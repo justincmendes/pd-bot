@@ -12,6 +12,29 @@ const prefix = botSettings.PREFIX;
 const Discord = require("discord.js");
 const bot = new Discord.Client({});
 
+const fs = require("fs");
+bot.commands = new Discord.Collection();
+
+//This shouldn't happen, this would be on Node.js
+fs.readdir("./commands", (err, files) => {
+    if(err) console.error (err);
+
+    //to get the file extension .js
+    let jsfiles = files.filter(f => f.split(".").pop() === "js");
+    if(jsfiles.length <= 0) {
+        console.log("No commands to load!");
+        return;
+    }
+
+    console.log(`Loading ${jsfiles.length} commands!`);
+
+    jsfiles.forEach((f,i) => {
+        let props = require(`./commands/${f}`);
+        console.log(`${i + 1}: ${f} loaded!`);
+        bot.commands.set(props.help.name, props);
+    });
+});
+
 bot.on("ready", async () => 
 {
     console.log(`${bot.user.username} is now online!`);
@@ -42,7 +65,8 @@ bot.on("ready", async () =>
 bot.on("message", async message =>
 {
     //If the message is from a bot, ignore
-    if(message.author.bot) return;
+    //When the message does not start with prefix, do nothing
+    if(message.author.bot || !message.content.startsWith(prefix)) return;
 
     //Messaging the bot in a DM
     /**
@@ -62,31 +86,21 @@ bot.on("message", async message =>
     //Get all of the arguments after the initial command
     let args = messageArray.slice(1);
 
-    
-
     // //Test Logs
     // console.log(messageArray);
     // console.log(args);
     // console.log(command);
 
-    //When the message does not start with prefix, do nothing
-    if(!message.content.startsWith(prefix)) return;
-    //Otherwise, begin checking the message is a viable command!
-    else
-    {
-        if(command === "ping")
-        {
-            //Show time between user command and bot reply = ping time!
-            let pingTime = message.createdTimestamp;
-            let botSendTime;
-            let pingMessage = await message.channel.send("Pong!");
-            
-            botSendTime = pingMessage.createdTimestamp;
-            pingTime = botSendTime - pingTime;
-            pingMessage.edit(`Pong! \`${pingTime}ms\``).catch(console.error);
+    //Otherwise, begin checking if the message is a viable command!
+    if(!bot.commands.has(command)) return;
+    else {
+        try {
+            bot.commands.get(command).run(bot, message, args);
+        } catch (error) {
+            console.error(error);
+            message.reply("there was an error trying to execute that command!");
         }
     }
-
 });
 
 bot.login(token);
