@@ -1,0 +1,18 @@
+{
+  "name": "pd-bot",
+  "version": "1.0.0",
+  "description": "Personal Development Bot for Habit Tracking, Journaling, Accountability, and Documenting Self-Improvement progress",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justincmendes/pd-bot.git"
+  },
+  "author": "Justin Mendes",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^12.2.0"
+  }
+}
