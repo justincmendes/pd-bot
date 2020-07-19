@@ -13,6 +13,7 @@
   "author": "Justin Mendes",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^12.2.0"
+    "discord.js": "^12.2.0",
+    "mongoose": "^5.9.25"
   }
 }

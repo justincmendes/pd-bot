@@ -1,3 +1,5 @@
+const Discord = require("discord.js");
+
 module.exports.run = async (bot, message, args) => {
     //Show time between user command and bot reply = ping time!
     let pingTime = message.createdTimestamp;

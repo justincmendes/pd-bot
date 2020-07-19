@@ -15,6 +15,8 @@ const bot = new Discord.Client({});
 const fs = require("fs");
 bot.commands = new Discord.Collection();
 
+bot.mongoose = require("./utils/mongoose");
+
 //This shouldn't happen, this would be on Node.js
 fs.readdir("./commands", (err, files) => {
     if(err) console.error (err);
@@ -38,6 +40,8 @@ fs.readdir("./commands", (err, files) => {
 bot.on("ready", async () => 
 {
     console.log(`${bot.user.username} is now online!`);
+
+    bot.user.setActivity("you thrive! | ?help", { type: "WATCHING" });
 
     // //Generating Link
     // //Method 1:
@@ -71,20 +75,20 @@ bot.on("message", async message =>
     //Messaging the bot in a DM
     /**
      * Have to implement DM interaction!
-     * Right now it does not handle DMs
+     * Right now it does not handle DMs preoply
      */
-    if(message.channel.type === "dm") return;
+    // if(message.channel.type === "dm") return;
 
     //Args/Arguments:
     //.slice to remove the first part of message containing the prefix
     //.split to section off multiple parts of the command (i.e. "?fast start now")
     //.shift() takes the first elements of the array
     //args will give all of the arguments passed in from the user
-    let messageArray = message.content.split(/ +/);
+    const messageArray = message.content.split(/ +/);
     //Get the command (Word after prefix)
-    let command = messageArray[0].slice(prefix.length).toLowerCase();
+    const command = messageArray[0].slice(prefix.length).toLowerCase();
     //Get all of the arguments after the initial command
-    let args = messageArray.slice(1);
+    const args = messageArray.slice(1);
 
     // //Test Logs
     // console.log(messageArray);
@@ -103,5 +107,8 @@ bot.on("message", async message =>
     }
 });
 
+bot.mongoose.init();
 bot.login(token);
 
+// Setting bot status to show initial prefix ?help
+// NOT working currently...
