@@ -1,4 +1,8 @@
 {
     "TOKEN": "YOUR_BOT_TOKEN",
-    "PREFIX": "?"
+    "PREFIX": "?",
+    
+    "MONGODB_USERNAME": "USER",
+    "MONGODB_PASSWORD": "1234",
+    "MONGODB_DBNAME": "DATABASE"
 }
