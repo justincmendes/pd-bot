@@ -10,7 +10,8 @@ const token = botSettings.TOKEN;
 const prefix = botSettings.PREFIX;
 
 const Discord = require("discord.js");
-const bot = new Discord.Client({});
+const bot = new Discord.Client({ partials: ["MESSAGE", "CHANNEL", "REACTION"] });
+const fn = require("./models/functions");
 
 const fs = require("fs");
 bot.commands = new Discord.Collection();
@@ -19,26 +20,25 @@ bot.mongoose = require("./utils/mongoose");
 
 //This shouldn't happen, this would be on Node.js
 fs.readdir("./commands", (err, files) => {
-    if(err) console.error (err);
+    if (err) console.error(err);
 
     //to get the file extension .js
     let jsfiles = files.filter(f => f.split(".").pop() === "js");
-    if(jsfiles.length <= 0) {
+    if (jsfiles.length <= 0) {
         console.log("No commands to load!");
         return;
     }
 
     console.log(`Loading ${jsfiles.length} commands!`);
 
-    jsfiles.forEach((f,i) => {
+    jsfiles.forEach((f, i) => {
         let props = require(`./commands/${f}`);
         console.log(`${i + 1}: ${f} loaded!`);
         bot.commands.set(props.help.name, props);
     });
 });
 
-bot.on("ready", async () => 
-{
+bot.on("ready", async () => {
     console.log(`${bot.user.username} is now online!`);
 
     bot.user.setActivity("you thrive! | ?help", { type: "WATCHING" });
@@ -66,11 +66,10 @@ bot.on("ready", async () =>
     // }
 });
 
-bot.on("message", async message =>
-{
+bot.on("message", async message => {
     //If the message is from a bot, ignore
     //When the message does not start with prefix, do nothing
-    if(message.author.bot || !message.content.startsWith(prefix)) return;
+    if (message.author.bot || !message.content.startsWith(prefix)) return;
 
     //Messaging the bot in a DM
     /**
@@ -95,8 +94,9 @@ bot.on("message", async message =>
     // console.log(args);
     // console.log(command);
 
+    
     //Otherwise, begin checking if the message is a viable command!
-    if(!bot.commands.has(command)) return;
+    if (!bot.commands.has(command)) return;
     else {
         try {
             bot.commands.get(command).run(bot, message, args);
@@ -107,8 +107,31 @@ bot.on("message", async message =>
     }
 });
 
+// bot.on("messageReactionAdd", async (reaction, user) => {
+//     try {
+//         if (reaction.message.partial) await reaction.message.fetch();
+//         if (reaction.partial) await reaction.fetch();
+//         if (reaction.message.channel.id != message.channel.id) return;
+//         if (user.bot) return;
+//         if (user != userOriginal) return;
+
+//         if (reaction.emoji.name == agree) {
+//             confirm.delete({ timeout: deleteDelay });
+//             confirmation = true;
+//             console.log("About to return!");
+//             return;
+//         }
+//         else {
+//             message.channel.send("Exiting...");
+//             confirm.delete({ timeout: deleteDelay });
+//             confirmation = false;
+//             return;
+//         }
+//     } catch (err) {
+//         console.log(err);
+//     }
+// });
+
+
 bot.mongoose.init();
 bot.login(token);
-
-// Setting bot status to show initial prefix ?help
-// NOT working currently...
