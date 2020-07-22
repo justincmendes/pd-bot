@@ -129,13 +129,8 @@ module.exports.run = async (bot, message, args) => {
                 const startTimeStamp = currentFast.startTime;
                 const fastDurationTimeStamp = endTimeStamp - startTimeStamp;
                 console.log(`${currentFastUser}'s fast start timestamp: ${startTimeStamp}`);
-                // console.log(`${currrentFastUser}'s fast duration timestamp (if ending now): ${fastDurationTimeStamp}`);
                 console.log(`${currentFastUser}'s fast duration timestamp (if ending now): ${fastDurationTimeStamp}`);
-
-
-                const endConfirmation = `Are you sure you want to **end** your **${fn.millisecondsToTimeString(fastDurationTimeStamp)}** fast?`
-                    + "\n\nSelect ✅ to **proceed**\nSelect ❌ to **cancel**";
-
+                const endConfirmation = `Are you sure you want to **end** your **${fn.millisecondsToTimeString(fastDurationTimeStamp)}** fast?`;
 
                 //If the user declines or has made a mistake, stop.
                 const confirmation = await fn.confirmationMessage(message, endConfirmation)

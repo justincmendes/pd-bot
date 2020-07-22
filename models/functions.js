@@ -11,7 +11,8 @@ module.exports = {
         var confirmation;
         const delayTime = 30000;
         const deleteDelay = 3000;
-        confirmMessage = confirmMessage + `\n*(expires in ${delayTime / 1000}s)*`;
+        confirmMessage = confirmMessage + "\n\nSelect ✅ to **proceed**\nSelect ❌ to **cancel**" +
+        `\n*(expires in ${delayTime / 1000}s)*`;
 
         const embed = new Discord.MessageEmbed()
             .setColor("#FF0000")
