@@ -1,7 +1,6 @@
 const Discord = require("discord.js");
 const botSettings = require("../botsettings.json");
 const prefix = botSettings.PREFIX;
-const Fast = require("../models/fasting.js");
 const mongoose = require("mongoose");
 const config = require("../botsettings.json");
 const fn = require("../models/functions");

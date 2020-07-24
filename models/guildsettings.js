@@ -1,9 +1,25 @@
 const mongoose = require("mongoose");
 
-const prefixSchema = mongoose.Schema({
+const guildSettingsSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
-    guildID: String,
-    prefix: String
+    guildID: {
+        type: mongoose.SchemaTypes.String,
+        required: true,
+        unique: true,
+    },
+    prefix: {
+        type: mongoose.SchemaTypes.String,
+        required: false,
+        default: "?",
+    },
+    defaultRole: {
+        type: mongoose.SchemaTypes.String,
+        required: false,
+    },
+    memberLogChannel: {
+        type: mongoose.SchemaTypes.String,
+        required: false,
+    }
 });
 
-module.exports = mongoose.model("Prefix", prefixSchema, "guildprefixes");
+module.exports = mongoose.model("GuildSetting", guildSettingsSchema, "guildsettings");

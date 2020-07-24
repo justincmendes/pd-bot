@@ -5,7 +5,6 @@ const Fast = require("../models/fasting.js");
 const mongoose = require("mongoose");
 const config = require("../botsettings.json");
 const fn = require("../models/functions");
-const { find, findOne } = require("../models/fasting.js");
 
 module.exports.run = async (bot, message, args) => {
     const usageMessage = `**USAGE:**\n\`${config.PREFIX}fast <ACTION>\`\n\n`
@@ -121,7 +120,7 @@ module.exports.run = async (bot, message, args) => {
 
                 fast.save()
                     .then(result => console.log(result))
-                    .catch(err => console.log(err))
+                    .catch(err => console.log(err));
 
                 message.reply(`Your fast starting **${args.slice(1)}** is being recorded!`);
             }
@@ -324,7 +323,6 @@ module.exports.run = async (bot, message, args) => {
             // If the user wants fast help, do not proceed to show them the fast.
             const seeCommands = ["past", "recent", "all"];
             var fastView, fastData, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText;
-
             currentTimestamp = fn.timeCommandHandler(["now"], message.createdTimestamp);
             if (args[1] != undefined) {
                 if (args[1].toLowerCase() == "help") {
@@ -370,12 +368,8 @@ module.exports.run = async (bot, message, args) => {
                 // After this filter:
                 // If the first argument after "see" is not past, then it is not a valid call
                 else {
-                    await message.reply("INVALID INPUT...")
-                        .then(msg => {
-                            message.reply(fastSeeUsage);
-                            msg.delete(5000);
-                        })
-                        .catch(err => console.error(err));
+                    await fn.invalidInputError(message, fastSeeUsage);
+                    return;
                 }
                 console.log(pastNumOfEntries);
                 console.log(pastFunctionality);
@@ -484,43 +478,13 @@ module.exports.run = async (bot, message, args) => {
                 + "\n(if MULTIPLE `<FIELD>`s: separate by **space**!)"
                 + "\nIF you'd like to see more of your fasts first before trying to delete: `?fast see`"
                 + "\n\nIF you'd like to archive the deleted fasts as well (i.e. get the data in a .txt file) - **proceed**.\nIF you'd like to archive without deletion, try: `fast archive` (FUTURE FEATURE)\\*";
-            var fastIndex, fastView, fastData, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText;
+            var mostRecentFast, fastView, fastData, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText;
             currentTimestamp = fn.timeCommandHandler(["now"], message.createdTimestamp);
-            if (fastsInProgress >= 1) {
-                // Show the user the current fast
-                fastView = await fast.collection.findOne({
-                    userID: message.author.id,
-                    endTime: null
-                })
-                    .catch(err => console.error(err));
-                fastIndex = "current";
-                endTimeToDate = fastView.endTime;
-            }
-            else {
+            const deleteCommands = ["past", "all", "many"];
 
-                fastView = await fast.collection
-                    .find({ userID: message.author.id })
-                    .sort({ startTime: -1 })
-                    .limit(1)
-                    .toArray();
-                fastView = fastView[0];
-                console.log(fastView);
-                fastIndex = "previous";
-                endTimeToDate = new Date(fastView.endTime).toLocaleString();
-            }
-            startTimeToDate = new Date(fastView.startTime).toLocaleString();
-            fastDuration = currentTimestamp - fastView.startTime;
-            fastBreaker = fastView.fastBreaker;
-            moodRating = fastView.mood;
-            reflectionText = fastView.reflection;
-            fastData = fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
-                fastBreaker, moodRating, reflectionText);
-            fastEmbed = new Discord.MessageEmbed()
-                .setColor("#00FF00")
-                .setTitle(`Fast: Delete Fast (previewing ${fastIndex})`)
-                .setDescription(fastData);
-            message.channel.send(fastEmbed);
-
+            // Show the user the current fast if they
+            fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp);
+            message.reply(fastDeleteUsage);
 
             if (args[1] == undefined || args.length == 1) {
                 message.reply(fastDeleteUsage); return;
@@ -584,7 +548,7 @@ module.exports.run = async (bot, message, args) => {
                         case isNumberArg: pastNumOfEntries = args[2].parseInt();
                             break;
                         default: await fn.invalidInputError(message, fastDeleteUsage)
-                        return;
+                            return;
                     }
                 }
             }

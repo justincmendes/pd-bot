@@ -255,9 +255,9 @@ module.exports = {
         return fastData;
     },
 
-    showRecentFast: async function (message, fast, fastsInProgress, currentTimestamp, fastSeeUsage) {
+    showRecentFast: async function (message, fast, fastsInProgress, currentTimestamp, usageMessage) {
         var fastView, fastIndex, startTimeToDate, endTimeToDate, fastDuration;
-        var fastBreaker, moodRating, reflection, fastData, fastEmbed;
+        var fastBreaker, moodRating, reflectionText, fastData, fastEmbed;
         if (fastsInProgress >= 1) {
             // Show the user the current fast
             fastView = await fast.collection.findOne({

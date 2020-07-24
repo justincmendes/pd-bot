@@ -16,6 +16,8 @@ const fn = require("./models/functions");
 const fs = require("fs");
 bot.commands = new Discord.Collection();
 
+const mongoose = require("mongoose");
+const guildSettings = require("./models/guildsettings");
 bot.mongoose = require("./utils/mongoose");
 
 //This shouldn't happen, this would be on Node.js
@@ -44,14 +46,14 @@ bot.on("ready", async () => {
     bot.user.setActivity(`you thrive! | ${prefix}help`, { type: "WATCHING" });
 
     // //Generating Link
-    // //Method 1:
-    // bot.generateInvite([126016]).then(link => 
-    // {
-    //     console.log(link);
-    // }).catch(err => 
-    // {
-    //     console.log(err.stack);
-    // });
+    //Method 1:
+    bot.generateInvite([126016]).then(link => 
+    {
+        console.log(link);
+    }).catch(err => 
+    {
+        console.log(err.stack);
+    });
 
     // //Method 2: Async - Handling Promises
     // //When using await it "pauses" code until the promise is fulfilled
@@ -131,7 +133,43 @@ bot.on("message", async message => {
 //         console.log(err);
 //     }
 // });
-
-
 bot.mongoose.init();
+
+// For dynamic bot settings per guild
+// Will help with handling unique prefixes!
+// Will implement better to make sure os guildID unique field
+bot.on ("guildCreate", async (guild) => {
+    try {
+        const guildConfig = new guildSettings(); 
+        const guildCheck = await guildConfig.collection
+        .find({ guildID: guild.id })
+        .count()
+        .catch(err => {
+            fn.invalidInputError(message, fastSeeUsage, "INVALID NUMBER...");
+            console.log(err);
+            return;
+        });
+        
+        // Check if it already exists to avoid duplicates
+        if (guildCheck >= 1) {
+            console.log(`${bot.user.username} is already in ${guild.name}! Won't create new instance in Database.`);
+            return;
+        }
+        else {
+            const guildConfig = new guildSettings( {
+                _id: mongoose.Types.ObjectId(),
+                guildID: guild.id,
+            });
+        guildConfig.save()
+        .then(result => console.log(result))
+        .catch(err => console.log(err));
+        console.log(`${bot.user.username} has joined the server ${guild.name}! Saved to Database.`);
+        }
+    }
+    catch (err) {
+        console.error(err);
+    }
+})
+
+
 bot.login(token);
