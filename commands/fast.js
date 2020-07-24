@@ -518,6 +518,19 @@ module.exports.run = async (bot, message, args) => {
                     message.reply(fastDeleteUsage);
                     return;
                 }
+                fastView = await fast.collection
+                    .find({ userID: message.author.id })
+                    .count();
+                // If the user has no fasts
+                if (fastView == 0) {
+                    message.reply(`NO FASTS... try \`${prefix}fast start\``);
+                    return;
+                }
+            }
+            // fast delete (only):
+            else {
+                message.reply(fastDeleteTryHelp);
+                return;
             }
 
             var mostRecentFast, fastView, fastData, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText;
