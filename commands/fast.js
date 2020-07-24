@@ -406,7 +406,13 @@ module.exports.run = async (bot, message, args) => {
                         .sort({ startTime: -1 })
                         .limit(pastNumOfEntries)
                         .toArray();
+                        
                     for (i = 0; i < pastNumOfEntries; i++) {
+                        console.log(fastView[i]);
+                        if (fastView[i] == undefined) {
+                            fn.invalidInputError(message, fastSeeUsage, `**FAST ${i + 1}**+ ONWARDS DOES NOT EXIST...`, false);
+                            return;
+                        }
                         startTimeToDate = new Date(fastView[i].startTime).toLocaleString();
                         if (i == 0 && fastView[0].endTime == null) {
                             endTimeToDate = null;
