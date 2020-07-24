@@ -53,7 +53,7 @@ module.exports.run = async (bot, message, args) => {
     const noFastRunningMessage = `You don't have a **fast running!**\nIf you want to **start** one \`${config.PREFIX}fast start <DATE/TIME>\``;
 
     const currentDate = new Date();
-    var startTimeStamp, currentTimeStamp;
+    var startTimeStamp, currentTimestamp, fastEmbed;
 
     // // Check all the servers the bot is in
     // let botServers = await bot.guilds.cache.map(guild => guild.id);
@@ -202,7 +202,7 @@ module.exports.run = async (bot, message, args) => {
                     do {
                         reflectionText.push(await fn.messageDataCollectFirst(message, reflectionTextPrompt, "Fast: Reflection", "#00FF00", 900000));
 
-                        if(messageIndex == 0) {
+                        if (messageIndex == 0) {
                             reflectionTextPrompt = reflectionTextPrompt + "\n\n**Current Reflection Message:**\n" + reflectionText[messageIndex] + "\n";
                         }
                         else {
@@ -304,7 +304,7 @@ module.exports.run = async (bot, message, args) => {
                             while (true)
                             // Ideally, format output with new line for every message sent! \n
                             console.log(`Fast Post: ${fastPost}`);
-                            message.reply(`Functionality still in development...\n**Fast Post:**\n\n ${fastPost}`);
+                            message.reply(`Functionality still in development...\n**Fast Post:**\n${fastPost}`);
                             // Now Send the Fast Post to desired channel
                         }
                     })
@@ -316,18 +316,165 @@ module.exports.run = async (bot, message, args) => {
             // Will add the ability to gather all of the user's data into a spreadsheet or note/JSON file!
             // **Handle users who do not yet have a fast!
             const fastSeeHelp = `Type \`${prefix}fast see help\` for **more options/ways to see your fasts!**`;
-            const fastSeeUsage = `**USAGE:**\n\`${prefix}fast see <PAST_#_OF_ENTRIES> <FIELD>\`\n\n\`<PAST_#_OF_ENTRIES>\`: recent; 5 (\\*any number); all` +
-                "\n`<FIELD>`: start; end; fastbreaker; duration; reflection (includes mood); *Default:* all\n(if MULTIPLE `<FIELD>`: separate by space!)";
+            const fastSeeUsage = `**USAGE:**\n\`${prefix}fast see past <PAST_#_OF_ENTRIES> <FIELD>\`\n\`${prefix}fast see <#_MOST_RECENT_ENTRY> <FIELD>\``
+                + `\n\n\`<PAST_#_OF_ENTRIES>\`: **recent; all; 5** (\\*any number)`
+                + `\n\`<#_MOST_RECENT_ENTRY>\`: **recent; all** (like <PAST_#_OF_ENTRIES>, returns all); **3 **(\\*3rd most recent entry, any number)`
+                + `\n\`all\`: Returns all of your past entries`;
+                + "\n`<FIELD>`: **start; end; fastbreaker; duration; reflection** (includes mood); *Default:* all fields\n(if MULTIPLE `<FIELD>`: separate by space!)";
             // If the user wants fast help, do not proceed to show them the fast.
+            const seeCommands = ["past", "recent", "all"];
+            var fastIndex, fastView, fastData, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText;
+
+            currentTimestamp = fn.timeCommandHandler(["now"], message.createdTimestamp);
             if (args[1] != undefined) {
                 if (args[1].toLowerCase() == "help") {
                     message.reply(fastSeeUsage);
                     return;
                 }
             }
+            // Do not show the most recent fast embed, when a valid command is called
+            // it will be handled properly later based on the values passed in!
+            if (!seeCommands.includes(args[1]) && isNaN(args[1])) {
+                await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeUsage);
+                message.reply(fastSeeUsage);
+                return;
+            }
+            else {
+                var pastFunctionality;
+                var pastNumOfEntries;
+                var fields = { userID: message.author.id };
+                // To check if the given argument is a number!
+                // If it's not a number and has passed the initial 
+                // filter, then use the "past" functionality
+                // Handling Argument 1:
+                const isNumberArg = !isNaN(args[1]);
+                var allEntries;
+                if (args[1].toLowerCase() == "recent") {
+                    pastNumOfEntries = 1;
+                    pastFunctionality = false;
+                }
+                else if (args[1].toLowerCase() == "all") {
+                    pastNumOfEntries = await fast.collection.find({ userID: message.author.id }).count();
+                    pastFunctionality = true;
+                }
+                else if (isNumberArg) {
+                    pastNumOfEntries = parseInt(args[1]);
+                    pastFunctionality = false;
+                }
+                else if (args[1].toLowerCase() == "past") {
+                    pastFunctionality = true;
+                }
+                // After this filter:
+                // If the first argument after "see" is not past, then it is not a valid call
+                else{
+                    await message.reply("INVALID INPUT...")
+                        .then(msg => {
+                            message.reply(fastSeeUsage);
+                            msg.delete(5000);
+                        })
+                        .catch(err => console.error(err));
+                }
+                console.log(pastNumOfEntries);
+                console.log(pastFunctionality);
+                if (pastFunctionality) {
+                    // Loop through all of the given fields, account for aliases and update fields
+                    // Find Entries, toArray, store data in meaningful output
+                    if (args[2] != undefined) {
+                        // If the next argument is NotaNumber, invalid "past" command call
+                        if (isNaN(args[2])) {
+                            fn.invalidInputError(message, fastSeeUsage);
+                            return;
+                        }
+                    }
+                    else {
+                        // If the next argument is undefined, implied "see all" command call unless "all" was not called:
+                        // => empty "past" command call
+                        if (args[1].toLowerCase() != "all") {
+                            message.reply(fastSeeUsage);
+                            return;
+                        }
+                        const confirmSeeAllMessage = "Are you sure you want to see all of your fast history?\n\n*(IF a lot of logs, it will spam DM/server!)*";
+                        let confirmSeeAll = await fn.confirmationMessage(message, confirmSeeAllMessage, "Fast: See All WARNING!");
+                        if (!confirmSeeAll) return;
+                    }
+                    // To assign pastNumOfEntries the argument value if not alread see "all"
+                    if(pastNumOfEntries == undefined) {
+                        pastNumOfEntries = parseInt(args[2]);
+                    }
+                    fastView = await fast.collection
+                        .find(fields)
+                        .sort({ startTime: -1 })
+                        .limit(pastNumOfEntries)
+                        .toArray();
+                    for (i = 0; i < pastNumOfEntries; i++) {
+                        startTimeToDate = new Date(fastView[i].startTime).toLocaleString();
+                        if (i == 0 && fastView[0].endTime == null) {
+                            endTimeToDate = null;
+                        }
+                        else {
+                            endTimeToDate = new Date(fastView[i].endTime);
+                        }
+                        fastDuration = fastView[i].fastDuration;
+                        fastBreaker = fastView[i].fastBreaker;
+                        moodRating = fastView[i].mood;
+                        reflectionText = fastView[i].reflection;
+                        fastData = `__**Fast ${i + 1}:**__\n` + fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
+                            fastBreaker, moodRating, reflectionText);
+                        message.reply(fastData);
+                    }
+                    return;
+                }
 
-            var fastIndex, fastView, fastData, startTimeToDate, endTimeToDate, fastDuration, moodRating, reflectionText;
-            const currentTimeStamp = fn.timeCommandHandler(["now"], message.createdTimestamp);
+                // If not using the pastFunctionality, then look up element
+                fastView = await fast.collection
+                    .find({ userID: message.author.id })
+                    .sort({ startTime: -1 })
+                    .limit(1)
+                    .skip(pastNumOfEntries - 1)
+                    .toArray()
+                    .catch(err => {
+                        fn.invalidInputError(message, fastSeeUsage, "INVALID NUMBER...");
+                        console.log(err);
+                        return;
+                    });
+                console.log(fastView);
+                // If the returned array is empty, then the fast does not exist.
+                if (fastView.length == 0) {
+                    fn.invalidInputError(message, fastSeeUsage, "FAST DOES NOT EXIST...", false);
+                    return;
+                }
+
+                startTimeToDate = new Date(fastView[0].startTime).toLocaleString();
+
+                if (fastView[0].endTime == null) {
+                    endTimeToDate = null;
+                }
+                else {
+                    endTimeToDate = new Date(fastView[0].endTime);
+                }
+                fastDuration = currentTimestamp - fastView[0].startTime;
+                fastBreaker = fastView[0].fastBreaker;
+                moodRating = fastView[0].mood;
+                reflectionText = fastView[0].reflection;
+
+                fastData = `__**Fast ${pastNumOfEntries}:**__\n` + fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
+                    fastBreaker, moodRating, reflectionText);
+                message.reply(fastData);
+
+            }
+            break;
+
+        case "delete":
+            const fastDeleteUsage = `**USAGE:**\n\`${prefix}fast delete past <PAST_#_OF_ENTRIES> <FIELD>\`\n\`${prefix}fast delete <#_MOST_RECENT_ENTRY> <FIELD>\`
+                 \n\`${prefix}fast delete set <RECENT_ENTRIES> <FIELD>\`\n\n\`<PAST_#_OF_ENTRIES>\`: 5 (\\*any number); all (NOTE: Can delete more than 1 entry!)` +
+                "\n`<#_MOST_RECENT_ENTRY>`: recent; 3 (\\*3rd most recent entry, any number) (NOTE: Deletes just 1 entry)"
+                + "\n\`<RECENT_ENTRIES>\`: 3, 5, 7, 1, 25 (COMMA SEPARATED, any number > 0: with 1 being the most recent fast, 25 the 25th most recent, etc.)"
+                + "`<FIELD>`: (any field you'd like to clear) start; end; fastbreaker; duration; mood; reflection; *Default:* all\n(if MULTIPLE `<FIELD>`: separate by space!)"
+                + "\nIF you'd like to see more of your fasts first before trying to delete: `?fast see`"
+                + "\n\nIF you'd like to archive the deleted fasts as well (i.e. get the data in a .txt file) - proceed. (FUTURE FEATURE)\\*\nIF you'd like to archive without deletion, try: `fast archive`";
+
+            var fastIndex, fastView, fastData, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText;
+            currentTimestamp = fn.timeCommandHandler(["now"], message.createdTimestamp);
             if (fastsInProgress >= 1) {
                 // Show the user the current fast
                 fastView = await fast.collection.findOne({
@@ -342,56 +489,98 @@ module.exports.run = async (bot, message, args) => {
                 // Show the user the last fast with the most recent end time (by sorting from largest to smallest end time and taking the first):
                 // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
                 // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
-                fastView = await fast.collection.find({ userID: message.author.id }).sort({ endTime: -1 }).limit(1);
+                fastView = await fast.collection
+                    .find({ userID: message.author.id })
+                    .sort({ startTime: -1 })
+                    .limit(1)
+                    .toArray();
+                fastView = fastView[0];
                 console.log(fastView);
                 fastIndex = "Previous";
                 endTimeToDate = new Date(fastView.endTime).toLocaleString();
             }
             startTimeToDate = new Date(fastView.startTime).toLocaleString();
-            fastDuration = currentTimeStamp - fastView.startTime;
+            fastDuration = currentTimestamp - fastView.startTime;
+            fastBreaker = fastView.fastBreaker;
             moodRating = fastView.mood;
             reflectionText = fastView.reflection;
-            fastData = `**Start Time:** ${startTimeToDate}\n` +
-                `**End Time:** ${endTimeToDate}\n` +
-                `**Fast Duration:** ${fn.millisecondsToTimeString(fastDuration)}\n` +
-                `**Fast Breaker:** ${fastBreaker}\n` +
-                `**Mood Rating (1-5):** ${moodRating}\n` +
-                `**Reflection:** ${reflectionText}\n`;
-            if (fastsInProgress >= 1) {
-                fastData = fastData + `\n(\\*Want to end your fast? \`${prefix}fast end\`)`;
-            }
-            const fastEmbed = new Discord.MessageEmbed()
+            fastData = fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
+                fastBreaker, moodRating, reflectionText);
+            fastEmbed = new Discord.MessageEmbed()
                 .setColor("#00FF00")
-                .setTitle(`Fast: See ${fastIndex} Fast`)
+                .setTitle(`Fast: Delete Fast (showing ${fastIndex})`)
                 .setDescription(fastData);
             message.channel.send(fastEmbed);
+
+
             if (args[1] == undefined || args.length == 1) {
-                message.reply(fastSeeHelp); return;
+                message.reply(fastDeleteUsage); return;
             }
             else {
-                var pastNumOfEntries;
-                // To check if the given argument is a number!
-                const isNumberArg = !isNaN(args[2].toLowerCase());
-                var allEntries;
-                switch (args[2].toLowerCase()) {
-                    case "recent": pastNumOfEntries = 1;
-                        break;
-                    case "all": pastNumOfEntries = await fast.collection.countDocuments({ userID: message.author.id });
-                        break;
-                    case isNumberArg: pastNumOfEntries = args[2].parseInt();
-                        break;
-                    default: await message.channel.send("INVALID INPUT...")
-                        .then(msg => {
-                            msg.delete(5000);
-                        })
-                        .catch(err => console.error(err));
+                if (args[2].toLowerCase == "past") {
+                    // If the following argument is not a number, exit!
+                    if (!args[3].isNaN()) {
+                        message.reply(fastDeleteUsage);
+                        return;
+                    }
+                    var deleteConfirmMessage = `Are you sure you want to delete ${args[3]} fasts?:`;
+                    var fastTargetIDs;
+                    fastView = await fast.collection.find({ userID: message.author.id })
+                        .sort({ startTime: -1 })
+                        .limit(args[3])
+                        .toArray();
+                    for (i = 0; i < args[3]; i++) {
+                        startTimeToDate = new Date(fastView[i].startTime).toLocaleString();
+                        if (i == 0 && fastView[0].endTime == null) {
+                            endTimeToDate = null;
+                        }
+                        else {
+                            endTimeToDate = new Date(fastView[i].endTime);
+                        }
+                        fastDuration = fastView[i].fastDuration;
+                        fastBreaker = fastView[i].fastBreaker;
+                        moodRating = fastView[i].mood;
+                        reflectionText = fastView[i].reflection;
+                        fastData = `__**Fast ${i + 1}:**__\n` + fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
+                            fastBreaker, moodRating, reflectionText);
+                        deleteConfirmMessage = deleteConfirmMessage + "\n\n" + fastData;
+                    }
+
+                    if (await fn.confirmationMessage(message, deleteConfirmMessage, `Fast: Delete Past ${args[3]}`)) {
+                        // Must Find the array of cursors first (map _id), then delete only args[3] of them
+                        // Sort from greatest endtime => most recent!
+                        console.log("Will delete!");
+
+                        // fastTargetIDs = fast.collection.find({ userID: message.author.id })
+                        //     .sort({ endtime: -1 })
+                        //     .limit(args[3])
+                        //     .toArray()
+                        //     .map(fasts => fasts._id);
+                        // fast.collection.remove({_id: {$in: fastTargetIDs}});
+                    }
+                    else return;
+                }
+                else {
+                    var pastNumOfEntries;
+                    // To check if the given argument is a number!
+                    const isNumberArg = !isNaN(args[2].toLowerCase());
+                    var allEntries;
+                    switch (args[2].toLowerCase()) {
+                        case "recent": pastNumOfEntries = 1;
+                            break;
+                        case "all": pastNumOfEntries = await fast.collection.countDocuments({ userID: message.author.id });
+                            break;
+                        case isNumberArg: pastNumOfEntries = args[2].parseInt();
+                            break;
+                        default: await message.reply("INVALID INPUT...")
+                            .then(msg => {
+                                msg.delete(5000);
+                            })
+                            .catch(err => console.error(err));
+                    }
                 }
             }
             break;
-
-        // case "delete":
-        //     if()
-        // break;
 
         // case "edit":
         //     if()

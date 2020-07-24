@@ -2,6 +2,8 @@
  * File of all the important reusable functions!
  */
 const Discord = require("discord.js");
+const botSettings = require("../botsettings.json");
+const prefix = botSettings.PREFIX;
 
 module.exports = {
     confirmationMessage: async function (message, confirmMessage, title = "Confirmation", delayTime = 60000, deleteDelay = 3000,
@@ -241,6 +243,70 @@ module.exports = {
 
         // }
         else return (false);
+    },
+
+    fastCursorToString: function (startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText) {
+        let fastData = `**Start Time:** ${startTimeToDate}\n` +
+        `**End Time:** ${endTimeToDate}\n` +
+        `**Fast Duration:** ${this.millisecondsToTimeString(fastDuration)}\n` +
+        `**Fast Breaker:** ${fastBreaker}\n` +
+        `**Mood Rating (1-5):** ${moodRating}\n` +
+        `**Reflection:** ${reflectionText}\n`;
+        return fastData;
+    },
+
+    showRecentFast: async function (message, fast, fastsInProgress, currentTimestamp, fastSeeUsage) {
+        var fastView, fastIndex, startTimeToDate, endTimeToDate, fastDuration;
+        var fastBreaker, moodRating, reflection, fastData, fastEmbed;
+        if (fastsInProgress >= 1) {
+            // Show the user the current fast
+            fastView = await fast.collection.findOne({
+                userID: message.author.id,
+                endTime: null
+            })
+                .catch(err => console.error(err));
+            fastIndex = "Current";
+            endTimeToDate = fastView.endTime;
+        }
+        else {
+            // Show the user the last fast with the most recent end time (by sorting from largest to smallest end time and taking the first):
+            // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
+            // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
+            fastView = await fast.collection
+                .find({ userID: message.author.id })
+                .sort({ endTime: -1 })
+                .limit(1)
+                .toArray();
+            fastView = fastView[0];
+            fastIndex = "Previous";
+            endTimeToDate = new Date(fastView.endTime).toLocaleString();
+        }
+        startTimeToDate = new Date(fastView.startTime).toLocaleString();
+        fastDuration = currentTimestamp - fastView.startTime;
+        fastBreaker = fastView.fastBreaker;
+        moodRating = fastView.mood;
+        reflectionText = fastView.reflection;
+        fastData = this.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
+            fastBreaker, moodRating, reflectionText)
+        if (fastsInProgress >= 1) {
+            fastData = fastData + `\n(\\*Want to end your fast? \`${prefix}fast end\`)`;
+        }
+        fastEmbed = new Discord.MessageEmbed()
+            .setColor("#00FF00")
+            .setTitle(`Fast: See ${fastIndex} Fast`)
+            .setDescription(fastData);
+        message.channel.send(fastEmbed);
+    },
+
+    invalidInputError: async function(message, usageMessage, errorMessage = "INVALID INPUT...", usageReply = true) {
+        await message.reply(errorMessage)
+        .then(msg => {
+            if(usageReply) {
+            message.reply(usageMessage);
+            msg.delete(5000);
+            }
+        })
+        .catch(err => console.error(err));
     }
 
 };
