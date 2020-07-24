@@ -333,6 +333,19 @@ module.exports.run = async (bot, message, args) => {
                     message.reply(fastSeeUsage);
                     return;
                 }
+                fastView = await fast.collection
+                    .find({ userID: message.author.id })
+                    .count();
+                // If the user has no fasts
+                if (fastView == 0) {
+                    message.reply(`NO FASTS... try \`${prefix}fast start\``);
+                    return;
+                }
+            }
+            // fast see (only):
+            else {
+                message.reply(fastSeeHelp);
+                return;
             }
             // Show the user the last fast with the most recent end time (by sorting from largest to smallest end time and taking the first):
             // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
@@ -364,7 +377,7 @@ module.exports.run = async (bot, message, args) => {
                 }
                 else if (isNumberArg) {
                     pastNumOfEntries = parseInt(args[1]);
-                    if(pastNumOfEntries <= 0) {
+                    if (pastNumOfEntries <= 0) {
                         await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeUsage);
                         message.reply(fastSeeHelp);
                         return;
@@ -394,9 +407,9 @@ module.exports.run = async (bot, message, args) => {
                             return;
                         }
                         if (parseInt(args[2]) <= 0) {
-                                await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeUsage);
-                                message.reply(fastSeeHelp);
-                                return;
+                            await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeUsage);
+                            message.reply(fastSeeHelp);
+                            return;
                         }
                         const confirmSeeMessage = `Are you sure you want to see ${args[2]} fasts?\n\n*(IF a lot of logs, it will spam DM/server!)*`;
                         let confirmSeeAll = await fn.confirmationMessage(message, confirmSeeMessage, `Fast: See ${args[2]} Fasts WARNING!`);
@@ -506,6 +519,7 @@ module.exports.run = async (bot, message, args) => {
                     return;
                 }
             }
+
             var mostRecentFast, fastView, fastData, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText;
             currentTimestamp = fn.timeCommandHandler(["now"], message.createdTimestamp);
             const deleteCommands = ["past", "all", "many"];
@@ -516,6 +530,7 @@ module.exports.run = async (bot, message, args) => {
                 message.reply(fastDeleteTryHelp);
                 return;
             }
+
             // delete past command:
             else if (args[2] != undefined) {
                 console.log(`args 2: ${args[2]} is defined`);
@@ -528,13 +543,14 @@ module.exports.run = async (bot, message, args) => {
                         message.reply(fastDeleteTryHelp);
                         return;
                     }
-                    const numberArg = parseInt(args[2]);
+                    var numberArg = parseInt(args[2]);
                     if (numberArg <= 0) {
                         await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp);
                         message.reply(fastDeleteTryHelp);
                         return;
                     }
-                    var deleteConfirmMessage = `Are you sure you want to **delete ${numberArg} fasts?:**`;
+                    // Start with an empty string as it will be iteratively populated
+                    var deleteConfirmMessage = "";
                     var fastTargetIDs = new Array();
                     fastView = await fast.collection.find({ userID: message.author.id })
                         .sort({ startTime: -1 })
@@ -542,7 +558,8 @@ module.exports.run = async (bot, message, args) => {
                         .toArray();
                     for (i = 0; i < numberArg; i++) {
                         if (fastView[i] == undefined) {
-                            numberArg = i + 1;
+                            numberArg = i;
+                            deleteConfirmMessage = `Are you sure you want to **delete ${numberArg} fasts?:**\n` + deleteConfirmMessage;
                             break;
                         }
                         startTimeToDate = new Date(fastView[i].startTime).toLocaleString();
@@ -559,26 +576,22 @@ module.exports.run = async (bot, message, args) => {
                         fastTargetIDs.push(fastView[i]._id);
                         fastData = `__**Fast ${i + 1}:**__\n` + fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
                             fastBreaker, moodRating, reflectionText);
-                        deleteConfirmMessage = deleteConfirmMessage + "\n" + fastData;
+                        deleteConfirmMessage = deleteConfirmMessage + fastData + "\n";
                     }
 
-                    if (await fn.confirmationMessage(message, deleteConfirmMessage, `Fast: Delete Past ${numberArg}`, 600)) {
+                    if (await fn.confirmationMessage(message, deleteConfirmMessage, `Fast: Delete Past ${numberArg} Fasts`, 600000)) {
                         // Must Find the array of cursors first (map _id), then delete only args[3] of them
                         // Sort from greatest endtime => most recent!
-                        console.log("Will delete!");
-
-                        // fastTargetIDs = fast.collection.find({ userID: message.author.id })
-                        //     .sort({ endtime: -1 })
-                        //     .limit(numberArg)
-                        //     .toArray()
-                        //     .map(fasts => fasts._id);
-                        // fast.collection.remove({ _id: { $in: fastTargetIDs } });
+                        console.log(`Deleting ${message.author.id}'s Past ${numberArg} Fasts`);
+                        fast.collection.deleteMany({ _id: { $in: fastTargetIDs } });
                     }
                     else return;
                 }
             }
+            // Next: FAST DELETE ALL
             // Next: FAST DELETE MANY
             // Next: FAST DELETE
+
             else {
                 var pastNumOfEntries;
                 // To check if the given argument is a number!
@@ -591,7 +604,7 @@ module.exports.run = async (bot, message, args) => {
                         break;
                     case isNumberArg: pastNumOfEntries = args[2].parseInt();
                         break;
-                    default: 
+                    default:
                         await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp);
                         message.reply(fastDeleteTryHelp);
                         return;
