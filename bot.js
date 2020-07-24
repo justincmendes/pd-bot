@@ -47,13 +47,13 @@ bot.on("ready", async () => {
 
     // //Generating Link
     //Method 1:
-    bot.generateInvite([126016]).then(link => 
-    {
-        console.log(link);
-    }).catch(err => 
-    {
-        console.log(err.stack);
-    });
+    // bot.generateInvite([126016]).then(link => 
+    // {
+    //     console.log(link);
+    // }).catch(err => 
+    // {
+    //     console.log(err.stack);
+    // });
 
     // //Method 2: Async - Handling Promises
     // //When using await it "pauses" code until the promise is fulfilled
