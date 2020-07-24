@@ -41,7 +41,7 @@ fs.readdir("./commands", (err, files) => {
 bot.on("ready", async () => {
     console.log(`${bot.user.username} is now online!`);
 
-    bot.user.setActivity("you thrive! | ?help", { type: "WATCHING" });
+    bot.user.setActivity(`you thrive! | ${prefix}help`, { type: "WATCHING" });
 
     // //Generating Link
     // //Method 1:
