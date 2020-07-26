@@ -4,7 +4,7 @@ const dailyJournalSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     userID: String,
     usedTemplate: Boolean,
-    journalEntry: String
+    journalEntry: [String]
 });
 
 module.exports = mongoose.model("Daily Journal", dailyJournalSchema, "dailyJournals");

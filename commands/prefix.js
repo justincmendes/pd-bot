@@ -6,7 +6,7 @@ const config = require("../botsettings.json");
 const fn = require("../models/functions");
 
 module.exports.run = async (bot, message, args) => {
-    message.channel.send(`This server's current prefix is ${prefix}\n(developing method to change prefix by: \`${prefix}\` <PREFIX>`);
+    message.channel.send(`This server's **current prefix** is **${prefix}**\n(SOON server managers change prefix by: \`${prefix}prefix <PREFIX>\`)`);
     // Will check if the user sending the message has the MANAGE_GUILD permission
     // Use collection guildprefix.js to store the prefix of the current guild
     // Alter code to make it run with the new prefix (i.e. check what the prefix is of the current guild in the bot.js file

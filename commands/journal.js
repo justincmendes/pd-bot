@@ -6,7 +6,7 @@ const fn = require("../models/functions");
 
 module.exports.run = async (bot, message, args) => {
     //At the end of every week, or when they submit their weekly journal reflection, send them a textfile of their weeks entries (press the paperclip)
-    //create, see, edit, end, template <= return both the weekly reflection/weekly goals and daily journal template!
+    //create, see, edit, end, templates <= return both the weekly reflection/weekly goals and daily journal template!
     message.reply("Journal in development!");
     
 }

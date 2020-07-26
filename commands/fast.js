@@ -6,13 +6,30 @@ const mongoose = require("mongoose");
 const config = require("../botsettings.json");
 const fn = require("../models/functions");
 
+// MAKE Help usage function*
+
+// IF USER TYPES `force` at the end, skip the confirmation window! FOR ALL FUNCTIONS!
+// <FORCE>
+
+// FOR FUTURE FEASABILITY/SCALABILITY:
+// For ?fast see: allow ?fast see all file <FORCE> - to send them a txt file of their fasts!
+// FOR SEE FUNCTION: Put a cap at PAST 5 AND ALL (max. 5), any number after that requires them to open the text file sent by the bot!
+// Send them a confirmation if they'd like to see the rest on a file!
+// Also put a cooldown on the see function!**
+
+// For ?fast see/?fast delete: MAKE AN ITERATIVE PROCESS to show all fasts from 1-n and have the user confirm when they are finished seeing
+// or if the fast they are looking at is the fast they want to delete (after deletion ask if they want to continue scrolling!) (MAKE THIS A MESSAGEAWAIT) FOR SPEED!
+
+// For ?fast see/?fast delete: all for user to fast delete <NUMBER> past <STARTING_INDEX>
+
+// ALLOW ALIASES (i.e. create fastfunctions.js and allow the switch to pick up multiple commands?)
+// Ex: ?fast d => fast delete, ?fast st/?fast s => fast start, ?fast e => fast end
+
 module.exports.run = async (bot, message, args) => {
     const usageMessage = `**USAGE:**\n\`${config.PREFIX}fast <ACTION>\`\n\n`
-        + "`<ACTION>`: start; end; see; edit; delete; see <PAST_#_OF_ENTRIES>; see <recent OR all>";
-    const fastStartUsage = `**USAGE:**\n\`${config.PREFIX}fast start <DATE/TIME>\`\n\n`
-        + "`<DATE/TIME>`: **now**\n(more features in development)";
-    const fastEndUsage = `**USAGE:**\n\`${config.PREFIX}fast end <DATE/TIME>\`\n\n`
-        + "`<DATE/TIME>`: **now**\n(more features in development)";
+        + "`<ACTION>`: **help; start; end; see; edit; delete; see <PAST_#_OF_ENTRIES>; see <recent OR all>**";
+    const usageHelp = `Try \`${prefix}fast help\``;
+    var forceSkip, fastEmbed;
 
     // MOSTLY Fleshed out capability: Most Time Handling Edge-Cases Considered
     // const fastStartUsage = `**USAGE:**\n\`${config.PREFIX}fast start <DATE/TIME>\`\n\n`
@@ -34,9 +51,12 @@ module.exports.run = async (bot, message, args) => {
 
     // Before declaration of more variables - check if the user has any arguments
     if (args == undefined || args.length == 0) {
-        message.reply(usageMessage);
+        message.reply(usageHelp);
         return;
     }
+
+    if (args[args.length - 1] == "force") forceSkip = true;
+    else forceSkip = false;
 
     let fast = new Fast();
 
@@ -46,13 +66,8 @@ module.exports.run = async (bot, message, args) => {
     }).count();
     console.log(`fastsInProgress: ${fastsInProgress}`);
 
-    const fastRunningMessage = `You already have a **fast running!**\nIf you want to **restart** it try \`${config.PREFIX}fast edit\``
-        + `\nIf you want to **delete** the fast entry altogether try \`${prefix}fast delete\``;
-
-    const noFastRunningMessage = `You don't have a **fast running!**\nIf you want to **start** one \`${config.PREFIX}fast start <DATE/TIME>\``;
-
     const currentDate = new Date();
-    var startTimeStamp, currentTimestamp, fastEmbed;
+    var startTimeStamp, currentTimestamp;
 
     // // Check all the servers the bot is in
     // let botServers = await bot.guilds.cache.map(guild => guild.id);
@@ -78,6 +93,7 @@ module.exports.run = async (bot, message, args) => {
 
 
     switch (args[0]) {
+        case "help": message.reply(usageMessage); break;
         case "start":
             /**
              * TO ADD:
@@ -92,17 +108,28 @@ module.exports.run = async (bot, message, args) => {
             //Check if the user does not already have a fast in progress, otherwise start.
             //Using greater than equal to ensure error message sent even though 
             //any given user should not be able to have more than 1 fast running at a time
+            const fastStartUsage = `**USAGE:**\n\`${config.PREFIX}fast start <DATE/TIME>\`\n\n`
+                + "`<DATE/TIME>`: **now**\n(more features in development, i.e. set fast goal time + fast reminder,  and `<DATE/TIME>` that is not just now)";
+            const fastStartHelp = `Try \`${prefix}fast start help\``;
+            const fastRunningMessage = `You already have a **fast running!**\nIf you want to **restart** it try \`${prefix}fast edit help\``
+                + `\nIf you want to **delete** the fast entry altogether try \`${prefix}fast delete help\``;
+            if (args[1] != undefined) {
+                if (args[1].toLowerCase() == "help") {
+                    message.reply(fastStartUsage);
+                    return;
+                }
+            }
             if (fastsInProgress >= 1) {
                 message.reply(fastRunningMessage); return;
             }
             else if (args[1] == undefined || args.length == 1) {
-                message.reply(fastStartUsage); return;
+                message.reply(fastStartHelp); return;
             }
             else {
                 // Remove the "start" from the args using slice
                 startTimeStamp = fn.timeCommandHandler(args.slice(1), message.createdTimestamp);
                 if (startTimeStamp == false) {
-                    message.reply(fastStartUsage); return;
+                    message.reply(fastStartHelp); return;
                 }
                 fast = new Fast({
                     _id: mongoose.Types.ObjectId(),
@@ -127,18 +154,30 @@ module.exports.run = async (bot, message, args) => {
             break;
 
         case "end":
+            const fastEndUsage = `**USAGE:**\n\`${config.PREFIX}fast end <DATE/TIME> <force>\`\n\n`
+                + "`<DATE/TIME>`: **now**\n(more features in development, i.e. send fast to accountability chat and `<DATE/TIME>` that is not just now)"
+                + "\n\n`<force>`: type **force** at the end of your command to **skip all of the confimation windows!**";;
+            const fastEndHelp = `Try \`${prefix}fast end help\``;
+            const noFastRunningMessage = `You don't have a **fast running!**\nIf you want to **start** one \`${config.PREFIX}fast start <DATE/TIME>\``;
+
+            if (args[1] != undefined) {
+                if (args[1].toLowerCase() == "help") {
+                    message.reply(fastEndUsage);
+                    return;
+                }
+            }
             if (fastsInProgress == 0) {
                 message.reply(noFastRunningMessage);
             }
             else if (args[1] == undefined || args.length == 1) {
-                message.reply(fastEndUsage); return;
+                message.reply(fastEndHelp); return;
             }
             else {
                 // FOR Handling when the user's fast ending time is not now!
                 // Remove the "end" from the args using slice
                 const endTimestamp = fn.timeCommandHandler(args.slice(1), message.createdTimestamp);
                 if (endTimestamp == false) {
-                    message.reply(fastEndUsage); return;
+                    message.reply(fastEndHelp); return;
                 }
 
                 const currentFast = await fast.collection.findOne({
@@ -160,9 +199,10 @@ module.exports.run = async (bot, message, args) => {
                 const quickEndEmojis = ["✅", "❌", "⌚"];
                 var endConfirmation = `Are you sure you want to **end** your **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast?`;
                 const fastBreakerPrompt = "**What did you break your fast with?** \n\nType `skip` to **skip** (will **continue**, but log it as blank)";
-                const moodValuePrompt = "**How did you feel during this past fast?**\n\n(Press ❌ to **exit**)";
-                const moodValueEmojis = ["😄", "🙂", "😐", "😔", "😖", "❌"];
-                var moodResult;
+                const moodValuePrompt = "**How did you feel during this past fast?\n\nEnter a number from 1-5 (Default: null)**\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖;\n";
+                // const moodValuePrompt = "**How did you feel during this past fast?**\n\n(Press ❌ to **exit**)";
+                // const moodValueEmojis = ["😄", "🙂", "😐", "😔", "😖", "❌"];
+                // var moodResult;
                 var reflectionTextPrompt = "**Elaborate? For Example:\n - __Why__ did you feel that way?\n - What did you do that made it great? / What could you have done to __make it better__?**" +
                     "\n\nType `1` when **done**\nType `skip` to **skip** (will **continue**, but log it as blank)";
                 let quickEnd = await fn.reactionDataCollect(message, quickEndMessage, quickEndEmojis, "Fast: Quick End?", "#00FF00", 180000)
@@ -181,17 +221,26 @@ module.exports.run = async (bot, message, args) => {
 
                     // Send message for reflection with reaction moods from 1-5
                     // Listen/await for the message.author.id to reply
+                    // METHOD 1: Reaction Collect
                     // Map the corresponding response to moodValue
-                    moodValue = await fn.reactionDataCollect(message, moodValuePrompt, moodValueEmojis, "Fast: Mood Assessment", "#008000")
+                    // moodValue = await fn.reactionDataCollect(message, moodValuePrompt, moodValueEmojis, "Fast: Mood Assessment", "#008000")
+                    //     .catch(err => console.error(err));;
+                    // if (!moodValue || moodValue == "❌") return;
+                    // else {
+                    //     for (i in moodValueEmojis) {
+                    //         if (moodValue == moodValueEmojis[i]) {
+                    //             moodResult = 5 - i;
+                    //         }
+                    //     }
+                    // }
+
+                    // METHOD 2: Message Collect
+                    moodValue = await fn.messageDataCollectFirst(message, moodValuePrompt, "Fast: Mood Assessment", "#008000")
                         .catch(err => console.error(err));;
-                    if (!moodValue || moodValue == "❌") return;
-                    else {
-                        for (i in moodValueEmojis) {
-                            if (moodValue == moodValueEmojis[i]) {
-                                moodResult = 5 - i;
-                            }
-                        }
-                    }
+                    if (moodValue == "stop") return;
+                    if (isNaN(moodValue)) moodValue = null;
+                    if (moodValue > 5 || moodValue < 1) moodValue = null;
+
                     // Then proceed to prompt user with next message regarding reflection
                     // Press the X reaction to leave it blank
                     let reflection = new Array();
@@ -233,11 +282,12 @@ module.exports.run = async (bot, message, args) => {
                 else {
                     // Skip adding values to the other fields, just end the fast
                     fastBreaker = null;
-                    moodResult = null;
+                    // moodResult = null;
+                    moodValue = null;
                     reflectionText = null;
                 }
 
-                endConfirmation = endConfirmation + `\n\n**Fast Breaker:** ${fastBreaker}\n**Mood:** ${moodResult}\n**Reflection:** ${reflectionText}`;
+                endConfirmation = endConfirmation + `\n\n**Fast Breaker:** ${fastBreaker}\n**Mood:** ${moodValue}\n**Reflection:** ${reflectionText}`;
                 //If the user declines or has made a mistake, stop.
                 const confirmation = await fn.confirmationMessage(message, endConfirmation)
                     .catch(err => console.error(err));
@@ -251,7 +301,7 @@ module.exports.run = async (bot, message, args) => {
                     {
                         $set: {
                             fastDuration: fastDurationTimestamp, endTime: endTimestamp,
-                            fastBreaker: fastBreaker, mood: moodResult, reflection: reflectionText
+                            fastBreaker: fastBreaker, mood: moodValue, reflection: reflectionText
                         }
                     })
                     .then(async () => {
@@ -295,6 +345,7 @@ module.exports.run = async (bot, message, args) => {
                                 if (fastPost[messageIndex] == "0") {
                                     // Overwrite any previously collected data:
                                     if (fastBreaker == null) {
+
                                         fastPost = new Array(`Broke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!`);
                                         break;
                                     }
@@ -318,12 +369,16 @@ module.exports.run = async (bot, message, args) => {
         case "see":
             // Will add the ability to gather all of the user's data into a spreadsheet or note/JSON file!
             // **Handle users who do not yet have a fast!
-            const fastSeeHelp = `INVALID USAGE... try \`${prefix}fast see help\` (+ **more options/ways to see your fasts!**)`;
-            const fastSeeUsage = `**USAGE:**\n\`${prefix}fast see past <PAST_#_OF_ENTRIES> <FIELD>\`\n\`${prefix}fast see <#_MOST_RECENT_ENTRY> <FIELD>\``
+            const fastSeeUsage = `**USAGE:**\n\`${prefix}fast see past <PAST_#_OF_ENTRIES> <FIELD> <force>\`\n\`${prefix}fast see <#_MOST_RECENT_ENTRY> <FIELD> <force>\``
+                + `\n\`${prefix}fast see <#_OF_ENTRIES> past <STARTING_INDEX> <FIELD> <force>\``
                 + `\n\n\`<PAST_#_OF_ENTRIES>\`: **recent; all; 5** (\\*any number)`
+                + `\n\`<#_OF_ENTRIES>\` and \`<STARTING_INDEX>\`: **2** (\\*any number)`
                 + `\n\`<#_MOST_RECENT_ENTRY>\`: **recent; all** (returns entire history); **3 **(\\*3rd most recent entry, any number)`
-                + `\n\`all\`: Returns all of your past entries`;
-            + "\n`<FIELD>`: **start; end; fastbreaker; duration; reflection** (includes mood); *Default:* all fields\n(if MULTIPLE `<FIELD>`: separate by space!)";
+                + `\n\`<STARTING_INDEX>\`: 4 (any number); (you want to see \`<#_OF_ENTRIES>\` past the 4th fast)`
+                + "\n`<FIELD>`(OPT.): **start; end; fastbreaker; duration; reflection** (includes mood); *Default:* all fields\n(if MULTIPLE `<FIELD>`s: separate by space!)"
+                + "\n\n`<force>`(OPT.): type **force** at the end of your command to **skip all of the confimation windows!**";
+            const fastSeeHelp = `**INVALID USAGE**... try \`${prefix}fast see help\``;
+
             // If the user wants fast help, do not proceed to show them the fast.
             const seeCommands = ["past", "recent", "all"];
             var fastView, fastData, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText;
@@ -344,14 +399,14 @@ module.exports.run = async (bot, message, args) => {
             }
             // fast see (only):
             else {
-                message.reply(fastSeeHelp);
+                message.reply(`Try \`${prefix}fast see help\``);
                 return;
             }
             // Show the user the last fast with the most recent end time (by sorting from largest to smallest end time and taking the first):
             // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
             // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
             if (!seeCommands.includes(args[1]) && isNaN(args[1])) {
-                await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeUsage);
+                await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeHelp);
                 message.reply(fastSeeHelp);
                 return;
             }
@@ -378,7 +433,7 @@ module.exports.run = async (bot, message, args) => {
                 else if (isNumberArg) {
                     pastNumOfEntries = parseInt(args[1]);
                     if (pastNumOfEntries <= 0) {
-                        await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeUsage);
+                        await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeHelp);
                         message.reply(fastSeeHelp);
                         return;
                     }
@@ -390,7 +445,7 @@ module.exports.run = async (bot, message, args) => {
                 // After this filter:
                 // If the first argument after "see" is not past, then it is not a valid call
                 else {
-                    await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeUsage);
+                    await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeHelp);
                     message.reply(fastSeeHelp);
                     return;
                 }
@@ -402,12 +457,12 @@ module.exports.run = async (bot, message, args) => {
                     if (args[2] != undefined) {
                         // If the next argument is NotaNumber, invalid "past" command call
                         if (isNaN(args[2])) {
-                            await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeUsage);
+                            await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeHelp);
                             message.reply(fastSeeHelp);
                             return;
                         }
                         if (parseInt(args[2]) <= 0) {
-                            await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeUsage);
+                            await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeHelp);
                             message.reply(fastSeeHelp);
                             return;
                         }
@@ -419,13 +474,13 @@ module.exports.run = async (bot, message, args) => {
                         // If the next argument is undefined, implied "see all" command call unless "all" was not called:
                         // => empty "past" command call
                         if (args[1].toLowerCase() != "all") {
-                            await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeUsage);
+                            await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp, fastSeeHelp);
                             message.reply(fastSeeHelp);
                             return;
                         }
-                        const confirmSeeAllMessage = "Are you sure you want to see all of your fast history?\n\n*(IF a lot of logs, it will spam DM/server!)*";
+                        const confirmSeeAllMessage = "Are you sure you want to **see all** of your fast history?\n\n*(IF a lot of logs, it will spam DM/server!)*";
                         let confirmSeeAll = await fn.confirmationMessage(message, confirmSeeAllMessage, "Fast: See All Fasts WARNING!");
-                        if (!confirmSeeAll) return;
+                        if (!(await confirmSeeAll)) return;
                     }
                     // To assign pastNumOfEntries the argument value if not already see "all"
                     if (pastNumOfEntries == undefined) {
@@ -437,11 +492,13 @@ module.exports.run = async (bot, message, args) => {
                         .limit(pastNumOfEntries)
                         .toArray();
 
+                    fastData = "";
                     for (i = 0; i < pastNumOfEntries; i++) {
                         console.log(fastView[i]);
                         if (fastView[i] == undefined) {
+                            pastNumOfEntries = i;
                             fn.invalidInputError(message, fastSeeHelp, `**FAST ${i + 1}**+ ONWARDS DOES NOT EXIST...`, false);
-                            return;
+                            break;
                         }
                         startTimeToDate = new Date(fastView[i].startTime).toLocaleString();
                         if (i == 0 && fastView[0].endTime == null) {
@@ -454,10 +511,14 @@ module.exports.run = async (bot, message, args) => {
                         fastBreaker = fastView[i].fastBreaker;
                         moodRating = fastView[i].mood;
                         reflectionText = fastView[i].reflection;
-                        fastData = `__**Fast ${i + 1}:**__\n` + fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
-                            fastBreaker, moodRating, reflectionText);
-                        message.reply(fastData);
+                        fastData = fastData + `__**Fast ${i + 1}:**__\n` + fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
+                            fastBreaker, moodRating, reflectionText) + "\n";
                     }
+                    fastEmbed = new Discord.MessageEmbed()
+                        .setColor("#008000")
+                        .setTitle(`Fast: See ${pastNumOfEntries} Fasts`)
+                        .setDescription(fastData);
+                    message.channel.send(fastEmbed);
                     return;
                 }
 
@@ -469,14 +530,14 @@ module.exports.run = async (bot, message, args) => {
                     .skip(pastNumOfEntries - 1)
                     .toArray()
                     .catch(err => {
-                        fn.invalidInputError(message, fastSeeUsage, "INVALID NUMBER...");
+                        fn.invalidInputError(message, fastSeeHelp, "INVALID NUMBER...");
                         console.log(err);
                         return;
                     });
                 console.log(fastView);
                 // If the returned array is empty, then the fast does not exist.
                 if (fastView.length == 0) {
-                    fn.invalidInputError(message, fastSeeUsage, "FAST DOES NOT EXIST...", false);
+                    fn.invalidInputError(message, fastSeeHelp, "**FAST DOES NOT EXIST**...", false);
                     return;
                 }
 
@@ -495,24 +556,35 @@ module.exports.run = async (bot, message, args) => {
 
                 fastData = `__**Fast ${pastNumOfEntries}:**__\n` + fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
                     fastBreaker, moodRating, reflectionText);
-                message.reply(fastData);
+
+                fastEmbed = new Discord.MessageEmbed()
+                    .setColor("#008000")
+                    .setTitle(`Fast: See Fast ${pastNumOfEntries}`)
+                    .setDescription(fastData);
+                message.channel.send(fastEmbed);
 
             }
             break;
 
+        //FIX USAGE MESSAGE - doens't make sense for new feature now.
         case "delete":
-            const fastDeleteUsage = `**USAGE:**\n\`${prefix}fast delete past <PAST_#_OF_ENTRIES> <FIELD>\``
-                + `\n\`${prefix}fast delete <#_MOST_RECENT_ENTRY> <FIELD>\``
-                + `\n\`${prefix}fast delete many <RECENT_ENTRIES> <FIELD>\``
-                + "\n\n`<PAST_#_OF_ENTRIES>`: 5 (\\*any number); all \n(NOTE: Will delete more than 1 entry!)"
-                + "\n`<#_MOST_RECENT_ENTRY>`: recent; 3 (\\*3rd most recent entry, any number)\n(NOTE: Deletes just 1 entry)"
-                + "\n`<RECENT_ENTRIES>`: 3, 5, 7, 1, 25\n(**COMMA SEPARATED:** with 1 being the most recent fast, 25 the 25th most recent, etc.)"
-                + "\n`<FIELD>`: (any field you'd like to clear, doesn't remove whole fast) start; end; fastbreaker; duration; mood; reflection"
+            const fastDeleteUsage = `**USAGE:**\n\`${prefix}fast delete past <PAST_#_OF_ENTRIES> <FIELD> <force>\``
+                + `\n\`${prefix}fast delete <#_MOST_RECENT_ENTRY> <FIELD> <force>\``
+                + `\n\`${prefix}fast delete many <RECENT_ENTRIES> <FIELD> <force>\``
+                + `\n\`${prefix}fast delete <#_OF_ENTRIES> past <STARTING_INDEX> <FIELD> <force>\``
+                + "\n\n`<PAST_#_OF_ENTRIES>`: **recent; 5** (\\*any number); **all** \n(NOTE: ***# or all* will delete more than 1 entry!**)"
+                + `\n\n\`<#_OF_ENTRIES>\` and \`<STARTING_INDEX>\`: **2** (\\*any number)`
+                + "\n\n`<#_MOST_RECENT_ENTRY>`: all; recent; 3 (\\*3rd most recent entry, any number)\n(NOTE: Deletes just 1 entry - UNLESS `all`)"
+                + "\n\n`<RECENT_ENTRIES>`: 3, 5, 7, 1, 25\n(**COMMA SEPARATED:** with 1 being the most recent fast, 25 the 25th most recent, etc.)"
+                + "\n\n`<FIELD>`(OPT.): (any field you'd like to clear, doesn't remove whole fast) start; end; fastbreaker; duration; mood; reflection"
                 + "\n(if MULTIPLE `<FIELD>`s: separate by **space**!)"
-                + "\nIF you'd like to see more of your fasts first before trying to delete: `?fast see`"
-                + "\n\nIF you'd like to archive the deleted fasts as well (i.e. get the data in a .txt file) - **proceed**.\nIF you'd like to archive without deletion, try: `fast archive` (FUTURE FEATURE)\\*";
-            const fastDeleteTryHelp = "**INVALID USAGE**... try \`?fast delete help\`";
-            //IMPLEMENT a delete help function so that the user does not get spammed with the usage message!
+                + "\n\n`<force>`(OPT.): type **force** at the end of your command to **skip all of the confimation windows!**"
+                + "\n\nIF you'd like to see more of your fasts first before trying to delete: `?fast see`"
+                + "\nIF you'd like to archive the deleted fasts as well (i.e. get the data in a .txt file) - **proceed**.\nIF you'd like to archive without deletion, try: `fast archive` (FUTURE FEATURE)\\*";
+            const fastDeleteHelp = `Try \`${prefix}fast delete help\``;
+            const fastTrySee = `Try \`${prefix}fast see help\``;
+
+            // delete help command so that the user does not get spammed with the usage message!
             if (args[1] != undefined) {
                 if (args[1].toLowerCase() == "help") {
                     message.reply(fastDeleteUsage);
@@ -529,7 +601,7 @@ module.exports.run = async (bot, message, args) => {
             }
             // fast delete (only):
             else {
-                message.reply(fastDeleteTryHelp);
+                message.reply(`try \`${prefix}fast delete help\``);
                 return;
             }
 
@@ -540,26 +612,23 @@ module.exports.run = async (bot, message, args) => {
             // Show the user the most recent fast
             if (args[1] == undefined || args.length == 1) {
                 await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp);
-                message.reply(fastDeleteTryHelp);
+                message.reply(fastDeleteHelp);
                 return;
             }
 
             // delete past command:
             else if (args[2] != undefined) {
-                console.log(`args 2: ${args[2]} is defined`);
-                console.log(`args 1: ${args[1]}`);
                 if (args[1].toLowerCase() == "past") {
-                    console.log("delete past command call");
                     // If the following argument is not a number, exit!
                     if (isNaN(args[2])) {
                         await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp);
-                        message.reply(fastDeleteTryHelp);
+                        message.reply(fastDeleteHelp);
                         return;
                     }
                     var numberArg = parseInt(args[2]);
                     if (numberArg <= 0) {
                         await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp);
-                        message.reply(fastDeleteTryHelp);
+                        message.reply(fastDeleteHelp);
                         return;
                     }
                     // Start with an empty string as it will be iteratively populated
@@ -576,8 +645,9 @@ module.exports.run = async (bot, message, args) => {
                             break;
                         }
                         startTimeToDate = new Date(fastView[i].startTime).toLocaleString();
-                        if (i == 0 && fastView[0].endTime == null) {
-                            endTimeToDate = null;
+                        if (i == 0) {
+
+                            if (fastView[0].endTime == null) endTimeToDate = null;
                         }
                         else {
                             endTimeToDate = new Date(fastView[i].endTime);
@@ -590,6 +660,11 @@ module.exports.run = async (bot, message, args) => {
                         fastData = `__**Fast ${i + 1}:**__\n` + fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
                             fastBreaker, moodRating, reflectionText);
                         deleteConfirmMessage = deleteConfirmMessage + fastData + "\n";
+
+                        // at the last element
+                        if (i == numberArg - 1) {
+                            deleteConfirmMessage = `Are you sure you want to **delete ${numberArg} fasts?:**\n` + deleteConfirmMessage;
+                        }
                     }
 
                     if (await fn.confirmationMessage(message, deleteConfirmMessage, `Fast: Delete Past ${numberArg} Fasts`, 600000)) {
@@ -598,30 +673,134 @@ module.exports.run = async (bot, message, args) => {
                         console.log(`Deleting ${message.author.id}'s Past ${numberArg} Fasts`);
                         fast.collection.deleteMany({ _id: { $in: fastTargetIDs } });
                     }
-                    else return;
+                    else {
+                        return;
+                    }
                 }
+            }
+            // They haven't specified the field for the fast delete past function
+            else if (args[1] == "past") {
+                message.reply(fastDeleteHelp);
+                return;
             }
             // Next: FAST DELETE ALL
             // Next: FAST DELETE MANY
             // Next: FAST DELETE
 
+            // fast delete <NUMBER/RECENT/ALL>
             else {
+                var deleteConfirmMessage = "";
+                var fastTargetIDs = new Array();
                 var pastNumOfEntries;
-                // To check if the given argument is a number!
-                const isNumberArg = !isNaN(args[2]);
-                var allEntries;
-                switch (args[2]) {
-                    case "recent": pastNumOfEntries = 1;
-                        break;
-                    case "all": pastNumOfEntries = await fast.collection.countDocuments({ userID: message.author.id });
-                        break;
-                    case isNumberArg: pastNumOfEntries = args[2].parseInt();
-                        break;
-                    default:
-                        await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp);
-                        message.reply(fastDeleteTryHelp);
+                const confirmDeleteAllMessage = "Are you sure you want to **delete all** of your recorded fasts?" +
+                    `\n\n*(I'd suggest you* \`${prefix}fast see all\` *or* \`${prefix}fast archive all\` *first)*`;
+                if (isNaN(args[1])) {
+                    if (args[1].toLowerCase() == "recent") {
+                        fastView = await fast.collection.find({ userID: message.author.id })
+                            .sort({ startTime: -1 })
+                            .limit(1)
+                            .toArray();
+                        if (fastView.length == 0) {
+                            fn.invalidInputError(message, fastDeleteHelp, `**NO FASTS**... try \`${prefix}fast start help\``, false);
+                            return;
+                        }
+                        startTimeToDate = new Date(fastView[0].startTime).toLocaleString();
+                        if (fastView[0].endTime == null) {
+                            endTimeToDate = null;
+                        }
+                        else {
+                            endTimeToDate = new Date(fastView[0].endTime);
+                        }
+                        fastDuration = fastView[0].fastDuration;
+                        fastBreaker = fastView[0].fastBreaker;
+                        moodRating = fastView[0].mood;
+                        reflectionText = fastView[0].reflection;
+                        fastTargetIDs.push(fastView[0]._id);
+                        deleteConfirmMessage = "Are you sure you want to **delete your most recent fast?:**\n\n__**Fast 1:**__\n" +
+                            fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
+                                fastBreaker, moodRating, reflectionText);
+                        if (await fn.confirmationMessage(message, deleteConfirmMessage, `Fast: Delete Recent Fast`, 300000)) {
+                            // Must Find the array of cursors first (map _id), then delete only args[3] of them
+                            // Sort from greatest endtime => most recent!
+                            console.log(`Deleting ${message.author.id}'s Recent Fast`);
+                            fast.collection.deleteOne({ _id: { $in: fastTargetIDs } });
+                            return;
+                        }
+                    }
+                    else if (args[1].toLowerCase() == "all") {
+                        pastNumOfEntries = await fast.collection.find({ userID: message.author.id }).count();
+                        if (pastNumOfEntries == 0) {
+                            fn.invalidInputError(message, fastDeleteHelp, `**NO FASTS**... try \`${prefix}fast start help\``, false);
+                            return;
+                        }
+                        let confirmDeleteAll = await fn.confirmationMessage(message, confirmDeleteAllMessage, "Fast: Delete All Fasts WARNING!");
+                        if (!(await confirmDeleteAll)) return;
+                        console.log(`Deleting ALL OF ${message.author.id}'s Recorded Fasts`);
+                        fast.collection.deleteMany({ userID: message.author.id });
                         return;
+                    }
+                    else {
+                        message.reply(fastDeleteHelp);
+                        return;
+                    }
                 }
+                else {
+                    pastNumOfEntries = parseInt(args[1]);
+                    fastView = await fast.collection
+                        .find({ userID: message.author.id })
+                        .sort({ startTime: -1 })
+                        .limit(1)
+                        .skip(pastNumOfEntries - 1)
+                        .toArray()
+                        .catch(err => {
+                            fn.invalidInputError(message, fastDeleteHelp, "**INVALID NUMBER**...");
+                            console.log(err);
+                            return;
+                        });
+                    if (fastView.length == 0) {
+                        fn.invalidInputError(message, fastTrySee, "**FAST DOES NOT EXIST**...");
+                        return;
+                    }
+                    startTimeToDate = new Date(fastView[0].startTime).toLocaleString();
+                    if (fastView[0].endTime == null) {
+                        endTimeToDate = null;
+                    }
+                    else {
+                        endTimeToDate = new Date(fastView[0].endTime);
+                    }
+                    fastDuration = fastView[0].fastDuration;
+                    fastBreaker = fastView[0].fastBreaker;
+                    moodRating = fastView[0].mood;
+                    reflectionText = fastView[0].reflection;
+                    fastTargetIDs.push(fastView[0]._id);
+                    deleteConfirmMessage = `Are you sure you want to **delete Fast ${pastNumOfEntries}?:**\n\n__**Fast ${pastNumOfEntries}:**__\n` +
+                        fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
+                            fastBreaker, moodRating, reflectionText);
+                    if (await fn.confirmationMessage(message, deleteConfirmMessage, `Fast: Delete Fast ${pastNumOfEntries}`, 300000)) {
+                        // Must Find the array of cursors first (map _id), then delete only args[3] of them
+                        // Sort from greatest endtime => most recent!
+                        console.log(`Deleting ${message.author.id}'s Recent Fast`);
+                        fast.collection.deleteOne({ _id: { $in: fastTargetIDs } });
+                        return;
+                    }
+
+                }
+                //     var pastNumOfEntries;
+                //     // To check if the given argument is a number!
+                //     const isNumberArg = !isNaN(args[2]);
+                //     var allEntries;
+                //     switch (args[2]) {
+                //         case "recent": pastNumOfEntries = 1;
+                //             break;
+                //         case "all": pastNumOfEntries = await fast.collection.countDocuments({ userID: message.author.id });
+                //             break;
+                //         case isNumberArg: pastNumOfEntries = args[2].parseInt();
+                //             break;
+                //         default:
+                //             await fn.showRecentFast(message, fast, fastsInProgress, currentTimestamp);
+                //             message.reply(fastDeleteHelp);
+                //             return;
+                //     }
             }
             break;
 
@@ -634,12 +813,12 @@ module.exports.run = async (bot, message, args) => {
         // break;
 
         default:
-            message.channel.send(usageMessage);
+            message.reply(usageHelp);
             break;
     }
 }
 
 module.exports.help = {
     name: "fast",
-    aliases: ["if"]
+    aliases: ["if", "fasts"]
 }

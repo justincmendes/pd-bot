@@ -11,6 +11,8 @@ module.exports.run = async (bot, message, args) => {
     // Others can only edit their own
     // Collect 1 message per user and put it beside their tag!
 
+    // Long-Term Goal Creation (store in DB and allow user to edit it in the channel!)
+
     // Scriber Mode: Admin team OR a specific role only can add to the messages (when event is called)
 
     // All Mode: anyone who types can change add to and change their reflection! If they type 1, finalize
@@ -53,5 +55,6 @@ module.exports.run = async (bot, message, args) => {
 }
 
 module.exports.help = {
-    name: "mastermind"
+    name: "mastermind",
+    aliases: ["mm", "master"]
 }

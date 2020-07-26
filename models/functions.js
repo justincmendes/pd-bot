@@ -71,6 +71,7 @@ module.exports = {
         return confirmation;
     },
 
+    // BUG: When user reacts too soon, the code breaks, figure out how to let it keep running!
     reactionDataCollect: async function (message, prompt, emojiArray, title = "Reaction", colour = "#ADD8E6", delayTime = 60000, promptMessageDelete = true) {
         const userOriginal = message.author.id;
         var result;
@@ -79,13 +80,16 @@ module.exports = {
 
         const embed = new Discord.MessageEmbed()
             .setColor(colour)
-            .setTitle(title)
+            .setTitle(title + "\n(*PLEASE WAIT UNTIL ALL REACTIONS SHOW* or else it will EXIT)")
             .setDescription(prompt);
 
         await message.channel.send(embed)
+
+        // FIX BUG WHEN USER REACTS TOO SOON! Allow the code to keep running!
             .then(async confirm => {
-                emojiArray.forEach(async (emoji, i) => {
-                    await confirm.react(emoji);
+                emojiArray.forEach((emoji, i) => {
+                    confirm.react(emoji)
+                    .catch(err => console.error(err));
                 });
 
                 const filter = (reaction, user) => {
@@ -115,7 +119,10 @@ module.exports = {
                         console.log(`Reaction Value (in function): undefined`);
                         return false;
                     });
-            }).catch(err => console.error(err));
+            }).catch(err => {
+                console.error(err);
+                return;
+            });
         return result;
     },
 
@@ -289,7 +296,7 @@ module.exports = {
         fastData = this.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
             fastBreaker, moodRating, reflectionText)
         if (fastsInProgress >= 1) {
-            fastData = fastData + `\n(\\*Want to end your fast? \`${prefix}fast end\`)`;
+            fastData = fastData + `\n(Want to end your fast? \`${prefix}fast end\`)`;
         }
         fastEmbed = new Discord.MessageEmbed()
             .setColor("#00FF00")
