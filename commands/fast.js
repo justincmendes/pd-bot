@@ -74,7 +74,7 @@ module.exports.run = async (bot, message, args) => {
     console.log(`fastsInProgress: ${fastsInProgress}`);
 
     const currentDate = new Date();
-    var startTimeStamp, currentTimestamp;
+    var startTimestamp, currentTimestamp;
 
     switch (args[0]) {
         case "help": message.reply(usageMessage); break;
@@ -115,15 +115,15 @@ module.exports.run = async (bot, message, args) => {
             }
             else {
                 // Remove the "start" from the args using slice
-                startTimeStamp = fn.timeCommandHandler(args.slice(1), message.createdTimestamp);
-                if (startTimeStamp == false) {
+                startTimestamp = fn.timeCommandHandler(args.slice(1), message.createdTimestamp);
+                if (startTimestamp == false) {
                     message.reply(fastStartHelp); return;
                 }
                 fast = new Fast({
                     _id: mongoose.Types.ObjectId(),
                     userID: message.author.id,
                     //using new Date().getTime() gives the time in milliseconds since Jan 1, 1970 00:00:00
-                    startTime: startTimeStamp,
+                    startTime: startTimestamp,
 
                     //if the endTime or fastDuration is null that indicates that the fast is still going
                     endTime: null,
@@ -178,9 +178,9 @@ module.exports.run = async (bot, message, args) => {
                 })
                     .catch(err => console.error(err));
                 const currentFastUser = currentFast.userID;
-                const startTimeStamp = currentFast.startTime;
-                const fastDurationTimestamp = endTimestamp - startTimeStamp;
-                console.log(`${currentFastUser}'s fast start timestamp: ${startTimeStamp}`);
+                startTimestamp = currentFast.startTime;
+                const fastDurationTimestamp = endTimestamp - startTimestamp;
+                console.log(`${currentFastUser}'s fast start timestamp: ${startTimestamp}`);
                 console.log(`${currentFastUser}'s fast duration timestamp (if ending now): ${fastDurationTimestamp}`);
 
                 // EVEN if the time is not now it will be handled accordingly
@@ -255,7 +255,7 @@ module.exports.run = async (bot, message, args) => {
                             // Overwrite any previously collected data: Make sure the user wants to do that
                             if (await fn.confirmationMessage(message, "Are you sure you want to **skip?** Your current reflection entry will be lost!",
                                 "Fast: Skip Reflection Confirmation")) {
-                                reflection = new Array(null);
+                                reflectionText = "";
                                 break;
                             }
                         }
@@ -313,10 +313,11 @@ module.exports.run = async (bot, message, args) => {
                             // FUTURE: Save messages to an array so that, on the sent post, there will be a reaction collect and it will allow the user to edit or delete their post!
                             // TAG @user in the post so that you can retrieve this information with partials! (getting the first @user.author.id): "@user 's fast:"
                             // **CANNOT COLLECTED IMAGES! Make a new function in fn! to listen to messages WITH pictures attached - while copying that object or image link to the final embed!
-                            var fastPostMessagePrompt = "Please enter the message(s) you'd like to send. (you can send pictures!)\nType `0` for **default message with fast breaker**\nType `1` when **done**!\n";
+                            var fastPostMessagePrompt = "Please enter the message(s) you'd like to send. (you can send pictures!)"
+                                + "\nType `0` for **default message with fast breaker**\nType `1` when **done**!\nType `2` **to post full fast**";
                             const endTimeToDate = new Date(endTimestamp).toLocaleString();
                             let messageIndex = 0;
-                            let fastPost;
+                            let fastPost = "";
                             var collectedMessage, confirmOverwrite;
                             // fastPost.push();
                             // Loop it to collect the first message given and store it, if that message is 0, 1, or stop then handle accordingly
@@ -325,6 +326,7 @@ module.exports.run = async (bot, message, args) => {
                                 collectedMessage = await fn.messageDataCollectFirst(message, fastPostMessagePrompt, "Fast: Post Creation", "#ADD8E6", 1800000);
                                 if (collectedMessage === false) return;
                                 if (messageIndex === 1) {
+                                    if (collectedEdit == "1") break;
                                     fastPostMessagePrompt = fastPostMessagePrompt + "\n**Current Message:**\n" + collectedMessage + "\n";
                                     fastPost = collectedMessage + "\n";
                                 }
@@ -353,6 +355,20 @@ module.exports.run = async (bot, message, args) => {
                                         }
                                     }
                                 }
+                                if (collectedMessage = "2") {
+                                    // Overwrite any previously collected data: Confirm first, if confirmed exit and post, otherwise continue loop
+                                    confirmOverwrite = await fn.confirmationMessage(message, "Are you sure you want to "
+                                        + "**overwrite** your current message with the **full fast post (including mood and reflection)?**"
+                                        + "\n\n(**Your current message progress will be lost**)",
+                                        "Fast Post: Overwrite with Full Fast Post", 60000, 0, "\n\nSelect ✅ to **overwrite and post**\nSelect ❌ to **continue with message creation**")
+                                        .catch(err => console.error(err));
+                                    if (confirmOverwrite) {
+                                        startTimeToDate = new Date(startTimestamp).toLocaleString();
+                                        fastPost = fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDurationTimestamp,
+                                            fastBreaker, moodValue, reflectionText);
+                                    }
+                                    break;
+                                }
                             }
                             while (true)
                             // Ideally, format output with new line for every message sent! \n
@@ -360,7 +376,7 @@ module.exports.run = async (bot, message, args) => {
                             // Now Send the Fast Post to desired channel
                             fn.sendMessageToChannel(bot, message, fastPost,
                                 `Exiting... try \`${prefix}fast post\` to try to **post again!**`, "#00FF00",
-                                "Fast: Post to Server", "Fast: Post to Channel", `${message.author.username}'s ${endTimeToDate} Fast`);
+                                "Fast: Post to Server", "Fast: Post to Channel", `${message.author.username}'s - ${endTimeToDate} - Fast`);
                         }
                     })
                     .catch(err => console.error(`Failed to end fast ${err}`));
@@ -984,8 +1000,8 @@ module.exports.run = async (bot, message, args) => {
                 // Field the user wants to edit
                 do {
                     fieldToEdit = await fn.messageDataCollectFirst(message, `**Which field do you want to edit?:**\n ${fieldsView}`
-                        + `\n***NO START/END DATE EDITING YET*** AND \n**FAST DURATION** CAN ONLY BE CHANGED TO **NOW**,\n(In Development...)\n\n__**Fast ${pastNumOfEntries}:**__\n${showFast}`,
-                         "Fast: Fast Edit Field", "00FF00", 180000);
+                        + `\n***NO \`<START/END_DATE/TIME>\` EDITING YET*** AND \n**\`fastDuration\`** CAN ONLY BE CHANGED TO **\`now\`**,\n(In Development...)\n\n__**Fast ${pastNumOfEntries}:**__\n${showFast}`,
+                        "Fast: Fast Edit Field", "00FF00", 180000);
                     if (fieldToEdit === false) return;
                     if (isNaN(fieldToEdit)) {
                         if (fieldToEdit.toLowerCase() == "stop") return;
@@ -1015,14 +1031,18 @@ module.exports.run = async (bot, message, args) => {
                 let messageIndex = 0;
                 var collectedEdit, userEdit;
                 fastEditMessagePrompt = `**What will you change your *${fastFields[fieldToEdit]}* to?:**\n`;
-                if(fieldToEdit == 2) {
+                if (fieldToEdit == 2) {
                     fastEditMessagePrompt = fastEditMessagePrompt + "***(ONLY possible edit = `now`)***\n";
                 }
-                else if(fieldToEdit == 4) {
+                else if (fieldToEdit == 4) {
                     fastEditMessagePrompt = fastEditMessagePrompt + "***(Please enter a number from `1-5`)***\n";
                 }
-                fastEditMessagePrompt = fastEditMessagePrompt + `\nType \`1\` when you're **done!**\n`;
-                    
+                else if (fieldToEdit == 5) {
+                    fastEditMessagePrompt = fastEditMessagePrompt + "__**Reflection Questions:**__\n-__Why__ did you feel that way?\n"
+                        + "- What did you do that made it great? / What could you have done to __make it better__?\n";
+                }
+                fastEditMessagePrompt = fastEditMessagePrompt + `\nType \`0\` when you're **done!**\n`;
+
 
                 // Collect User Edit
                 do {
@@ -1030,10 +1050,11 @@ module.exports.run = async (bot, message, args) => {
                     collectedEdit = await fn.messageDataCollectFirst(message, fastEditMessagePrompt, "Fast: Fast Edit", "00FF00", 600000);
                     if (collectedEdit === false) return;
                     if (messageIndex === 1) {
+                        if (collectedEdit == "0") break;
                         fastEditMessagePrompt = fastEditMessagePrompt + "\n**Current Edit:**\n" + collectedEdit + "\n";
                         userEdit = collectedEdit;
                     }
-                    else if (collectedEdit == "1") break;
+                    else if (collectedEdit == "0") break;
                     else {
                         fastEditMessagePrompt = fastEditMessagePrompt + collectedEdit + "\n";
                         userEdit = "\n" + userEdit + collectedEdit + "\n";
@@ -1065,8 +1086,33 @@ module.exports.run = async (bot, message, args) => {
                 editConfirmMessage = `Are you sure you want to **edit fast ${pastNumOfEntries}'s ${fastFields[fieldToEdit]}?:**\n\n__**Fast ${pastNumOfEntries}:**__\n` + showFast;
                 if (await fn.confirmationMessage(message, editConfirmMessage, `Fast: Edit Fast ${pastNumOfEntries}`, 300000)) {
                     console.log(`Editing ${message.author.id}'s Fast ${pastNumOfEntries}`);
-                    fast.collection.updateOne({ _id: fastTargetID }, { $set: { fastFields: collectedEdit } })
-                        .catch(err => console.error(err));
+
+                    switch (fieldToEdit) {
+                        case 0:
+                            fast.collection.updateOne({ _id: fastTargetID }, { $set: { startTime: startTimestamp } })
+                                .catch(err => console.error(err));
+                            break;
+                        case 1:
+                            fast.collection.updateOne({ _id: fastTargetID }, { $set: { endTime: endTimestamp } })
+                                .catch(err => console.error(err));
+                            break;
+                        case 2:
+                            fast.collection.updateOne({ _id: fastTargetID }, { $set: { fastDuration: fastDuration } })
+                                .catch(err => console.error(err));
+                            break;
+                        case 3:
+                            fast.collection.updateOne({ _id: fastTargetID }, { $set: { fastBreaker: fastBreaker } })
+                                .catch(err => console.error(err));
+                            break;
+                        case 4:
+                            fast.collection.updateOne({ _id: fastTargetID }, { $set: { mood: moodRating } })
+                                .catch(err => console.error(err));
+                            break;
+                        case 5:
+                            fast.collection.updateOne({ _id: fastTargetID }, { $set: { reflection: reflectionText } })
+                                .catch(err => console.error(err));
+                            break;
+                    }
                     return;
                 }
                 else {
@@ -1079,8 +1125,6 @@ module.exports.run = async (bot, message, args) => {
                 }
 
             }
-
-
             break;
 
         // ALIAS: "send"
