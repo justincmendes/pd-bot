@@ -5,9 +5,9 @@
  */
 
 //To keep the sensitive information in a separate folder
-const botSettings = require("./botsettings.json");
-const token = botSettings.TOKEN;
-const prefix = botSettings.PREFIX;
+require("dotenv").config();
+const token = process.env.TOKEN;
+const prefix = process.env.PREFIX;
 
 const Discord = require("discord.js");
 const bot = new Discord.Client({ partials: ["MESSAGE", "CHANNEL", "REACTION"] });

@@ -1,8 +1,9 @@
 const Discord = require("discord.js");
 const UserSettings = require("../models/usersettings");
 const mongoose = require("mongoose");
-const config = require("../botsettings.json");
 const fn = require("../utils/functions");
+require("dotenv").config();
+const prefix = process.env.PREFIX;
 
 module.exports.run = async (bot, message, args) => {
 // To quickly log some you've completed in an Accountability chat (something that is not a habit!)

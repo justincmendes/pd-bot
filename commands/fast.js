@@ -1,11 +1,10 @@
 const Discord = require("discord.js");
-const botSettings = require("../botsettings.json");
-const prefix = botSettings.PREFIX;
 const Fast = require("../models/fasting.js");
 const UserSettings = require("../models/usersettings");
 const mongoose = require("mongoose");
-const config = require("../botsettings.json");
 const fn = require("../utils/functions");
+require("dotenv").config();
+const prefix = process.env.PREFIX;
 
 // MAKE Help usage function*
 
@@ -33,7 +32,7 @@ const fn = require("../utils/functions");
 // CREATE Fast Post command!! (using fast see and fast end's logic => make functions to make the code more readable and reusable)
 
 module.exports.run = async (bot, message, args) => {
-    const usageMessage = `**USAGE:**\n\`${config.PREFIX}fast <ACTION>\`\n\n`
+    const usageMessage = `**USAGE:**\n\`${prefix}fast <ACTION>\`\n\n`
         + "`<ACTION>`: **help; start; end; see; edit; delete; see <PAST_#_OF_ENTRIES>; see <recent OR all>**";
     const usageHelp = `Try \`${prefix}fast help\``;
     var forceSkip, fastEmbed;
@@ -92,7 +91,7 @@ module.exports.run = async (bot, message, args) => {
             //Check if the user does not already have a fast in progress, otherwise start.
             //Using greater than equal to ensure error message sent even though 
             //any given user should not be able to have more than 1 fast running at a time
-            var fastStartUsage = `**USAGE:**\n\`${config.PREFIX}fast start <DATE/TIME>\`\n\n`
+            var fastStartUsage = `**USAGE:**\n\`${prefix}fast start <DATE/TIME>\`\n\n`
                 + "`<DATE/TIME>`: **now**\n\n(more features in development, i.e. set fast goal time + fast reminder,  and <DATE/TIME> natural language processor";
             fastStartUsage = new Discord.MessageEmbed()
                 .setColor("#00FF00")
@@ -142,7 +141,7 @@ module.exports.run = async (bot, message, args) => {
             break;
 
         case "end":
-            var fastEndUsage = `**USAGE:**\n\`${config.PREFIX}fast end <DATE/TIME> <force>\`\n\n`
+            var fastEndUsage = `**USAGE:**\n\`${prefix}fast end <DATE/TIME> <force>\`\n\n`
                 + "`<DATE/TIME>`: **now**\n\n(more features in development, i.e. send fast to accountability chat and <DATE/TIME> that is not just now)"
                 + "\n\n`<force>`: type **force** at the end of your command to **skip all of the confimation windows!**";
             fastEndUsage = new Discord.MessageEmbed()
@@ -150,7 +149,7 @@ module.exports.run = async (bot, message, args) => {
                 .setTitle(`Fast: Fast End Help`)
                 .setDescription(fastEndUsage);
             const fastEndHelp = `Try \`${prefix}fast end help\``;
-            const noFastRunningMessage = `You don't have a **fast running!**\nIf you want to **start** one \`${config.PREFIX}fast start <DATE/TIME>\``;
+            const noFastRunningMessage = `You don't have a **fast running!**\nIf you want to **start** one \`${prefix}fast start <DATE/TIME>\``;
 
             if (args[1] != undefined) {
                 if (args[1].toLowerCase() == "help") {

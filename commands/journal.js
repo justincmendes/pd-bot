@@ -2,8 +2,9 @@ const Discord = require("discord.js");
 const DailyJournal = require("../models/dailyjournal.js");
 const WeeklyJournal = require("../models/weeklyjournal.js");
 const mongoose = require("mongoose");
-const config = require("../botsettings.json");
 const fn = require("../utils/functions");
+require("dotenv").config();
+const prefix = process.env.PREFIX;
 
 module.exports.run = async (bot, message, args) => {
     //At the end of every week, or when they submit their weekly journal reflection, send them a textfile of their weeks entries (press the paperclip)

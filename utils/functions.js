@@ -2,8 +2,8 @@
  * File of all the important reusable functions!
  */
 const Discord = require("discord.js");
-const botSettings = require("../botsettings.json");
-const prefix = botSettings.PREFIX;
+require("dotenv").config();
+const prefix = process.env.PREFIX;
 
 module.exports = {
     confirmationMessage: async function (message, confirmMessage, title = "Confirmation", delayTime = 60000, deleteDelay = 3000,

@@ -2,8 +2,9 @@ const Discord = require("discord.js");
 const botSettings = require("../botsettings.json");
 const prefix = botSettings.PREFIX;
 const mongoose = require("mongoose");
-const config = require("../botsettings.json");
 const fn = require("../utils/functions");
+require("dotenv").config();
+const prefix = process.env.PREFIX;
 
 module.exports.run = async (bot, message, args) => {
     message.channel.send(`This server's **current prefix** is **${prefix}**\n(SOON server managers can change prefix by: \`${prefix}prefix <PREFIX>\`)`);

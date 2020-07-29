@@ -2,8 +2,9 @@ const Discord = require("discord.js");
 const Habits = require("../models/habittracker.js");
 const UserSettings = require("../models/usersettings");
 const mongoose = require("mongoose");
-const config = require("../botsettings.json");
 const fn = require("../utils/functions");
+require("dotenv").config();
+const prefix = process.env.PREFIX;
 
 module.exports.run = async (bot, message, args) => {
     // create, archive, current, see <progress for this habit>, pastweek (as per Sunday reset), past <number>
