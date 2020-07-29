@@ -6,7 +6,7 @@ const fn = require("../utils/functions");
 require("dotenv").config();
 const prefix = process.env.PREFIX;
 
-// MAKE Help usage function*
+// Handle TIMEZONES - based on userSettings!
 
 // Handle <FIELD>s for each function call!
 
