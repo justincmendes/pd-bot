@@ -1,6 +1,4 @@
 const Discord = require("discord.js");
-const botSettings = require("../botsettings.json");
-const prefix = botSettings.PREFIX;
 const mongoose = require("mongoose");
 const fn = require("../utils/functions");
 require("dotenv").config();
