@@ -5,8 +5,8 @@ const fastSchema = mongoose.Schema({
     userID: String,
     startTime: Number,
     endTime: Number,
-    fastBreaker: String,
     fastDuration: Number,
+    fastBreaker: String,
     mood: Number,
     reflection: String
 });

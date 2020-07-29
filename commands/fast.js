@@ -9,6 +9,8 @@ const fn = require("../utils/functions");
 
 // MAKE Help usage function*
 
+// Handle <FIELD>s for each function call!
+
 // IF USER TYPES `force` at the end, skip the confirmation window! FOR ALL FUNCTIONS!
 // <FORCE>
 
@@ -19,7 +21,7 @@ const fn = require("../utils/functions");
 // Also put a cooldown on the see function!**
 
 
-// SCROLL mode for see and delete:
+// SCROLL mode for see and delete: "cursor"
 // For ?fast see/?fast delete: MAKE AN ITERATIVE PROCESS to show all fasts from 1-n and have the user confirm when they are finished seeing
 // or if the fast they are looking at is the fast they want to delete (after deletion ask if they want to continue scrolling!) (MAKE THIS A MESSAGEAWAIT) FOR SPEED!
 
@@ -91,7 +93,7 @@ module.exports.run = async (bot, message, args) => {
             //Using greater than equal to ensure error message sent even though 
             //any given user should not be able to have more than 1 fast running at a time
             var fastStartUsage = `**USAGE:**\n\`${config.PREFIX}fast start <DATE/TIME>\`\n\n`
-                + "`<DATE/TIME>`: **now**\n(more features in development, i.e. set fast goal time + fast reminder,  and `<DATE/TIME>` that is not just now)";
+                + "`<DATE/TIME>`: **now**\n\n(more features in development, i.e. set fast goal time + fast reminder,  and <DATE/TIME> natural language processor";
             fastStartUsage = new Discord.MessageEmbed()
                 .setColor("#00FF00")
                 .setTitle(`Fast: Fast Start Help`)
@@ -141,7 +143,7 @@ module.exports.run = async (bot, message, args) => {
 
         case "end":
             var fastEndUsage = `**USAGE:**\n\`${config.PREFIX}fast end <DATE/TIME> <force>\`\n\n`
-                + "`<DATE/TIME>`: **now**\n(more features in development, i.e. send fast to accountability chat and `<DATE/TIME>` that is not just now)"
+                + "`<DATE/TIME>`: **now**\n\n(more features in development, i.e. send fast to accountability chat and <DATE/TIME> that is not just now)"
                 + "\n\n`<force>`: type **force** at the end of your command to **skip all of the confimation windows!**";
             fastEndUsage = new Discord.MessageEmbed()
                 .setColor("#00FF00")
@@ -204,6 +206,7 @@ module.exports.run = async (bot, message, args) => {
                     // which can be referenced later or sent to a server when DMs are handled!
                     fastBreaker = await fn.messageDataCollectFirst(message, fastBreakerPrompt, "Fast: Fast Breaker!", "#32CD32", 300000);
                     console.log(fastBreaker);
+                    if (fastBreaker === false) return;
                     if (fastBreaker == "stop") return;
                     else if (fastBreaker == "skip") {
                         fastBreaker = null;
@@ -227,7 +230,7 @@ module.exports.run = async (bot, message, args) => {
                     // METHOD 2: Message Collect
                     moodValue = await fn.messageDataCollectFirst(message, moodValuePrompt, "Fast: Mood Assessment", "#008000")
                         .catch(err => console.error(err));;
-                    if (moodValue == "stop") return;
+                    if (moodValue == "stop" || moodValue === false) return;
                     if (isNaN(moodValue)) moodValue = null;
                     if (moodValue > 5 || moodValue < 1) moodValue = null;
 
@@ -240,6 +243,7 @@ module.exports.run = async (bot, message, args) => {
                     // Loop it to collect the first message given and store it, if that message is 0, 1, or stop then handle accordingly
                     do {
                         reflection.push(await fn.messageDataCollectFirst(message, reflectionTextPrompt, "Fast: Reflection", "#00FF00", 900000));
+                        if (reflection[messageIndex] === false) return;
                         if (reflection[messageIndex] == "1") {
                             // Delete "1" from the end:
                             reflection.pop();
@@ -302,7 +306,7 @@ module.exports.run = async (bot, message, args) => {
                          */
                         const confirmPostFastMessage = "Would you like to take a **picture** of your **fast breaker** *and/or* **send a message** to a server channel? (for accountability!)"
                             + "\n\n(if ✅, I will list the servers you're in to find the channel you want to post to!)";
-                        let confirmPostFast = await fn.confirmationMessage(message, confirmPostFastMessage, "Send Message for Accountability?", 45000, 0)
+                        let confirmPostFast = await fn.confirmationMessage(message, confirmPostFastMessage, "Send Message for Accountability?", 60000, 0)
                             .catch(err => console.error(err))
                         if (!confirmPostFast) return;
                         else {
@@ -319,12 +323,12 @@ module.exports.run = async (bot, message, args) => {
                             do {
                                 messageIndex++;
                                 collectedMessage = await fn.messageDataCollectFirst(message, fastPostMessagePrompt, "Fast: Post Creation", "#ADD8E6", 1800000);
-
+                                if (collectedMessage === false) return;
                                 if (messageIndex === 1) {
                                     fastPostMessagePrompt = fastPostMessagePrompt + "\n**Current Message:**\n" + collectedMessage + "\n";
-                                    fastPost = fastPost + collectedMessage + "\n";
+                                    fastPost = collectedMessage + "\n";
                                 }
-                                else {
+                                else if (collectedMessage != "0") {
                                     fastPostMessagePrompt = fastPostMessagePrompt + collectedMessage + "\n";
                                     fastPost = fastPost + collectedMessage + "\n";
                                 }
@@ -340,7 +344,6 @@ module.exports.run = async (bot, message, args) => {
                                         .catch(err => console.error(err));
                                     if (confirmOverwrite) {
                                         if (fastBreaker == null) {
-
                                             fastPost = `Broke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!`;
                                             break;
                                         }
@@ -380,12 +383,14 @@ module.exports.run = async (bot, message, args) => {
                 .setColor("#00FF00")
                 .setTitle(`Fast: Fast See Help`)
                 .setDescription(fastSeeUsage);
-            const fastSeeHelp = `**INVALID USAGE**... try \`${prefix}fast see help\``;
+            const fastSeeHelp = `**INVALID USAGE**... Try \`${prefix}fast see help\``;
 
             // If the user wants fast help, do not proceed to show them the fast.
             const seeCommands = ["past", "recent", "all"];
             var fastView, fastData, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText;
             currentTimestamp = fn.timeCommandHandler(["now"], message.createdTimestamp);
+
+            // MAKE THIS OPERATION INTO A FUNCTION!
             if (args[1] != undefined) {
                 if (args[1].toLowerCase() == "help") {
                     message.channel.send(fastSeeUsage);
@@ -594,7 +599,7 @@ module.exports.run = async (bot, message, args) => {
                 .setTitle(`Fast: Fast Delete Help`)
                 .setDescription(fastDeleteUsage);
             const fastDeleteHelp = `Try \`${prefix}fast delete help\``;
-            const fastTrySee = `Try \`${prefix}fast see help\``;
+            const fastDeleteTrySee = `Try \`${prefix}fast see help\``;
 
             // delete help command so that the user does not get spammed with the usage message!
             if (args[1] != undefined) {
@@ -613,7 +618,7 @@ module.exports.run = async (bot, message, args) => {
             }
             // fast delete (only):
             else {
-                message.reply(`try \`${prefix}fast delete help\``);
+                message.reply(`Try \`${prefix}fast delete help\``);
                 return;
             }
 
@@ -844,7 +849,7 @@ module.exports.run = async (bot, message, args) => {
                             return;
                         });
                     if (fastView.length == 0) {
-                        fn.invalidInputError(message, fastTrySee, "**FAST DOES NOT EXIST**...");
+                        fn.invalidInputError(message, fastDeleteTrySee, "**FAST DOES NOT EXIST**...");
                         return;
                     }
                     startTimeToDate = new Date(fastView[0].startTime).toLocaleString();
@@ -890,11 +895,196 @@ module.exports.run = async (bot, message, args) => {
             }
             break;
 
-        // case "edit":
-        //     if()
-        // break;
+        case "edit":
+            var fastEditUsage = `**USAGE:**\n\`${prefix}fast edit <#_MOST_RECENT_ENTRY> <force>\``
+                + "\n\n`<#_MOST_RECENT_ENTRY>`: **recent; 3** (3rd most recent entry, \\**any number*)"
+                + "\n\n`<force>`(OPT.): type **force** at the end of your command to **skip all of the confimation windows! (More editing capabilities in future development)**"
 
-        // case "send":
+            fastEditUsage = new Discord.MessageEmbed()
+                .setColor("#00FF00")
+                .setTitle(`Fast: Fast Delete Help`)
+                .setDescription(fastEditUsage);
+            const fastEditHelp = `Try \`${prefix}fast edit help\``;
+            const fastEditTrySee = `Try \`${prefix}fast see help\``;
+            var fastView;
+
+            if (args[1] != undefined) {
+                if (args[1].toLowerCase() == "help") {
+                    message.channel.send(fastEditUsage);
+                    return;
+                }
+                fastView = await fast.collection
+                    .find({ userID: message.author.id })
+                    .count();
+                // If the user has no fasts
+                if (fastView == 0) {
+                    message.reply(`NO FASTS... Try \`${prefix}fast start help\``);
+                    return;
+                }
+            }
+            // User typed fast edit only
+            else {
+                message.reply(fastEditHelp);
+                return;
+            }
+
+            if (isNaN(args[1]) && args[1].toLowerCase() != "recent") {
+                message.reply(fastEditHelp);
+                return;
+            }
+            else {
+
+                var fastView, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating,
+                    fastTargetID, reflectionText, editConfirmMessage, showFast;
+                var fastFields = ["startTime", "endTime", "fastDuration", "fastBreaker", "mood", "reflection"];
+                let fieldsView = "";
+                fastFields.forEach((element, i) => {
+                    fieldsView = fieldsView + `\`${i + 1}\` - ${element}\n`;
+                });
+
+                if (args[1].toLowerCase() == "recent") {
+                    pastNumOfEntries = 1;
+                }
+                else {
+                    pastNumOfEntries = parseInt(args[1]);
+                }
+
+                fastView = await fast.collection
+                    .find({ userID: message.author.id })
+                    .sort({ startTime: -1 })
+                    .limit(1)
+                    .skip(pastNumOfEntries - 1)
+                    .toArray()
+                    .catch(err => {
+                        fn.invalidInputError(message, fastEditHelp, "**INVALID NUMBER**...");
+                        console.log(err);
+                        return;
+                    });
+                if (fastView.length == 0) {
+                    fn.invalidInputError(message, fastEditTrySee, "**FAST DOES NOT EXIST**...");
+                    return;
+                }
+
+                // Get user's fast at pastNumOfEntries
+                startTimeToDate = new Date(fastView[0].startTime).toLocaleString();
+                if (fastView[0].endTime == null) {
+                    endTimeToDate = null;
+                }
+                else {
+                    endTimeToDate = new Date(fastView[0].endTime);
+                }
+                fastDuration = fastView[0].fastDuration;
+                fastBreaker = fastView[0].fastBreaker;
+                moodRating = fastView[0].mood;
+                reflectionText = fastView[0].reflection;
+                fastTargetID = fastView[0]._id;
+                showFast = fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
+                    fastBreaker, moodRating, reflectionText);
+
+                // Field the user wants to edit
+                do {
+                    fieldToEdit = await fn.messageDataCollectFirst(message, `**Which field do you want to edit?:**\n ${fieldsView}`
+                        + `\n***NO START/END DATE EDITING YET*** AND \n**FAST DURATION** CAN ONLY BE CHANGED TO **NOW**,\n(In Development...)\n\n__**Fast ${pastNumOfEntries}:**__\n${showFast}`,
+                         "Fast: Fast Edit Field", "00FF00", 180000);
+                    if (fieldToEdit === false) return;
+                    if (isNaN(fieldToEdit)) {
+                        if (fieldToEdit.toLowerCase() == "stop") return;
+                        else {
+                            message.reply("Please enter a number on the given list!")
+                                .then(msg => {
+                                    msg.delete({ timeout: 5000 });
+                                })
+                                .catch(err => console.error(err));
+                        }
+                    }
+                    else if (parseInt(fieldToEdit) > fastFields.length || parseInt(fieldToEdit) <= 0) {
+                        message.reply("Please enter a number on the given list!")
+                            .then(msg => {
+                                msg.delete({ timeout: 5000 });
+                            })
+                            .catch(err => console.error(err));
+                    }
+                    else {
+                        // Minus 1 to convert to back array index (was +1 for user understanding)
+                        fieldToEdit = parseInt(fieldToEdit) - 1;
+                        break;
+                    }
+                }
+                while (true)
+
+                let messageIndex = 0;
+                var collectedEdit, userEdit;
+                fastEditMessagePrompt = `**What will you change your *${fastFields[fieldToEdit]}* to?:**\n`;
+                if(fieldToEdit == 2) {
+                    fastEditMessagePrompt = fastEditMessagePrompt + "***(ONLY possible edit = `now`)***\n";
+                }
+                else if(fieldToEdit == 4) {
+                    fastEditMessagePrompt = fastEditMessagePrompt + "***(Please enter a number from `1-5`)***\n";
+                }
+                fastEditMessagePrompt = fastEditMessagePrompt + `\nType \`1\` when you're **done!**\n`;
+                    
+
+                // Collect User Edit
+                do {
+                    messageIndex++;
+                    collectedEdit = await fn.messageDataCollectFirst(message, fastEditMessagePrompt, "Fast: Fast Edit", "00FF00", 600000);
+                    if (collectedEdit === false) return;
+                    if (messageIndex === 1) {
+                        fastEditMessagePrompt = fastEditMessagePrompt + "\n**Current Edit:**\n" + collectedEdit + "\n";
+                        userEdit = collectedEdit;
+                    }
+                    else if (collectedEdit == "1") break;
+                    else {
+                        fastEditMessagePrompt = fastEditMessagePrompt + collectedEdit + "\n";
+                        userEdit = "\n" + userEdit + collectedEdit + "\n";
+                    }
+                    if (collectedEdit == "stop") return;
+                }
+                while (true)
+                console.log(userEdit);
+
+                // Show user updated fast!
+                if (fieldToEdit == 2) {
+                    userEdit = userEdit.split(/ +/);
+                    console.log(userEdit);
+                    fastDuration = fn.timeCommandHandler(userEdit, message.createdAt);
+                }
+                else if (fieldToEdit == 3) fastBreaker = userEdit;
+                else if (fieldToEdit == 4) {
+                    if (!isNaN(userEdit)) {
+                        if (parseInt(userEdit) > 0 || parseInt(userEdit) <= 5) {
+                            moodRating = userEdit;
+                        }
+                    }
+                }
+                else if (fieldToEdit == 5) reflectionText = userEdit;
+
+                showFast = fn.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
+                    fastBreaker, moodRating, reflectionText);
+
+                editConfirmMessage = `Are you sure you want to **edit fast ${pastNumOfEntries}'s ${fastFields[fieldToEdit]}?:**\n\n__**Fast ${pastNumOfEntries}:**__\n` + showFast;
+                if (await fn.confirmationMessage(message, editConfirmMessage, `Fast: Edit Fast ${pastNumOfEntries}`, 300000)) {
+                    console.log(`Editing ${message.author.id}'s Fast ${pastNumOfEntries}`);
+                    fast.collection.updateOne({ _id: fastTargetID }, { $set: { fastFields: collectedEdit } })
+                        .catch(err => console.error(err));
+                    return;
+                }
+                else {
+                    message.reply("**Exiting... This was your edit!: (Deleting in 10 minutes)**\n" + userEdit)
+                        .then(msg => {
+                            msg.delete({ timeout: 600000 });
+                        })
+                        .catch(err => console.error(err));
+                    return;
+                }
+
+            }
+
+
+            break;
+
+        // ALIAS: "send"
+        // case "post":
         //     if()
         // break;
 
