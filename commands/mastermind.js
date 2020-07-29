@@ -1,8 +1,10 @@
 const Discord = require("discord.js");
-const Fast = require("../models/fasting.js");
+const DailyJournal = require("../models/dailyjournal.js");
+const WeeklyJournal = require("../models/weeklyjournal.js");
+const UserSettings = require("../models/usersettings");
 const mongoose = require("mongoose");
 const config = require("../botsettings.json");
-const fn = require("../models/functions");
+const fn = require("../utils/functions");
 
 module.exports.run = async (bot, message, args) => {
     // Will allow for text collection of notes during meeting and output it in a nice format!
@@ -51,7 +53,66 @@ module.exports.run = async (bot, message, args) => {
 
     // Will allow users to add their own to the mastermind week's message and handle multiple people
     // Adding their own edits at the same time.
-    message.reply("Mastermind in development!");
+
+    var journalView = "";
+    var confirmMastermindTemplate;
+    var namesToAdd = new Array();
+    
+    if (args[0] != undefined) {
+        if (args[0].toLowerCase() == "template") {
+            const date = new Date();
+            if (isNaN(args[1])) {
+                message.reply("**INVALID INPUT**... Enter a **positive number > 1!**");
+                return;
+            }
+            else if (parseInt(args[1]) <= 0) {
+                message.reply("**INVALID INPUT**... Enter a **positive number > 1!**");
+                return;
+            }
+
+            numberOfUsers = parseInt(args[1]);
+            confirmMastermindTemplate = await fn.confirmationMessage(message, `Are you sure you want to **generate a mastermind template for ${numberOfUsers} users?**`,
+                `Mastermind: Confirm ${numberOfUsers} User Template`, 30000);
+            if (!confirmMastermindTemplate) return;
+
+            if (args[2] != undefined) {
+                namesToAdd = args[2].split(",");
+            }
+            for (i = 0; i < numberOfUsers; i++) {
+                if (namesToAdd[i] == undefined) namesToAdd.push("NAME_");
+                if (numberOfUsers == 1) {
+                    journalView = "`**__" + date.toString() + "__**\n\n" + fn.mastermindWeeklyJournalTemplate((i + 1), namesToAdd[i]) + "`";
+                    break;
+                }
+                if (i == 0) {
+                    journalView = "`**__" + date.toString() + "__**\n\n" + fn.mastermindWeeklyJournalTemplate((i + 1), namesToAdd[i]) + "\n\n\n";
+                }
+                else if (i == numberOfUsers - 1) {
+                    journalView = journalView + fn.mastermindWeeklyJournalTemplate((i + 1), namesToAdd[i]) + "`";
+                    journalView = new Discord.MessageEmbed()
+                        .setColor("#ADD8E6")
+                        .setDescription(journalView);
+                    message.channel.send(journalView);
+                    break;
+                }
+                else if (i % 5 == 0) {
+                    journalView = journalView + fn.mastermindWeeklyJournalTemplate((i + 1), namesToAdd[i]) + "`";
+                    journalView = new Discord.MessageEmbed()
+                        .setColor("#ADD8E6")
+                        .setDescription(journalView);
+                    message.channel.send(journalView);
+                    journalView = "`";
+                }
+                else {
+                    journalView = journalView + fn.mastermindWeeklyJournalTemplate((i + 1), namesToAdd[i]) + "\n\n\n";
+                }
+
+            }
+            return;
+        }
+
+        message.reply("Mastermind in development!");
+    }
 }
 
 module.exports.help = {

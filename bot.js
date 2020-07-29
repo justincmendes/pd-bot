@@ -11,7 +11,7 @@ const prefix = botSettings.PREFIX;
 
 const Discord = require("discord.js");
 const bot = new Discord.Client({ partials: ["MESSAGE", "CHANNEL", "REACTION"] });
-const fn = require("./models/functions");
+const fn = require("./utils/functions");
 
 const fs = require("fs");
 bot.commands = new Discord.Collection();
@@ -67,6 +67,14 @@ bot.on("ready", async () => {
     //     console.log(e.stack);
     // }
 });
+
+// To deal with reactions to bot messages
+// bot.on("messageReactionAdd", async (reaction, user) => {
+//     if (reaction.message.partial) {
+//         console.log(reaction);
+//         console.log("A user has reacted to an uncached message.");
+//     }
+// });
 
 bot.on("message", async message => {
     //If the message is from a bot, ignore

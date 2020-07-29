@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 
+// STORE MASTERMIND SETTINGS AS WELL! (i.e. what is the mastermind role?)
+
 const guildSettingsSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     guildID: {

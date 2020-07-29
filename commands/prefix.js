@@ -3,7 +3,7 @@ const botSettings = require("../botsettings.json");
 const prefix = botSettings.PREFIX;
 const mongoose = require("mongoose");
 const config = require("../botsettings.json");
-const fn = require("../models/functions");
+const fn = require("../utils/functions");
 
 module.exports.run = async (bot, message, args) => {
     message.channel.send(`This server's **current prefix** is **${prefix}**\n(SOON server managers change prefix by: \`${prefix}prefix <PREFIX>\`)`);
