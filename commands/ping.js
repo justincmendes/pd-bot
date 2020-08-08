@@ -1,6 +1,6 @@
 const Discord = require("discord.js");
 require("dotenv").config();
-const prefix = process.env.PREFIX;
+const PREFIX = process.env.PREFIX;
 
 module.exports.run = async (bot, message, args) => {
     //Show time between user command and bot reply = ping time!

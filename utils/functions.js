@@ -3,10 +3,10 @@
  */
 const Discord = require("discord.js");
 require("dotenv").config();
-const prefix = process.env.PREFIX;
+const PREFIX = process.env.PREFIX;
 
 module.exports = {
-    confirmationMessage: async function (message, confirmMessage, title = "Confirmation", delayTime = 60000, deleteDelay = 3000,
+    getUserConfirmation: async function (message, confirmMessage, title = "Confirmation", delayTime = 60000, deleteDelay = 3000,
         confirmationInstructions = "\n\nSelect ✅ to **proceed**\nSelect ❌ to **cancel**") {
         const agree = "✅";
         const disagree = "❌";
@@ -27,6 +27,7 @@ module.exports = {
                 const filter = (reaction, user) => {
                     const filterOut = user.id == userOriginal && (reaction.emoji.name == agree || reaction.emoji.name == disagree);
                     console.log(`For ${user.username}'s ${reaction.emoji.name} reaction, the filter value is: ${filterOut}`);
+
                     return filterOut;
                 };
 
@@ -221,8 +222,8 @@ module.exports = {
     //     return result;
     // },
 
-    sendMessageToChannel: async function (bot, message, toSend, mistakeMessage, messageColour = "#ADD8E6", 
-    postToServerTitle, postToChannelTitle, postTitle) {
+    sendMessageToChannel: async function (bot, message, toSend, mistakeMessage, messageColour = "#ADD8E6",
+        postToServerTitle, postToChannelTitle, postTitle) {
         // Check all the servers the bot is in
         let botServers = await bot.guilds.cache.map(guild => guild.id);
         console.log(botServers);
@@ -272,9 +273,9 @@ module.exports = {
         while (true);
 
         // List channels in the server: Let the user select the server they with to send their message to
-        // ONLY the channels that user is able to see
+        // ONLY the channels that user is able to send messages to.
         channelList = await bot.guilds.cache.get(botServers[targetServer]).channels.cache.map(channel => {
-            if (channel.permissionsFor(message.author).has("VIEW_CHANNEL") && channel.type !== "category" && channel.type !== "voice") {
+            if (channel.permissionsFor(message.author).has("SEND_MESSAGES") && channel.type !== "category" && channel.type !== "voice") {
                 return channel.id;
             }
             else return null;
@@ -320,13 +321,13 @@ module.exports = {
         }
         while (true);
 
-        confirmSend = await this.confirmationMessage(message, `Are you sure you want to send it to **#${bot.channels.cache.get(channelList[targetChannel]).name}**?`);
+        confirmSend = await this.getUserConfirmation(message, `Are you sure you want to send it to **#${bot.channels.cache.get(channelList[targetChannel]).name}**?`);
         if (!confirmSend) {
             message.reply("Here was your post: (deleting in 10 minutes)\n" + toSend)
-            .then(msg => {
-                msg.delete({ timeout: 600000 });
-            })
-            .catch(err => console.error(err));
+                .then(msg => {
+                    msg.delete({ timeout: 600000 });
+                })
+                .catch(err => console.error(err));
             message.reply(mistakeMessage)
                 .then(msg => {
                     msg.delete({ timeout: 600000 });
@@ -336,9 +337,9 @@ module.exports = {
         }
 
         messageEmbed = new Discord.MessageEmbed()
-        .setColor(messageColour)
-        .setTitle(postTitle)
-        .setDescription(toSend);
+            .setColor(messageColour)
+            .setTitle(postTitle)
+            .setDescription(toSend);
 
         bot.channels.cache.get(channelList[targetChannel]).send(messageEmbed);
         return;
@@ -412,7 +413,7 @@ module.exports = {
         fastData = this.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
             fastBreaker, moodRating, reflectionText)
         if (fastsInProgress >= 1) {
-            fastData = fastData + `\n(Want to end your fast? \`${prefix}fast end\`)`;
+            fastData = fastData + `\n(Want to end your fast? \`${PREFIX}fast end\`)`;
         }
         fastEmbed = new Discord.MessageEmbed()
             .setColor("#00FF00")

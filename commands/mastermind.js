@@ -5,7 +5,11 @@ const UserSettings = require("../models/usersettings");
 const mongoose = require("mongoose");
 const fn = require("../utils/functions");
 require("dotenv").config();
-const prefix = process.env.PREFIX;
+const PREFIX = process.env.PREFIX;
+
+// Variable Declarations and Initializations
+
+// Function Declarations and Initializations
 
 module.exports.run = async (bot, message, args) => {
     // Will allow for text collection of notes during meeting and output it in a nice format!
@@ -55,9 +59,7 @@ module.exports.run = async (bot, message, args) => {
     // Will allow users to add their own to the mastermind week's message and handle multiple people
     // Adding their own edits at the same time.
 
-    var journalView = "";
-    var confirmMastermindTemplate;
-    var namesToAdd = new Array();
+    var namesForTemplate = new Array();
     
     if (args[0] != undefined) {
         if (args[0].toLowerCase() == "template") {
@@ -70,42 +72,50 @@ module.exports.run = async (bot, message, args) => {
                 message.reply("**INVALID INPUT**... Enter a **positive number > 1!**");
                 return;
             }
+            const numberOfUsers = parseInt(args[1]);
+            var templateOutput = "";
+            console.log({numberOfUsers});
 
-            numberOfUsers = parseInt(args[1]);
-            confirmMastermindTemplate = await fn.confirmationMessage(message, `Are you sure you want to **generate a mastermind template for ${numberOfUsers} users?**`,
+            let userConfirmation = await fn.getUserConfirmation(message, `Are you sure you want to **generate a mastermind template for ${numberOfUsers} user(s)?**`,
                 `Mastermind: Confirm ${numberOfUsers} User Template`, 30000);
-            if (!confirmMastermindTemplate) return;
+            if (userConfirmation == false) return;
 
             if (args[2] != undefined) {
-                namesToAdd = args[2].split(",");
+                // Filter out the empty inputs due to multiple commas (e.g. ",,,, ,,, ,   ,")
+                namesForTemplate = args.slice(2).join("").split(',').filter(name => name != "");
+                console.log({namesToAdd: namesForTemplate});
             }
             for (i = 0; i < numberOfUsers; i++) {
-                if (namesToAdd[i] == undefined) namesToAdd.push("NAME_");
+                if (namesForTemplate[i] == undefined) namesForTemplate.push("NAME_");
                 if (numberOfUsers == 1) {
-                    journalView = "`**__" + date.toString() + "__**\n\n" + fn.mastermindWeeklyJournalTemplate((i + 1), namesToAdd[i]) + "`";
+                    templateOutput = "`**__" + date.toString() + "__**\n\n" + fn.mastermindWeeklyJournalTemplate((i + 1), namesForTemplate[i]) + "`";
+                    templateOutput = new Discord.MessageEmbed()
+                        .setColor("#ADD8E6")
+                        .setDescription(templateOutput);
+                    message.channel.send(templateOutput);
                     break;
                 }
                 if (i == 0) {
-                    journalView = "`**__" + date.toString() + "__**\n\n" + fn.mastermindWeeklyJournalTemplate((i + 1), namesToAdd[i]) + "\n\n\n";
+                    templateOutput = "`**__" + date.toString() + "__**\n\n" + fn.mastermindWeeklyJournalTemplate((i + 1), namesForTemplate[i]) + "\n\n\n";
                 }
                 else if (i == numberOfUsers - 1) {
-                    journalView = journalView + fn.mastermindWeeklyJournalTemplate((i + 1), namesToAdd[i]) + "`";
-                    journalView = new Discord.MessageEmbed()
+                    templateOutput = templateOutput + fn.mastermindWeeklyJournalTemplate((i + 1), namesForTemplate[i]) + "`";
+                    templateOutput = new Discord.MessageEmbed()
                         .setColor("#ADD8E6")
-                        .setDescription(journalView);
-                    message.channel.send(journalView);
+                        .setDescription(templateOutput);
+                    message.channel.send(templateOutput);
                     break;
                 }
                 else if (i % 5 == 0) {
-                    journalView = journalView + fn.mastermindWeeklyJournalTemplate((i + 1), namesToAdd[i]) + "`";
-                    journalView = new Discord.MessageEmbed()
+                    templateOutput = templateOutput + fn.mastermindWeeklyJournalTemplate((i + 1), namesForTemplate[i]) + "`";
+                    templateOutput = new Discord.MessageEmbed()
                         .setColor("#ADD8E6")
-                        .setDescription(journalView);
-                    message.channel.send(journalView);
-                    journalView = "`";
+                        .setDescription(templateOutput);
+                    message.channel.send(templateOutput);
+                    templateOutput = "`";
                 }
                 else {
-                    journalView = journalView + fn.mastermindWeeklyJournalTemplate((i + 1), namesToAdd[i]) + "\n\n\n";
+                    templateOutput = templateOutput + fn.mastermindWeeklyJournalTemplate((i + 1), namesForTemplate[i]) + "\n\n\n";
                 }
 
             }

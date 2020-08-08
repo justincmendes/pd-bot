@@ -5,7 +5,8 @@ const userSettings = mongoose.Schema({
     userID: String,
     // Consider mapping the timezone to Integers to save space/data?
     timeZone: String,
-    habitCron: Number
+    habitCron: Number,
+    likesBeingPushed: Boolean
 });
 
 module.exports = mongoose.model("Setting", userSettings, "settings");

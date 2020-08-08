@@ -4,7 +4,7 @@ const UserSettings = require("../models/usersettings");
 const mongoose = require("mongoose");
 const fn = require("../utils/functions");
 require("dotenv").config();
-const prefix = process.env.PREFIX;
+const PREFIX = process.env.PREFIX;
 
 module.exports.run = async (bot, message, args) => {
     // create, archive, current, see <progress for this habit>, pastweek (as per Sunday reset), past <number>

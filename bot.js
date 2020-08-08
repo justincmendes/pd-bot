@@ -1,13 +1,13 @@
 /**
  * Author Name: Justin Mendes
  * Date Created: July 18, 2020
- * Last Updated: July 18, 2020
+ * Last Updated: August 08, 2020
  */
 
 //To keep the sensitive information in a separate folder
 require("dotenv").config();
-const token = process.env.TOKEN;
-const prefix = process.env.PREFIX;
+const TOKEN = process.env.TOKEN;
+const PREFIX = process.env.PREFIX;
 
 const Discord = require("discord.js");
 const bot = new Discord.Client({ partials: ["MESSAGE", "CHANNEL", "REACTION"] });
@@ -19,6 +19,11 @@ bot.commands = new Discord.Collection();
 const mongoose = require("mongoose");
 const guildSettings = require("./models/guildsettings");
 bot.mongoose = require("./utils/mongoose");
+
+const router = require("express").Router();
+const auth = require( './backend/routes/auth' );
+router.use("/auth", auth);
+module.exports = router;
 
 //This shouldn't happen, this would be on Node.js
 fs.readdir("./commands", (err, files) => {
@@ -43,7 +48,7 @@ fs.readdir("./commands", (err, files) => {
 bot.on("ready", async () => {
     console.log(`${bot.user.username} is now online!`);
 
-    bot.user.setActivity(`you thrive! | ${prefix}help`, { type: "WATCHING" });
+    bot.user.setActivity(`you thrive! | ${PREFIX}help`, { type: "WATCHING" });
 
     // //Generating Link
     //Method 1:
@@ -79,7 +84,7 @@ bot.on("ready", async () => {
 bot.on("message", async message => {
     //If the message is from a bot, ignore
     //When the message does not start with prefix, do nothing
-    if (message.author.bot || !message.content.startsWith(prefix)) return;
+    if (message.author.bot || !message.content.startsWith(PREFIX)) return;
 
     //Messaging the bot in a DM
     /**
@@ -95,7 +100,7 @@ bot.on("message", async message => {
     //args will give all of the arguments passed in from the user
     const messageArray = message.content.split(/ +/);
     //Get the command (Word after prefix)
-    const command = messageArray[0].slice(prefix.length).toLowerCase();
+    const command = messageArray[0].slice(PREFIX.length).toLowerCase();
     //Get all of the arguments after the initial command
     const args = messageArray.slice(1);
 
@@ -109,6 +114,7 @@ bot.on("message", async message => {
     if (!bot.commands.has(command)) return;
     else {
         try {
+            console.log(`%c User Command: ${PREFIX}${command} ${args.join(' ')}`, 'color: green; font-weight: bold;');
             bot.commands.get(command).run(bot, message, args);
         } catch (error) {
             console.error(error);
@@ -180,4 +186,4 @@ bot.on ("guildCreate", async (guild) => {
 })
 
 
-bot.login(token);
+bot.login(TOKEN);
