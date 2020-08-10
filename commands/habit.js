@@ -19,7 +19,7 @@ module.exports.run = async (bot, message, args) => {
     // FOR SUPER quick and easy habit logging for the week!
 
     // Currently: will only show 
-    message.reply("Habits in development!");
+    message.reply("Habit in development!");
 }
 
 module.exports.help = {

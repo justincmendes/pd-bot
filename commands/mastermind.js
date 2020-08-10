@@ -93,6 +93,11 @@ module.exports.run = async (bot, message, args) => {
 
     // Variable Declarations and Initializations
     const invalidTemplateNumber = "**INVALID INPUT**... Enter a **positive number > 1!**";
+    var mastermindUsageMessage = `**USAGE:**\n\`${prefix}mastermind <COMMAND>\``
+    + "\n\n\`<COMMAND>\`: **template OR templates; help**"
+    + "\n**FUTURE FEATURES: settings; create; reflection; goals**";
+    mastermindUsageMessage = fn.getMessageEmbed(mastermindUsageMessage, "Mastermind: Help");
+    const mastermindHelpMessage = `Try \`${prefix}mastermind help\`...`;
     let mastermindCommand = args[0];
     if (mastermindCommand != undefined) {
         mastermindCommand = mastermindCommand.toLowerCase();
@@ -128,8 +133,14 @@ module.exports.run = async (bot, message, args) => {
             sendGeneratedTemplate(numberOfUsers, namesForTemplate);
             return;
         }
-
-        message.reply("Mastermind in development!");
+        else {
+            message.reply(mastermindHelpMessage);
+            return;
+        }
+    }
+    else {
+        message.channel.send(mastermindUsageMessage);
+        return;
     }
 }
 
