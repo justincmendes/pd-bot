@@ -1,5 +1,5 @@
 const Discord = require("discord.js");
-const Habits = require("../models/habittracker.js");
+const Habit = require("../models/habittracker.js");
 const UserSettings = require("../models/usersettings");
 const mongoose = require("mongoose");
 const fn = require("../utils/functions");
@@ -23,6 +23,6 @@ module.exports.run = async (bot, message, args) => {
 }
 
 module.exports.help = {
-    name: "habits",
-    aliases: ["habit"]
+    name: "habit",
+    aliases: ["habits"]
 }

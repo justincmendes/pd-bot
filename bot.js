@@ -2,7 +2,7 @@
  * @author Justin Mendes
  * @license MIT
  * Date Created: July 18, 2020
- * Last Updated: August 08, 2020
+ * Last Updated: August 10, 2020
  */
 
  // TO-DO ALIASES ON COMMANDS!
