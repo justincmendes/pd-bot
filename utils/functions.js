@@ -1,33 +1,35 @@
 /**
- * File of all the important reusable functions!
+ * File of all the important and universally reusable functions!
  */
 const Discord = require("discord.js");
 require("dotenv").config();
 const PREFIX = process.env.PREFIX;
 
 module.exports = {
-    getUserConfirmation: async function (message, confirmMessage, title = "Confirmation", delayTime = 60000, deleteDelay = 3000,
+    getUserConfirmation: async function (userOriginalMessageObject, confirmationMessage, title = "Confirmation", delayTime = 60000, deleteDelay = 3000,
         confirmationInstructions = "\n\nSelect ✅ to **proceed**\nSelect ❌ to **cancel**") {
         const agree = "✅";
         const disagree = "❌";
-        const userOriginal = message.author.id;
+        const userOriginal = userOriginalMessageObject.author.id;
+        const MS_TO_SECONDS = 1000;
+        const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
         var confirmation;
-        confirmMessage = confirmMessage + confirmationInstructions + `\n*(expires in ${delayTime / 1000}s)*`;
+        confirmationMessage = confirmationMessage + confirmationInstructions;
 
         const embed = new Discord.MessageEmbed()
             .setColor("#FF0000")
             .setTitle(title)
-            .setDescription(confirmMessage);
+            .setDescription(confirmationMessage)
+            .setFooter(footerText);
 
-        await message.channel.send(embed)
+        await userOriginalMessageObject.channel.send(embed)
             .then(async confirm => {
                 await confirm.react(agree);
                 await confirm.react(disagree);
 
                 const filter = (reaction, user) => {
                     const filterOut = user.id == userOriginal && (reaction.emoji.name == agree || reaction.emoji.name == disagree);
-                    console.log(`For ${user.username}'s ${reaction.emoji.name} reaction, the filter value is: ${filterOut}`);
-
+                    // console.log(`For ${user.username}'s ${reaction.emoji.name} reaction, the filter value is: ${filterOut}`);
                     return filterOut;
                 };
 
@@ -37,7 +39,7 @@ module.exports = {
                         console.log(`User's ${reacted.first().emoji.name} collected!`);
                         if (reacted.first().emoji.name == agree) {
                             confirm.delete();
-                            message.channel.send("Confirmed!")
+                            userOriginalMessageObject.channel.send("Confirmed!")
                                 .then(exitMessage => {
                                     exitMessage.delete({ timeout: deleteDelay });
                                 }).catch(err => console.error(err));
@@ -47,7 +49,7 @@ module.exports = {
                         else {
                             confirm.delete();
                             console.log("Ending (confirmationMessage) promise...");
-                            message.channel.send("Exiting...")
+                            userOriginalMessageObject.channel.send("Exiting...")
                                 .then(exitMessage => {
                                     exitMessage.delete({ timeout: deleteDelay });
                                 }).catch(err => console.error(err));
@@ -59,9 +61,9 @@ module.exports = {
                     .catch(err => {
                         console.error(err);
                         confirm.delete();
-                        console.log(`ERROR: User didn't react within ${delayTime / 1000}s!`);
+                        console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
                         console.log("Ending (confirmationMessage) promise...");
-                        message.channel.send("Exiting...")
+                        userOriginalMessageObject.channel.send("Exiting...")
                             .then(exitMessage => {
                                 exitMessage.delete({ timeout: deleteDelay });
                             }).catch(err => console.error(err));
@@ -73,18 +75,20 @@ module.exports = {
     },
 
     // BUG: When user reacts too soon, the code breaks, figure out how to let it keep running!
-    reactionDataCollect: async function (message, prompt, emojiArray, title = "Reaction", colour = "#ADD8E6", delayTime = 60000, promptMessageDelete = true) {
-        const userOriginal = message.author.id;
+    reactionDataCollect: async function (userOriginalMessageObject, prompt, emojiArray, title = "Reaction", colour = "#ADD8E6", delayTime = 60000, promptMessageDelete = true) {
+        const userOriginal = userOriginalMessageObject.author.id;
         var result;
         const deleteDelay = 3000;
-        prompt = prompt + `\n*(expires in ${delayTime / 1000}s)*`;
+        const MS_TO_SECONDS = 1000;
+        const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
 
         const embed = new Discord.MessageEmbed()
             .setColor(colour)
             .setTitle(title + "\n(*PLEASE WAIT UNTIL ALL REACTIONS SHOW* or else it will EXIT)")
-            .setDescription(prompt);
+            .setDescription(prompt)
+            .setFooter(footerText);
 
-        await message.channel.send(embed)
+        await userOriginalMessageObject.channel.send(embed)
 
             // FIX BUG WHEN USER REACTS TOO SOON! Allow the code to keep running!
             .then(async confirm => {
@@ -92,10 +96,9 @@ module.exports = {
                     confirm.react(emoji)
                         .catch(err => console.error(err));
                 });
-
                 const filter = (reaction, user) => {
                     const filterOut = user.id == userOriginal && (emojiArray.includes(reaction.emoji.name));
-                    console.log(`For ${user.username}'s ${reaction.emoji.name} reaction, the filter value is: ${filterOut}`);
+                    // console.log(`For ${user.username}'s ${reaction.emoji.name} reaction, the filter value is: ${filterOut}`);
                     return filterOut;
                 };
 
@@ -111,9 +114,9 @@ module.exports = {
                     .catch(err => {
                         console.error(err);
                         confirm.delete();
-                        console.log(`ERROR: User didn't react within ${delayTime / 1000}s!`);
+                        console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
                         console.log("Ending (reactionDataCollect) promise...");
-                        message.channel.send("Exiting...")
+                        userOriginalMessageObject.channel.send("Exiting...")
                             .then(exitMessage => {
                                 exitMessage.delete({ timeout: deleteDelay });
                             }).catch(err => console.error(err));
@@ -127,33 +130,47 @@ module.exports = {
         return result;
     },
 
-    messageDataCollectFirst: async function (message, prompt, title = "Message Reaction", colour = "#ADD8E6", delayTime = 60000, messageDelete = true) {
-        const userOriginal = message.author.id;
+    messageDataCollectFirst: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = "#ADD8E6", delayTime = 60000, deleteUserMessage = true,
+        userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
+        const userOriginal = userOriginalMessageObject.author.id;
         var result;
         const deleteDelay = 3000;
-        prompt = prompt + `\n\n\\*P.S. use\`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**\n*(expires in ${delayTime / 1000}s)*`;
-
-        const embed = new Discord.MessageEmbed()
-            .setColor(colour)
-            .setTitle(title)
-            .setDescription(prompt);
-
-        await message.channel.send(embed)
+        const MS_TO_SECONDS = 1000;
+        const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+        const textEntryInstructions = `\n\n\*P.S. use \`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**`;
+        prompt = prompt + textEntryInstructions;
+        var embed;
+        if (attachImage == true) {
+            embed = new Discord.MessageEmbed()
+                .setColor(colour)
+                .setTitle(title)
+                .setDescription(prompt)
+                .setFooter(footerText);
+            embed = embed.setImage(imageURL);
+        }
+        else {
+            embed = new Discord.MessageEmbed()
+                .setColor(colour)
+                .setTitle(title)
+                .setDescription(prompt)
+                .setFooter(footerText);
+        }
+        await userOriginalMessageObject.channel.send(embed)
             .then(async confirm => {
                 const filter = response => {
                     const filterOut = response.author.id == userOriginal;
-                    console.log(`For ${response.author.id}'s response, the filter value is: ${filterOut}`);
+                    console.log(`For ${response.author.username}'s response, the filter value is: ${filterOut}`);
                     return filterOut;
                 };
 
                 // Create the awaitMessages promise object for the confirmation message just sent
-                result = await message.channel.awaitMessages(filter, { time: delayTime, max: 1 })
+                result = await userOriginalMessageObject.channel.awaitMessages(filter, { time: delayTime, max: 1 })
                     .then(async reacted => {
-                        console.log(`${reacted.first().author.id}'s message was collected!`);
+                        console.log(`${reacted.first().author.username}'s message was collected!`);
                         confirm.delete();
                         console.log(`Message Sent (in function): ${reacted.first().content}`);
-                        if (messageDelete) {
-                            reacted.first().delete();
+                        if (deleteUserMessage === true) {
+                            reacted.first().delete({ timeout: userMessageDeleteDelay });
                             return reacted.first().content;
                         }
                     })
@@ -161,9 +178,9 @@ module.exports = {
                     .catch(err => {
                         console.error(err);
                         confirm.delete();
-                        console.log(`ERROR: User didn't respond within ${delayTime / 1000}s!`);
+                        console.log(`ERROR: User didn't respond within ${delayTime / MS_TO_SECONDS}s!`);
                         console.log("Ending (messageDataCollect) promise...");
-                        message.channel.send("Ending...")
+                        userOriginalMessageObject.channel.send("Ending...")
                             .then(exitMessage => {
                                 exitMessage.delete({ timeout: deleteDelay });
                             }).catch(err => console.error(err));
@@ -174,91 +191,106 @@ module.exports = {
         return result;
     },
 
-    // Copied from messageDataCollectFirst - need to make it function properly!
-    // messageDataCollect: async function (message, prompt, title = "Message Reaction", colour = "#ADD8E6", delayTime = 60000, messageDelete = true) {
-    //     const userOriginal = message.author.id;
-    //     var result;
-    //     const deleteDelay = 3000;
-    //     prompt = prompt + `\n\\*P.S. use\`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**\n*(expires in ${delayTime / 1000}s)*`;
+    messageDataCollectFirstObject: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = "#ADD8E6", delayTime = 60000, deleteUserMessage = true,
+        userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
+        const userOriginal = userOriginalMessageObject.author.id;
+        var result;
+        const deleteDelay = 3000;
+        const MS_TO_SECONDS = 1000;
+        const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+        const textEntryInstructions = `\n\n\*P.S. use \`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**`;
+        prompt = prompt + textEntryInstructions;
+        var embed;
+        if (attachImage == true) {
+            embed = new Discord.MessageEmbed()
+                .setColor(colour)
+                .setTitle(title)
+                .setDescription(prompt)
+                .setFooter(footerText);
+            embed = embed.setImage(imageURL);
+        }
+        else {
+            embed = new Discord.MessageEmbed()
+                .setColor(colour)
+                .setTitle(title)
+                .setDescription(prompt)
+                .setFooter(footerText);
+        }
+        await userOriginalMessageObject.channel.send(embed)
+            .then(async confirm => {
+                const filter = response => {
+                    const filterOut = response.author.id == userOriginal;
+                    console.log(`For ${response.author.username}'s response, the filter value is: ${filterOut}`);
+                    return filterOut;
+                };
 
-    //     const embed = new Discord.MessageEmbed()
-    //         .setColor(colour)
-    //         .setTitle(title)
-    //         .setDescription(prompt);
+                // Create the awaitMessages promise object for the confirmation message just sent
+                result = await userOriginalMessageObject.channel.awaitMessages(filter, { time: delayTime, max: 1 })
+                    .then(async reacted => {
+                        console.log(`${reacted.first().author.username}'s message was collected!`);
+                        confirm.delete();
+                        console.log(`Message Sent (in function): ${reacted.first().content}`);
+                        if (deleteUserMessage === true) {
+                            reacted.first().delete({ timeout: userMessageDeleteDelay });
+                            return reacted.first();
+                        }
+                    })
+                    // When the user DOESN'T react!
+                    .catch(err => {
+                        console.error(err);
+                        confirm.delete();
+                        console.log(`ERROR: User didn't respond within ${delayTime / MS_TO_SECONDS}s!`);
+                        console.log("Ending (messageDataCollect) promise...");
+                        userOriginalMessageObject.channel.send("Ending...")
+                            .then(exitMessage => {
+                                exitMessage.delete({ timeout: deleteDelay });
+                            }).catch(err => console.error(err));
+                        console.log(`Message Sent (in function): false`);
+                        return false;
+                    });
+            }).catch(err => console.error(err));
+        return result;
+    },
 
-    //     await message.channel.send(embed)
-    //         .then(async confirm => {
-    //             const filter = response => {
-    //                 const filterOut = response.author.id == userOriginal;
-    //                 console.log(`For ${response.author.id}'s response, the filter value is: ${filterOut}`);
-    //                 return filterOut;
-    //             };
-
-    //             // Create the awaitMessages promise object for the confirmation message just sent
-    //             result = await message.channel.awaitMessages(filter, { time: delayTime, max: 1 })
-    //                 .then(async reacted => {
-    //                     console.log(`${reacted.first().author.id}'s message was collected!`);
-    //                     confirm.delete();
-    //                     console.log(`Message Sent (in function): ${reacted.first().content}`);
-    //                     if (messageDelete) {
-    //                         reacted.first().delete();
-    //                         return reacted.first().content;
-    //                     }
-    //                 })
-    //                 // When the user DOESN'T react!
-    //                 .catch(err => {
-    //                     console.error(err);
-    //                     confirm.delete();
-    //                     console.log(`ERROR: User didn't respond within ${delayTime / 1000}s!`);
-    //                     console.log("Ending (messageDataCollect) promise...");
-    //                     message.channel.send("Ending...")
-    //                         .then(exitMessage => {
-    //                             exitMessage.delete({ timeout: deleteDelay });
-    //                         }).catch(err => console.error(err));
-    //                     console.log(`Message Sent (in function): false`);
-    //                     return false;
-    //                 });
-    //         }).catch(err => console.error(err));
-    //     return result;
-    // },
-
-    sendMessageToChannel: async function (bot, message, toSend, mistakeMessage, messageColour = "#ADD8E6",
-        postToServerTitle, postToChannelTitle, postTitle) {
-        // Check all the servers the bot is in
-        let botServers = await bot.guilds.cache.map(guild => guild.id);
-        console.log(botServers);
-
-        // Find all the mutual servers with the user and bot
+    userAndBotMutualServerIDs: async function (bot, userID, botServersIDs) {
         var botUserServers = new Array();
-        var targetServer, targetChannel;
-        var channelList, confirmSend, messageEmbed;
-        var channelListDisplay = "Type the number corresponding to the channel you want to post in:"
-        var serverList = "Type the number corresponding to the server you want to post in:";
-        for (i = 0; i < botServers.length; i++) {
-            if (await bot.guilds.cache.get(botServers[i]).member(message.author.id)) {
-                botUserServers.push(botServers[i]);
-                serverList = serverList + `\n\`${i + 1}\` - **` + await bot.guilds.cache.get(botServers[i]).name + "**";
+        for (i = 0; i < botServersIDs.length; i++) {
+            if (await bot.guilds.cache.get(botServersIDs[i]).member(userID)) {
+                botUserServers.push(botServersIDs[i]);
             }
         }
+        return botUserServers;
+    },
 
-        // Expecting a response from index 0-botUserServers.length - 1
-        // List servers: Let user select the server they wish to send their message to
+    listOfServerNames: async function (bot, serverIDs) {
+        var serverListString = "";
+        await serverIDs.forEach(async (server, serverIndex) => {
+            let serverName = await bot.guilds.cache.get(server).name;
+            serverListString = serverListString + `\`${serverIndex + 1}\` - **` + serverName + "**\n";
+        });
+        return serverListString;
+    },
+
+    // Note: This function displays values from 1 onwards but returns a properly indexed value (for arrays)
+    userSelectFromList: async function (userOriginalMessageObject, list, numberOfEntries, instructions, selectTitle, messageColour = "#ADD8E6",
+        delayTime = 120000, userMessageDeleteDelay = 0, messageAfterList = "") {
         do {
-            targetServer = await this.messageDataCollectFirst(message, serverList, postToServerTitle, messageColour, 120000);
-            if (isNaN(targetServer)) {
-                if (targetServer.toLowerCase() == "stop") {
-                    break;
+            targetIndex = await this.messageDataCollectFirst(userOriginalMessageObject, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
+                messageColour, delayTime, true, userMessageDeleteDelay);
+            if (isNaN(targetIndex)) {
+                if (targetIndex.toLowerCase() == "stop") {
+                    return false;
                 }
                 else {
-                    message.reply("Please enter a number on the given list!")
+                    userOriginalMessageObject.reply("Please enter a number on the given list!")
                         .then(msg => {
                             msg.delete({ timeout: 5000 });
                         })
                         .catch(err => console.error(err));
                 }
             }
-            else if (parseInt(targetServer) > botUserServers.length || parseInt(targetServer) <= 0) {
-                message.reply("Please enter a number on the given list!")
+            else if (parseInt(targetIndex) > numberOfEntries || parseInt(targetIndex) <= 0) {
+                userOriginalMessageObject.reply("Please enter a number on the given list!")
                     .then(msg => {
                         msg.delete({ timeout: 5000 });
                     })
@@ -266,98 +298,52 @@ module.exports = {
             }
             else {
                 // Minus 1 to convert to back array index (was +1 for user understanding)
-                targetServer = parseInt(targetServer) - 1;
+                targetIndex = parseInt(targetIndex) - 1;
                 break;
             }
         }
         while (true);
+        return targetIndex;
+    },
 
-        // List channels in the server: Let the user select the server they with to send their message to
-        // ONLY the channels that user is able to send messages to.
-        channelList = await bot.guilds.cache.get(botServers[targetServer]).channels.cache.map(channel => {
-            if (channel.permissionsFor(message.author).has("SEND_MESSAGES") && channel.type !== "category" && channel.type !== "voice") {
+    listOfServerTextChannelsUserCanSendTo: async function (bot, userOriginalMessageObject, serverID) {
+        channelList = await bot.guilds.cache.get(serverID).channels.cache.map(channel => {
+            if (channel.permissionsFor(userOriginalMessageObject.author).has("SEND_MESSAGES") && channel.type === "text") {
                 return channel.id;
             }
             else return null;
-        }).filter(element => element != null);
+        }).filter(element => element !== null);
+        return channelList;
+    },
 
-        if (channelList.length == 0) {
-            message.reply("This server has **no channels!** EXITING...")
-                .then(msg => {
-                    msg.delete({ timeout: 5000 });
-                })
-                .catch(err => console.error(err));
-            return;
-        }
-        for (i = 0; i < channelList.length; i++) {
-            channelListDisplay = channelListDisplay + `\n\`${i + 1}\` - **` + bot.channels.cache.get(channelList[i]).name + "**";
-        }
+    listOfChannelNames: async function (bot, channelList) {
+        var channelListDisplay = "";
+        await channelList.forEach(async (channel, channelIndex) => {
+            let channelName = await bot.channels.cache.get(channel).name;
+            channelListDisplay = channelListDisplay + `\`${channelIndex + 1}\` - **` + channelName + "**\n";
+        });
+        return channelListDisplay;
+    },
 
-        do {
-            targetChannel = await this.messageDataCollectFirst(message, channelListDisplay, postToChannelTitle, messageColour, 180000);
-            if (isNaN(targetChannel)) {
-                if (targetChannel.toLowerCase() == "stop") {
-                    break;
-                }
-                else {
-                    message.reply("Please enter a number on the given list!")
-                        .then(msg => {
-                            msg.delete({ timeout: 5000 });
-                        })
-                        .catch(err => console.error(err));
-                }
-            }
-            else if (parseInt(targetChannel) > channelList.length || parseInt(targetChannel) <= 0) {
-                message.reply("Please enter a number on the given list!")
-                    .then(msg => {
-                        msg.delete({ timeout: 5000 });
-                    })
-                    .catch(err => console.error(err));
-            }
-            else {
-                targetChannel = parseInt(targetChannel) - 1;
-                break;
-            }
-        }
-        while (true);
-
-        confirmSend = await this.getUserConfirmation(message, `Are you sure you want to send it to **#${bot.channels.cache.get(channelList[targetChannel]).name}**?`);
-        if (!confirmSend) {
-            message.reply("Here was your post: (deleting in 10 minutes)\n" + toSend)
-                .then(msg => {
-                    msg.delete({ timeout: 600000 });
-                })
-                .catch(err => console.error(err));
-            message.reply(mistakeMessage)
-                .then(msg => {
-                    msg.delete({ timeout: 600000 });
-                })
-                .catch(err => console.error(err));
-            return;
-        }
-
-        messageEmbed = new Discord.MessageEmbed()
-            .setColor(messageColour)
-            .setTitle(postTitle)
-            .setDescription(toSend);
-
-        bot.channels.cache.get(channelList[targetChannel]).send(messageEmbed);
-        return;
+    sendMessageToChannel: async function (bot, messageToSend, targetChannel) {
+        await bot.channels.cache.get(targetChannel).send(messageToSend);
     },
 
     millisecondsToTimeString: function (milliseconds) {
+        const MS_PER_HOUR = 3600 * 1000;
+        const MS_PER_MINUTE = 60 * 1000;
+        const MS_PER_SECOND = 1000;
         var hours, minutes, seconds, timeString;
-        hours = Math.floor(milliseconds / 3600 / 1000);
-        minutes = Math.floor((milliseconds - hours * 3600 * 1000) / 60 / 1000);
-        seconds = Math.floor((milliseconds - hours * 3600 * 1000 - minutes * 60 * 1000) / 1000);
-
+        hours = Math.floor(milliseconds / MS_PER_HOUR);
+        minutes = Math.floor((milliseconds - MS_PER_HOUR * hours) / MS_PER_MINUTE);
+        seconds = Math.floor((milliseconds - MS_PER_HOUR * hours - MS_PER_MINUTE * minutes) / MS_PER_SECOND);
         timeString = `${hours}h:${minutes}m:${seconds}s`;
         return (timeString);
     },
 
-    timeCommandHandler: function (args, messageCreatedTime, past = true, future = true) {
+    timeCommandHandler: function (timeArgs, messageCreatedTime) {
         // Allows for handling past and future dates (passing in a boolean)
-        if (args[0].toLowerCase() == "now") return messageCreatedTime;
+        if (timeArgs[0].toLowerCase() == "now") return messageCreatedTime;
         // else if(past)
         // {
 
@@ -369,89 +355,82 @@ module.exports = {
         else return (false);
     },
 
-    fastCursorToString: function (startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText) {
-        let fastData = `**Start Time:** ${startTimeToDate}\n` +
-            `**End Time:** ${endTimeToDate}\n` +
-            `**Fast Duration:** ${this.millisecondsToTimeString(fastDuration)}\n` +
-            `**Fast Breaker:** ${fastBreaker}\n` +
-            `**Mood Rating (1-5):** ${moodRating}\n` +
-            `**Reflection:** ${reflectionText}\n`;
-        return fastData;
-    },
-
-    showRecentFast: async function (message, fast, fastsInProgress, currentTimestamp, usageMessage) {
-        var fastView, fastIndex, startTimeToDate, endTimeToDate, fastDuration;
-        var fastBreaker, moodRating, reflectionText, fastData, fastEmbed;
-        if (fastsInProgress >= 1) {
-            // Show the user the current fast
-            fastView = await fast.collection.findOne({
-                userID: message.author.id,
-                endTime: null
-            })
-                .catch(err => console.error(err));
-            fastIndex = "Current";
-            endTimeToDate = fastView.endTime;
-        }
-        else {
-            // Show the user the last fast with the most recent end time (by sorting from largest to smallest end time and taking the first):
-            // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
-            // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
-            fastView = await fast.collection
-                .find({ userID: message.author.id })
-                .sort({ endTime: -1 })
-                .limit(1)
-                .toArray();
-            fastView = fastView[0];
-            fastIndex = "Previous";
-            endTimeToDate = new Date(fastView.endTime).toLocaleString();
-        }
-        startTimeToDate = new Date(fastView.startTime).toLocaleString();
-        fastDuration = currentTimestamp - fastView.startTime;
-        fastBreaker = fastView.fastBreaker;
-        moodRating = fastView.mood;
-        reflectionText = fastView.reflection;
-        fastData = this.fastCursorToString(startTimeToDate, endTimeToDate, fastDuration,
-            fastBreaker, moodRating, reflectionText)
-        if (fastsInProgress >= 1) {
-            fastData = fastData + `\n(Want to end your fast? \`${PREFIX}fast end\`)`;
-        }
-        fastEmbed = new Discord.MessageEmbed()
-            .setColor("#00FF00")
-            .setTitle(`Fast: See ${fastIndex} Fast`)
-            .setDescription(fastData);
-        message.channel.send(fastEmbed);
-    },
-
-    invalidInputError: async function (message, usageMessage, errorMessage = "INVALID INPUT...", usageReply = true) {
-        await message.reply(errorMessage)
+    sendErrorMessageAndUsage: async function (userOriginalMessageObject, usageMessage, errorMessage = "**INVALID INPUT...**", usageReply = true) {
+        await userOriginalMessageObject.reply(errorMessage)
             .then(msg => {
                 if (usageReply) {
-                    message.reply(usageMessage);
+                    userOriginalMessageObject.reply(usageMessage);
                     msg.delete(5000);
                 }
             })
             .catch(err => console.error(err));
     },
 
+    sendErrorMessage: function (userOriginalMessageObject, errorMessage = "**INVALID INPUT...**") {
+        userOriginalMessageObject.reply(errorMessage);
+    },
+
+    sendDescriptionOnlyEmbed: function (userOriginalMessageObject, embedMessage, embedColour = "#ADD8E6") {
+        embedMessage = new Discord.MessageEmbed()
+            .setColor(embedColour)
+            .setDescription(embedMessage);
+        userOriginalMessageObject.channel.send(embedMessage);
+    },
+
+    getMessageEmbed: function (embedMessage, embedTitle, embedColour = "#ADD8E6") {
+        embedMessage = new Discord.MessageEmbed()
+            .setColor(embedColour)
+            .setTitle(embedTitle)
+            .setDescription(embedMessage);
+        return embedMessage;
+    },
+
+    getMessageDescriptionOnlyEmbed: function (embedMessage, embedColour = "#ADD8E6") {
+        embedMessage = new Discord.MessageEmbed()
+            .setColor(embedColour)
+            .setDescription(embedMessage);
+        return embedMessage;
+    },
+
+    getMessageImageEmbed: function (embedImageURL, embedMessage, embedTitle, embedColour = "#ADD8E6") {
+        embedMessage = new Discord.MessageEmbed()
+            .setColor(embedColour)
+            .setTitle(embedTitle)
+            .setDescription(embedMessage)
+            .setImage(embedImageURL);
+        return embedMessage;
+    },
+
+    sendDescriptionOnlyMessageEmbed: function (userOriginalMessageObject, embedMessage, embedColour = "#ADD8E6") {
+        embedMessage = this.getMessageDescriptionOnlyEmbed(embedMessage, embedColour);
+        userOriginalMessageObject.channel.send(embedMessage);
+    },
+
     weeklyJournalTemplate: function () {
-        const weeklyGoalsTemplate = "**__WEEKLY GOALS:__**\n`__**Week:**__\n__**Next Week's 1-3 ABSOLUTE Goals and WHY:**__"
+        const weeklyGoalsTemplate = "\n`__**Week:**__\n__**Next Week's 1-3 ABSOLUTE Goals and WHY:**__"
             + "\n**Weekly Goal 1**:\n**Weekly Goal 2**:\n**Weekly Goal 3**:`";
-        const weeklyReflectionTemplate = "**__WEEKLY REFLECTION:__**\n`__**Week:**__"
+        const weeklyReflectionTemplate = "**\n`__**Week:**__"
             + "\n**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**"
             + "\n\n__**Area of Life That Needs the Most Attention:** __\n__**STOP, START, CONTINUE:** __"
             + "\n**STOP**:\n**START**:\n**CONTINUE**:`";
-        return weeklyGoalsTemplate + "\n\n" + weeklyReflectionTemplate;
+        return "**__WEEKLY GOALS:__**\n" + weeklyGoalsTemplate + "\n\n" + "**__WEEKLY REFLECTION:__\n" + weeklyReflectionTemplate;
     },
 
-    mastermindWeeklyJournalTemplate: function (i, name = "NAME_") {
-        if (name == "NAME_") name = name + i;
-        const weeklyJournalTemplate = `__**${name}**__`
-            + "\n**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__** "
-            + "\n\n__**Area of Life That Needs the Most Attention:**__ \n__**STOP, START, CONTINUE:** __"
-            + "\n**STOP**: \n**START**: \n**CONTINUE**: "
+    // Function call allows for name to be a Discord user tag! <@##############>
+    mastermindWeeklyJournalEntry: function (name = "NAME", previousWeekReflectionEntry = "", areaOfLifeEntry = "", stopEntry = "",
+        startEntry = "", continueEntry = "", firstWeeklyGoal = "", secondWeeklyGoal = "", thirdWeeklyGoal = "") {
+        const weeklyJournalEntry = `__**${name}**__`
+            + `\n**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**\n${previousWeekReflectionEntry}`
+            + `\n__**Area of Life That Needs the Most Attention:**__ ${areaOfLifeEntry}\n__**STOP, START, CONTINUE:** __`
+            + `\n**STOP**: ${stopEntry}\n**START**: ${startEntry}\n**CONTINUE**: ${continueEntry}`
             + `\n__**Next Week's 1-3 ABSOLUTE Goals and WHY:**__`
-            + "\n**Weekly Goal 1**:\n**Weekly Goal 2**:\n**Weekly Goal 3**:";
-        return weeklyJournalTemplate;
+            + `\n**Weekly Goal 1**: ${firstWeeklyGoal}\n**Weekly Goal 2**: ${secondWeeklyGoal}\n**Weekly Goal 3**: ${thirdWeeklyGoal}`;
+        return weeklyJournalEntry;
+    },
+
+    longTermGoalsTemplate: function () {
+        const goalsTemplate = "";
+        return goalsTemplate;
     }
 
 };

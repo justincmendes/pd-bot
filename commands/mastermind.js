@@ -7,11 +7,9 @@ const fn = require("../utils/functions");
 require("dotenv").config();
 const PREFIX = process.env.PREFIX;
 
-// Variable Declarations and Initializations
-
-// Function Declarations and Initializations
-
 module.exports.run = async (bot, message, args) => {
+    // FUTURE FEATURE: Cap mastermind at 6 maximum, any more => Create .txt file with FULL entry and react with paperclip for user to download the file
+
     // Will allow for text collection of notes during meeting and output it in a nice format!
     // Allow users with the "mastermind" (captain) role to press the pencil and edit the sent message!
     // User's with mastermind role can EDIT ANYONE'S ENTRIES! **be careful**
@@ -59,66 +57,75 @@ module.exports.run = async (bot, message, args) => {
     // Will allow users to add their own to the mastermind week's message and handle multiple people
     // Adding their own edits at the same time.
 
-    var namesForTemplate = new Array();
-    
-    if (args[0] != undefined) {
-        if (args[0].toLowerCase() == "template") {
-            const date = new Date();
-            if (isNaN(args[1])) {
-                message.reply("**INVALID INPUT**... Enter a **positive number > 1!**");
+
+    // Function Declarations and Initializations
+
+    // Use WeeklyJournalEntry function to create empty entries and format in backticks for Discord markdown
+
+    function sendGeneratedTemplate (numberOfUsers, namesForTemplate) {
+        const date = new Date();
+        for (templateIndex = 0; templateIndex < numberOfUsers; templateIndex++) {
+            if (namesForTemplate[templateIndex] == undefined) namesForTemplate.push(`NAME_${templateIndex + 1}`);
+            if (numberOfUsers == 1) {
+                templateOutput = "`**__" + date.toString() + "__**\n\n" + fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex]) + "`";
+                fn.sendDescriptionOnlyEmbed(message, templateOutput);
+                break;
+            }
+            if (templateIndex == 0) {
+                templateOutput = "`**__" + date.toString() + "__**\n\n" + fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex]) + "\n\n";
+            }
+            else if (templateIndex == numberOfUsers - 1) {
+                templateOutput = templateOutput + fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex]) + "`";
+                fn.sendDescriptionOnlyEmbed(message, templateOutput);
+                break;
+            }
+            else if (templateIndex % 5 == 0) {
+                templateOutput = templateOutput + fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex]) + "`";
+                fn.sendDescriptionOnlyEmbed(message, templateOutput);
+                templateOutput = "`";
+            }
+            else {
+                templateOutput = templateOutput + fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex]) + "\n\n";
+            }
+        }
+    }
+
+
+    // Variable Declarations and Initializations
+    const invalidTemplateNumber = "**INVALID INPUT**... Enter a **positive number > 1!**";
+    let mastermindCommand = args[0];
+    if (mastermindCommand != undefined) {
+        mastermindCommand = mastermindCommand.toLowerCase();
+        if (mastermindCommand == "template" || mastermindCommand == "templates") {
+            let numberOfUsers = args[1];
+            if (isNaN(numberOfUsers)) {
+                fn.sendErrorMessage(message, invalidTemplateNumber);
                 return;
             }
-            else if (parseInt(args[1]) <= 0) {
-                message.reply("**INVALID INPUT**... Enter a **positive number > 1!**");
-                return;
+            else {
+                numberOfUsers = parseInt(numberOfUsers);
+                if (numberOfUsers <= 0) {
+                    fn.sendErrorMessage(message, invalidTemplateNumber);
+                    return;
+                }
             }
-            const numberOfUsers = parseInt(args[1]);
+            // "Template" Variable Declarations
+            const confirmTemplateGenerationMessage = `Are you sure you want to **generate a mastermind template for ${numberOfUsers} user(s)?**`;
+            const confirmTemplateGenerationTitle = `Mastermind: Confirm ${numberOfUsers} User Template`;
+            var namesForTemplate = new Array();
             var templateOutput = "";
-            console.log({numberOfUsers});
-
-            let userConfirmation = await fn.getUserConfirmation(message, `Are you sure you want to **generate a mastermind template for ${numberOfUsers} user(s)?**`,
-                `Mastermind: Confirm ${numberOfUsers} User Template`, 30000);
-            if (userConfirmation == false) return;
-
+            console.log({ numberOfUsers });
+            let userConfirmation = await fn.getUserConfirmation(message, confirmTemplateGenerationMessage, confirmTemplateGenerationTitle, 30000);
+            if (userConfirmation == false) {
+                return;
+            }
             if (args[2] != undefined) {
                 // Filter out the empty inputs due to multiple commas (e.g. ",,,, ,,, ,   ,")
                 namesForTemplate = args.slice(2).join("").split(',').filter(name => name != "");
-                console.log({namesToAdd: namesForTemplate});
+                console.log({ namesForTemplate });
             }
-            for (i = 0; i < numberOfUsers; i++) {
-                if (namesForTemplate[i] == undefined) namesForTemplate.push("NAME_");
-                if (numberOfUsers == 1) {
-                    templateOutput = "`**__" + date.toString() + "__**\n\n" + fn.mastermindWeeklyJournalTemplate((i + 1), namesForTemplate[i]) + "`";
-                    templateOutput = new Discord.MessageEmbed()
-                        .setColor("#ADD8E6")
-                        .setDescription(templateOutput);
-                    message.channel.send(templateOutput);
-                    break;
-                }
-                if (i == 0) {
-                    templateOutput = "`**__" + date.toString() + "__**\n\n" + fn.mastermindWeeklyJournalTemplate((i + 1), namesForTemplate[i]) + "\n\n\n";
-                }
-                else if (i == numberOfUsers - 1) {
-                    templateOutput = templateOutput + fn.mastermindWeeklyJournalTemplate((i + 1), namesForTemplate[i]) + "`";
-                    templateOutput = new Discord.MessageEmbed()
-                        .setColor("#ADD8E6")
-                        .setDescription(templateOutput);
-                    message.channel.send(templateOutput);
-                    break;
-                }
-                else if (i % 5 == 0) {
-                    templateOutput = templateOutput + fn.mastermindWeeklyJournalTemplate((i + 1), namesForTemplate[i]) + "`";
-                    templateOutput = new Discord.MessageEmbed()
-                        .setColor("#ADD8E6")
-                        .setDescription(templateOutput);
-                    message.channel.send(templateOutput);
-                    templateOutput = "`";
-                }
-                else {
-                    templateOutput = templateOutput + fn.mastermindWeeklyJournalTemplate((i + 1), namesForTemplate[i]) + "\n\n\n";
-                }
-
-            }
+            // Use WeeklyJournalEntry function to create empty entries and format in backticks for Discord markdown
+            sendGeneratedTemplate(numberOfUsers, namesForTemplate);
             return;
         }
 

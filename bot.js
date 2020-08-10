@@ -1,10 +1,14 @@
 /**
- * Author Name: Justin Mendes
+ * @author Justin Mendes
+ * @license MIT
  * Date Created: July 18, 2020
  * Last Updated: August 08, 2020
  */
 
-//To keep the sensitive information in a separate folder
+ // TO-DO ALIASES ON COMMANDS!
+
+// To keep the sensitive information in a separate folder
+// and allow for environment variables when hosting
 require("dotenv").config();
 const TOKEN = process.env.TOKEN;
 const PREFIX = process.env.PREFIX;
@@ -100,7 +104,7 @@ bot.on("message", async message => {
     //args will give all of the arguments passed in from the user
     const messageArray = message.content.split(/ +/);
     //Get the command (Word after prefix)
-    const command = messageArray[0].slice(PREFIX.length).toLowerCase();
+    const commandName = messageArray[0].slice(PREFIX.length).toLowerCase();
     //Get all of the arguments after the initial command
     const args = messageArray.slice(1);
 
@@ -111,14 +115,14 @@ bot.on("message", async message => {
 
     
     //Otherwise, begin checking if the message is a viable command!
-    if (!bot.commands.has(command)) return;
+    if (!bot.commands.has(commandName)) return;
     else {
         try {
-            console.log(`%c User Command: ${PREFIX}${command} ${args.join(' ')}`, 'color: green; font-weight: bold;');
-            bot.commands.get(command).run(bot, message, args);
+            console.log(`%c User Command: ${PREFIX}${commandName} ${args.join(' ')}`, 'color: green; font-weight: bold;');
+            bot.commands.get(commandName).run(bot, message, args);
         } catch (error) {
             console.error(error);
-            message.reply("there was an error trying to execute that command!");
+            message.reply("There was an error trying to execute that command!");
         }
     }
 });
@@ -159,7 +163,7 @@ bot.on ("guildCreate", async (guild) => {
         .find({ guildID: guild.id })
         .count()
         .catch(err => {
-            fn.invalidInputError(message, fastSeeUsage, "INVALID NUMBER...");
+            fn.sendErrorMessageAndUsage(message, fastSeeUsage, "INVALID NUMBER...");
             console.log(err);
             return;
         });
