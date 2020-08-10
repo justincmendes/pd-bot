@@ -7,5 +7,6 @@ const routes = require('./routes');
 
 app.use('/api', routes);
 
-app.listen(PORT, () => console.log(`Running on Port ${PORT}`
-));
+app.listen(PORT, () => {
+    console.log(`Running on Port ${PORT}`);
+});

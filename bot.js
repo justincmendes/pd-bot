@@ -1,18 +1,18 @@
 /**
- * Author Name: Justin Mendes
+ * @author Justin Mendes
+ * @license MIT
  * Date Created: July 18, 2020
- * Last Updated: July 18, 2020
+ * Last Updated: August 10, 2020
  */
 
-//To keep the sensitive information in a separate folder
+// Variable Declarations and Initializations
+// To keep the sensitive information in a separate folder
 require("dotenv").config();
 const token = process.env.TOKEN;
 const prefix = process.env.PREFIX;
-
 const Discord = require("discord.js");
 const bot = new Discord.Client({ partials: ["MESSAGE", "CHANNEL", "REACTION"] });
 const fn = require("./utils/functions");
-
 const fs = require("fs");
 bot.commands = new Discord.Collection();
 
@@ -20,11 +20,11 @@ const mongoose = require("mongoose");
 const guildSettings = require("./models/guildsettings");
 bot.mongoose = require("./utils/mongoose");
 
-//This shouldn't happen, this would be on Node.js
+// This shouldn't happen, this would be on Node.js
 fs.readdir("./commands", (err, files) => {
     if (err) console.error(err);
 
-    //to get the file extension .js
+    // To get the file extension .js
     let jsfiles = files.filter(f => f.split(".").pop() === "js");
     if (jsfiles.length <= 0) {
         console.log("No commands to load!");
