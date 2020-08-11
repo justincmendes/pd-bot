@@ -3,8 +3,9 @@ require("dotenv").config();
 const PREFIX = process.env.PREFIX;
 
 module.exports.run = async (bot, message, args) => {
-    message.channel.send(`**USAGE:** \`${PREFIX}<COMMAND>\``
-    + "\n\n`<COMMAND>`: **ping, prefix, fast, mastermind, habit, journal, settings**");
+    const commandHelpMessage = `**USAGE:** \`${PREFIX}<COMMAND>\``
+    + "\n\n`<COMMAND>`: **ping, prefix, fast, mastermind, habit, journal, settings**"
+    message.channel.send(commandHelpMessage);
 }
 
 module.exports.help = {

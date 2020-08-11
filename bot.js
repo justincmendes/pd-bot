@@ -90,13 +90,6 @@ bot.on("message", async message => {
     //When the message does not start with prefix, do nothing
     if (message.author.bot || !message.content.startsWith(PREFIX)) return;
 
-    //Messaging the bot in a DM
-    /**
-     * Have to implement DM interaction!
-     * Right now it does not handle DMs preoply
-     */
-    // if(message.channel.type === "dm") return;
-
     //Args/Arguments:
     //.slice to remove the first part of message containing the prefix
     //.split to section off multiple parts of the command (i.e. "?fast start now")
@@ -108,12 +101,6 @@ bot.on("message", async message => {
     //Get all of the arguments after the initial command
     const args = messageArray.slice(1);
 
-    // //Test Logs
-    // console.log(messageArray);
-    // console.log(args);
-    // console.log(command);
-
-    
     //Otherwise, begin checking if the message is a viable command!
     if (!bot.commands.has(commandName)) return;
     else {
