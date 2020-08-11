@@ -468,7 +468,8 @@ module.exports.run = async (bot, message, args) => {
     var startTimestamp, currentTimestamp;
 
     switch (fastCommand) {
-        case "help": message.reply(usageMessage);
+        case "help": 
+        message.channel.send(usageMessage);
             break;
         case "start":
             /**
