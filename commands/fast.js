@@ -405,9 +405,6 @@ module.exports.run = async (bot, message, args) => {
         return;
     }
 
-    if (args[args.length - 1] == "force") forceSkip = true;
-    else forceSkip = false;
-
     let fastCollectionDocument = new Fast();
 
     const fastInProgress = fastCollectionDocument.collection.find({
