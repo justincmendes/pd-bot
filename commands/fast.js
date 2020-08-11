@@ -10,31 +10,6 @@ const PREFIX = process.env.PREFIX;
 // Computed Property Names
 // Using Object Destructuring
 
-// Handle TIMEZONES - based on userSettings!
-
-// Handle <FIELD>s for each function call!
-
-// IF USER TYPES `force` at the end, skip the confirmation window! FOR ALL FUNCTIONS!
-// <FORCE>
-
-// FOR FUTURE FEASABILITY/SCALABILITY:
-// For ?fast see: allow ?fast see all file <FORCE> - to send them a txt file of their fasts!
-// FOR SEE FUNCTION: Put a cap at PAST 5 AND ALL (max. 5), any number after that requires them to open the text file sent by the bot!
-// Send them a confirmation if they'd like to see the rest on a file!
-// Also put a cooldown on the see function!**
-
-
-// SCROLL mode for see and delete: "cursor"
-// For ?fast see/?fast delete: MAKE AN ITERATIVE PROCESS to show all fasts from 1-n and have the user confirm when they are finished seeing
-// or if the fast they are looking at is the fast they want to delete (after deletion ask if they want to continue scrolling!) (MAKE THIS A MESSAGEAWAIT) FOR SPEED!
-
-// For ?fast see/?fast delete: all for user to fast delete <NUMBER> past <STARTING_INDEX>
-
-// ALLOW ALIASES (i.e. create fastfunctions.js and allow the switch to pick up multiple commands?)
-// Ex: ?fast d => fast delete, ?fast st/?fast s => fast start, ?fast e => fast end
-
-// CREATE Fast Post command!! (using fast see and fast end's logic => make functions to make the code more readable and reusable)
-
 // Function Declarations and Definitions
 function fastDataArrayToString(fastData) {
     const [startTimestamp, endTimestamp, fastDuration, fastBreaker, moodRating, reflectionText] = fastData;
@@ -114,7 +89,7 @@ async function showRecentFast(message, fast, fastIsInProgress, currentTimestamp)
 }
 async function getEditEndConfirmation(userOriginalMessageObject, field, userEdit) {
     const resetWarningMessage = `**Are you sure you want to change your ${field} to:**\n${userEdit}`;
-    let endEditConfirmation = await fn.getUserConfirmation(userOriginalMessageObject, resetWarningMessage, `Fast: Edit ${field} Confirmation`);
+    let endEditConfirmation = await fn.getUserConfirmation(userOriginalMessageObject, resetWarningMessage, forceSkip, `Fast: Edit ${field} Confirmation`);
     return endEditConfirmation;
 }
 async function getUserEdit(userOriginalMessageObject, fastFields, fieldToEdit) {
@@ -163,7 +138,7 @@ async function getUserEdit(userOriginalMessageObject, fastFields, fieldToEdit) {
         }
         else if (collectedEdit == "0") {
             const resetWarningMessage = "Are you sure you want to __**reset**__ your current edit?\n*(All of your current edit will be lost...)*";
-            let resetConfirmation = await fn.getUserConfirmation(userOriginalMessageObject, resetWarningMessage, `Fast: Edit ${field} Reset`);
+            let resetConfirmation = await fn.getUserConfirmation(userOriginalMessageObject, resetWarningMessage, forceSkip, `Fast: Edit ${field} Reset`);
             if (resetConfirmation === true) {
                 fastEditMessagePrompt = fastEditMessagePromptOriginal;
                 userEdit = "";
@@ -182,7 +157,7 @@ async function confirmPostOverwrite(userOriginalMessageObject, overwriteReplaceW
     let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, "Are you sure you want to "
         + `**overwrite** your current message with a ${overwriteReplaceWith}?`
         + "\n\n(**Your current message progress will be lost**, the latest image sent will be posted, unless you did `remove`)",
-        `Fast Post: Overwrite with ${overwriteTitle}`, 60000, 0, "\n\nSelect ✅ to **overwrite and post**\nSelect ❌ to **continue with message creation**")
+        forceSkip, `Fast Post: Overwrite with ${overwriteTitle}`, 60000, 0, "\n\nSelect ✅ to **overwrite and post**\nSelect ❌ to **continue with message creation**")
         .catch(err => console.error(err));
     return confirmOverwrite;
 }
@@ -388,7 +363,7 @@ async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp) 
         }
         console.log({ targetChannelIndex })
         let targetChannelName = await bot.channels.cache.get(channelList[targetChannelIndex]).name;
-        confirmSendToChannel = await fn.getUserConfirmation(userOriginalMessageObject, `Are you sure you want to send it to **#${targetChannelName}**?`);
+        confirmSendToChannel = await fn.getUserConfirmation(userOriginalMessageObject, `Are you sure you want to send it to **#${targetChannelName}**?`, forceSkip);
     }
     // Overwrite fastPost Title with one specific to user's nickname in respective server
     fastPost = fastPost.setTitle(`${bot.guilds.cache.get(botServers[targetServerIndex]).member(authorID).displayName}'s ${endTimeToDate} Fast`);
@@ -423,26 +398,7 @@ module.exports.run = async (bot, message, args) => {
     const fastCommand = args[0];
     const authorID = message.author.id;
     const authorUsername = message.author.username;
-    var forceSkip;
-
-    // MOSTLY Fleshed out capability: Most Time Handling Edge-Cases Considered
-    // const fastStartUsage = `**USAGE:**\n\`${config.PREFIX}fast start <DATE/TIME>\`\n\n`
-    // + "Enter date and/or time in **relative terms**\n"
-    // + "(i.e. now, 1 hour ago, 15 minutes ago, yesterday at 12PM, today at 8:32a)"
-    // + "\n\nOR\n\n Enter date and/or time in **absolute terms**\n"
-    // + "(i.e. [Month/Day/Year]: 3/22/2020 10a EST, [Month.Day.Year]: 3.22.2020 at 9PM," 
-    // + "[Month/Day]: 3/22 at 10p PST, [Month.Day]: 3.22 9:27PM, [Time]: 9:22PM OR 11:05a)"
-    // + "**Defaults:** Time: *Assumed Today*; Time Zone: *EST*";
-
-    // FULLY Fleshed out capability: All Time Handling Edge-Cases Considered
-    // const fastStartUsage = `**USAGE:**\n\`${config.PREFIX}fast start <DATE/TIME>\`\n\n`
-    // + "Enter date and/or time in relative terms\n"
-    // + "(i.e. now, 1 hour ago, 15 minutes ago, in 15 minutes, in 1 hour, yesterday at 10pm EST,"
-    // + " two days ago at 6P PST, 1 day ago 8p) Default: next time forward(AM/PM), EST"
-    // + "\n\nOR\n\n Enter date and/or time in absolute terms\n"
-    // + "(i.e. [Month/Day/Year] 3/22/2020 at 10a EST, [Month.Day.Year] 3.22.2020 at 9PM," 
-    // + "[Month/Day] 3/22 at 10a EST, [Month.Day] 3.22 at 9PM)";
-
+    const forceSkip = fn.getForceSkip(args);
     // Before declaration of more variables - check if the user has any arguments
     if (args == undefined || args.length == 0) {
         fn.sendErrorMessageAndUsage(usageHelpMessage);
@@ -468,23 +424,13 @@ module.exports.run = async (bot, message, args) => {
     var startTimestamp, currentTimestamp;
 
     switch (fastCommand) {
-        case "help": 
-        message.channel.send(usageMessage);
+        case "help":
+            message.channel.send(usageMessage);
             break;
         case "start":
-            /**
-             * TO ADD:
-             * 1. How long do you intend to fast? (in hours - you can use decimals too)
-             * 
-             * 2. Set your fast reminder preference? (this will apply unless you change it)
-             * Would you like a reminder before or when your fasts ends? if so when?
-             * -> When you DM the user, have reaction at the bottom which allow them to
-             * quickly and seamlessly end or edit their fast! (Embed)
-             */
-
-            //Check if the user does not already have a fast in progress, otherwise start.
-            //Using greater than equal to ensure error message sent even though 
-            //any given user should not be able to have more than 1 fast running at a time
+            // Check if the user does not already have a fast in progress, otherwise start.
+            // Using greater than equal to ensure error message sent even though 
+            // Any given user should not be able to have more than 1 fast running at a time
             var fastStartUsageMessage = `**USAGE:**\n\`${PREFIX}fast start <DATE/TIME>\`\n\n`
                 + "`<DATE/TIME>`: **now**\n\n(more features in development, i.e. set fast goal time + fast reminder,  and <DATE/TIME> natural language processor";
             fastStartUsageMessage = fn.getMessageEmbed(fastStartUsageMessage, `Fast: Fast Start Help`, "#00FF00");
@@ -619,7 +565,7 @@ module.exports.run = async (bot, message, args) => {
                         }
                         else if (userReflection == "reset") {
                             let confirmReset = await fn.getUserConfirmation(message, "Are you sure you want to **reset/clear** your current message?\nYour current reflection entry will be lost!",
-                                "Fast: Reset Reflection Confirmation");
+                                forceSkip, "Fast: Reset Reflection Confirmation");
                             if (confirmReset === true) {
                                 reflectionTextPrompt = reflectionTextPromptOriginal;
                                 reflectionText = "";
@@ -632,7 +578,7 @@ module.exports.run = async (bot, message, args) => {
                         else if (userReflection == "skip") {
                             // Overwrite any previously collected data: Make sure the user wants to do that
                             let confirmSkip = await fn.getUserConfirmation(message, "Are you sure you want to **skip?**\nYour current reflection entry will be lost!",
-                                "Fast: Skip Reflection Confirmation");
+                                forceSkip, "Fast: Skip Reflection Confirmation");
                             if (confirmSkip === true) {
                                 reflectionText = null;
                                 break;
@@ -663,7 +609,7 @@ module.exports.run = async (bot, message, args) => {
 
                 endConfirmation = endConfirmation + `\n\n**Fast Breaker:** ${fastBreaker}\n**Mood:** ${moodValue}\n**Reflection:** ${reflectionText}`;
                 //If the user declines or has made a mistake, stop.
-                const confirmation = await fn.getUserConfirmation(message, endConfirmation)
+                const confirmation = await fn.getUserConfirmation(message, endConfirmation, forceSkip)
                     .catch(err => console.error(err));
                 console.log(`Confirmation function call: ${confirmation}`);
                 if (confirmation === false) {
@@ -688,7 +634,7 @@ module.exports.run = async (bot, message, args) => {
                         message.reply(`You have successfully logged your **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!`);
                         const confirmPostFastMessage = "Would you like to take a **picture** of your **fast breaker** *and/or* **send a message** to a server channel? (for accountability!)"
                             + "\n\n(if ✅, I will list the servers you're in to find the channel you want to post to!)";
-                        let confirmPostFast = await fn.getUserConfirmation(message, confirmPostFastMessage, "Send Message for Accountability?", 180000, 0)
+                        let confirmPostFast = await fn.getUserConfirmation(message, confirmPostFastMessage, forceSkip, "Send Message for Accountability?", 180000, 0)
                             .catch(err => console.error(err))
                         if (confirmPostFast === false) {
                             return;
@@ -812,7 +758,7 @@ module.exports.run = async (bot, message, args) => {
                             return;
                         }
                         const confirmSeeMessage = `Are you sure you want to see ${args[2]} fasts?\n\n*(IF a lot of logs, it will spam DM/server!)*`;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, `Fast: See ${args[2]} Fasts WARNING!`);
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Fast: See ${args[2]} Fasts WARNING!`);
                         if (!confirmSeeAll) return;
                     }
                     else {
@@ -824,7 +770,7 @@ module.exports.run = async (bot, message, args) => {
                             return;
                         }
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your fast history?\n\n*(IF a lot of logs, it will spam DM/server!)*";
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, "Fast: See All Fasts WARNING!");
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Fast: See All Fasts WARNING!");
                         if (!(await confirmSeeAll)) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
@@ -1051,7 +997,7 @@ module.exports.run = async (bot, message, args) => {
                             deleteConfirmMessage = `Are you sure you want to **delete ${numberArg} fasts?:**\n` + deleteConfirmMessage;
                         }
                     }
-                    if (await fn.getUserConfirmation(message, deleteConfirmMessage, `Fast: Delete Past ${numberArg} Fasts`, 600000)) {
+                    if (await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Fast: Delete Past ${numberArg} Fasts`, 600000)) {
                         // Must Find the array of cursors first (map _id), then delete only args[3] of them
                         // Sort from greatest endtime => most recent!
                         console.log(`Deleting ${authorID}'s Past ${numberArg} Fasts`);
@@ -1111,7 +1057,7 @@ module.exports.run = async (bot, message, args) => {
                             deleteConfirmMessage = `Are you sure you want to **delete fasts ${toDelete.toString()}?:**\n` + deleteConfirmMessage;
                         }
                     }
-                    if (await fn.getUserConfirmation(message, deleteConfirmMessage, `Fast: Delete Fasts ${toDelete}`, 600000)) {
+                    if (await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Fast: Delete Fasts ${toDelete}`, 600000)) {
                         console.log(`Deleting ${authorID}'s Fasts ${toDelete}`);
                         fastCollectionDocument.collection.deleteMany({ _id: { $in: fastTargetIDs } });
                         return;
@@ -1123,7 +1069,7 @@ module.exports.run = async (bot, message, args) => {
                             pastNumberOfEntriesIndex = parseInt(args[1]);
                             let skipEntries = 0;
                             const multipleDeleteMessage = `Are you sure you want to delete ${pastNumberOfEntriesIndex} fasts after recent`;
-                            let multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, "Fast: Multiple Delete Warning!");
+                            let multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, forceSkip, "Fast: Multiple Delete Warning!");
                             if (multipleDeleteConfirmation === false) {
                                 return;
                             }
@@ -1141,7 +1087,7 @@ module.exports.run = async (bot, message, args) => {
                         let skipEntries = parseInt(args[3]);
                         pastNumberOfEntriesIndex = parseInt(args[1]);
                         const multipleDeleteMessage = `Are you sure you want to delete ${pastNumberOfEntriesIndex} fasts past fast ${skipEntries}`;
-                        let multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, "Fast: Multiple Delete Warning!");
+                        let multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, forceSkip, "Fast: Multiple Delete Warning!");
                         if (multipleDeleteConfirmation === false) {
                             return;
                         }
@@ -1179,7 +1125,7 @@ module.exports.run = async (bot, message, args) => {
                         fastTargetIDs.push(fastView[0]._id);
                         deleteConfirmMessage = "Are you sure you want to **delete your most recent fast?:**\n\n__**Fast 1:**__\n" +
                             fastDataArrayToString(fastData);
-                        if (await fn.getUserConfirmation(message, deleteConfirmMessage, `Fast: Delete Recent Fast`, 300000)) {
+                        if (await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Fast: Delete Recent Fast`, 300000)) {
                             // Must Find the array of cursors first (map _id), then delete only args[3] of them
                             // Sort from greatest endtime => most recent
                             console.log(`Deleting ${authorID}'s Recent Fast`);
@@ -1193,7 +1139,7 @@ module.exports.run = async (bot, message, args) => {
                             fn.sendErrorMessageAndUsage(message, fastDeleteHelpMessage, `**NO FASTS**... try \`${PREFIX}fast start help\``, false);
                             return;
                         }
-                        let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, "Fast: Delete All Fasts WARNING!");
+                        let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, "Fast: Delete All Fasts WARNING!");
                         if (!(await confirmDeleteAll)) return;
                         console.log(`Deleting ALL OF ${authorID}'s Recorded Fasts`);
                         fastCollectionDocument.collection.deleteMany({ userID: authorID });
@@ -1214,7 +1160,7 @@ module.exports.run = async (bot, message, args) => {
                     let fastData = fastCursorToDataArray(fastView[0]);
                     deleteConfirmMessage = `Are you sure you want to **delete Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n` +
                         fastDataArrayToString(fastData);
-                    if (await fn.getUserConfirmation(message, deleteConfirmMessage, `Fast: Delete Fast ${pastNumberOfEntriesIndex}`, 300000)) {
+                    if (await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Fast: Delete Fast ${pastNumberOfEntriesIndex}`, 300000)) {
                         // Must Find the array of cursors first (map _id), then delete only args[3] of them
                         // Sort from greatest endtime => most recent
                         console.log(`Deleting ${authorID}'s Recent Fast`);
@@ -1320,7 +1266,7 @@ module.exports.run = async (bot, message, args) => {
                 showFast = fastDataArrayToString(fastData);
                 console.log({ fastData });
                 editConfirmationMessage = `Are you sure you want to **edit fast ${pastNumberOfEntriesIndex}'s ${fastFields[fieldToEdit]}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n` + showFast;
-                if (await fn.getUserConfirmation(message, editConfirmationMessage, `Fast: Edit Fast ${pastNumberOfEntriesIndex}`, 300000)) {
+                if (await fn.getUserConfirmation(message, editConfirmationMessage, forceSkip, `Fast: Edit Fast ${pastNumberOfEntriesIndex}`, 300000)) {
                     console.log(`Editing ${authorID}'s Fast ${pastNumberOfEntriesIndex}`);
                     switch (fieldToEdit) {
                         case 0:

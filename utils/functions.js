@@ -6,8 +6,11 @@ require("dotenv").config();
 const PREFIX = process.env.PREFIX;
 
 module.exports = {
-    getUserConfirmation: async function (userOriginalMessageObject, confirmationMessage, title = "Confirmation", delayTime = 60000, deleteDelay = 3000,
+    getUserConfirmation: async function (userOriginalMessageObject, confirmationMessage, forceSkip = false, title = "Confirmation", delayTime = 60000, deleteDelay = 3000,
         confirmationInstructions = "\n\nSelect ✅ to **proceed**\nSelect ❌ to **cancel**") {
+        if(forceSkip === true) {
+            return true;
+        }
         const agree = "✅";
         const disagree = "❌";
         const userOriginal = userOriginalMessageObject.author.id;
@@ -431,6 +434,17 @@ module.exports = {
     longTermGoalsTemplate: function () {
         const goalsTemplate = "";
         return goalsTemplate;
-    }
+    },
+
+    getForceSkip: function (args) {
+        var forceSkip;
+        if (args[args.length - 1].toLowerCase == "force") {
+            forceSkip = true;
+        }
+        else {
+            forceSkip = false;
+        }
+        return forceSkip;
+    },
 
 };
