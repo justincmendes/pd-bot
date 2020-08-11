@@ -416,8 +416,9 @@ async function userFastIndexOf(fastCollectionDocument, userID, pastNumberOfEntri
 module.exports.run = async (bot, message, args) => {
 
     // Variable Declarations and Initializations
-    const usageMessage = `**USAGE:**\n\`${PREFIX}fast <ACTION>\`\n\n`
+    var usageMessage = `**USAGE:**\n\`${PREFIX}fast <ACTION>\`\n\n`
         + "`<ACTION>`: **help; start; end; see; edit; delete; see <PAST_#_OF_ENTRIES>; see <recent OR all>**";
+    usageMessage = fn.getMessageEmbed(usageMessage, "Help");
     const usageHelpMessage = `Try \`${PREFIX}fast help\``;
     const fastCommand = args[0];
     const authorID = message.author.id;
