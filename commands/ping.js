@@ -7,7 +7,6 @@ module.exports.run = async (bot, message, args) => {
     let pingTime = message.createdTimestamp;
     let botSendTime;
     let pingMessage = await message.channel.send("Pong!");
-    
     botSendTime = pingMessage.createdTimestamp;
     pingTime = botSendTime - pingTime;
     pingMessage.edit(`Pong! \`${pingTime}ms\``).catch(console.error);

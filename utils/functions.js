@@ -8,7 +8,7 @@ const PREFIX = process.env.PREFIX;
 module.exports = {
     getUserConfirmation: async function (userOriginalMessageObject, confirmationMessage, forceSkip = false, title = "Confirmation", delayTime = 60000, deleteDelay = 3000,
         confirmationInstructions = "\n\nSelect ✅ to **proceed**\nSelect ❌ to **cancel**") {
-        if(forceSkip === true) {
+        if (forceSkip === true) {
             return true;
         }
         const agree = "✅";
@@ -358,13 +358,11 @@ module.exports = {
         else return (false);
     },
 
-    sendErrorMessageAndUsage: async function (userOriginalMessageObject, usageMessage, errorMessage = "**INVALID INPUT...**", usageReply = true) {
+    sendErrorMessageAndUsage: async function (userOriginalMessageObject, usageMessage, errorMessage = "**INVALID INPUT...**") {
         await userOriginalMessageObject.reply(errorMessage)
             .then(msg => {
-                if (usageReply) {
-                    userOriginalMessageObject.reply(usageMessage);
+                    msg.channel.send(usageMessage);
                     msg.delete(5000);
-                }
             })
             .catch(err => console.error(err));
     },
@@ -409,25 +407,99 @@ module.exports = {
         userOriginalMessageObject.channel.send(embedMessage);
     },
 
-    weeklyJournalTemplate: function () {
-        const weeklyGoalsTemplate = "\n`__**Week:**__\n__**Next Week's 1-3 ABSOLUTE Goals and WHY:**__"
-            + "\n**Weekly Goal 1**:\n**Weekly Goal 2**:\n**Weekly Goal 3**:`";
-        const weeklyReflectionTemplate = "**\n`__**Week:**__"
-            + "\n**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**"
+    getDailyJournalMorningTemplate: function (withTitle = true, withMarkdown = true) {
+        const dailyJournalMorningTemplate = "**What am I truly grateful for?**\n1.\n2.\n3.\n"
+            + "\n**What are 3 things I need to be better at?**\n1.\n2.\n3.\n"
+            + "\n**What mindset/actions would make today GREAT?**\n1.\n2.\n3.\n"
+            + "\n**Daily Affirmation:**\nI am";
+        var journalOut;
+        if (withTitle === true) {
+            journalOut = `**__MORNING__**\n${dailyJournalMorningTemplate}`;
+        }
+        else {
+            journalOut = dailyJournalMorningTemplate;
+        }
+        if(withMarkdown === true) {
+            journalOut = `\`${journalOut}\``;
+        }
+        return journalOut;
+    },
+
+    getDailyJournalNightTemplate: function (withTitle = true, withMarkdown = true) {
+        const dailyJournalNightTemplate = "**List 3 Accomplishments:**\n1.\n2.\n3.\n"
+            + "**How could I have made today better?**";
+        var journalOut;
+        if (withTitle === true) {
+            journalOut = `**__NIGHT__**\n${dailyJournalNightTemplate}`;
+        }
+        else {
+            journalOut = dailyJournalNightTemplate;
+        }
+        if(withMarkdown === true) {
+            journalOut = `\`${journalOut}\``;
+        }
+        return journalOut;
+    },
+
+    getDailyJournalFullTemplate: function (withTitle = true, withMarkdown = true) {
+        const dailyJournalMorningTemplate = this.getDailyJournalMorningTemplate(withTitle, withMarkdown);
+        const dailyJournalNightTemplate = this.getDailyJournalNightTemplate(withTitle, withMarkdown);
+        let journalOut = `${dailyJournalMorningTemplate}\n\n${dailyJournalNightTemplate}`;
+        return journalOut;
+    },
+
+    getWeeklyJournalReflectionTemplate: function (withTitles = true, withMarkdown = true) {
+        const weeklyReflectionTemplate = "**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**"
             + "\n\n__**Area of Life That Needs the Most Attention:** __\n__**STOP, START, CONTINUE:** __"
-            + "\n**STOP**:\n**START**:\n**CONTINUE**:`";
-        return "**__WEEKLY GOALS:__**\n" + weeklyGoalsTemplate + "\n\n" + "**__WEEKLY REFLECTION:__\n" + weeklyReflectionTemplate;
+            + "\n**STOP**:\n**START**:\n**CONTINUE**:";
+        var journalOut;
+        if (withTitles === true) {
+            journalOut = `**__WEEKLY REFLECTION:__**\n${weeklyReflectionTemplate}`;
+        }
+        else {
+            journalOut = weeklyReflectionTemplate;
+        }
+        if(withMarkdown === true) {
+            journalOut = `\`${journalOut}\``;
+        }
+        return journalOut;
+    },
+
+    getWeeklyJournalGoalTemplate: function (withTitle = true, withMarkdown = true) {
+        const weeklyGoalsTemplate = "__**Next Week's 1-3 ABSOLUTE Goals and WHY:**__"
+            + "\n**Weekly Goal 1**:\n**Weekly Goal 2**:\n**Weekly Goal 3**:";
+        var journalOut;
+        if (withTitle === true) {
+            journalOut = `**__WEEKLY GOALS:__**\n${weeklyGoalsTemplate}`;
+        }
+        else {
+            journalOut = weeklyGoalsTemplate;
+        }
+        if(withMarkdown === true) {
+            journalOut = `\`${journalOut}\``;
+        }
+        return journalOut;
+    },
+
+    getWeeklyJournalFullTemplate: function (withTitles = true, withMarkdown = true) {
+        const weeklyGoalsTemplate = this.getWeeklyJournalGoalTemplate(withTitles, withMarkdown);
+        const weeklyReflectionTemplate = this.getWeeklyJournalReflectionTemplate(withTitles, withMarkdown);
+        let journalOut = `${weeklyReflectionTemplate}\n\n${weeklyGoalsTemplate}`;
+        return journalOut;
     },
 
     // Function call allows for name to be a Discord user tag! <@##############>
-    mastermindWeeklyJournalEntry: function (name = "NAME", previousWeekReflectionEntry = "", areaOfLifeEntry = "", stopEntry = "",
-        startEntry = "", continueEntry = "", firstWeeklyGoal = "", secondWeeklyGoal = "", thirdWeeklyGoal = "") {
-        const weeklyJournalEntry = `__**${name}**__`
+    mastermindWeeklyJournalEntry: function (name = "NAME", withMarkdown = false, previousWeekReflectionEntry = "", areaOfLifeEntry = "", 
+    stopEntry = "", startEntry = "", continueEntry = "", firstWeeklyGoal = "", secondWeeklyGoal = "", thirdWeeklyGoal = "") {
+        let weeklyJournalEntry = `__**${name}**__`
             + `\n**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**\n${previousWeekReflectionEntry}`
             + `\n__**Area of Life That Needs the Most Attention:**__ ${areaOfLifeEntry}\n__**STOP, START, CONTINUE:** __`
             + `\n**STOP**: ${stopEntry}\n**START**: ${startEntry}\n**CONTINUE**: ${continueEntry}`
             + `\n__**Next Week's 1-3 ABSOLUTE Goals and WHY:**__`
             + `\n**Weekly Goal 1**: ${firstWeeklyGoal}\n**Weekly Goal 2**: ${secondWeeklyGoal}\n**Weekly Goal 3**: ${thirdWeeklyGoal}`;
+        if (withMarkdown === true) {
+            weeklyJournalEntry = `\`${weeklyJournalEntry}\``;
+        }
         return weeklyJournalEntry;
     },
 
@@ -436,14 +508,23 @@ module.exports = {
         return goalsTemplate;
     },
 
+    // Accounting for only the ALL LOWERCASE "force" as the last argument
     getForceSkip: function (args) {
         var forceSkip;
-        if (args[args.length - 1].toLowerCase == "force") {
-            forceSkip = true;
+        var lastArg = args[args.length - 1];
+        // If the user sent just a command call, with no args
+        if (lastArg !== undefined) {
+            if (lastArg == "force") {
+                forceSkip = true;
+            }
+            else {
+                forceSkip = false;
+            }
         }
         else {
             forceSkip = false;
         }
+        console.log({ forceSkip });
         return forceSkip;
     },
 
