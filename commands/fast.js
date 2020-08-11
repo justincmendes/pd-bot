@@ -418,7 +418,7 @@ module.exports.run = async (bot, message, args) => {
     // Variable Declarations and Initializations
     var usageMessage = `**USAGE:**\n\`${PREFIX}fast <ACTION>\`\n\n`
         + "`<ACTION>`: **help; start; end; see; edit; delete; see <PAST_#_OF_ENTRIES>; see <recent OR all>**";
-    usageMessage = fn.getMessageEmbed(usageMessage, "Help");
+    usageMessage = fn.getMessageEmbed(usageMessage, "Fast Help");
     const usageHelpMessage = `Try \`${PREFIX}fast help\``;
     const fastCommand = args[0];
     const authorID = message.author.id;
