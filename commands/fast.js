@@ -50,6 +50,10 @@ function fastCursorToDataArray(fastCursor, calculateFastDuration = false, update
         if (givenEndTimestamp !== null) {
             fastDuration = givenEndTimestamp - startTimestamp;
         }
+        else {
+            let currentTimestamp = new Date();
+            fastDuration = currentTimestamp - startTimestamp;
+        }
     }
     else {
         fastDuration = fastCursor.fastDuration;
@@ -70,7 +74,7 @@ async function getRecentFast(message, fast, fastIsInProgress, currentTimestamp) 
         })
             .catch(err => console.error(err));
         fastType = "Current";
-        fastData = fastCursorToDataArray(fastView, true, true, currentTimestamp);
+        fastData = fastCursorToDataArray(fastView, true);
     }
     else {
         // Show the user the last fast with the most recent end time (by sorting from largest to smallest end time and taking the first):
@@ -232,7 +236,7 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
                 messageIndex--;
             }
             else {
-                fastPostMessagePrompt = fastPostMessagePrompt + "\n**Current Message:**\n" + collectedMessage + "\n";
+                fastPostMessagePrompt += `\n**Current Message:**\n${collectedMessage}\n`;
                 fastPost = collectedMessage + "\n";
             }
         }
@@ -286,7 +290,7 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
             // Overwrite any previously collected data: Confirm first, if confirmed exit and post, otherwise continue loop
             let confirmOverwrite = await confirmPostOverwrite(userOriginalMessageObject, "**full fast post (including mood and reflection)**", forceSkip, "Full Fast Post");
             if (confirmOverwrite === true) {
-                fastPost = fastPost = addUserTag(userOriginalMessageObject, fastDataArrayToString(fastData));
+                fastPost = addUserTag(userOriginalMessageObject, fastDataArrayToString(fastData));
                 break;
             }
         }
@@ -325,7 +329,13 @@ async function showFastPost(userOriginalMessageObject, fastPost, mistakeMessage,
 async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, forceSkip = false) {
     // FUTURE: On the sent post, there will be a reaction collect and it will allow the user to edit or delete their post!
     // TAGGED @user in the post so that you can retrieve this information with partials! (getting the first @user.author.id): "@user 's fast:"
-    const endTimeToDate = new Date(endTimestamp).toLocaleString();
+    var endTimeToDate;
+    if(endTimestamp === null) {
+        endTimeToDate = new Date().toLocaleString();
+    }
+    else {
+        endTimeToDate = new Date(endTimestamp).toLocaleString();
+    }
     const authorID = userOriginalMessageObject.author.id;
 
     // Check all the servers the bot is in
@@ -1270,6 +1280,7 @@ module.exports.run = async (bot, message, args) => {
         fastPostUsageMessage = fn.getMessageEmbed(fastPostUsageMessage, `Fast: Post Help`, fastEmbedColour);
         const fastPostHelpMessage = `**INVALID USAGE**... Try \`${PREFIX}fast post help\``;
         if (args[1] !== undefined) {
+            var fastData;
             if (args[1].toLowerCase() == "help") {
                 message.channel.send(fastPostUsageMessage);
                 return;
@@ -1286,9 +1297,10 @@ module.exports.run = async (bot, message, args) => {
                 if (args[1].toLowerCase() == "recent") {
                     // If user has no recent fast, case already handed above
                     let fastView = await userFastIndexOf(fastCollectionDocument, authorID, 0);
-                    fastData = fastCursorToDataArray(fastView[0]);
+                    fastData = fastCursorToDataArray(fastView[0], true);
                     endTimestamp = fastData[1];
                     let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
+                    console.log({fastPost});
                     if (fastPost === false) {
                         return;
                     }
@@ -1301,13 +1313,20 @@ module.exports.run = async (bot, message, args) => {
                 }
             }
             else {
+                var fastData;
                 pastNumberOfEntriesIndex = parseInt(args[1]) - 1;
                 let fastView = await userFastIndexOf(fastCollectionDocument, authorID, pastNumberOfEntriesIndex);
                 if (fastView === undefined) {
                     fn.sendErrorMessage(message, "**FAST DOES NOT EXIST**...");
                     return;
                 }
-                fastData = fastCursorToDataArray(fastView[0]);
+                let shownFast = fastView[0];
+                if (pastNumberOfEntriesIndex === 0 && shownFast.endTime === null) {
+                    fastData = fastCursorToDataArray(shownFast, true);
+                }
+                else {
+                    fastData = fastCursorToDataArray(shownFast);
+                }
                 endTimestamp = fastData[1];
                 let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
                 if (fastPost === false) {
