@@ -427,7 +427,7 @@ module.exports = {
 
     getDailyJournalNightTemplate: function (withTitle = true, withMarkdown = true) {
         const dailyJournalNightTemplate = "**List 3 Accomplishments:**\n1.\n2.\n3.\n"
-            + "**How could I have made today better?**";
+            + "\n**How could I have made today better?**";
         var journalOut;
         if (withTitle === true) {
             journalOut = `**__NIGHT__**\n${dailyJournalNightTemplate}`;

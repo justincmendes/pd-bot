@@ -115,7 +115,7 @@ module.exports.run = async (bot, message, args) => {
         let templateUsageMessage = `**USAGE:**\n\`${PREFIX}mastermind template <NUMBER_OF_USERS> <NAMES>\``
             + "\n\n\`<NUMBER_OF_USERS>\`: **10** (\**any number*\*)"
             + "\n\n\`<NAMES>\`: Enter names of people in mastermind meeting\n***(COMMA SEPARATED, spaces in between is optional)***"
-            + "\n(i.e. \`Paul, Radeesh, David, Kurt, Angel, Josh, Ragel, Sharran, Luke, Justin\`)";
+            + "\n(i.e. \`Paul, Radeesh, David, Kurt, Angel, Luke, Josh, Ragel, Sharran, Justin\`)";
         templateUsageMessage = fn.getMessageEmbed(templateUsageMessage, "Mastermind: Help", mastermindEmbedColour);
         const templateHelpMessage = `Try \`${PREFIX}mastermind template help\``;
         const invalidTemplateNumber = "**INVALID INPUT**... Enter a **positive number > 1!**";

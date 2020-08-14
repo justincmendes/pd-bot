@@ -86,7 +86,7 @@ module.exports.run = async (bot, message, args) => {
 
     // SHOWS WEEKLY JOURNAL TEMPLATES!
     else if (journalCommand == "template" || journalCommand == "templates" || journalCommand == "temp" || journalCommand == "t") {
-        let templateUsageMessage = `**USAGE**\n\`${PREFIX}journal template <DAILY/WEEKLY> <JOURNAL_TYPE>\``
+        let templateUsageMessage = `**USAGE:**\n\`${PREFIX}journal template <DAILY/WEEKLY> <JOURNAL_TYPE>\``
             + "\n\n`<DAILY/WEEKLY>`: **daily; weekly**"
             + "\n\n`<JOURNAL_TYPE>`:\nIf `daily`: **morning; night**\nIf `weekly`: **reflection; goals**";
         templateUsageMessage = fn.getMessageEmbed(templateUsageMessage, "Journal: Template Help", journalEmbedColour);

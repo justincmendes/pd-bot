@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
-    // Last time tracked/checked will be the most recent of: log
-    // Can map log to checkInMessage and show user all of the past logs!
-    // Can map log to Total Tracked to show the users the days they hit the goal!
+// Last time tracked/checked will be the most recent of: log
+// Can map log to checkInMessage and show user all of the past logs!
+// Can map log to Total Tracked to show the users the days they hit the goal!
 
 const habitSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
@@ -12,26 +12,47 @@ const habitSchema = mongoose.Schema({
     totalMissed: Number,
     totalSkip: Number,
     totalDays: Number,
+    // Past 7 Days
     pastWeek: Number,
+    // Past 30 Days
+    pastMonth: Number,
     allTimeAvg: Number,
-    monthAvg : Number,
-    cron : Number,
+    monthAvg: Number,
+    // Relative to January 1, 1970 00:00:00 UTC.
+    cronTime: Number,
 
-    // For Habits that have a daily counter!
-    trackValue: {
-        type: Number,
-        required: false
+    // For Habits that have a daily/general counter!
+    countHabitSettings: {
+        "isCountType": Boolean,
+        // To automatically mark complete or incomplete on day!
+        "autoMarkCountGoal": {
+            type: Boolean,
+            required: false,
+        },
+        "countValueDailyGoal": {
+            type: Number,
+            required: false,
+        },
+        "countValueTotalGoal": {
+            type: Number,
+            required: false,
+        },
     },
-    // To automatically mark complete or incomplete on day!
-    trackValueGoal: {
-        type: Number,
-        required: false
+    countHabitValue: {
+        type: [Number],
+        required: false,
     },
-    // Ensure there is only one log per cron
-    log: [Number],
-    
-    // Allow for Checked: ✅; Missed: ❌; Skip: ➖ (still counts as a log)
-    checkInMessage: [String]
+
+    habit: {
+        "Title": String,
+        "Description": String,
+        // Ensure there is only one log per cron
+        "timeLog": [Number],
+        // Allow for Checked: ✅; Missed: ❌; Skip: ➖ (still counts as a log)
+        "checkInType": [String],
+        "checkInMessage": [String],
+
+    },
 });
 
 module.exports = mongoose.model("Habit", habitSchema, "habits");

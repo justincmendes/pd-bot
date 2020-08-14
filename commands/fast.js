@@ -13,7 +13,7 @@ const fastEmbedColour = "#32CD32";
 // Using Object Destructuring
 
 // Function Declarations and Definitions
-function fastDataArrayToString(fastData) {
+function fastDataArrayToString(fastData, showFastEndMessage) {
     const [startTimestamp, endTimestamp, fastDuration, fastBreaker, moodRating, reflectionText] = fastData;
     const startTimeToDate = new Date(startTimestamp).toLocaleString();
     var endTimeToDate;
@@ -29,13 +29,17 @@ function fastDataArrayToString(fastData) {
         `**Fast Breaker:** ${fastBreaker}\n` +
         `**Mood Rating (1-5):** ${moodRating}\n` +
         `**Reflection:** ${reflectionText}\n`;
+    if (showFastEndMessage) {
+        fastDataString += "\n(Want to end your fast? `?fast end`";
+    }
     return fastDataString;
 }
 function fastCursorToDataArray(fastCursor, calculateFastDuration = false, updateShownEndTime = false, endTimestamp = null) {
     var fastDataArray;
+    const givenEndTimestamp = endTimestamp;
     const startTimestamp = fastCursor.startTime;
     // Calculate Fast Duration => endTime is not defined yet!
-    if (updateShownEndTime) {
+    if (updateShownEndTime === true) {
         endTimestamp = endTimestamp;
     }
     else {
@@ -43,7 +47,9 @@ function fastCursorToDataArray(fastCursor, calculateFastDuration = false, update
     }
     var fastDuration;
     if (calculateFastDuration) {
-        fastDuration = endTimestamp - startTimestamp;
+        if (givenEndTimestamp !== null) {
+            fastDuration = givenEndTimestamp - startTimestamp;
+        }
     }
     else {
         fastDuration = fastCursor.fastDuration;
@@ -54,8 +60,8 @@ function fastCursorToDataArray(fastCursor, calculateFastDuration = false, update
     fastDataArray = [startTimestamp, endTimestamp, fastDuration, fastBreaker, moodRating, reflectionText];
     return fastDataArray;
 }
-async function showRecentFast(message, fast, fastIsInProgress, currentTimestamp) {
-    var fastView, fastIndex, fastData, fastDataToString, fastEmbed;
+async function getRecentFast(message, fast, fastIsInProgress, currentTimestamp) {
+    var fastView, fastType, fastData, fastDataToString, fastEmbed;
     if (fastIsInProgress === true) {
         // Show the user the current fast
         fastView = await fast.collection.findOne({
@@ -63,7 +69,7 @@ async function showRecentFast(message, fast, fastIsInProgress, currentTimestamp)
             endTime: null
         })
             .catch(err => console.error(err));
-        fastIndex = "Current";
+        fastType = "Current";
         fastData = fastCursorToDataArray(fastView, true, true, currentTimestamp);
     }
     else {
@@ -76,15 +82,15 @@ async function showRecentFast(message, fast, fastIsInProgress, currentTimestamp)
             .limit(1)
             .toArray();
         fastView = fastView[0];
-        fastIndex = "Previous";
+        fastType = "Previous";
         fastData = fastCursorToDataArray(fastView);
     }
-    fastDataToString = fastDataArrayToString(fastData);
-    if (fastIsInProgress == true) {
+    fastDataToString = `__**Fast 1:**__\n${fastDataArrayToString(fastData)}`;
+    if (fastIsInProgress === true) {
         fastDataToString = fastDataToString + `\n(Want to end your fast? \`${PREFIX}fast end\`)`;
     }
-    fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See ${fastIndex} Fast`, fastEmbedColour);
-    message.channel.send(fastEmbed);
+    fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See ${fastType} Fast`, fastEmbedColour);
+    return (fastEmbed);
 }
 async function getEditEndConfirmation(userOriginalMessageObject, field, userEdit, forceSkip = false) {
     const resetWarningMessage = `**Are you sure you want to change your ${field} to:**\n${userEdit}`;
@@ -389,7 +395,6 @@ async function userFastIndexOf(fastCollectionDocument, userID, pastNumberOfEntri
 }
 
 module.exports.run = async (bot, message, args) => {
-
     // Variable Declarations and Initializations
     var fastUsageMessage = `**USAGE:**\n\`${PREFIX}fast <ACTION>\`\n\n`
         + "`<ACTION>`: **help; start; end; see; edit; delete; see <PAST_#_OF_ENTRIES>; see <recent OR all>**";
@@ -698,27 +703,26 @@ module.exports.run = async (bot, message, args) => {
         // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
         // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
         if (!seeCommands.includes(args[1]) && isNaN(args[1])) {
-            await showRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp);
+            message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
             message.reply(fastSeeHelpMessage);
             return;
         }
         // Do not show the most recent fast embed, when a valid command is called
         // it will be handled properly later based on the values passed in!
         else {
+            const seeType = args[1].toLowerCase();
             var pastFunctionality;
             var pastNumberOfEntriesIndex;
-            var fields = { userID: authorID };
             // To check if the given argument is a number!
             // If it's not a number and has passed the initial 
             // filter, then use the "past" functionality
             // Handling Argument 1:
             const isNumberArg = !isNaN(args[1]);
-            var allEntries;
-            if (args[1].toLowerCase() == "recent") {
-                await showRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp);
+            if (seeType == "recent") {
+                message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
                 return;
             }
-            else if (args[1].toLowerCase() == "all") {
+            else if (seeType == "all") {
                 pastNumberOfEntriesIndex = await fastCollectionDocument.collection.find({ userID: authorID }).count();
                 pastFunctionality = true;
             }
@@ -730,13 +734,13 @@ module.exports.run = async (bot, message, args) => {
                 }
                 else pastFunctionality = false;
             }
-            else if (args[1].toLowerCase() == "past") {
+            else if (seeType == "past") {
                 pastFunctionality = true;
             }
             // After this filter:
             // If the first argument after "see" is not past, then it is not a valid call
             else {
-                await showRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp);
+                message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
                 message.reply(fastSeeHelpMessage);
                 return;
             }
@@ -747,30 +751,30 @@ module.exports.run = async (bot, message, args) => {
                 if (args[2] != undefined) {
                     // If the next argument is NotaNumber, invalid "past" command call
                     if (isNaN(args[2])) {
-                        await showRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp);
+                        message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
                         message.reply(fastSeeHelpMessage);
                         return;
                     }
                     if (parseInt(args[2]) <= 0) {
-                        await showRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp);
+                        message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
                         message.reply(fastSeeHelpMessage);
                         return;
                     }
                     const confirmSeeMessage = `Are you sure you want to see ${args[2]} fasts?\n\n*(IF a lot of logs, it will spam DM/server!)*`;
                     let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Fast: See ${args[2]} Fasts WARNING!`);
-                    if (!confirmSeeAll) return;
+                    if (confirmSeeAll === false) return;
                 }
                 else {
                     // If the next argument is undefined, implied "see all" command call unless "all" was not called:
                     // => empty "past" command call
-                    if (args[1].toLowerCase() != "all") {
-                        await showRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp);
+                    if (seeType != "all") {
+                        message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
                         message.reply(fastSeeHelpMessage);
                         return;
                     }
                     const confirmSeeAllMessage = "Are you sure you want to **see all** of your fast history?\n\n*(IF a lot of logs, it will spam DM/server!)*";
                     let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Fast: See All Fasts WARNING!");
-                    if (!(await confirmSeeAll)) return;
+                    if (confirmSeeAll === false) return;
                 }
                 // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
                 if (pastNumberOfEntriesIndex === undefined) {
@@ -789,7 +793,7 @@ module.exports.run = async (bot, message, args) => {
                     let fastData = fastCursorToDataArray(fastView[i]);
                     fastDataToString = fastDataToString + `__**Fast ${i + 1}:**__\n` + fastDataArrayToString(fastData) + "\n";
                 }
-                fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See ${pastNumberOfEntriesIndex} Fasts`, "00FF00");
+                fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See ${pastNumberOfEntriesIndex} Fasts`, fastEmbedColour);
                 message.channel.send(fastEmbed);
                 return;
             }
@@ -840,8 +844,13 @@ module.exports.run = async (bot, message, args) => {
             else {
                 fastData = fastCursorToDataArray(fastView[0]);
             }
-            fastDataToString = `__**Fast ${pastNumberOfEntriesIndex}:**__\n` + fastDataArrayToString(fastData);
-            fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See Fast ${pastNumberOfEntriesIndex}`, "00FF00");
+
+            var showFastEndMessage = false;
+            if (pastNumberOfEntriesIndex === 1) {
+                showFastEndMessage = true
+            }
+            fastDataToString = `__**Fast ${pastNumberOfEntriesIndex}:**__\n` + fastDataArrayToString(fastData, showFastEndMessage);
+            fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See Fast ${pastNumberOfEntriesIndex}`, fastEmbedColour);
             message.channel.send(fastEmbed);
         }
     }
@@ -892,23 +901,24 @@ module.exports.run = async (bot, message, args) => {
 
         // Show the user the most recent fast
         if (args[1] == undefined || args.length == 1) {
-            await showRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp);
+            message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
             message.reply(fastDeleteHelpMessage);
             return;
         }
 
         // delete past command:
         else if (args[2] !== undefined) {
-            if (args[1].toLowerCase() == "past") {
+            const deleteType = args[1].toLowerCase();
+            if (deleteType == "past") {
                 // If the following argument is not a number, exit!
                 if (isNaN(args[2])) {
-                    await showRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp);
+                    message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
                     message.reply(fastDeleteHelpMessage);
                     return;
                 }
                 var numberArg = parseInt(args[2]);
                 if (numberArg <= 0) {
-                    await showRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp);
+                    message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
                     message.reply(fastDeleteHelpMessage);
                     return;
                 }
@@ -945,7 +955,7 @@ module.exports.run = async (bot, message, args) => {
                     return;
                 }
             }
-            else if (args[1].toLowerCase() == "many") {
+            else if (deleteType == "many") {
                 if (args[2] == undefined) {
                     message.reply(fastDeleteHelpMessage);
                     return;
@@ -1004,7 +1014,7 @@ module.exports.run = async (bot, message, args) => {
             else if (args[2].toLowerCase() == "past") {
                 if (isNaN(args[3])) {
                     if (args[3].toLowerCase() == "recent") {
-                        pastNumberOfEntriesIndex = parseInt(args[1]);
+                        let pastNumberOfEntriesIndex = parseInt(args[1]);
                         let skipEntries = 0;
                         const multipleDeleteMessage = `Are you sure you want to delete ${pastNumberOfEntriesIndex} fast(s) after recent`;
                         let multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, forceSkip, "Fast: Multiple Delete Warning!");
@@ -1023,7 +1033,7 @@ module.exports.run = async (bot, message, args) => {
                 }
                 else {
                     let skipEntries = parseInt(args[3]);
-                    pastNumberOfEntriesIndex = parseInt(args[1]);
+                    let pastNumberOfEntriesIndex = parseInt(args[1]);
                     const multipleDeleteMessage = `Are you sure you want to delete ${pastNumberOfEntriesIndex} fast(s) past fast ${skipEntries}`;
                     let multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, forceSkip, "Fast: Multiple Delete Warning!");
                     if (multipleDeleteConfirmation === false) {
@@ -1036,7 +1046,7 @@ module.exports.run = async (bot, message, args) => {
                 }
             }
             // They haven't specified the field for the fast delete past function
-            else if (args[1].toLowerCase() == "past") {
+            else if (deleteType == "past") {
                 message.reply(fastDeleteHelpMessage);
                 return;
             }
@@ -1054,7 +1064,8 @@ module.exports.run = async (bot, message, args) => {
                 `\n\n*(I'd suggest you* \`${PREFIX}fast see all\` *or* \`${PREFIX}fast archive all\` *first)*`;
             const noFastsMessage = `**NO FASTS**... try \`${PREFIX}fast start help\``;
             if (isNaN(args[1])) {
-                if (args[1].toLowerCase() == "recent") {
+                const deleteType = args[1].toLowerCase();
+                if (deleteType == "recent") {
                     fastView = await userFastIndexOf(fastCollectionDocument, authorID, 0, 1);
                     if (fastView.length == 0) {
                         fn.sendErrorMessage(message, noFastsMessage);
@@ -1072,7 +1083,7 @@ module.exports.run = async (bot, message, args) => {
                         return;
                     }
                 }
-                else if (args[1].toLowerCase() == "all") {
+                else if (deleteType == "all") {
                     pastNumberOfEntriesIndex = await fastCollectionDocument.collection.find({ userID: authorID }).count();
                     if (pastNumberOfEntriesIndex == 0) {
                         fn.sendErrorMessage(message, noFastsMessage);
