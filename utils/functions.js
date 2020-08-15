@@ -6,7 +6,7 @@ require("dotenv").config();
 const PREFIX = process.env.PREFIX;
 
 module.exports = {
-    getUserConfirmation: async function (userOriginalMessageObject, confirmationMessage, forceSkip = false, title = "Confirmation", delayTime = 60000, deleteDelay = 3000,
+    getUserConfirmation: async function (userOriginalMessageObject, confirmationMessage, forceSkip = false, embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,
         confirmationInstructions = "\n\nSelect ✅ to **proceed**\nSelect ❌ to **cancel**") {
         if (forceSkip === true) {
             return true;
@@ -19,17 +19,12 @@ module.exports = {
         var confirmation;
         confirmationMessage = confirmationMessage + confirmationInstructions;
 
-        const embed = new Discord.MessageEmbed()
-            .setColor("#FF0000")
-            .setTitle(title)
-            .setDescription(confirmationMessage)
-            .setFooter(footerText);
+        const embed = this.getMessageEmbed(confirmationMessage, embedTitle, "#FF0000").setFooter(footerText);
 
         await userOriginalMessageObject.channel.send(embed)
             .then(async confirm => {
                 await confirm.react(agree);
                 await confirm.react(disagree);
-
                 const filter = (reaction, user) => {
                     const filterOut = user.id == userOriginal && (reaction.emoji.name == agree || reaction.emoji.name == disagree);
                     // console.log(`For ${user.username}'s ${reaction.emoji.name} reaction, the filter value is: ${filterOut}`);
@@ -42,20 +37,14 @@ module.exports = {
                         console.log(`User's ${reacted.first().emoji.name} collected!`);
                         if (reacted.first().emoji.name == agree) {
                             confirm.delete();
-                            userOriginalMessageObject.channel.send("Confirmed!")
-                                .then(exitMessage => {
-                                    exitMessage.delete({ timeout: deleteDelay });
-                                }).catch(err => console.error(err));
+                            this.sendMessageThenDelete(userOriginalMessageObject, "Confirmed!", deleteDelay);
                             console.log(`Confirmation Value (in function): true`);
                             return true;
                         }
                         else {
                             confirm.delete();
                             console.log("Ending (confirmationMessage) promise...");
-                            userOriginalMessageObject.channel.send("Exiting...")
-                                .then(exitMessage => {
-                                    exitMessage.delete({ timeout: deleteDelay });
-                                }).catch(err => console.error(err));
+                            this.sendMessageThenDelete(userOriginalMessageObject, "Exiting...", deleteDelay);
                             console.log(`Confirmation Value (in function): false`);
                             return false;
                         }
@@ -66,10 +55,7 @@ module.exports = {
                         confirm.delete();
                         console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
                         console.log("Ending (confirmationMessage) promise...");
-                        userOriginalMessageObject.channel.send("Exiting...")
-                            .then(exitMessage => {
-                                exitMessage.delete({ timeout: deleteDelay });
-                            }).catch(err => console.error(err));
+                        this.sendMessageThenDelete(userOriginalMessageObject, "Exiting...", deleteDelay);
                         console.log(`Confirmation Value (in function): false`);
                         return false;
                     });
@@ -85,12 +71,8 @@ module.exports = {
         const MS_TO_SECONDS = 1000;
         const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
 
-        const embed = new Discord.MessageEmbed()
-            .setColor(colour)
-            .setTitle(title + "\n(*PLEASE WAIT UNTIL ALL REACTIONS SHOW* or else it will EXIT)")
-            .setDescription(prompt)
-            .setFooter(footerText);
-
+        title += "\n(*PLEASE WAIT UNTIL ALL REACTIONS SHOW* or else it will EXIT)";
+        const embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
         await userOriginalMessageObject.channel.send(embed)
 
             // FIX BUG WHEN USER REACTS TOO SOON! Allow the code to keep running!
@@ -109,7 +91,9 @@ module.exports = {
                 result = await confirm.awaitReactions(filter, { time: delayTime, max: 1 })
                     .then(reacted => {
                         console.log(`User's ${reacted.first().emoji.name} collected!`);
-                        if (promptMessageDelete) confirm.delete();
+                        if (promptMessageDelete) {
+                            confirm.delete();
+                        }
                         console.log(`Reaction Value (in function): ${reacted.first().emoji.name}`);
                         return reacted.first().emoji.name;
                     })
@@ -119,10 +103,7 @@ module.exports = {
                         confirm.delete();
                         console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
                         console.log("Ending (reactionDataCollect) promise...");
-                        userOriginalMessageObject.channel.send("Exiting...")
-                            .then(exitMessage => {
-                                exitMessage.delete({ timeout: deleteDelay });
-                            }).catch(err => console.error(err));
+                        this.sendMessageThenDelete(userOriginalMessageObject, "Exiting...", deleteDelay);
                         console.log(`Reaction Value (in function): undefined`);
                         return false;
                     });
@@ -142,21 +123,9 @@ module.exports = {
         const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
         const textEntryInstructions = `\n\n\*P.S. use \`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**`;
         prompt = prompt + textEntryInstructions;
-        var embed;
+        let embed = this.getMessageEmbed(prompt, title, colour);
         if (attachImage == true) {
-            embed = new Discord.MessageEmbed()
-                .setColor(colour)
-                .setTitle(title)
-                .setDescription(prompt)
-                .setFooter(footerText);
             embed = embed.setImage(imageURL);
-        }
-        else {
-            embed = new Discord.MessageEmbed()
-                .setColor(colour)
-                .setTitle(title)
-                .setDescription(prompt)
-                .setFooter(footerText);
         }
         await userOriginalMessageObject.channel.send(embed)
             .then(async confirm => {
@@ -183,10 +152,7 @@ module.exports = {
                         confirm.delete();
                         console.log(`ERROR: User didn't respond within ${delayTime / MS_TO_SECONDS}s!`);
                         console.log("Ending (messageDataCollect) promise...");
-                        userOriginalMessageObject.channel.send("Ending...")
-                            .then(exitMessage => {
-                                exitMessage.delete({ timeout: deleteDelay });
-                            }).catch(err => console.error(err));
+                        this.sendMessageThenDelete(userOriginalMessageObject, "Ending...", deleteDelay);
                         console.log(`Message Sent (in function): false`);
                         return false;
                     });
@@ -203,21 +169,9 @@ module.exports = {
         const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
         const textEntryInstructions = `\n\n\*P.S. use \`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**`;
         prompt = prompt + textEntryInstructions;
-        var embed;
+        let embed = this.getMessageEmbed(prompt, title, colour);
         if (attachImage == true) {
-            embed = new Discord.MessageEmbed()
-                .setColor(colour)
-                .setTitle(title)
-                .setDescription(prompt)
-                .setFooter(footerText);
             embed = embed.setImage(imageURL);
-        }
-        else {
-            embed = new Discord.MessageEmbed()
-                .setColor(colour)
-                .setTitle(title)
-                .setDescription(prompt)
-                .setFooter(footerText);
         }
         await userOriginalMessageObject.channel.send(embed)
             .then(async confirm => {
@@ -244,10 +198,7 @@ module.exports = {
                         confirm.delete();
                         console.log(`ERROR: User didn't respond within ${delayTime / MS_TO_SECONDS}s!`);
                         console.log("Ending (messageDataCollect) promise...");
-                        userOriginalMessageObject.channel.send("Ending...")
-                            .then(exitMessage => {
-                                exitMessage.delete({ timeout: deleteDelay });
-                            }).catch(err => console.error(err));
+                        this.sendMessageThenDelete(userOriginalMessageObject, "Ending...", deleteDelay);
                         console.log(`Message Sent (in function): false`);
                         return false;
                     });
@@ -361,8 +312,8 @@ module.exports = {
     sendErrorMessageAndUsage: async function (userOriginalMessageObject, usageMessage, errorMessage = "**INVALID INPUT...**") {
         await userOriginalMessageObject.reply(errorMessage)
             .then(msg => {
-                    msg.channel.send(usageMessage);
-                    msg.delete(5000);
+                msg.channel.send(usageMessage);
+                msg.delete(5000);
             })
             .catch(err => console.error(err));
     },
@@ -419,7 +370,7 @@ module.exports = {
         else {
             journalOut = dailyJournalMorningTemplate;
         }
-        if(withMarkdown === true) {
+        if (withMarkdown === true) {
             journalOut = `\`${journalOut}\``;
         }
         return journalOut;
@@ -435,7 +386,7 @@ module.exports = {
         else {
             journalOut = dailyJournalNightTemplate;
         }
-        if(withMarkdown === true) {
+        if (withMarkdown === true) {
             journalOut = `\`${journalOut}\``;
         }
         return journalOut;
@@ -459,7 +410,7 @@ module.exports = {
         else {
             journalOut = weeklyReflectionTemplate;
         }
-        if(withMarkdown === true) {
+        if (withMarkdown === true) {
             journalOut = `\`${journalOut}\``;
         }
         return journalOut;
@@ -475,7 +426,7 @@ module.exports = {
         else {
             journalOut = weeklyGoalsTemplate;
         }
-        if(withMarkdown === true) {
+        if (withMarkdown === true) {
             journalOut = `\`${journalOut}\``;
         }
         return journalOut;
@@ -489,8 +440,8 @@ module.exports = {
     },
 
     // Function call allows for name to be a Discord user tag! <@##############>
-    mastermindWeeklyJournalEntry: function (name = "NAME", withMarkdown = false, previousWeekReflectionEntry = "", areaOfLifeEntry = "", 
-    stopEntry = "", startEntry = "", continueEntry = "", firstWeeklyGoal = "", secondWeeklyGoal = "", thirdWeeklyGoal = "") {
+    mastermindWeeklyJournalEntry: function (name = "NAME", withMarkdown = false, previousWeekReflectionEntry = "", areaOfLifeEntry = "",
+        stopEntry = "", startEntry = "", continueEntry = "", firstWeeklyGoal = "", secondWeeklyGoal = "", thirdWeeklyGoal = "") {
         let weeklyJournalEntry = `__**${name}**__`
             + `\n**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**\n${previousWeekReflectionEntry}`
             + `\n__**Area of Life That Needs the Most Attention:**__ ${areaOfLifeEntry}\n__**STOP, START, CONTINUE:** __`
@@ -527,5 +478,21 @@ module.exports = {
         console.log({ forceSkip });
         return forceSkip;
     },
+
+    sendReplyThenDelete: async function (userOriginalMessageObject, replyMessage, deleteDelay = 5000) {
+        userOriginalMessageObject.reply(replyMessage)
+            .then(msg => {
+                msg.delete({ timeout: deleteDelay });
+            })
+            .catch(err => console.error(err));
+    },
+
+    sendMessageThenDelete: async function (userOriginalMessageObject, messageToSend, deleteDelay = 5000) {
+        userOriginalMessageObject.channel.send(messageToSend)
+            .then(msg => {
+                msg.delete({ timeout: deleteDelay });
+            })
+            .catch(err => console.error(err));
+    }
 
 };

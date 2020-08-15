@@ -4,6 +4,7 @@ const Fast = require("../models/fasting.js");
 const UserSettings = require("../models/usersettings");
 const mongoose = require("mongoose");
 const fn = require("../utils/functions");
+const { find } = require("../models/fasting.js");
 require("dotenv").config();
 const PREFIX = process.env.PREFIX;
 const fastEmbedColour = "#32CD32";
@@ -170,18 +171,23 @@ async function confirmPostOverwrite(userOriginalMessageObject, overwriteReplaceW
         .catch(err => console.error(err));
     return confirmOverwrite;
 }
-function attachedIsImage(messageAttachment) {
-    var url = messageAttachment.url;
-    console.log({ url });
-    // Return true if the url is of a png, jpg or jpeg image
+function urlIsImage(url) {
     return (url.indexOf(".png", url.length - 4) !== -1
         || url.indexOf(".jpeg", url.length - 5) !== -1
-        || url.indexOf(".jpg", url.length - 4) !== -1);
+        || url.indexOf(".jpg", url.length - 4) !== -1
+        || url.indexOf(".gif") !== -1
+        || url.indexOf("-gif") !== -1);
+}
+function messageAttachmentIsImage(messageAttachment) {
+    const url = messageAttachment.url;
+    console.log({ url });
+    // Return true if the url is of a png, jpg or jpeg image
+    return urlIsImage(url);
 }
 async function findFirstAttachment(attachmentArray) {
     var attachment;
     await attachmentArray.forEach((currentAttachment, i) => {
-        if (attachedIsImage(currentAttachment)) {
+        if (messageAttachmentIsImage(currentAttachment)) {
             attachment = currentAttachment.url;
             return;
         }
@@ -194,18 +200,21 @@ function addUserTag(userOriginalMessageObject, post) {
 // Designed not to break when userConfirmation = ❌ (FALSE), but only stop when `stop`
 async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip = false) {
     const [startTimestamp, endTimestamp, fastDurationTimestamp, fastBreaker, moodValue, reflectionText] = fastData;
-    let messageIndex = 0;
+    let postIndex = 0;
     let fastPost = "";
     let attachment = null;
     var collectedMessage = "", collectedObject;
     var fastPostMessagePrompt = "Please enter the message(s) you'd like to send. (you can send pictures!)"
         + "\nThe latest picture you send will be attached to the post for ALL options below (except stop):"
         + "\nType `0` for **default message with fast breaker**\nType `1` when **done**!\nType `2` **to post full fast**"
-        + "\nType `remove` to remove the attached image";
+        + "\nType `remove` to **remove** the **attached image**\nType `clear` to **reset/clear** your **current message** (message only)"
+        + "\nType `clear all` to **clear** both attached **image and message**\n";
+    const originalFastPostMessagePrompt = fastPostMessagePrompt;
+    const postCommands = ["0", "1", "2", "remove", "clear", "clear all"];
     // Loop to collect the first message given and store it, if that message is 0, 1, or stop then handle accordingly
     // Detect and store images, allow user to remove image before posting!
     do {
-        messageIndex++;
+        postIndex++;
         console.log({ attachment });
         if (attachment === null) {
             collectedObject = await fn.messageDataCollectFirstObject(userOriginalMessageObject, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
@@ -220,7 +229,7 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
             return false;
         }
         collectedMessage = collectedObject.content;
-        if (messageIndex === 1) {
+        if (postIndex === 1) {
             if (collectedMessage == "1") {
                 break;
             }
@@ -228,24 +237,31 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
             console.log({ attachmentArray });
             if (attachmentArray.size > 0) {
                 // Just check and post the first image
-                if (attachmentArray.some(attachedIsImage)) {
+                if (attachmentArray.some(messageAttachmentIsImage)) {
                     attachment = await findFirstAttachment(attachmentArray);
+                    postIndex = 0;
                 }
             }
-            if (collectedMessage == "0" || collectedMessage == "2" || collectedMessage == "remove") {
-                messageIndex--;
+            else if (postCommands.includes(collectedMessage)) {
+                postIndex--;
             }
             else {
-                fastPostMessagePrompt += `\n**Current Message:**\n${collectedMessage}\n`;
-                fastPost = collectedMessage + "\n";
+                if (urlIsImage(collectedMessage)) {
+                    attachment = collectedMessage;
+                    postIndex = 0;
+                }
+                else {
+                    fastPostMessagePrompt += `\n**Current Message:**\n${collectedMessage}\n`;
+                    fastPost = collectedMessage + "\n";
+                }
             }
         }
-        else if (collectedMessage != "0" && collectedMessage != "1" && collectedMessage != "2" && collectedMessage != "remove") {
+        else if (!postCommands.includes(collectedMessage)) {
             let attachmentArray = collectedObject.attachments;
             console.log({ attachmentArray });
             if (attachmentArray.size > 0) {
-                // Just check and post the first image
-                if (attachmentArray.some(attachedIsImage)) {
+                // Just check and post the first image/gif
+                if (attachmentArray.some(messageAttachmentIsImage)) {
                     attachment = await findFirstAttachment(attachmentArray);
                     if (collectedMessage != "") {
                         fastPostMessagePrompt = fastPostMessagePrompt + collectedMessage + "\n";
@@ -254,24 +270,51 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
                 }
             }
             else {
-                fastPostMessagePrompt = fastPostMessagePrompt + collectedMessage + "\n";
-                fastPost = fastPost + collectedMessage + "\n";
+                // If the user posts the link to their image/gif
+                if (urlIsImage(collectedMessage)) {
+                    attachment = collectedMessage;
+                }
+                else {
+                    fastPostMessagePrompt = fastPostMessagePrompt + collectedMessage + "\n";
+                    fastPost = fastPost + collectedMessage + "\n";
+                }
             }
+            console.log({ attachment });
         }
         if (collectedMessage == "remove" && attachment !== null) {
-            userOriginalMessageObject.reply("**Attachment Removed!**")
-                .then(msg => {
-                    msg.delete({ timeout: 30000 });
-                })
-                .catch(err => console.error(err));
-            attachment = null;
+            const removeFastWarning = "Are you sure you want to remove your **attached image/gif?**";
+            let confirmClearMessage = await fn.getUserConfirmation(userOriginalMessageObject, removeFastWarning, forceSkip, "Fast Post: Remove Attachment");
+            if (confirmClearMessage == true) {
+                attachment = null;
+            }
         }
-        if (collectedMessage == "stop") return false;
-        if (collectedMessage == "1") {
+        else if (collectedMessage == "clear") {
+            const clearMessageWarning = "Are you sure you want to reset your **current message?** (your attached image remains the same if you had one)";
+            let confirmClearMessage = await fn.getUserConfirmation(userOriginalMessageObject, clearMessageWarning, forceSkip, "Fast Post: Clear Current Message");
+            if (confirmClearMessage == true) {
+                fastPostMessagePrompt = originalFastPostMessagePrompt;
+                fastPost = "";
+                postIndex = 0;
+            }
+        }
+        else if (collectedMessage == "clear all") {
+            const clearAllWarning = "Are you sure you want to reset both your **current message and attached image?**";
+            let confirmClearAll = await fn.getUserConfirmation(userOriginalMessageObject, clearAllWarning, forceSkip, "Fast Post: Clear All");
+            if (confirmClearAll == true) {
+                fastPostMessagePrompt = originalFastPostMessagePrompt;
+                fastPost = "";
+                attachment = null;
+                postIndex = 0;
+            }
+        }
+        else if (collectedMessage == "stop") {
+            return false;
+        }
+        else if (collectedMessage == "1") {
             fastPost = addUserTag(userOriginalMessageObject, fastPost);
             break;
         }
-        if (collectedMessage == "0") {
+        else if (collectedMessage == "0") {
             // Overwrite any previously collected data: Confirm first, if confirmed exit and post, otherwise continue loop
             let confirmOverwrite = await confirmPostOverwrite(userOriginalMessageObject, "default message including the **time and your fast breaker** (if you entered one)",
                 forceSkip, "Default Post");
@@ -286,7 +329,7 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
                 }
             }
         }
-        if (collectedMessage == "2") {
+        else if (collectedMessage == "2") {
             // Overwrite any previously collected data: Confirm first, if confirmed exit and post, otherwise continue loop
             let confirmOverwrite = await confirmPostOverwrite(userOriginalMessageObject, "**full fast post (including mood and reflection)**", forceSkip, "Full Fast Post");
             if (confirmOverwrite === true) {
@@ -311,16 +354,8 @@ async function showFastPost(userOriginalMessageObject, fastPost, mistakeMessage,
         userOriginalMessageObject.channel.send(fastPost);
     }
     else {
-        userOriginalMessageObject.reply("**Here was your post:** (deleting in 10 minutes)")
-            .then(msg => {
-                msg.delete({ timeout: 600000 });
-            })
-            .catch(err => console.error(err));
-        userOriginalMessageObject.channel.send(fastPost)
-            .then(msg => {
-                msg.delete({ timeout: 600000 });
-            })
-            .catch(err => console.error(err));
+        fn.sendReplyThenDelete(userOriginalMessageObject, "**Here was your post:** (deleting in 10 minutes)", 600000);
+        fn.sendMessageThenDelete(userOriginalMessageObject, fastPost, 600000);
     }
     userOriginalMessageObject.reply(mistakeMessage);
     return;
@@ -330,7 +365,7 @@ async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, 
     // FUTURE: On the sent post, there will be a reaction collect and it will allow the user to edit or delete their post!
     // TAGGED @user in the post so that you can retrieve this information with partials! (getting the first @user.author.id): "@user 's fast:"
     var endTimeToDate;
-    if(endTimestamp === null) {
+    if (endTimestamp === null) {
         endTimeToDate = new Date().toLocaleString();
     }
     else {
@@ -355,24 +390,20 @@ async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, 
     const mistakeMessage = `Exiting... try \`${PREFIX}fast post\` to try to **post again!**`;
     var serverList = await fn.listOfServerNames(bot, botUserMutualServerIDs);
     targetServerIndex = await fn.userSelectFromList(userOriginalMessageObject, serverList, botUserMutualServerIDs.length,
-        serverSelectInstructions, postToServerTitle, "00FF00");
+        serverSelectInstructions, postToServerTitle, fastEmbedColour);
     if (targetServerIndex === false) {
         await showFastPost(userOriginalMessageObject, fastPost, mistakeMessage);
         return false;
     }
     channelList = await fn.listOfServerTextChannelsUserCanSendTo(bot, userOriginalMessageObject, botServers[targetServerIndex]);
     if (channelList.length == 0) {
-        userOriginalMessageObject.reply("This server has **no channels!** EXITING...")
-            .then(msg => {
-                msg.delete({ timeout: 5000 });
-            })
-            .catch(err => console.error(err));
+        fn.sendReplyThenDelete(userOriginalMessageObject, "This server has **no channels!** EXITING...");
         return false;
     }
     channelListDisplay = await fn.listOfChannelNames(bot, channelList);
     while (confirmSendToChannel === false) {
         targetChannelIndex = await fn.userSelectFromList(userOriginalMessageObject, channelListDisplay, channelList.length,
-            channelSelectInstructions, postToChannelTitle, "00FF00", 300000);
+            channelSelectInstructions, postToChannelTitle, fastEmbedColour, 300000);
         if (targetChannelIndex === false) {
             await showFastPost(userOriginalMessageObject, fastPost, mistakeMessage);
             return false;
@@ -419,7 +450,9 @@ module.exports.run = async (bot, message, args) => {
         fn.sendErrorMessageAndUsage(message, fastHelpMessage);
         return;
     }
-    fastCommand = fastCommand.toLowerCase();
+    else {
+        fastCommand = fastCommand.toLowerCase();
+    }
 
     let fastCollectionDocument = new Fast();
     const fastInProgress = fastCollectionDocument.collection.find({
@@ -646,8 +679,7 @@ module.exports.run = async (bot, message, args) => {
                     message.reply(`You have successfully logged your **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!`);
                     const confirmPostFastMessage = "Would you like to take a **picture** of your **fast breaker** *and/or* **send a message** to a server channel? (for accountability!)"
                         + "\n\n(if ✅, I will list the servers you're in to find the channel you want to post to!)";
-                    let confirmPostFast = await fn.getUserConfirmation(message, confirmPostFastMessage, forceSkip, "Send Message for Accountability?", 180000, 0)
-                        .catch(err => console.error(err))
+                    let confirmPostFast = await fn.getUserConfirmation(message, confirmPostFastMessage, forceSkip, "Send Message for Accountability?", 180000, 0);
                     if (confirmPostFast === false) {
                         return;
                     }
@@ -656,7 +688,12 @@ module.exports.run = async (bot, message, args) => {
                         if (fastPost === false) {
                             return;
                         }
-                        await postFast(bot, message, fastPost, endTimestamp, forceSkip);
+                        if (endTimestamp === null) {
+                            await postFast(bot, message, fastPost, startTimestamp, forceSkip);
+                        }
+                        else {
+                            await postFast(bot, message, fastPost, endTimestamp, forceSkip);
+                        }
                     }
                 })
                 .catch(err => console.error(`Failed to end fast ${err}`));
@@ -1297,14 +1334,20 @@ module.exports.run = async (bot, message, args) => {
                 if (args[1].toLowerCase() == "recent") {
                     // If user has no recent fast, case already handed above
                     let fastView = await userFastIndexOf(fastCollectionDocument, authorID, 0);
-                    fastData = fastCursorToDataArray(fastView[0], true);
-                    endTimestamp = fastData[1];
+                    const fastData = fastCursorToDataArray(fastView[0], true);
+                    const startTimestamp = fastData[0];
+                    const endTimestamp = fastData[1];
                     let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
-                    console.log({fastPost});
+                    console.log({ fastPost });
                     if (fastPost === false) {
                         return;
                     }
-                    await postFast(bot, message, fastPost, endTimestamp, forceSkip);
+                    if (endTimestamp === null) {
+                        await postFast(bot, message, fastPost, startTimestamp, forceSkip);
+                    }
+                    else {
+                        await postFast(bot, message, fastPost, endTimestamp, forceSkip);
+                    }
                     return;
                 }
                 else {
@@ -1314,7 +1357,7 @@ module.exports.run = async (bot, message, args) => {
             }
             else {
                 var fastData;
-                pastNumberOfEntriesIndex = parseInt(args[1]) - 1;
+                let pastNumberOfEntriesIndex = parseInt(args[1]) - 1;
                 let fastView = await userFastIndexOf(fastCollectionDocument, authorID, pastNumberOfEntriesIndex);
                 if (fastView === undefined) {
                     fn.sendErrorMessage(message, "**FAST DOES NOT EXIST**...");
@@ -1327,12 +1370,18 @@ module.exports.run = async (bot, message, args) => {
                 else {
                     fastData = fastCursorToDataArray(shownFast);
                 }
-                endTimestamp = fastData[1];
+                const startTimestamp = fastData[0];
+                const endTimestamp = fastData[1];
                 let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
                 if (fastPost === false) {
                     return;
                 }
-                await postFast(bot, message, fastPost, endTimestamp, forceSkip);
+                if (endTimestamp === null) {
+                    await postFast(bot, message, fastPost, startTimestamp, forceSkip);
+                }
+                else {
+                    await postFast(bot, message, fastPost, endTimestamp, forceSkip);
+                }
             }
         }
         // fast post (only):

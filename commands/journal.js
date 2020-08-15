@@ -20,7 +20,7 @@ function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = "#EE
                     journalView = fn.getMessageEmbed(fn.getWeeklyJournalGoalTemplate(false, withMarkdown), `Weekly Journal: Weekly Goals`, journalEmbedColour);
                 }
                 else if (weeklyType == "reflection" || weeklyType == "r" || weeklyType == "re" || weeklyType == "ref" || weeklyType == "refl"
-                || weeklyType == "reflect" || weeklyType == "2") {
+                    || weeklyType == "reflect" || weeklyType == "2") {
                     journalView = fn.getMessageEmbed(fn.getWeeklyJournalReflectionTemplate(false, withMarkdown), `Weekly Journal: Weekly Reflection`, journalEmbedColour);
                 }
                 else {
@@ -32,15 +32,15 @@ function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = "#EE
             }
         }
         else if (journalType == "daily" || journalType == "day" || journalType == "regular" || journalType == "reg" || journalType == "d"
-        || journalType == "r" || journalType == "2") {
+            || journalType == "r" || journalType == "2") {
             if (args[2] !== undefined) {
                 let dailyType = args[2].toLowerCase();
                 if (dailyType == "morning" || dailyType == "am" || dailyType == "a" || dailyType == "morn" || dailyType == "start"
-                || dailyType == "first" || dailyType == "beginning"  || dailyType == "beg" || dailyType == "a" || dailyType == "1") {
+                    || dailyType == "first" || dailyType == "beginning" || dailyType == "beg" || dailyType == "a" || dailyType == "1") {
                     journalView = fn.getMessageEmbed(fn.getDailyJournalMorningTemplate(true, withMarkdown), `Daily Journal: Morning`, journalEmbedColour);
                 }
                 else if (dailyType == "night" || dailyType == "evening" || dailyType == "pm" || dailyType == "p" || dailyType == "eve" || dailyType == "end"
-                || dailyType == "last" || dailyType == "final" || dailyType == "2") {
+                    || dailyType == "last" || dailyType == "final" || dailyType == "2") {
                     journalView = fn.getMessageEmbed(fn.getDailyJournalNightTemplate(true, withMarkdown), `Daily Journal: Night`, journalEmbedColour);
                 }
                 else {
@@ -75,7 +75,9 @@ module.exports.run = async (bot, message, args) => {
         fn.sendErrorMessageAndUsage(message, journalHelpMessage);
         return;
     }
-    journalCommand = journalCommand.toLowerCase();
+    else {
+        journalCommand = journalCommand.toLowerCase();
+    }
 
     // Journal Commands
     if (journalCommand == "help") {

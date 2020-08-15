@@ -103,7 +103,9 @@ module.exports.run = async (bot, message, args) => {
         fn.sendErrorMessageAndUsage(message, mastermindHelpMessage);
         return;
     }
-    mastermindCommand = mastermindCommand.toLowerCase();
+    else {
+        mastermindCommand = mastermindCommand.toLowerCase();
+    }
 
     if (mastermindCommand == "help") {
         message.channel.send(mastermindUsageMessage);
