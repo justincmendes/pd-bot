@@ -18,9 +18,7 @@ module.exports = {
         const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
         var confirmation;
         confirmationMessage = confirmationMessage + confirmationInstructions;
-
         const embed = this.getMessageEmbed(confirmationMessage, embedTitle, "#FF0000").setFooter(footerText);
-
         await userOriginalMessageObject.channel.send(embed)
             .then(async confirm => {
                 await confirm.react(agree);
@@ -43,9 +41,8 @@ module.exports = {
                         }
                         else {
                             confirm.delete();
-                            console.log("Ending (confirmationMessage) promise...");
+                            console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
                             this.sendMessageThenDelete(userOriginalMessageObject, "Exiting...", deleteDelay);
-                            console.log(`Confirmation Value (in function): false`);
                             return false;
                         }
                     })
@@ -54,9 +51,8 @@ module.exports = {
                         console.error(err);
                         confirm.delete();
                         console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
-                        console.log("Ending (confirmationMessage) promise...");
+                        console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
                         this.sendMessageThenDelete(userOriginalMessageObject, "Exiting...", deleteDelay);
-                        console.log(`Confirmation Value (in function): false`);
                         return false;
                     });
             }).catch(err => console.error(err));
@@ -70,14 +66,10 @@ module.exports = {
         const deleteDelay = 3000;
         const MS_TO_SECONDS = 1000;
         const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
-
-        title += "\n(*PLEASE WAIT UNTIL ALL REACTIONS SHOW* or else it will EXIT)";
         const embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
         await userOriginalMessageObject.channel.send(embed)
-
-            // FIX BUG WHEN USER REACTS TOO SOON! Allow the code to keep running!
             .then(async confirm => {
-                emojiArray.forEach((emoji, i) => {
+                await emojiArray.forEach((emoji) => {
                     confirm.react(emoji)
                         .catch(err => console.error(err));
                 });
@@ -123,7 +115,7 @@ module.exports = {
         const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
         const textEntryInstructions = `\n\n\*P.S. use \`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**`;
         prompt = prompt + textEntryInstructions;
-        let embed = this.getMessageEmbed(prompt, title, colour);
+        let embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
         if (attachImage == true) {
             embed = embed.setImage(imageURL);
         }

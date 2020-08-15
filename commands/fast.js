@@ -488,17 +488,20 @@ module.exports.run = async (bot, message, args) => {
             }
         }
         if (fastIsInProgress >= 1) {
-            message.reply(fastIsRunningMessage); return;
+            message.reply(fastIsRunningMessage); 
+            return;
         }
         else if (args[1] == undefined || args.length == 1) {
-            message.reply(fastStartHelpMessage); return;
+            message.reply(fastStartHelpMessage); 
+            return;
         }
         else {
             // Remove the "start" from the args using slice
             const startTimeArgs = args.slice(1);
             startTimestamp = fn.timeCommandHandler(startTimeArgs, message.createdTimestamp);
             if (startTimestamp == false) {
-                message.reply(fastStartHelpMessage); return;
+                message.reply(fastStartHelpMessage); 
+                return;
             }
             fastCollectionDocument = new Fast({
                 _id: mongoose.Types.ObjectId(),
