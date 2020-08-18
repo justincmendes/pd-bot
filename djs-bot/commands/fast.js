@@ -309,14 +309,14 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
         if (collectedMessage == "remove" && attachment !== null) {
             const removeFastWarning = "Are you sure you want to remove your **attached image/gif?**";
             let confirmClearMessage = await fn.getUserConfirmation(userOriginalMessageObject, removeFastWarning, forceSkip, "Fast Post: Remove Attachment");
-            if (confirmClearMessage == true) {
+            if (confirmClearMessage === true) {
                 attachment = null;
             }
         }
         else if (collectedMessage == "clear") {
             const clearMessageWarning = "Are you sure you want to reset your **current message?** (your attached image remains the same if you had one)";
             let confirmClearMessage = await fn.getUserConfirmation(userOriginalMessageObject, clearMessageWarning, forceSkip, "Fast Post: Clear Current Message");
-            if (confirmClearMessage == true) {
+            if (confirmClearMessage === true) {
                 fastPostMessagePrompt = originalFastPostMessagePrompt;
                 fastPost = "";
                 postIndex = 0;
@@ -325,7 +325,7 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
         else if (collectedMessage == "clear all") {
             const clearAllWarning = "Are you sure you want to reset both your **current message and attached image?**";
             let confirmClearAll = await fn.getUserConfirmation(userOriginalMessageObject, clearAllWarning, forceSkip, "Fast Post: Clear All");
-            if (confirmClearAll == true) {
+            if (confirmClearAll === true) {
                 fastPostMessagePrompt = originalFastPostMessagePrompt;
                 fastPost = "";
                 attachment = null;
