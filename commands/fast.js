@@ -1,10 +1,10 @@
-// Global Variable Delclarations and Initializations
+// Global Variable Declarations and Initializations
 const Discord = require("discord.js");
 const Fast = require("../models/fasting.js");
 const UserSettings = require("../models/usersettings");
 const mongoose = require("mongoose");
 const fn = require("../utils/functions");
-const { find } = require("../models/fasting.js");
+const { getUserConfirmation } = require("../utils/functions");
 require("dotenv").config();
 const PREFIX = process.env.PREFIX;
 const fastEmbedColour = "#32CD32";
@@ -102,29 +102,18 @@ async function getEditEndConfirmation(userOriginalMessageObject, field, userEdit
     let endEditConfirmation = await fn.getUserConfirmation(userOriginalMessageObject, resetWarningMessage, forceSkip, `Fast: Edit ${field} Confirmation`);
     return endEditConfirmation;
 }
-async function getUserEdit(userOriginalMessageObject, fastFields, fieldToEdit, forceSkip = false) {
+async function getUserEditString(userOriginalMessageObject, field, instructionPrompt, forceSkip = false) {
     let messageIndex = 0;
     let reset = false;
-    var collectedEdit, userEdit;
-    let field = fastFields[fieldToEdit]
-    fastEditMessagePrompt = `**What will you change your *${field}* to?:**\n`;
-    if (fieldToEdit == 2) {
-        fastEditMessagePrompt = fastEditMessagePrompt + "***(ONLY possible edit = `now`)***\n";
-    }
-    else if (fieldToEdit == 4) {
-        fastEditMessagePrompt = fastEditMessagePrompt + "***(Please enter a number from `1-5`)***\n";
-    }
-    else if (fieldToEdit == 5) {
-        fastEditMessagePrompt = fastEditMessagePrompt + "__**Reflection Questions:**__\n-__Why__ did you feel that way?\n"
-            + "- What did you do that made it great? / What could you have done to __make it better__?\n";
-    }
+    var collectedEdit, userEdit = "\n";
+    let fastEditMessagePrompt = `**What will you change your *${field}* to?:**\n${instructionPrompt}\n`;
     fastEditMessagePrompt = fastEditMessagePrompt + `\nType \`0\` to **restart/clear** your current edit!`
         + `\nType \`1\` when you're **done!**\n`;
     const fastEditMessagePromptOriginal = fastEditMessagePrompt;
     do {
         messageIndex++;
-        collectedEdit = await fn.messageDataCollectFirst(userOriginalMessageObject, fastEditMessagePrompt, "Fast: Edit", "00FF00", 600000);
-        if (collectedEdit === "stop") {
+        collectedEdit = await fn.messageDataCollectFirst(userOriginalMessageObject, fastEditMessagePrompt, "Fast: Edit", fastEmbedColour, 600000);
+        if (collectedEdit === "stop" || collectedEdit === false) {
             return false;
         }
         if (messageIndex === 1 || reset === true) {
@@ -136,7 +125,7 @@ async function getUserEdit(userOriginalMessageObject, fastFields, fieldToEdit, f
             }
             else if (collectedEdit != "0") {
                 fastEditMessagePrompt = fastEditMessagePrompt + "\n**Current Edit:**\n" + collectedEdit + "\n";
-                userEdit = collectedEdit + "\n";
+                userEdit = collectedEdit;
                 reset = false;
             }
         }
@@ -157,19 +146,39 @@ async function getUserEdit(userOriginalMessageObject, fastFields, fieldToEdit, f
         }
         else {
             fastEditMessagePrompt = fastEditMessagePrompt + collectedEdit + "\n";
-            userEdit = "\n" + userEdit + collectedEdit + "\n";
+            userEdit = `${userEdit}\n${collectedEdit}`;
         }
     }
     while (true)
     return userEdit;
 }
-async function confirmPostOverwrite(userOriginalMessageObject, overwriteReplaceWith, forceSkip = false, overwriteTitle = "Overwrite") {
-    let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, "Are you sure you want to "
-        + `**overwrite** your current message with a ${overwriteReplaceWith}?`
-        + "\n\n(**Your current message progress will be lost**, the latest image sent will be posted, unless you did `remove`)",
-        forceSkip, `Fast Post: Overwrite with ${overwriteTitle}`, 60000, 0, "\n\nSelect ✅ to **overwrite and post**\nSelect ❌ to **continue with message creation**")
-        .catch(err => console.error(err));
-    return confirmOverwrite;
+async function getUserEditNumber(userOriginalMessageObject, field, maxNumber, forceSkip = false) {
+    var collectedEdit;
+    const numberErrorMessage = `**INVALID INPUT... Please Enter a Number from 1-${maxNumber}**`;
+    let fastEditMessagePrompt = `**What will you change your *${field}* to?:**\n***(Please enter a number from \`1-${maxNumber}\`)***\n`;
+    while (true) {
+        collectedEdit = await fn.messageDataCollectFirst(userOriginalMessageObject, fastEditMessagePrompt, "Fast: Edit", fastEmbedColour, 300000);
+        if (collectedEdit === "stop" || collectedEdit === false) {
+            return false;
+        }
+        // Check if the given message is a number
+        else if (isNaN(collectedEdit)) {
+            fn.sendReplyThenDelete(userOriginalMessageObject, numberErrorMessage, 15000);
+        }
+        else if (collectedEdit !== undefined) {
+            collectedEdit = parseInt(collectedEdit);
+            if (collectedEdit < 1 || collectedEdit > maxNumber) {
+                fn.sendReplyThenDelete(userOriginalMessageObject, numberErrorMessage, 15000);
+            }
+            else {
+                let confirmEdit = await getEditEndConfirmation(userOriginalMessageObject, field, collectedEdit, forceSkip);
+                if (confirmEdit === true) {
+                    break;
+                }
+            }
+        }
+    }
+    return collectedEdit;
 }
 function urlIsImage(url) {
     return (url.indexOf(".png", url.length - 4) !== -1
@@ -201,14 +210,14 @@ function addUserTag(userOriginalMessageObject, post) {
 async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip = false) {
     const [startTimestamp, endTimestamp, fastDurationTimestamp, fastBreaker, moodValue, reflectionText] = fastData;
     let postIndex = 0;
-    let fastPost = "";
+    let fastPost = "\n";
     let attachment = null;
     var collectedMessage = "", collectedObject;
     var fastPostMessagePrompt = "Please enter the message(s) you'd like to send. (you can send pictures!)"
         + "\nThe latest picture you send will be attached to the post for ALL options below (except stop):"
-        + "\nType `0` for **default message with fast breaker**\nType `1` when **done**!\nType `2` **to post full fast**"
+        + "\nType `0` to add **default message with fast breaker**\nType `1` when **done**!\nType `2` to add **full fast**"
         + "\nType `remove` to **remove** the **attached image**\nType `clear` to **reset/clear** your **current message** (message only)"
-        + "\nType `clear all` to **clear** both attached **image and message**\n";
+        + "\nType `clear all` to **clear** both attached **image and message**\n\n";
     const originalFastPostMessagePrompt = fastPostMessagePrompt;
     const postCommands = ["0", "1", "2", "remove", "clear", "clear all"];
     // Loop to collect the first message given and store it, if that message is 0, 1, or stop then handle accordingly
@@ -243,7 +252,12 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
                 }
             }
             else if (postCommands.includes(collectedMessage)) {
-                postIndex--;
+                if (collectedMessage != "0" && collectedMessage != "2") {
+                    postIndex--;
+                }
+                else {
+                    fastPostMessagePrompt += "__**Current Message:**__";
+                }
             }
             else {
                 if (urlIsImage(collectedMessage)) {
@@ -251,8 +265,8 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
                     postIndex = 0;
                 }
                 else {
-                    fastPostMessagePrompt += `\n**Current Message:**\n${collectedMessage}\n`;
-                    fastPost = collectedMessage + "\n";
+                    fastPostMessagePrompt += `__**Current Message:**__\n${collectedMessage}`;
+                    fastPost = collectedMessage;
                 }
             }
         }
@@ -264,8 +278,8 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
                 if (attachmentArray.some(messageAttachmentIsImage)) {
                     attachment = await findFirstAttachment(attachmentArray);
                     if (collectedMessage != "") {
-                        fastPostMessagePrompt = fastPostMessagePrompt + collectedMessage + "\n";
-                        fastPost = fastPost + collectedMessage + "\n";
+                        fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
+                        fastPost = `${fastPost}\n${collectedMessage}`;
                     }
                 }
             }
@@ -275,12 +289,13 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
                     attachment = collectedMessage;
                 }
                 else {
-                    fastPostMessagePrompt = fastPostMessagePrompt + collectedMessage + "\n";
-                    fastPost = fastPost + collectedMessage + "\n";
+                    fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
+                    fastPost = `${fastPost}\n${collectedMessage}`;
                 }
             }
             console.log({ attachment });
         }
+
         if (collectedMessage == "remove" && attachment !== null) {
             const removeFastWarning = "Are you sure you want to remove your **attached image/gif?**";
             let confirmClearMessage = await fn.getUserConfirmation(userOriginalMessageObject, removeFastWarning, forceSkip, "Fast Post: Remove Attachment");
@@ -315,26 +330,29 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
             break;
         }
         else if (collectedMessage == "0") {
-            // Overwrite any previously collected data: Confirm first, if confirmed exit and post, otherwise continue loop
-            let confirmOverwrite = await confirmPostOverwrite(userOriginalMessageObject, "default message including the **time and your fast breaker** (if you entered one)",
-                forceSkip, "Default Post");
+            const addDefaultMessagePrompt = "Are you sure you want to add the default message including the **time and your fast breaker** (if you entered one)";
+            let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, addDefaultMessagePrompt, forceSkip, "Add Default Fast Message");
             if (confirmOverwrite === true) {
-                if (fastBreaker == null) {
-                    fastPost = addUserTag(userOriginalMessageObject, `Broke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!`);
-                    break;
+                if (fastBreaker === null) {
+                    // MAKE THIS INTO A FUNCTION SO U CAN USE IT FOR INDEX 1???
+                    collectedMessage = `Broke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!`;
+                    fastPost = `${fastPost}\n${collectedMessage}`;
+                    fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
                 }
                 else {
-                    fastPost = addUserTag(userOriginalMessageObject, `Broke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast with **${fastBreaker}**!`);
-                    break;
+                    collectedMessage = `Broke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast with **${fastBreaker}**!`;
+                    fastPost = `${fastPost}\n${collectedMessage}`;
+                    fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
                 }
             }
         }
         else if (collectedMessage == "2") {
-            // Overwrite any previously collected data: Confirm first, if confirmed exit and post, otherwise continue loop
-            let confirmOverwrite = await confirmPostOverwrite(userOriginalMessageObject, "**full fast post (including mood and reflection)**", forceSkip, "Full Fast Post");
+            const addFullFastPrompt = "Are you sure you want to add your **full fast (including mood and reflection)**";
+            let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, addFullFastPrompt, forceSkip, "Add Full Fast");
             if (confirmOverwrite === true) {
-                fastPost = addUserTag(userOriginalMessageObject, fastDataArrayToString(fastData));
-                break;
+                collectedMessage = fastDataArrayToString(fastData);
+                fastPost = `${fastPost}\n${collectedMessage}`;
+                fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
             }
         }
     }
@@ -362,8 +380,6 @@ async function showFastPost(userOriginalMessageObject, fastPost, mistakeMessage,
 }
 
 async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, forceSkip = false) {
-    // FUTURE: On the sent post, there will be a reaction collect and it will allow the user to edit or delete their post!
-    // TAGGED @user in the post so that you can retrieve this information with partials! (getting the first @user.author.id): "@user 's fast:"
     var endTimeToDate;
     if (endTimestamp === null) {
         endTimeToDate = new Date().toLocaleString();
@@ -373,16 +389,15 @@ async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, 
     }
     const authorID = userOriginalMessageObject.author.id;
 
-    // Check all the servers the bot is in
+    // Check all of the servers the bot is in
     let botServers = await bot.guilds.cache.map(guild => guild.id);
     console.log({ botServers });
 
     // Find all the mutual servers with the user and bot
     var botUserMutualServerIDs = await fn.userAndBotMutualServerIDs(bot, userOriginalMessageObject, botServers);
     var targetServerIndex, targetChannelIndex;
-    var channelList;
+    var channelList, channelListDisplay;
     var confirmSendToChannel = false;
-    var channelListDisplay;
     const channelSelectInstructions = "Type the number corresponding to the channel you want to post in:";
     const serverSelectInstructions = "Type the number corresponding to the server you want to post in:";
     const postToServerTitle = "Fast: Post to Server";
@@ -488,11 +503,11 @@ module.exports.run = async (bot, message, args) => {
             }
         }
         if (fastIsInProgress >= 1) {
-            message.reply(fastIsRunningMessage); 
+            message.reply(fastIsRunningMessage);
             return;
         }
         else if (args[1] == undefined || args.length == 1) {
-            message.reply(fastStartHelpMessage); 
+            message.reply(fastStartHelpMessage);
             return;
         }
         else {
@@ -500,7 +515,7 @@ module.exports.run = async (bot, message, args) => {
             const startTimeArgs = args.slice(1);
             startTimestamp = fn.timeCommandHandler(startTimeArgs, message.createdTimestamp);
             if (startTimestamp == false) {
-                message.reply(fastStartHelpMessage); 
+                message.reply(fastStartHelpMessage);
                 return;
             }
             fastCollectionDocument = new Fast({
@@ -596,7 +611,8 @@ module.exports.run = async (bot, message, args) => {
                     fastBreaker = null;
                 }
 
-                moodValue = await fn.userSelectFromList(message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour);
+                // +1 to convert the returned index back to natural numbers
+                moodValue = await fn.userSelectFromList(message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour) + 1;
                 if (moodValue === false) {
                     return;
                 }
@@ -1208,8 +1224,7 @@ module.exports.run = async (bot, message, args) => {
             return;
         }
         else {
-            var fastView, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating,
-                fastTargetID, reflectionText, editConfirmationMessage, showFast;
+            var fastView, fastBreaker, fastTargetID, reflectionText, editConfirmationMessage, showFast;
             var fastFields = ["startTime", "endTime", "fastDuration", "fastBreaker", "mood", "reflection"];
             let fieldsList = "";
             fastFields.forEach((element, i) => {
@@ -1237,41 +1252,60 @@ module.exports.run = async (bot, message, args) => {
             const fieldToEditAdditionalMessage = `***NO \`<START/END_DATE/TIME>\` EDITING YET*** AND \n**\`fastDuration\`** CAN ONLY BE CHANGED TO **\`now\`**,`
                 + `\n(In Development...)\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n${showFast}`;
             const fieldToEditTitle = "Fast: Edit Field";
-            fieldToEdit = await fn.userSelectFromList(message, fieldsList, 6, fieldToEditInstructions, fieldToEditTitle, "00FF00", 180000, 0, fieldToEditAdditionalMessage);
-            if (fieldToEdit === false) {
+            let fieldToEditIndex = await fn.userSelectFromList(message, fieldsList, 6, fieldToEditInstructions, fieldToEditTitle, "00FF00", 180000, 0, fieldToEditAdditionalMessage);
+            if (fieldToEditIndex === false) {
                 return;
             }
-            let userEdit = await getUserEdit(message, fastFields, fieldToEdit, forceSkip);
+
+            var userEdit, fastEditMessagePrompt;
+            const fieldToEdit = fastFields[fieldToEditIndex];
+            if (fieldToEditIndex == 2) {
+                fastEditMessagePrompt = "***(ONLY possible edit = `now`)***\n";
+            }
+            else if (fieldToEditIndex == 4) {
+                fastEditMessagePrompt = "***(Please enter a number from `1-5`)***\n";
+            }
+            else if (fieldToEditIndex == 5) {
+                fastEditMessagePrompt = "__**Reflection Questions:**__\n-__Why__ did you feel that way?\n"
+                    + "- What did you do that made it great? / What could you have done to __make it better__?\n";
+            }
+
+            if (fieldToEditIndex == 4) {
+                userEdit = await getUserEditNumber(message, fieldToEdit, 5, forceSkip);
+            }
+            else {
+                userEdit = await getUserEditString(message, fieldToEdit, fastEditMessagePrompt, forceSkip);
+            }
             if (userEdit === false) {
                 return;
             }
             console.log({ userEdit });
 
             // Show user updated fast!
-            if (fieldToEdit == 2) {
+            if (fieldToEditIndex == 2) {
                 userEdit = userEdit.split(/ +/);
                 console.log({ userEdit });
-                fastData[fieldToEdit] = fn.timeCommandHandler(userEdit, message.createdAt);
+                fastData[fieldToEditIndex] = fn.timeCommandHandler(userEdit, message.createdAt);
             }
-            else if (fieldToEdit == 3) {
-                fastData[fieldToEdit] = userEdit;
+            else if (fieldToEditIndex == 3) {
+                fastData[fieldToEditIndex] = userEdit;
             }
-            else if (fieldToEdit == 4) {
+            else if (fieldToEditIndex == 4) {
                 if (!isNaN(userEdit)) {
-                    if (parseInt(userEdit) > 0 || parseInt(userEdit) <= 5) {
-                        fastData[fieldToEdit] = userEdit;
+                    if (userEdit > 0 || userEdit <= 5) {
+                        fastData[fieldToEditIndex] = parseInt(userEdit);
                     }
                 }
             }
-            else if (fieldToEdit == 5) {
-                fastData[fieldToEdit] = userEdit;
+            else if (fieldToEditIndex == 5) {
+                fastData[fieldToEditIndex] = userEdit;
             }
             showFast = fastDataArrayToString(fastData);
             console.log({ fastData });
-            editConfirmationMessage = `Are you sure you want to **edit fast ${pastNumberOfEntriesIndex}'s ${fastFields[fieldToEdit]}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n` + showFast;
+            editConfirmationMessage = `Are you sure you want to **edit fast ${pastNumberOfEntriesIndex}'s ${fastFields[fieldToEditIndex]}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n` + showFast;
             if (await fn.getUserConfirmation(message, editConfirmationMessage, forceSkip, `Fast: Edit Fast ${pastNumberOfEntriesIndex}`, 300000)) {
                 console.log(`Editing ${authorID}'s Fast ${pastNumberOfEntriesIndex}`);
-                switch (fieldToEdit) {
+                switch (fieldToEditIndex) {
                     case 0:
                         fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { startTime: fastData[0] } })
                             .catch(err => console.error(err));
