@@ -180,6 +180,7 @@ bot.on('guildDelete', async (guild) => {
             console.log(err);
             return;
         });
+        console.log(`Removed from ${guild.name}(${guild.id})\nDeleting guildsettings...`);
     }
     catch(err) {
         console.error(err);

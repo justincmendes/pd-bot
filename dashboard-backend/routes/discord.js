@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { getBotGuilds } = require('../utils/api');
-const User = require('../database/schemas/User');
+const User = require('../database/schemas/user');
 const fn = require('../utils/functions');
 
 router.get('/guilds', async (req, res) => {
