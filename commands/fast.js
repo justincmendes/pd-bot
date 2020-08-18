@@ -29,9 +29,9 @@ function fastDataArrayToString(fastData, showFastEndMessage) {
         `**Fast Duration:** ${fn.millisecondsToTimeString(fastDuration)}\n` +
         `**Fast Breaker:** ${fastBreaker}\n` +
         `**Mood Rating (1-5):** ${moodRating}\n` +
-        `**Reflection:** ${reflectionText}\n`;
+        `**Reflection:** ${reflectionText}`;
     if (showFastEndMessage) {
-        fastDataString += "\n(Want to end your fast? `?fast end`";
+        fastDataString += "\n\n(Want to end your fast? `?fast end`";
     }
     return fastDataString;
 }
@@ -210,7 +210,7 @@ function addUserTag(userOriginalMessageObject, post) {
 async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip = false) {
     const [startTimestamp, endTimestamp, fastDurationTimestamp, fastBreaker, moodValue, reflectionText] = fastData;
     let postIndex = 0;
-    let fastPost = "\n";
+    let fastPost = "";
     let attachment = null;
     var collectedMessage = "", collectedObject;
     var fastPostMessagePrompt = "Please enter the message(s) you'd like to send. (you can send pictures!)"
@@ -334,12 +334,12 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
             let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, addDefaultMessagePrompt, forceSkip, "Add Default Fast Message");
             if (confirmOverwrite === true) {
                 if (fastBreaker === null) {
-                    collectedMessage = `==========\nBroke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!\n==========`;
+                    collectedMessage = `=============\nBroke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!\n=============`;
                     fastPost = `${fastPost}\n${collectedMessage}`;
                     fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
                 }
                 else {
-                    collectedMessage = `==========\nBroke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast with **${fastBreaker}**!\n==========`;
+                    collectedMessage = `=============\nBroke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast with **${fastBreaker}**!\n=============`;
                     fastPost = `${fastPost}\n${collectedMessage}`;
                     fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
                 }
@@ -349,7 +349,7 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
             const addFullFastPrompt = "Are you sure you want to add your **full fast (including mood and reflection)**";
             let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, addFullFastPrompt, forceSkip, "Add Full Fast");
             if (confirmOverwrite === true) {
-                collectedMessage = `==========\n${fastDataArrayToString(fastData)}\n==========`;
+                collectedMessage = `=============\n${fastDataArrayToString(fastData)}\n=============`;
                 fastPost = `${fastPost}\n${collectedMessage}`;
                 fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
             }
@@ -590,7 +590,7 @@ module.exports.run = async (bot, message, args) => {
             const fastBreakerPrompt = "**What did you break your fast with?** \n\nType `skip` to **skip** (will **continue**, but log it as blank)";
             const moodValuePrompt = "**How did you feel during this past fast?\n\nEnter a number from 1-5 (1 = worst, 5 = best)**\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖;";
             var reflectionTextPrompt = "**Elaborate? For Example:\n - __Why__ did you feel that way?\n - What did you do that made it great? / What could you have done to __make it better__?**" +
-                "\n\nType `1` when **done**\nType `skip` to **skip** (will **continue**, but log it as blank)\nType `reset` to **reset** your current reflection message";
+                "\n\nType `1` when **done**\nType `skip` to **skip** (will **continue**, but log it as blank)\nType `reset` to **reset** your current reflection message\n\n";
             const reflectionTextPromptOriginal = reflectionTextPrompt;
             let quickEnd = await fn.reactionDataCollect(message, quickEndMessage, quickEndEmojis, "Fast: Quick End?", fastEmbedColour, 180000)
                 .catch(err => console.error(err));
@@ -615,7 +615,7 @@ module.exports.run = async (bot, message, args) => {
                 if (moodValue === false) {
                     return;
                 }
-                var reflectionText;
+                var reflectionText = "";
                 let messageIndex = 0;
                 let reset = false;
                 do {
@@ -649,13 +649,13 @@ module.exports.run = async (bot, message, args) => {
                     }
                     else {
                         if (messageIndex == 0 || reset === true) {
-                            reflectionTextPrompt = reflectionTextPrompt + "\n\n**Current Reflection Message:**\n" + userReflection + "\n";
-                            reflectionText = userReflection + "\n";
+                            reflectionTextPrompt = reflectionTextPrompt + "**Current Reflection Message:**\n" + userReflection;
+                            reflectionText = userReflection;
                             reset = false;
                         }
                         else {
-                            reflectionTextPrompt = reflectionTextPrompt + userReflection + "\n";
-                            reflectionText = reflectionText + userReflection + "\n";
+                            reflectionTextPrompt = `${reflectionTextPrompt}\n${userReflection}`;
+                            reflectionText = `${reflectionText}\n${userReflection}`;
                         }
                     }
                     messageIndex++;
