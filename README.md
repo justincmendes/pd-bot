@@ -7,5 +7,6 @@ Frameworks:
 - MongoDB/Mongoose
 - React.js
 - ChakraUI
+- axios, cors
 - Discord.js
 - GraphQL
