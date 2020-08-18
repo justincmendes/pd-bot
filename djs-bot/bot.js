@@ -145,7 +145,6 @@ bot.on ("guildCreate", async (guild) => {
         .find({ guildID: guild.id })
         .count()
         .catch(err => {
-            fn.sendErrorMessageAndUsage(message, fastSeeUsage, "INVALID NUMBER...");
             console.log(err);
             return;
         });
@@ -171,5 +170,20 @@ bot.on ("guildCreate", async (guild) => {
     }
 })
 
+// Remove the settings and preset data if PD is removed from guild
+bot.on('guildDelete', async (guild) => {
+    try {
+        const guildConfig = new GuildSettings();
+        await guildConfig.collection
+        .deleteOne({ guildID: guild.id })
+        .catch(err => {
+            console.log(err);
+            return;
+        });
+    }
+    catch(err) {
+        console.error(err);
+    }
+})
 
 bot.login(TOKEN);

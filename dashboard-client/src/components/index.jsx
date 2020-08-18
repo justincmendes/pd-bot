@@ -1,0 +1,2 @@
+export {MenuComponent} from './MenuWrapper';
+
