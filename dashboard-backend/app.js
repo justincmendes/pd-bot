@@ -4,6 +4,7 @@ require('./strategies/discord');
 const mongoose = require('mongoose');
 const mongoDB = require('../utilities/mongoose');
 const session = require('express-session');
+const cors = require('cors')
 const Store = require('connect-mongo')(session);
 
 const express = require('express');
@@ -13,6 +14,11 @@ const PORT = process.env.PORT || 3002;
 const routes = require('./routes');
 
 mongoDB.init(true);
+
+app.use(cors( {
+    origin: ['http://localhost:3000'],
+    credentials: true,
+}))
 
 app.use(session( {
     secret: 'secret',
