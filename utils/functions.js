@@ -161,7 +161,7 @@ module.exports = {
         const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
         const textEntryInstructions = `\n\n\*P.S. use \`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**`;
         prompt = prompt + textEntryInstructions;
-        let embed = this.getMessageEmbed(prompt, title, colour);
+        let embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
         if (attachImage == true) {
             embed = embed.setImage(imageURL);
         }

@@ -1,5 +1,6 @@
 require('dotenv').config();
 require('./strategies/discord');
+
 const express = require('express');
 const passport = require('passport');
 const app = express();
