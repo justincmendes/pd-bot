@@ -334,13 +334,12 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
             let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, addDefaultMessagePrompt, forceSkip, "Add Default Fast Message");
             if (confirmOverwrite === true) {
                 if (fastBreaker === null) {
-                    // MAKE THIS INTO A FUNCTION SO U CAN USE IT FOR INDEX 1???
-                    collectedMessage = `Broke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!`;
+                    collectedMessage = `==========\nBroke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!\n==========`;
                     fastPost = `${fastPost}\n${collectedMessage}`;
                     fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
                 }
                 else {
-                    collectedMessage = `Broke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast with **${fastBreaker}**!`;
+                    collectedMessage = `==========\nBroke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast with **${fastBreaker}**!\n==========`;
                     fastPost = `${fastPost}\n${collectedMessage}`;
                     fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
                 }
@@ -350,7 +349,7 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
             const addFullFastPrompt = "Are you sure you want to add your **full fast (including mood and reflection)**";
             let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, addFullFastPrompt, forceSkip, "Add Full Fast");
             if (confirmOverwrite === true) {
-                collectedMessage = fastDataArrayToString(fastData);
+                collectedMessage = `==========\n${fastDataArrayToString(fastData)}\n==========`;
                 fastPost = `${fastPost}\n${collectedMessage}`;
                 fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
             }
