@@ -7,7 +7,7 @@ export function MenuPage({
     // Check if user is authenticated, create state variable
     const [user, setUser] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
-    const [guilds, setGuilds] = React.useState([]);
+    const [guilds, setGuilds] = React.useState({});
 
     React.useEffect(() => {
         getUserDetails()
@@ -15,11 +15,11 @@ export function MenuPage({
                 console.log(data);
                 // Update user state variable
                 setUser(data);
-                setLoading(false);
                 return getGuilds();
             }).then(({ data }) => {
                 console.log(data);
                 setGuilds(data);
+                setLoading(false);
             }).catch((err) => {
                 console.error(err);
                 // Push to main route

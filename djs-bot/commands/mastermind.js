@@ -6,7 +6,6 @@ const UserSettings = require("../database/schemas/usersettings");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
-const PREFIX = process.env.PREFIX;
 const mastermindEmbedColour = "#ff6a00";
 
 // Function Declarations and Initializations
@@ -39,7 +38,7 @@ function sendGeneratedTemplate(message, numberOfUsers, namesForTemplate, withMar
     }
 }
 
-module.exports.run = async (bot, message, args) => {
+module.exports.run = async (bot, message, args, PREFIX) => {
     // FUTURE FEATURE: Cap mastermind at 6 maximum, any more => Create .txt file with FULL entry and react with paperclip for user to download the file
 
     // Will allow for text collection of notes during meeting and output it in a nice format!

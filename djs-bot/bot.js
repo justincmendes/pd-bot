@@ -11,7 +11,6 @@
 // and allow for environment variables when hosting
 require("dotenv").config();
 const TOKEN = process.env.TOKEN;
-const PREFIX = process.env.PREFIX;
 
 const Discord = require("discord.js");
 const bot = new Discord.Client({ partials: ["MESSAGE", "CHANNEL", "REACTION"] });
@@ -44,10 +43,12 @@ fs.readdir("./djs-bot/commands", (err, files) => {
     });
 });
 
+
+
 bot.on("ready", async () => {
     console.log(`${bot.user.username} is now online!`);
 
-    bot.user.setActivity(`you thrive! | ${PREFIX}help`, { type: "WATCHING" });
+    bot.user.setActivity(`you thrive! | ?help`, { type: "WATCHING" });
 
     // //Generating Link
     //Method 1:
@@ -80,7 +81,14 @@ bot.on("ready", async () => {
 //     }
 // });
 
+bot.mongoose.init();
+
 bot.on("message", async message => {
+    const guildConfig = new GuildSettings();
+    const guildID = message.guild.id;
+    const guildSettingsObject = await guildConfig.collection.find({guildID}).limit(1).toArray();
+    const PREFIX = guildSettingsObject[0].prefix || "?";
+
     //If the message is from a bot, ignore
     //When the message does not start with prefix, do nothing
     if (message.author.bot || !message.content.startsWith(PREFIX)) return;
@@ -101,7 +109,7 @@ bot.on("message", async message => {
     else {
         try {
             console.log(`%c User Command: ${PREFIX}${commandName} ${args.join(' ')}`, 'color: green; font-weight: bold;');
-            bot.commands.get(commandName).run(bot, message, args);
+            bot.commands.get(commandName).run(bot, message, args, PREFIX);
         } catch (error) {
             console.error(error);
             message.reply("There was an error trying to execute that command!");
@@ -133,7 +141,6 @@ bot.on("message", async message => {
 //         console.log(err);
 //     }
 // });
-bot.mongoose.init();
 
 // For dynamic bot settings per guild
 // Will help with handling unique prefixes!

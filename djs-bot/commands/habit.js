@@ -4,9 +4,8 @@ const UserSettings = require("../database/schemas/usersettings");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
-const PREFIX = process.env.PREFIX;
 
-module.exports.run = async (bot, message, args) => {
+module.exports.run = async (bot, message, args, PREFIX) => {
     // create, archive, current, see <progress for this habit>, pastweek (as per Sunday reset), past <number>
     // Allow users to check habit ✅, ❌, *SKIP habit if something happends (leave a ➖)
     // Set Habit Description - 50 words or less!

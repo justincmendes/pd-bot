@@ -5,7 +5,7 @@ const fn = require("../../utilities/functions");
 require("dotenv").config();
 
 
-module.exports.run = async (bot, message, args) => {
+module.exports.run = async (bot, message, args, PREFIX) => {
     //see, edit (when edit, show see first then usage),
     message.reply("(User) Settings in development!");
 }

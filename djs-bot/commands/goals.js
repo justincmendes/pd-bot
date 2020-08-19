@@ -4,12 +4,11 @@ const Goals = require("../database/schemas/longtermgoals");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
-const PREFIX = process.env.PREFIX;
 const goalsEmbedColour = "#0000FF";
 
 // Function Declarations and Definitions
 
-module.exports.run = async (bot, message, args) => {
+module.exports.run = async (bot, message, args, PREFIX) => {
     // Variable Declarations and Initializations
     // See - with markdown option!
     let goalsUsageMessage = `**USAGE**\n\`${PREFIX}goals <ACTION>\``

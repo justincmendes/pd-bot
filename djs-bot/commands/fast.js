@@ -5,7 +5,6 @@ const UserSettings = require("../database/schemas/usersettings");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
-const PREFIX = process.env.PREFIX;
 const fastEmbedColour = "#32CD32";
 
 // REDESIGNED:
@@ -477,10 +476,10 @@ async function userFastIndexOf(fastCollectionDocument, userID, pastNumberOfEntri
     }
 }
 
-module.exports.run = async (bot, message, args) => {
+module.exports.run = async (bot, message, args, PREFIX) => {
     // Variable Declarations and Initializations
     var fastUsageMessage = `**USAGE:**\n\`${PREFIX}fast <ACTION>\`\n\n`
-        + "`<ACTION>`: **help; start; end; see; edit; delete; see <PAST_#_OF_ENTRIES>; see <recent OR all>**";
+        + "`<ACTION>`: **help; start; end; see; edit; delete; post**";
     fastUsageMessage = fn.getMessageEmbed(fastUsageMessage, "Fast: Help", fastEmbedColour);
     const fastHelpMessage = `Try \`${PREFIX}fast help\``;
     const authorID = message.author.id;

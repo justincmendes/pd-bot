@@ -5,7 +5,6 @@ const WeeklyJournal = require("../database/schemas/weeklyjournal");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
-const PREFIX = process.env.PREFIX;
 const journalEmbedColour = "#EE82EE";
 
 // Function Declarations and Definitions
@@ -61,7 +60,7 @@ function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = "#EE
     return journalView;
 }
 
-module.exports.run = async (bot, message, args) => {
+module.exports.run = async (bot, message, args, PREFIX) => {
     //At the end of every week, or when they submit their weekly journal reflection, send them a textfile of their weeks entries (press the paperclip)
     //create, see, edit, end, templates <= return both the weekly reflection/weekly goals and daily journal template!
 
