@@ -15,8 +15,8 @@ module.exports.run = async (bot, message, args, PREFIX) => {
             await guildConfig.collection.findOneAndUpdate({ guildID: message.guild.id }, {$set: {prefix: newPrefix }})
                 .catch(err => console.log(err));
             console.log(`${message.guild.name}'s (${message.guild.id}) prefix was changed to ${newPrefix}`);
-            message.reply(`You have successfully **changed ${message.guild.name}'s prefix** from ${PREFIX} to ${newPrefix}`
-            + `\nWant to change it back? Try \`${newPrefix}prefix <NEW_PREFIX>\``);
+            message.reply(`You have successfully **changed ${message.guild.name}'s prefix** from **${PREFIX}** to **${newPrefix}**`
+            + `\nWant to change it back? Try **\`${newPrefix}prefix <NEW_PREFIX>\`**`);
         }
         else {
             message.reply("Sorry, you do not have permission to do that.");
