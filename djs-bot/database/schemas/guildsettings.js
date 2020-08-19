@@ -11,17 +11,9 @@ const guildSettingsSchema = mongoose.Schema({
     },
     prefix: {
         type: mongoose.SchemaTypes.String,
-        required: false,
+        required: true,
         default: "?",
     },
-    defaultRole: {
-        type: mongoose.SchemaTypes.String,
-        required: false,
-    },
-    memberLogChannel: {
-        type: mongoose.SchemaTypes.String,
-        required: false,
-    }
 });
 
 module.exports = mongoose.model("GuildSetting", guildSettingsSchema, "guildsettings");

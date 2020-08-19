@@ -3,7 +3,7 @@ require("dotenv").config();
 const prefix = process.env.PREFIX;
 
 module.exports = {
-    init: (useFindAndModify = false) => {
+    init: () => {
         const dbOptions = {
             useNewUrlParser: true,
             useUnifiedTopology: true,
@@ -15,7 +15,7 @@ module.exports = {
             family: 4
         };
         mongoose.connect(process.env.MONGODB_CONNECT_URL, dbOptions);
-        mongoose.set("useFindAndModify", useFindAndModify);
+        mongoose.set("useFindAndModify", false);
         mongoose.Promise = global.Promise;
         mongoose.connection.on('connected', () => {
             console.log('Mongoose has successfully connected!');

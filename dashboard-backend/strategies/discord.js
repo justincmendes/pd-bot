@@ -31,11 +31,7 @@ passport.use(
                 avatar,
                 guilds,
             }, { new: true });
-            if (findUser === true) {
-                console.log("User was found");
-                return done(null, findUser);
-            }
-            else {
+            if (findUser === null) {
                 const newUser = await User.create({
                     discordID: id,
                     discordTag: `${username}#${discriminator}`,
@@ -43,6 +39,10 @@ passport.use(
                     guilds,
                 });
                 return done(null, newUser);
+            }
+            else {
+                console.log("User was found");
+                return done(null, findUser);
             }
         }
         catch (err) {

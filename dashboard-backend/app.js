@@ -13,12 +13,15 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 const routes = require('./routes');
 
-mongoDB.init(true);
+mongoDB.init();
+
+app.use(express.json());
+app.use(express.urlencoded({extended: false}));
 
 app.use(cors( {
     origin: ['http://localhost:3000'],
     credentials: true,
-}))
+}));
 
 app.use(session( {
     secret: 'secret',
@@ -28,7 +31,7 @@ app.use(session( {
     resave: false,
     saveUninitialized: false,
     store: new Store({mongooseConnection: mongoose.connection}),
-}))
+}));
 
 app.use(passport.initialize());
 app.use(passport.session());
