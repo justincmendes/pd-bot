@@ -7,7 +7,7 @@ require("dotenv").config();
 
 module.exports.run = async (bot, message, args, PREFIX) => {
     //see, edit (when edit, show see first then usage),
-    message.reply("(User) Settings in development!");
+    message.reply("User Settings in development!");
 }
 
 module.exports.help = {

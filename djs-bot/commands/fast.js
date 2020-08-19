@@ -12,7 +12,7 @@ const fastEmbedColour = "#32CD32";
 // Using Object Destructuring
 
 // Function Declarations and Definitions
-function fastDataArrayToString(fastData, showFastEndMessage) {
+function fastDataArrayToString(fastData, showFastEndMessage = false, PREFIX = '?') {
     const [startTimestamp, endTimestamp, fastDuration, fastBreaker, moodRating, reflectionText] = fastData;
     const startTimeToDate = new Date(startTimestamp).toLocaleString();
     var endTimeToDate;
@@ -69,7 +69,7 @@ async function totalFasts(fastCollectionDocument, userID) {
         .count()
     return fastCount;
 }
-async function getRecentFast(message, fast, fastIsInProgress, currentTimestamp) {
+async function getRecentFast(message, fast, fastIsInProgress, PREFIX) {
     var fastView, fastType, fastData, fastDataToString, fastEmbed;
     if (fastIsInProgress === true) {
         // Show the user the current fast
@@ -96,10 +96,10 @@ async function getRecentFast(message, fast, fastIsInProgress, currentTimestamp) 
     }
     fastDataToString = "__**Fast 1:**__\n";
     if (fastIsInProgress === true) {
-        fastDataToString += fastDataArrayToString(fastData, true);
+        fastDataToString += fastDataArrayToString(fastData, true, PREFIX);
     }
     else {
-        fastDataToString += fastDataArrayToString(fastData, false);
+        fastDataToString += fastDataArrayToString(fastData, false, PREFIX);
     }
     fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See ${fastType} Fast`, fastEmbedColour);
     return (fastEmbed);
@@ -405,7 +405,7 @@ async function showFastPost(userOriginalMessageObject, fastPost, mistakeMessage,
     return;
 }
 
-async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, forceSkip = false, fastNumber = 1) {
+async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, PREFIX, forceSkip = false, fastNumber = 1) {
     var endTimeToDate;
     if (endTimestamp === null) {
         endTimeToDate = new Date().toLocaleString();
@@ -734,10 +734,10 @@ module.exports.run = async (bot, message, args, PREFIX) => {
                             return;
                         }
                         if (endTimestamp === null) {
-                            await postFast(bot, message, fastPost, startTimestamp, forceSkip);
+                            await postFast(bot, message, fastPost, startTimestamp, PREFIX, forceSkip);
                         }
                         else {
-                            await postFast(bot, message, fastPost, endTimestamp, forceSkip);
+                            await postFast(bot, message, fastPost, endTimestamp, PREFIX, forceSkip);
                         }
                     }
                 })
@@ -793,7 +793,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
         // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
         // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
         if (!seeCommands.includes(args[1]) && isNaN(args[1])) {
-            message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
+            message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, PREFIX));
             message.reply(fastSeeHelpMessage);
             return;
         }
@@ -809,7 +809,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
             // Handling Argument 1:
             const isNumberArg = !isNaN(args[1]);
             if (seeType == "recent") {
-                message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
+                message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, PREFIX));
                 return;
             }
             else if (seeType == "all") {
@@ -830,7 +830,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
             // After this filter:
             // If the first argument after "see" is not past, then it is not a valid call
             else {
-                message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
+                message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, PREFIX));
                 message.reply(fastSeeHelpMessage);
                 return;
             }
@@ -841,12 +841,12 @@ module.exports.run = async (bot, message, args, PREFIX) => {
                 if (args[2] != undefined) {
                     // If the next argument is NotaNumber, invalid "past" command call
                     if (isNaN(args[2])) {
-                        message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
+                        message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, PREFIX));
                         message.reply(fastSeeHelpMessage);
                         return;
                     }
                     if (parseInt(args[2]) <= 0) {
-                        message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
+                        message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, PREFIX));
                         message.reply(fastSeeHelpMessage);
                         return;
                     }
@@ -858,7 +858,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
                     // If the next argument is undefined, implied "see all" command call unless "all" was not called:
                     // => empty "past" command call
                     if (seeType != "all") {
-                        message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
+                        message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, PREFIX));
                         message.reply(fastSeeHelpMessage);
                         return;
                     }
@@ -940,7 +940,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
             if (fastEndTime === null) {
                 showFastEndMessage = true;
             }
-            fastDataToString = `__**Fast ${pastNumberOfEntriesIndex}:**__\n` + fastDataArrayToString(fastData, showFastEndMessage);
+            fastDataToString = `__**Fast ${pastNumberOfEntriesIndex}:**__\n` + fastDataArrayToString(fastData, showFastEndMessage, PREFIX);
             fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See Fast ${pastNumberOfEntriesIndex}`, fastEmbedColour);
             message.channel.send(fastEmbed);
         }
@@ -990,7 +990,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
 
         // Show the user the most recent fast
         if (args[1] == undefined || args.length == 1) {
-            message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
+            message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, PREFIX));
             message.reply(fastDeleteHelpMessage);
             return;
         }
@@ -1001,13 +1001,13 @@ module.exports.run = async (bot, message, args, PREFIX) => {
             if (deleteType == "past") {
                 // If the following argument is not a number, exit!
                 if (isNaN(args[2])) {
-                    message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
+                    message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, PREFIX));
                     message.reply(fastDeleteHelpMessage);
                     return;
                 }
                 var numberArg = parseInt(args[2]);
                 if (numberArg <= 0) {
-                    message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, currentTimestamp));
+                    message.channel.send(await getRecentFast(message, fastCollectionDocument, fastIsInProgress, PREFIX));
                     message.reply(fastDeleteHelpMessage);
                     return;
                 }
@@ -1406,10 +1406,10 @@ module.exports.run = async (bot, message, args, PREFIX) => {
                         return;
                     }
                     if (endTimestamp === null) {
-                        await postFast(bot, message, fastPost, startTimestamp, forceSkip, totalFastsNumber);
+                        await postFast(bot, message, fastPost, startTimestamp, PREFIX, forceSkip, totalFastsNumber);
                     }
                     else {
-                        await postFast(bot, message, fastPost, endTimestamp, forceSkip, totalFastsNumber);
+                        await postFast(bot, message, fastPost, endTimestamp, PREFIX, forceSkip, totalFastsNumber);
                     }
                     return;
                 }
@@ -1440,10 +1440,10 @@ module.exports.run = async (bot, message, args, PREFIX) => {
                     return;
                 }
                 if (endTimestamp === null) {
-                    await postFast(bot, message, fastPost, startTimestamp, forceSkip, totalFastsNumber - pastNumberOfEntriesIndex + 1);
+                    await postFast(bot, message, fastPost, startTimestamp, PREFIX, forceSkip, totalFastsNumber - pastNumberOfEntriesIndex + 1);
                 }
                 else {
-                    await postFast(bot, message, fastPost, endTimestamp, forceSkip, totalFastsNumber - pastNumberOfEntriesIndex + 1);
+                    await postFast(bot, message, fastPost, endTimestamp, PREFIX, forceSkip, totalFastsNumber - pastNumberOfEntriesIndex + 1);
                 }
             }
         }

@@ -2,7 +2,6 @@ const Discord = require("discord.js");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const GuildSettings = require("../database/schemas/guildsettings");
-const { getForceSkip } = require("../../utilities/functions");
 require("dotenv").config();
 
 // Function Declarations and Definitions
