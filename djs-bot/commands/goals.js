@@ -8,36 +8,26 @@ const goalsEmbedColour = "#0000FF";
 
 // Function Declarations and Definitions
 
-module.exports.run = async (bot, message, args, PREFIX) => {
-    // Variable Declarations and Initializations
-    // See - with markdown option!
-    let goalsUsageMessage = `**USAGE**\n\`${PREFIX}goals <ACTION>\``
-        + "\n\n\`<ACTION>\`: **template/templates/temp/t; see; add; edit; delete/remove; post**";
-    goalsUsageMessage = fn.getMessageEmbed(goalsUsageMessage, "Goals: Help", goalsEmbedColour);
-    const goalsHelpMessage = `Try \`${PREFIX}goals help\``;
-    const forceSkip = fn.getForceSkip(args);
-    var goalsCommand = args[0];
-
-    // Before declaration of more variables - check if the user has any arguments
-    if (goalsCommand === undefined || args.length == 0) {
-        message.reply(goalsHelpMessage);
-        return;
-    }
-    else {
-        goalsCommand = goalsCommand.toLowerCase();
-    }
-    
-
-
-    if (goalsCommand == "help") {
-        message.channel.send(goalsUsageMessage);
-        return;
-    }
-
-
-}
-
-module.exports.help = {
+module.exports = {
     name: "goals",
-    aliases: ["goal", "g"]
-}
+    description: "Long-term goal setting handler",
+    aliases: ["goal", "g"],
+    cooldown: 3,
+    args: true,
+    run: async function run(bot, message, commandUsed, args, PREFIX) {
+        // Variable Declarations and Initializations
+        // See - with markdown option!
+        let goalsUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
+            + "\n\n\`<ACTION>\`: **template/templates/temp/t; see; add; edit; delete/remove; post**"
+            + `\n\n*__ALIASES:__* **${this.name}; ${this.aliases.join('; ')}**`;
+        goalsUsageMessage = fn.getMessageEmbed(goalsUsageMessage, "Goals: Help", goalsEmbedColour);
+        const goalsHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
+        const forceSkip = fn.getForceSkip(args);
+        var goalsCommand = args[0].toLowerCase();
+
+        if (goalsCommand == "help") {
+            message.channel.send(goalsUsageMessage);
+            return;
+        }
+    }
+};

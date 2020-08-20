@@ -60,62 +60,56 @@ function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = "#EE
     return journalView;
 }
 
-module.exports.run = async (bot, message, args, PREFIX) => {
-    //At the end of every week, or when they submit their weekly journal reflection, send them a textfile of their weeks entries (press the paperclip)
-    //create, see, edit, end, templates <= return both the weekly reflection/weekly goals and daily journal template!
-
-    // Variable Declarations and Initializations
-    let journalUsageMessage = `**USAGE**\n\`${PREFIX}journal <ACTION>\``
-        + "\n\n\`<ACTION>\`: **template/templates/temp/t; help**"
-        + "\n\n**FUTURE FEATURES: create; see; edit; end**";
-    journalUsageMessage = fn.getMessageEmbed(journalUsageMessage, "Journal: Help", journalEmbedColour);
-    const journalHelpMessage = `Try \`${PREFIX}journal help\``;
-    const forceSkip = fn.getForceSkip(args);
-    let journalCommand = args[0];
-    // Before declaration of more variables - check if the user has any arguments
-    if (journalCommand === undefined || args.length == 0) {
-        fn.sendErrorMessageAndUsage(message, journalHelpMessage);
-        return;
-    }
-    else {
-        journalCommand = journalCommand.toLowerCase();
-    }
-
-    // Journal Commands
-    if (journalCommand == "help") {
-        message.channel.send(journalUsageMessage);
-        return;
-    }
-
-
-    // SHOWS WEEKLY JOURNAL TEMPLATES!
-    else if (journalCommand == "template" || journalCommand == "templates" || journalCommand == "temp" || journalCommand == "t") {
-        let templateUsageMessage = `**USAGE:**\n\`${PREFIX}journal template <DAILY/WEEKLY> <JOURNAL_TYPE>\``
-            + "\n\n`<DAILY/WEEKLY>`: **daily; weekly**"
-            + "\n\n`<JOURNAL_TYPE>`:\nIf `daily`: **morning; night**\nIf `weekly`: **reflection; goals**";
-        templateUsageMessage = fn.getMessageEmbed(templateUsageMessage, "Journal: Template Help", journalEmbedColour);
-        const templateHelpMessage = `Try \`${PREFIX}journal template help\``;
-        var journalType;
-        if (args[1] !== undefined) {
-            journalType = args[1].toLowerCase();
-        }
-        let journalTemplate = getJournalTemplate(args, true, journalEmbedColour);
-        if (journalType == "help") {
-            message.channel.send(templateUsageMessage);
-            return;
-        }
-        else if (journalTemplate === false) {
-            message.reply(templateHelpMessage);
-            return;
-        }
-        else {
-            message.channel.send(journalTemplate);
-            return;
-        }
-    }
-}
-
-module.exports.help = {
+module.exports = {
     name: "journal",
-    aliases: ["j", "jour", "journ"]
-}
+    description: "Daily and Weekly Journaling",
+    aliases: ["j", "jour", "journ"],
+    cooldown: 5,
+    args: true,
+    run: async function run(bot, message, commandUsed, args, PREFIX) {
+        //At the end of every week, or when they submit their weekly journal reflection, send them a textfile of their weeks entries (press the paperclip)
+        //create, see, edit, end, templates <= return both the weekly reflection/weekly goals and daily journal template!
+
+        // Variable Declarations and Initializations
+        let journalUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
+            + "\n\n\`<ACTION>\`: **template/templates/temp/t; help**"
+            + `\n\n*__ALIASES:__* **${this.name}; ${this.aliases.join('; ')}**`
+            + "\n\n**FUTURE FEATURES: create; see; edit; end**";
+        journalUsageMessage = fn.getMessageEmbed(journalUsageMessage, "Journal: Help", journalEmbedColour);
+        const journalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
+        const forceSkip = fn.getForceSkip(args);
+        let journalCommand = args[0].toLowerCase();
+        // Journal Commands
+        if (journalCommand == "help") {
+            message.channel.send(journalUsageMessage);
+            return;
+        }
+
+
+        // SHOWS WEEKLY JOURNAL TEMPLATES!
+        else if (journalCommand == "template" || journalCommand == "templates" || journalCommand == "temp" || journalCommand == "t") {
+            let templateUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${journalCommand} <DAILY/WEEKLY> <JOURNAL_TYPE>\``
+                + "\n\n`<DAILY/WEEKLY>`: **daily/day/d; weekly/week/w**"
+                + "\n\n`<JOURNAL_TYPE>`:\nIf `daily`: **morning/m; night/n**\nIf `weekly`: **reflection/r; goals/g**";
+            templateUsageMessage = fn.getMessageEmbed(templateUsageMessage, "Journal: Template Help", journalEmbedColour);
+            const templateHelpMessage = `Try \`${PREFIX}${commandUsed} ${journalCommand} help\``;
+            var journalType;
+            if (args[1] !== undefined) {
+                journalType = args[1].toLowerCase();
+            }
+            let journalTemplate = getJournalTemplate(args, true, journalEmbedColour);
+            if (journalType == "help") {
+                message.channel.send(templateUsageMessage);
+                return;
+            }
+            else if (journalTemplate === false) {
+                message.reply(templateHelpMessage);
+                return;
+            }
+            else {
+                message.channel.send(journalTemplate);
+                return;
+            }
+        }
+    }
+};

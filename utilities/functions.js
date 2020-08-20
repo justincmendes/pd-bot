@@ -3,7 +3,6 @@
  */
 const Discord = require("discord.js");
 require("dotenv").config();
-const PREFIX = process.env.PREFIX;
 
 module.exports = {
     getUserConfirmation: async function (userOriginalMessageObject, confirmationMessage, forceSkip = false, embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,

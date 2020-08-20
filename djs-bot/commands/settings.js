@@ -4,13 +4,14 @@ const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
 
-
-module.exports.run = async (bot, message, args, PREFIX) => {
-    //see, edit (when edit, show see first then usage),
-    message.reply("User Settings in development!");
-}
-
-module.exports.help = {
+module.exports = {
     name: "settings",
-    alias: ["set", "config"]
-}
+    description: "User Settings/Preferences: Timezone, reminders, etc.",
+    aliases: ["setting", "set", "config", "s", "preferences"],
+    cooldown: 5,
+    args: true,
+    run: async function run(bot, message, commandUsed, args, PREFIX) {
+        //see, edit (when edit, show see first then usage),
+        message.reply("User Settings in development!");
+    }
+};

@@ -14,7 +14,7 @@ const guildSettingsSchema = mongoose.Schema({
         required: true,
         default: "?",
     },
-    defaultTimezone: {
+    primaryTimezone: {
         type: String,
         required: true,
         default: "EST",

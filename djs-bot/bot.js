@@ -5,19 +5,18 @@
  * Last Updated: August 10, 2020
  */
 
- // TO-DO ALIASES ON COMMANDS!
+// TO-DO ALIASES ON COMMANDS!
 
 // To keep the sensitive information in a separate folder
 // and allow for environment variables when hosting
 require("dotenv").config();
 const TOKEN = process.env.TOKEN;
-
 const Discord = require("discord.js");
 const bot = new Discord.Client({ partials: ["MESSAGE", "CHANNEL", "REACTION"] });
 const fn = require("../utilities/functions");
-
 const fs = require("fs");
 bot.commands = new Discord.Collection();
+const cooldowns = new Discord.Collection();
 
 const mongoose = require("mongoose");
 const GuildSettings = require("./database/schemas/guildsettings");
@@ -39,7 +38,7 @@ fs.readdir("./djs-bot/commands", (err, files) => {
     jsfiles.forEach((f, i) => {
         let props = require(`./commands/${f}`);
         console.log(`${i + 1}: ${f} loaded!`);
-        bot.commands.set(props.help.name, props);
+        bot.commands.set(props.name, props);
     });
 });
 
@@ -86,7 +85,7 @@ bot.mongoose.init();
 bot.on("message", async message => {
     const guildConfig = new GuildSettings();
     const guildID = message.guild.id;
-    const guildSettingsObject = await guildConfig.collection.find({guildID}).limit(1).toArray();
+    const guildSettingsObject = await guildConfig.collection.find({ guildID }).limit(1).toArray();
     const PREFIX = guildSettingsObject[0].prefix || "?";
 
     //If the message is from a bot, ignore
@@ -105,15 +104,40 @@ bot.on("message", async message => {
     const args = messageArray.slice(1);
 
     //Otherwise, begin checking if the message is a viable command!
-    if (!bot.commands.has(commandName)) return;
-    else {
-        try {
-            console.log(`%c User Command: ${PREFIX}${commandName} ${args.join(' ')}`, 'color: green; font-weight: bold;');
-            bot.commands.get(commandName).run(bot, message, args, PREFIX);
-        } catch (error) {
-            console.error(error);
-            message.reply("There was an error trying to execute that command!");
+    // With ALIASES
+    const command = bot.commands.get(commandName)
+    || bot.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
+    if(!command) return;
+    
+    console.log(`%c User Command: ${PREFIX}${commandName} ${args.join(' ')}`, 'color: green; font-weight: bold;');
+
+    // Help: If command requires args send help message
+    if(!args.length && command.args) {
+        return message.reply(`Try \`${PREFIX}${commandName} help\`...`);
+    }
+
+    // Cooldowns:
+    if(!cooldowns.has(command.name)) {
+        cooldowns.set(command.name, new Discord.Collection());
+    }
+    const now = Date.now();
+    const timestamps = cooldowns.get(command.name);
+    const cooldownAmount = (command.cooldown) * 1000;
+    if(timestamps.has(message.author.id)) {
+        const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
+        if(now < expirationTime) {
+            const timeLeft = (expirationTime - now) / 1000;
+            return fn.sendReplyThenDelete(message, `Please **wait ${timeLeft.toFixed(1)} more second(s)** before reusing the **\`${command.name}\` command**`, timeLeft * 1000);
         }
+    }
+    timestamps.set(message.author.id, now);
+    setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
+
+    try {
+        command.run(bot, message, commandName, args, PREFIX);
+    } catch (err) {
+        console.error(err);
+        return message.reply("There was an error trying to execute that command!");
     }
 });
 
@@ -144,32 +168,29 @@ bot.on("message", async message => {
 
 // For dynamic bot settings per guild
 // Will help with handling unique prefixes!
-// Will implement better to make sure os guildID unique field
-bot.on ("guildCreate", async (guild) => {
+bot.on("guildCreate", async (guild) => {
     try {
-        const guildConfig = new GuildSettings(); 
+        const guildConfig = new GuildSettings();
         const guildCheck = await guildConfig.collection
-        .find({ guildID: guild.id })
-        .count()
-        .catch(err => {
-            console.log(err);
-            return;
-        });
-        
+            .find({ guildID: guild.id })
+            .count()
+            .catch(err => {
+                return console.log(err);
+            });
+
         // Check if it already exists to avoid duplicates
         if (guildCheck >= 1) {
-            console.log(`${bot.user.username} is already in ${guild.name}! Won't create new instance in Database.`);
-            return;
+            return console.log(`${bot.user.username} is already in ${guild.name}! Won't create new instance in Database.`);
         }
         else {
-            const guildConfig = new GuildSettings( {
+            const guildConfig = new GuildSettings({
                 _id: mongoose.Types.ObjectId(),
                 guildID: guild.id,
             });
-        guildConfig.save()
-        .then(result => console.log(result))
-        .catch(err => console.log(err));
-        console.log(`${bot.user.username} has joined the server ${guild.name}! Saved to Database.`);
+            guildConfig.save()
+                .then(result => console.log(result))
+                .catch(err => console.log(err));
+            console.log(`${bot.user.username} has joined the server ${guild.name}! Saved to Database.`);
         }
     }
     catch (err) {
@@ -182,14 +203,14 @@ bot.on('guildDelete', async (guild) => {
     try {
         const guildConfig = new GuildSettings();
         await guildConfig.collection
-        .deleteOne({ guildID: guild.id })
-        .catch(err => {
-            console.log(err);
-            return;
-        });
-        console.log(`Removed from ${guild.name}(${guild.id})\nDeleting guildsettings...`);
+            .deleteOne({ guildID: guild.id })
+            .catch(err => {
+                console.log(err);
+                return;
+            });
+        console.log(`Removed from ${guild.name}(${guild.id})\nDeleting Guild Settings...`);
     }
-    catch(err) {
+    catch (err) {
         console.error(err);
     }
 })
