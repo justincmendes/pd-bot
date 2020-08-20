@@ -3,15 +3,6 @@ const GuildSettings = require("../database/schemas/guildsettings");
 require("dotenv").config();
 
 // Function Declarations and Definitions
-function stringContainsItemFromList(string, items) {
-    var stringContainsItem = false
-    items.forEach(item => {
-        if (string.includes(item)) {
-            stringContainsItem = true;
-        }
-    });
-    return stringContainsItem;
-}
 function specialCharacterArrayToList(charArray) {
     var string = "";
     charArray.forEach((character, i) => {
@@ -56,10 +47,11 @@ module.exports = {
                     "**Colon** (\:) : Emoji Matching - `:sunglasses:`", "**Backquote** (\\\`) : `Code Blocks`",
                     `**At Sign** (\@) : Ping Someone - <@${message.author.id}>`];
                 const newPrefix = args[0];
-                if (stringContainsItemFromList(newPrefix, invalidPrefixes)) {
-                    message.channel.send("Sorry that contains a **special character**, please use something else!\n**__Special Characters__**: "
+                const markdownRegex = /[\*\_\~\>\\\/\:\`\@]+/;
+                const isInvalidPrefix = markdownRegex.test(newPrefix);
+                if (isInvalidPrefix) {
+                    return message.channel.send("Sorry that contains a **special character**, please use something else!\n**__Special Characters__**: "
                         + `${specialCharacterArrayToList(invalidPrefixes)}\n${arrayToMultilineList(invalidPrefixNames)}`);
-                    return;
                 }
                 const confirmation = await fn.getUserConfirmation(message, `Are you sure you want to change your guild prefix **${PREFIX}** to **${newPrefix}**?`,
                     fn.getForceSkip(args), "Prefix Change");
