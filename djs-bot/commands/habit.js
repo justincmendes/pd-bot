@@ -11,7 +11,7 @@ module.exports = {
     aliases: ["habits", "hab", "ha", "log", "track", "check"],
     cooldown: 3,
     args: true,
-    run: async function run(bot, message, commandUsed, args, PREFIX) {
+    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
         // create, archive, current, see <progress for this habit>, pastweek (as per Sunday reset), past <number>
         // Allow users to check habit ✅, ❌, *SKIP habit if something happends (leave a ➖)
         // Set Habit Description - 50 words or less!

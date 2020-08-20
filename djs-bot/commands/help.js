@@ -6,7 +6,7 @@ module.exports = {
     aliases: ["he", "halp", "how", "h"],
     cooldown: 5,
     args: false,
-    run: async function run(bot, message, commandUsed, args, PREFIX) {
+    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
         let commandHelpMessage = `**USAGE:** \`${PREFIX}<COMMAND>\``
             + `\n\n\`<COMMAND>\`: **${bot.commands.map(command => command.name).join('; ')}**`
             + `\n\n*__ALIASES:__* **${this.name}; ${this.aliases.join('; ')}**`;

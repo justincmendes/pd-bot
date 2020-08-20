@@ -101,31 +101,31 @@ bot.on("message", async message => {
     //Get the command (Word after prefix)
     const commandName = messageArray[0].slice(PREFIX.length).toLowerCase();
     //Get all of the arguments after the initial command
-    const args = messageArray.slice(1);
+    let args = messageArray.slice(1);
 
     //Otherwise, begin checking if the message is a viable command!
     // With ALIASES
     const command = bot.commands.get(commandName)
-    || bot.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
-    if(!command) return;
-    
+        || bot.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
+    if (!command) return;
+
     console.log(`%c User Command: ${PREFIX}${commandName} ${args.join(' ')}`, 'color: green; font-weight: bold;');
 
     // Help: If command requires args send help message
-    if(!args.length && command.args) {
+    if (!args.length && command.args) {
         return message.reply(`Try \`${PREFIX}${commandName} help\`...`);
     }
 
     // Cooldowns:
-    if(!cooldowns.has(command.name)) {
+    if (!cooldowns.has(command.name)) {
         cooldowns.set(command.name, new Discord.Collection());
     }
     const now = Date.now();
     const timestamps = cooldowns.get(command.name);
     const cooldownAmount = (command.cooldown) * 1000;
-    if(timestamps.has(message.author.id)) {
+    if (timestamps.has(message.author.id)) {
         const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
-        if(now < expirationTime) {
+        if (now < expirationTime) {
             const timeLeft = (expirationTime - now) / 1000;
             return fn.sendReplyThenDelete(message, `Please **wait ${timeLeft.toFixed(1)} more second(s)** before reusing the **\`${command.name}\` command**`, timeLeft * 1000);
         }
@@ -133,8 +133,19 @@ bot.on("message", async message => {
     timestamps.set(message.author.id, now);
     setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
 
+    // Check if user wants to skip confirmation windows
+    var forceSkip;
+    const lastArg = args[args.length - 1];
+    if (lastArg == "force") {
+        forceSkip = true
+        args = args.slice(0, -1);
+    }
+    else {
+        forceSkip = false;
+    }
+    
     try {
-        command.run(bot, message, commandName, args, PREFIX);
+        command.run(bot, message, commandName, args, PREFIX, forceSkip);
     } catch (err) {
         console.error(err);
         return message.reply("There was an error trying to execute that command!");

@@ -14,7 +14,7 @@ module.exports = {
     aliases: ["goal", "g"],
     cooldown: 3,
     args: true,
-    run: async function run(bot, message, commandUsed, args, PREFIX) {
+    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
         // Variable Declarations and Initializations
         // See - with markdown option!
         let goalsUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
@@ -22,7 +22,6 @@ module.exports = {
             + `\n\n*__ALIASES:__* **${this.name}; ${this.aliases.join('; ')}**`;
         goalsUsageMessage = fn.getMessageEmbed(goalsUsageMessage, "Goals: Help", goalsEmbedColour);
         const goalsHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
-        const forceSkip = fn.getForceSkip(args);
         var goalsCommand = args[0].toLowerCase();
 
         if (goalsCommand == "help") {

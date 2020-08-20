@@ -29,7 +29,7 @@ module.exports = {
     aliases: ["p", "pre", "changeprefix", "prefixchange"],
     cooldown: 5,
     args: false,
-    run: async function run(bot, message, commandUsed, args, PREFIX) {
+    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
         const showCurrentPrefix = `This server's **current prefix** is **${PREFIX}**\nThe server owner can change prefix using: \`${PREFIX}${commandUsed} <NEW_PREFIX>\``;
         if (args[0] === undefined) {
             message.channel.send(showCurrentPrefix);
@@ -54,7 +54,7 @@ module.exports = {
                         + `${specialCharacterArrayToList(invalidPrefixes)}\n${arrayToMultilineList(invalidPrefixNames)}`);
                 }
                 const confirmation = await fn.getUserConfirmation(message, `Are you sure you want to change your guild prefix **${PREFIX}** to **${newPrefix}**?`,
-                    fn.getForceSkip(args), "Prefix Change");
+                    forceSkip, "Prefix Change");
                 if (confirmation === false) {
                     return;
                 }

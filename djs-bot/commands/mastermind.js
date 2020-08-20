@@ -44,7 +44,7 @@ module.exports = {
     aliases: ["master", "mm", "m"],
     cooldown: 5,
     args: true,
-    run: async function run(bot, message, commandUsed, args, PREFIX) {
+    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
         // FUTURE FEATURE: Cap mastermind at 6 maximum, any more => Create .txt file with FULL entry and react with paperclip for user to download the file
 
         // Will allow for text collection of notes during meeting and output it in a nice format!
@@ -102,7 +102,6 @@ module.exports = {
             + "\n\n**FUTURE FEATURES: settings; create; reflection; goals**";
         mastermindUsageMessage = fn.getMessageEmbed(mastermindUsageMessage, "Mastermind: Help", mastermindEmbedColour);
         const mastermindHelpMessage = `Try \`${PREFIX}${commandUsed} help\`...`;
-        const forceSkip = fn.getForceSkip(args);
         let mastermindCommand = args[0].toLowerCase();
         // Mastermind Commands
         if (mastermindCommand == "help") {
@@ -152,10 +151,6 @@ module.exports = {
             }
             if (args[2] != undefined) {
                 var names = args;
-                // Ignore "force" at the end
-                if (forceSkip === true) {
-                    names = names.slice(0, -1);
-                }
                 // Filter out the empty inputs due to multiple commas (e.g. ",,,, ,,, ,   ,")
                 namesForTemplate = names.slice(2).join("").split(',').filter(name => name != "");
                 console.log({ namesForTemplate });

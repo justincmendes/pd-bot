@@ -580,7 +580,7 @@ module.exports = {
     aliases: ["f", "if", "fasts", "fasting"],
     cooldown: 5,
     args: true,
-    run: async function run(bot, message, commandUsed, args, PREFIX) {
+    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
         // Variable Declarations and Initializations
         var fastUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\`\n\n`
             + "`<ACTION>`: **help; start; end; see; edit; delete; post**"
@@ -589,7 +589,6 @@ module.exports = {
         const fastHelpMessage = `Try \`${PREFIX}fast help\``;
         const authorID = message.author.id;
         const authorUsername = message.author.username;
-        const forceSkip = fn.getForceSkip(args);
         let fastCommand = args[0].toLowerCase();
         let fastCollectionDocument = new Fast();
         const fastInProgress = fastCollectionDocument.collection.find({

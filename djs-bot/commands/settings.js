@@ -10,7 +10,7 @@ module.exports = {
     aliases: ["setting", "set", "config", "s", "preferences"],
     cooldown: 5,
     args: true,
-    run: async function run(bot, message, commandUsed, args, PREFIX) {
+    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
         //see, edit (when edit, show see first then usage),
         message.reply("User Settings in development!");
     }

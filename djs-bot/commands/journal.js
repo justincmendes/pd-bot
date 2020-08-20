@@ -66,7 +66,7 @@ module.exports = {
     aliases: ["j", "jour", "journ"],
     cooldown: 5,
     args: true,
-    run: async function run(bot, message, commandUsed, args, PREFIX) {
+    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
         //At the end of every week, or when they submit their weekly journal reflection, send them a textfile of their weeks entries (press the paperclip)
         //create, see, edit, end, templates <= return both the weekly reflection/weekly goals and daily journal template!
 
@@ -77,7 +77,6 @@ module.exports = {
             + "\n\n**FUTURE FEATURES: create; see; edit; end**";
         journalUsageMessage = fn.getMessageEmbed(journalUsageMessage, "Journal: Help", journalEmbedColour);
         const journalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
-        const forceSkip = fn.getForceSkip(args);
         let journalCommand = args[0].toLowerCase();
         // Journal Commands
         if (journalCommand == "help") {

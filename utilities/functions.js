@@ -288,9 +288,16 @@ module.exports = {
         return (timeString);
     },
 
-    timeCommandHandler: function (timeArgs, messageCreatedTime) {
+    // Using Regular Expressions
+    timeCommandHandler: function (args, messageCreatedTime) {
+        // Convert from space separated arguments to time arguments
+        // Step 1: Combine any Dates/Times space separated
+        console.log({args});
+        const argsString = args.join("");
+        console.log(argsString);
+        var timeArgs;
         // Allows for handling past and future dates (passing in a boolean)
-        if (timeArgs[0].toLowerCase() == "now") return messageCreatedTime;
+        if (args[0].toLowerCase() == "now") return messageCreatedTime;
         // else if(past)
         // {
 
@@ -450,26 +457,6 @@ module.exports = {
     longTermGoalsTemplate: function () {
         const goalsTemplate = "";
         return goalsTemplate;
-    },
-
-    // Accounting for only the ALL LOWERCASE "force" as the last argument
-    getForceSkip: function (args) {
-        var forceSkip;
-        var lastArg = args[args.length - 1];
-        // If the user sent just a command call, with no args
-        if (lastArg !== undefined) {
-            if (lastArg == "force") {
-                forceSkip = true;
-            }
-            else {
-                forceSkip = false;
-            }
-        }
-        else {
-            forceSkip = false;
-        }
-        console.log({ forceSkip });
-        return forceSkip;
     },
 
     sendReplyThenDelete: async function (userOriginalMessageObject, replyMessage, deleteDelay = 5000) {
