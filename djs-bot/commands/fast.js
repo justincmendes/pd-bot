@@ -139,7 +139,7 @@ async function getBackToMainMenuConfirmation(userOriginalMessageObject, forceSki
 async function getUserEditString(userOriginalMessageObject, field, instructionPrompt, forceSkip = false) {
     let messageIndex = 0;
     let reset = false;
-    var collectedEdit, userEdit = "\n";
+    var collectedEdit, userEdit = "";
     let fastEditMessagePrompt = `**What will you change your *${field}* to?:**\n${instructionPrompt}\n`;
     fastEditMessagePrompt = fastEditMessagePrompt + `\nType \`0\` to **restart/clear** your current edit!`
         + `\nType \`1\` when you're **done!**\nType \`back\` to go **back to the main edit menu**\n`;
@@ -163,6 +163,13 @@ async function getUserEditString(userOriginalMessageObject, field, instructionPr
                 userEdit = collectedEdit;
                 reset = false;
             }
+            else if (collectedEdit == "back") {
+                const backToMainEdit = await getBackToMainMenuConfirmation(userOriginalMessageObject, forceSkip);
+                if (backToMainEdit === true) {
+                    userEdit = "back";
+                    break;
+                }
+            }
         }
         else if (collectedEdit == "back") {
             const backToMainEdit = await getBackToMainMenuConfirmation(userOriginalMessageObject, forceSkip);
@@ -178,12 +185,17 @@ async function getUserEditString(userOriginalMessageObject, field, instructionPr
             }
         }
         else if (collectedEdit == "0") {
-            const resetWarningMessage = "Are you sure you want to __**reset**__ your current edit?\n*(All of your current edit will be lost...)*";
-            let resetConfirmation = await fn.getUserConfirmation(userOriginalMessageObject, resetWarningMessage, forceSkip, `Fast: Edit ${field} Reset`);
-            if (resetConfirmation === true) {
-                fastEditMessagePrompt = fastEditMessagePromptOriginal;
-                userEdit = "";
+            if (userEdit == "") {
                 reset = true;
+            }
+            else {
+                const resetWarningMessage = "Are you sure you want to __**reset**__ your current edit?\n*(All of your current edit will be lost...)*";
+                let resetConfirmation = await fn.getUserConfirmation(userOriginalMessageObject, resetWarningMessage, forceSkip, `Fast: Edit ${field} Reset`);
+                if (resetConfirmation === true) {
+                    fastEditMessagePrompt = fastEditMessagePromptOriginal;
+                    userEdit = "";
+                    reset = true;
+                }
             }
         }
         else {
@@ -1216,7 +1228,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
                 }
                 const fastCollection = await getFastsIndexOf(fastCollectionDocument, authorID, skipEntries, pastNumberOfEntries);
                 const showFasts = multipleFastsToString(message, fastCollection, pastNumberOfEntries, skipEntries);
-                if(skipEntries > totalFastNumber) {
+                if (skipEntries >= totalFastNumber) {
                     return;
                 }
                 // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
@@ -1391,7 +1403,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
                 if (fieldToEditIndex === false) {
                     return;
                 }
-                var userEdit, fastEditMessagePrompt;
+                var userEdit, fastEditMessagePrompt = "";
                 const fieldToEdit = fastFields[fieldToEditIndex];
                 if (fieldToEditIndex == 2) {
                     fastEditMessagePrompt = "***(ONLY possible edit = `now`)***\n";
@@ -1412,7 +1424,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
                 if (userEdit === false) {
                     return;
                 }
-                else if (userEdit.toLowerCase() !== "back") {
+                else if (userEdit !== "back") {
                     // Parse User Edit
                     if (fieldToEditIndex == 2) {
                         userEdit = userEdit.split(/ +/);
@@ -1464,7 +1476,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
                     showFast = fastDataArrayToString(fastData);
                     console.log({ fastData, fastTargetID, fieldToEditIndex });
                     continueEditMessage = `Do you want to continue **editing Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n${showFast}`;
-                    continueEdit = await fn.getUserConfirmation(message, continueEditMessage, false, `Fast: Continue Editing Fast ${pastNumberOfEntriesIndex}?`, 300000);
+                    continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Fast: Continue Editing Fast ${pastNumberOfEntriesIndex}?`, 300000);
                 }
                 else {
                     continueEdit = true;

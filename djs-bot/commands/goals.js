@@ -20,7 +20,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
 
     // Before declaration of more variables - check if the user has any arguments
     if (goalsCommand === undefined || args.length == 0) {
-        fn.sendErrorMessageAndUsage(message, goalsHelpMessage);
+        message.reply(goalsHelpMessage);
         return;
     }
     else {

@@ -105,7 +105,7 @@ module.exports.run = async (bot, message, args, PREFIX) => {
             return;
         }
         else if (journalTemplate === false) {
-            fn.sendErrorMessageAndUsage(message, templateHelpMessage);
+            message.reply(templateHelpMessage);
             return;
         }
         else {
