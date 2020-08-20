@@ -101,7 +101,7 @@ The foundational code was inspired by Threebow "Discord.js Bot Tutorial" and the
 - **End + Post:**
 
 <details>
-   <summary><b>End + Post Examples</b></summary>
+   <summary>End + Post Examples</summary>
   
   - **Help (End + Post):**
   
@@ -131,7 +131,7 @@ The foundational code was inspired by Threebow "Discord.js Bot Tutorial" and the
   - **Post:**
   
  <details>
-   <summary><b>Post Fast to Specific Server/Channel</b></summary>
+  <summary><b>Post Fast to Specific Server/Channel</b></summary>
   
 ![image](https://user-images.githubusercontent.com/50083088/90652239-dc7e3e00-e20b-11ea-8e4b-11542f813e85.png)
   
@@ -152,7 +152,7 @@ The foundational code was inspired by Threebow "Discord.js Bot Tutorial" and the
 - **See:**
 
 <details>
-   <summary><b>See/Show Fast(s)</b></summary>
+   <summary>See/Show Fast(s)</summary>
   
   - **Help:**
   
@@ -185,7 +185,7 @@ The foundational code was inspired by Threebow "Discord.js Bot Tutorial" and the
 - **Edit:**
 
 <details>
-   <summary><b>Edit Fast</b></summary>
+   <summary>Edit Fast</summary>
   
   - **Help:**
 
@@ -208,7 +208,7 @@ The foundational code was inspired by Threebow "Discord.js Bot Tutorial" and the
 - **Delete:**
 
 <details>
-   <summary><b>Delete Fast(s)</b></summary>
+   <summary>Delete Fast(s)</summary>
   
   - **Help:**
   
