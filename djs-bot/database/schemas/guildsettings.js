@@ -14,6 +14,11 @@ const guildSettingsSchema = mongoose.Schema({
         required: true,
         default: "?",
     },
+    defaultTimezone: {
+        type: String,
+        required: true,
+        default: "EST",
+    }
 });
 
 module.exports = mongoose.model("GuildSetting", guildSettingsSchema, "guildsettings");

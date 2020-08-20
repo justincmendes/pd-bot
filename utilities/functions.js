@@ -106,8 +106,8 @@ module.exports = {
         return result;
     },
 
-    messageDataCollectFirst: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = "#ADD8E6", delayTime = 60000, deleteUserMessage = true,
-        userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
+    messageDataCollectFirst: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = "#ADD8E6", delayTime = 60000, 
+    deleteUserMessage = true, userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
         const userOriginal = userOriginalMessageObject.author.id;
         var result;
         const deleteDelay = 3000;
