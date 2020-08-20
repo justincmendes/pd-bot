@@ -252,8 +252,10 @@ module.exports = {
     },
 
     listOfServerTextChannelsUserCanSendTo: async function (bot, userOriginalMessageObject, serverID) {
-        channelList = await bot.guilds.cache.get(serverID).channels.cache.map(channel => {
-            if (channel.permissionsFor(userOriginalMessageObject.author).has("SEND_MESSAGES") && channel.type === "text") {
+        const channelList = await bot.guilds.cache.get(serverID).channels.cache.map(channel => {
+            const userPermissions = channel.permissionsFor(userOriginalMessageObject.author);
+            if (!userPermissions) return null;
+            else if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL") && channel.type === "text") {
                 return channel.id;
             }
             else return null;

@@ -147,7 +147,7 @@ async function getUserEditString(userOriginalMessageObject, field, instructionPr
     do {
         messageIndex++;
         collectedEdit = await fn.messageDataCollectFirst(userOriginalMessageObject, fastEditMessagePrompt, "Fast: Edit", fastEmbedColour, 600000);
-        if (collectedEdit === "stop" || collectedEdit === false) {
+        if (!collectedEdit || collectedEdit === "stop") {
             fn.sendReplyThenDelete(userOriginalMessageObject, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${userEdit}`, 600000)
             return false;
         }
@@ -213,7 +213,7 @@ async function getUserEditNumber(userOriginalMessageObject, field, maxNumber, fo
         + "\nType `back` to go **back to the main edit menu**\n";
     while (true) {
         collectedEdit = await fn.messageDataCollectFirst(userOriginalMessageObject, fastEditMessagePrompt, "Fast: Edit", fastEmbedColour, 300000);
-        if (collectedEdit === "stop" || collectedEdit === false) {
+        if (!collectedEdit || collectedEdit === "stop") {
             return false;
         }
         // Check if the given message is a number
@@ -299,12 +299,11 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
                 true, 3000, true, attachment);
         }
         // If user types stop, messageDataCollectFirstObject returns false:
-        if (collectedObject === false) {
-            return false;
-        }
+        if (!collectedObject) return false;
         collectedMessage = collectedObject.content;
         if (postIndex === 1) {
             if (collectedMessage == "1") {
+                fastPost = addUserTag(userOriginalMessageObject, fastPost);
                 break;
             }
             let attachmentArray = collectedObject.attachments;
@@ -493,13 +492,13 @@ async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, 
         await showFastPost(userOriginalMessageObject, fastPost, mistakeMessage);
         return false;
     }
-    channelList = await fn.listOfServerTextChannelsUserCanSendTo(bot, userOriginalMessageObject, botServers[targetServerIndex]);
+    channelList = await fn.listOfServerTextChannelsUserCanSendTo(bot, userOriginalMessageObject, botUserMutualServerIDs[targetServerIndex]);
     if (channelList.length == 0) {
         fn.sendReplyThenDelete(userOriginalMessageObject, "This server has **no channels!** EXITING...");
         return false;
     }
     channelListDisplay = await fn.listOfChannelNames(bot, channelList);
-    while (confirmSendToChannel === false) {
+    while (!confirmSendToChannel) {
         targetChannelIndex = await fn.userSelectFromList(userOriginalMessageObject, channelListDisplay, channelList.length,
             channelSelectInstructions, postToChannelTitle, fastEmbedColour, 300000);
         if (targetChannelIndex === false) {
@@ -511,17 +510,17 @@ async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, 
         confirmSendToChannel = await fn.getUserConfirmation(userOriginalMessageObject, `Are you sure you want to send it to **#${targetChannelName}**?`, forceSkip);
     }
     // Overwrite fastPost Title with one specific to user's nickname in respective server
-    fastPost = fastPost.setTitle(`${bot.guilds.cache.get(botServers[targetServerIndex]).member(authorID).displayName}'s ${endTimeToDate} Fast`);
+    fastPost = fastPost.setTitle(`${bot.guilds.cache.get(botUserMutualServerIDs[targetServerIndex]).member(authorID).displayName}'s ${endTimeToDate} Fast`);
     await fn.sendMessageToChannel(bot, fastPost, channelList[targetChannelIndex]);
     return true;
 }
 
-async function getOneFast(fastCollectionDocument, userID, pastNumberOfEntriesIndex) {
+async function getOneFast(fastCollectionDocument, userID, fastIndex) {
     const fastView = await fastCollectionDocument.collection
         .find({ userID: userID })
         .sort({ startTime: -1 })
         .limit(1)
-        .skip(pastNumberOfEntriesIndex)
+        .skip(fastIndex)
         .toArray()
         .catch(err => {
             console.log(err);
@@ -530,12 +529,12 @@ async function getOneFast(fastCollectionDocument, userID, pastNumberOfEntriesInd
     return fastView;
 }
 
-async function getFastsIndexOf(fastCollectionDocument, userID, pastNumberOfEntriesIndex, numberOfEntries = 1) {
+async function getFastsIndexOf(fastCollectionDocument, userID, fastIndex, numberOfEntries = 1) {
     const fastView = await fastCollectionDocument.collection
         .find({ userID: userID })
         .sort({ startTime: -1 })
         .limit(numberOfEntries)
-        .skip(pastNumberOfEntriesIndex)
+        .skip(fastIndex)
         .toArray()
         .catch(err => {
             console.log(err);
@@ -551,13 +550,22 @@ async function getFastsIndexOf(fastCollectionDocument, userID, pastNumberOfEntri
     else {
         var fastCollection = new Array();
         for (i = 0; i < numberOfEntries; i++) {
-            const checkFast = await getOneFast(fastCollectionDocument, userID, pastNumberOfEntriesIndex)
-            if (checkFast.length !== 0 && checkFast !== false) {
+            const checkFast = await getOneFast(fastCollectionDocument, userID, fastIndex)
+            if (!checkFast) {
                 fastCollection.push(checkFast);
             }
         }
         return fastCollection;
     }
+}
+function endTimeAfterStartTime(message, startTimestamp, endTimestamp) {
+    if (endTimestamp < startTimestamp) {
+        const startTimestampToDate = new Date(startTimestamp).toLocaleString();
+        const endTimestampToDate = new Date(endTimestamp).toLocaleString();
+        message.reply(`Your __fast end time__ **(${endTimestampToDate})** cannot be ***before*** your __fast start time__ **(${startTimestampToDate})**`);
+        return false;
+    }
+    else return true;
 }
 
 
@@ -680,17 +688,17 @@ module.exports = {
                 const endTimeArgs = args.slice(1);
                 const endTimestamp = fn.timeCommandHandler(endTimeArgs, message.createdTimestamp);
                 if (endTimestamp == false) {
-                    message.reply(fastEndHelpMessage); return;
+                    return message.reply(fastEndHelpMessage);
                 }
-
-                const currentFast = await fastInProgress
-                    .sort({ startTime: -1 })
-                    .limit(1)
-                    .toArray();
+                const currentFast = await getOneFast(fastCollectionDocument, authorID, 0);
                 // Can use authorID in this case as well, but will stick to pulling the
                 // value from the database - to ensure the user is correct!
+                const startTimestamp = currentFast[0].startTime;
+                const validEndTime = endTimeAfterStartTime(message, startTimestamp, endTimestamp);
+                if (!validEndTime) {
+                    return message.channel.send(`If you want to change the start time try \`${PREFIX}${commandUsed} edit recent\``);
+                }
                 const currentFastUserID = currentFast[0].userID;
-                startTimestamp = currentFast[0].startTime;
                 const fastDurationTimestamp = endTimestamp - startTimestamp;
                 console.log({ currentFastUserID, startTimestamp, fastDurationTimestamp });
 
@@ -717,7 +725,7 @@ module.exports = {
                     // which can be referenced later or sent to a server when DMs are handled!
                     fastBreaker = await fn.messageDataCollectFirst(message, fastBreakerPrompt, "Fast: Fast Breaker", fastEmbedColour, 300000);
                     console.log({ fastBreaker });
-                    if (fastBreaker === false || fastBreaker == "stop") {
+                    if (!fastBreaker || fastBreaker == "stop") {
                         return;
                     }
                     else if (fastBreaker == "skip") {
@@ -726,17 +734,13 @@ module.exports = {
 
                     // +1 to convert the returned index back to natural numbers
                     moodValue = await fn.userSelectFromList(message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour) + 1;
-                    if (moodValue === false) {
-                        return;
-                    }
+                    if (moodValue === false) return;
                     var reflectionText = "";
                     let messageIndex = 0;
                     let reset = false;
                     do {
                         let userReflection = await fn.messageDataCollectFirst(message, reflectionTextPrompt, "Fast: Reflection", fastEmbedColour, 900000);
-                        if (userReflection === false) {
-                            return;
-                        }
+                        if (!userReflection) return;
                         if (userReflection == "1") {
                             break;
                         }
@@ -789,9 +793,7 @@ module.exports = {
                 const confirmation = await fn.getUserConfirmation(message, endConfirmation, forceSkip)
                     .catch(err => console.error(err));
                 console.log(`Confirmation function call: ${confirmation}`);
-                if (confirmation === false) {
-                    return;
-                }
+                if (!confirmation) return;
                 const fastData = [startTimestamp, endTimestamp, fastDurationTimestamp, fastBreaker, moodValue, reflectionText];
                 fastCollectionDocument.collection.updateOne({
                     userID: authorID,
@@ -812,14 +814,10 @@ module.exports = {
                         const confirmPostFastMessage = "Would you like to take a **picture** of your **fast breaker** *and/or* **send a message** to a server channel? (for accountability!)"
                             + "\n\n(if ✅, I will list the servers you're in to find the channel you want to post to!)";
                         let confirmPostFast = await fn.getUserConfirmation(message, confirmPostFastMessage, forceSkip, "Send Message for Accountability?", 180000, 0);
-                        if (confirmPostFast === false) {
-                            return;
-                        }
+                        if (!confirmPostFast) return;
                         else {
                             let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
-                            if (fastPost === false) {
-                                return;
-                            }
+                            if (!fastPost) return;
                             if (endTimestamp === null) {
                                 await postFast(bot, message, fastPost, startTimestamp, PREFIX, commandUsed, forceSkip);
                             }
@@ -938,9 +936,7 @@ module.exports = {
                         }
                         const confirmSeeMessage = `Are you sure you want to **see ${args[2]} fasts?**\n\n*(IF a lot of logs, it will spam DM/server!)*`;
                         let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Fast: See ${args[2]} Fasts WARNING!`);
-                        if (confirmSeeAll === false) {
-                            return;
-                        }
+                        if (!confirmSeeAll) return;
                     }
                     else {
                         // If the next argument is undefined, implied "see all" command call unless "all" was not called:
@@ -952,9 +948,7 @@ module.exports = {
                         }
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your fast history?\n\n*(IF a lot of logs, it will spam DM/server!)*";
                         let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Fast: See All Fasts WARNING!");
-                        if (confirmSeeAll === false) {
-                            return;
-                        }
+                        if (!confirmSeeAll) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
                     if (pastNumberOfEntriesIndex === undefined) {
@@ -988,7 +982,7 @@ module.exports = {
                             }
                             const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} fasts past ${entriesToSkip}?**\n\n*(IF a lot of logs, it will spam DM/server!)*`;
                             const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Fast: See ${args[1]} Fasts Past ${entriesToSkip} WARNING!`);
-                            if (confirmSeePast === false) {
+                            if (!confirmSeePast) {
                                 return;
                             }
 
@@ -1181,36 +1175,6 @@ module.exports = {
                         return;
                     }
                 }
-                // Delete # Past #
-                /**
-                 *  var entriesToSkip;
-                            // If the argument after past is a number, valid command call!
-                            if (!isNaN(args[3])) {
-                                entriesToSkip = parseInt(args[3]);
-                            }
-                            else if (args[3] == "recent") {
-                                entriesToSkip = 1;
-                            }
-                            else {
-                                message.reply(fastSeeHelpMessage);
-                                return;
-                            }
-                            if (entriesToSkip < 0 || entriesToSkip > totalFastNumber) {
-                                fn.sendErrorMessageAndUsage(message, fastSeeHelpMessage, "**FAST(S) DO NOT EXIST**...");
-                                return;
-                            }
-                            const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} fasts past ${entriesToSkip}?**\n\n*(IF a lot of logs, it will spam DM/server!)*`;
-                            const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Fast: See ${args[1]} Fasts Past ${entriesToSkip} WARNING!`);
-                            if (confirmSeePast === false) {
-                                return;
-                            }
-    
-                            const fastView = await getFastsIndexOf(fastCollectionDocument, authorID, entriesToSkip, pastNumberOfEntriesIndex);
-                            const fastDataToString = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, entriesToSkip);
-                            fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip}`, fastEmbedColour);
-                            message.channel.send(fastEmbed);
-                            return;
-                 */
                 else if (args[2].toLowerCase() == "past") {
                     var skipEntries;
                     if (isNaN(args[3])) {
@@ -1238,9 +1202,7 @@ module.exports = {
                     // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                     const multipleDeleteMessage = `Are you sure you want to **delete ${fastCollection.length} fast(s) past fast ${skipEntries}**:\n\n${showFasts}`;
                     const multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, forceSkip, "Fast: Multiple Delete Warning!");
-                    if (multipleDeleteConfirmation === false) {
-                        return;
-                    }
+                    if (!multipleDeleteConfirmation) return;
                     const targetIDs = await fastCollection.map(fast => fast._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} fasts(s) past ${skipEntries}`);
                     fastCollectionDocument.collection.deleteMany({ _id: { $in: targetIDs } });
@@ -1292,15 +1254,11 @@ module.exports = {
                             return;
                         }
                         let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, "Fast: Delete All Fasts WARNING!");
-                        if (confirmDeleteAll === false) {
-                            return;
-                        }
+                        if (!confirmDeleteAll) return;
                         const finalDeleteAllMessage = "Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR FASTS ON RECORD**?\n\nYou **cannot UNDO** this!"
                             + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
                         let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, false, "Fast: Delete ALL Fasts Final Warning!");
-                        if (finalConfirmDeleteAll === false) {
-                            return;
-                        }
+                        if (!finalConfirmDeleteAll) return;
                         console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Fasts`);
                         fastCollectionDocument.collection.deleteMany({ userID: authorID });
                         return;
@@ -1365,7 +1323,7 @@ module.exports = {
             }
             else {
                 var fastBreaker, reflectionText, continueEditMessage;
-                var fastFields = ["Start Time", "End Time", "Fast Duration", "Fast Breaker", "Mood", "Reflection"];
+                var fastFields = ["Start Time", "End Time", "Fast Breaker", "Mood", "Reflection"];
                 let fieldsList = "";
                 fastFields.forEach((element, i) => {
                     fieldsList = fieldsList + `\`${i + 1}\` - ${element}\n`;
@@ -1409,17 +1367,18 @@ module.exports = {
                     }
                     var userEdit, fastEditMessagePrompt = "";
                     const fieldToEdit = fastFields[fieldToEditIndex];
-                    if (fieldToEditIndex == 2) {
+                    if (fieldToEditIndex == 0 || fieldToEditIndex == 1) {
                         fastEditMessagePrompt = "***(ONLY possible edit = `now`)***\n";
                     }
-                    else if (fieldToEditIndex == 4) {
+                    // No prompt for the fast breaker
+                    else if (fieldToEditIndex == 3) {
                         fastEditMessagePrompt = "***(Please enter a number from `1-5`)***\n";
                     }
-                    else if (fieldToEditIndex == 5) {
+                    else if (fieldToEditIndex == 4) {
                         fastEditMessagePrompt = "**__Reflection Questions:__\n- __Why__ did you feel that way?\n"
                             + "- What did you do that made it great? / What could you have done to __make it better__?**\n";
                     }
-                    if (fieldToEditIndex == 4) {
+                    if (fieldToEditIndex == 3) {
                         userEdit = await getUserEditNumber(message, fieldToEdit, 5, forceSkip);
                     }
                     else {
@@ -1430,57 +1389,64 @@ module.exports = {
                     }
                     else if (userEdit !== "back") {
                         // Parse User Edit
-                        if (fieldToEditIndex == 2) {
+                        if (fieldToEditIndex == 0 || fieldToEditIndex == 1) {
                             userEdit = userEdit.split(/ +/);
                             console.log({ userEdit });
                             fastData[fieldToEditIndex] = fn.timeCommandHandler(userEdit, message.createdAt);
+                            // If the end time is correctly after the start time, update the fast duration as well!
+                            // Otherwise, go back to the main menu
+                            const validFastDuration = endTimeAfterStartTime(message, fastData[0], fastData[1]);
+                            if (!validFastDuration) {
+                                continueEdit = true;
+                            }
+                            else {
+                                fastData[2] = fastData[1] - fastData[0];
+                            }
                         }
-                        else if (fieldToEditIndex == 3) {
+                        else if (fieldToEditIndex == 2) {
                             fastData[fieldToEditIndex] = userEdit;
                         }
-                        else if (fieldToEditIndex == 4) {
+                        else if (fieldToEditIndex == 3) {
                             if (!isNaN(userEdit)) {
                                 if (userEdit > 0 || userEdit <= 5) {
                                     fastData[fieldToEditIndex] = parseInt(userEdit);
                                 }
                             }
                         }
-                        else if (fieldToEditIndex == 5) {
+                        else if (fieldToEditIndex == 4) {
                             fastData[fieldToEditIndex] = userEdit;
                         }
 
-                        console.log(`Editing ${authorID}'s Fast ${pastNumberOfEntriesIndex}`);
-                        switch (fieldToEditIndex) {
-                            case 0:
-                                await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { startTime: fastData[0] } })
-                                    .catch(err => console.error(err));
-                                break;
-                            case 1:
-                                await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { endTime: fastData[1] } })
-                                    .catch(err => console.error(err));
-                                break;
-                            case 2:
-                                await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { fastDuration: fastData[2] } })
-                                    .catch(err => console.error(err));
-                                break;
-                            case 3:
-                                await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { fastBreaker: fastData[3] } })
-                                    .catch(err => console.error(err));
-                                break;
-                            case 4:
-                                await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { mood: fastData[4] } })
-                                    .catch(err => console.error(err));
-                                break;
-                            case 5:
-                                await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { reflection: fastData[5] } })
-                                    .catch(err => console.error(err));
-                                break;
+                        if (!continueEdit) {
+                            console.log(`Editing ${authorID}'s Fast ${pastNumberOfEntriesIndex}`);
+                            switch (fieldToEditIndex) {
+                                case 0:
+                                    await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { startTime: fastData[0], fastDuration: fastData[2] } })
+                                        .catch(err => console.error(err));
+                                    break;
+                                case 1:
+                                    await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { endTime: fastData[1], fastDuration: fastData[2] } })
+                                        .catch(err => console.error(err));
+                                    break;
+                                case 2:
+                                    await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { fastBreaker: fastData[3] } })
+                                        .catch(err => console.error(err));
+                                    break;
+                                case 3:
+                                    await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { mood: fastData[4] } })
+                                        .catch(err => console.error(err));
+                                    break;
+                                case 4:
+                                    await fastCollectionDocument.collection.updateOne({ _id: fastTargetID }, { $set: { reflection: fastData[5] } })
+                                        .catch(err => console.error(err));
+                                    break;
+                            }
+                            console.log({ userEdit });
+                            showFast = fastDataArrayToString(fastData);
+                            console.log({ fastData, fastTargetID, fieldToEditIndex });
+                            continueEditMessage = `Do you want to continue **editing Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n${showFast}`;
+                            continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Fast: Continue Editing Fast ${pastNumberOfEntriesIndex}?`, 300000);
                         }
-                        console.log({ userEdit });
-                        showFast = fastDataArrayToString(fastData);
-                        console.log({ fastData, fastTargetID, fieldToEditIndex });
-                        continueEditMessage = `Do you want to continue **editing Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n${showFast}`;
-                        continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Fast: Continue Editing Fast ${pastNumberOfEntriesIndex}?`, 300000);
                     }
                     else {
                         continueEdit = true;
@@ -1520,9 +1486,7 @@ module.exports = {
                         const endTimestamp = fastData[1];
                         let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
                         console.log({ fastPost });
-                        if (fastPost === false) {
-                            return;
-                        }
+                        if (!fastPost) return;
                         if (endTimestamp === null) {
                             await postFast(bot, message, fastPost, startTimestamp, PREFIX, commandUsed, forceSkip, totalFastsNumber);
                         }
@@ -1554,9 +1518,7 @@ module.exports = {
                     const startTimestamp = fastData[0];
                     const endTimestamp = fastData[1];
                     let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
-                    if (fastPost === false) {
-                        return;
-                    }
+                    if (!fastPost) return;
                     if (endTimestamp === null) {
                         await postFast(bot, message, fastPost, startTimestamp, PREFIX, commandUsed, forceSkip, totalFastsNumber - pastNumberOfEntriesIndex + 1);
                     }
