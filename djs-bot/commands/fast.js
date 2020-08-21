@@ -610,10 +610,17 @@ module.exports = {
             // Check if the user does not already have a fast in progress, otherwise start.
             // Using greater than equal to ensure error message sent even though 
             // Any given user should not be able to have more than 1 fast running at a time
-            var fastStartUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} start <DATE/TIME>\`\n\n`
-                + "`<DATE/TIME>`: **now**\n\n(more features in development, i.e. set fast goal time + fast reminder,  and <DATE/TIME> natural language processor";
+            var fastStartUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <DATE/TIME> <force>\`\n\n`
+            + "`<DATE/TIME>` Enter date and/or time in relative terms\n"
+            + "(i.e. now, 1 hour ago, 15 minutes ago, in 15 minutes, in 1 hour, yesterday at 10pm EST,"
+            + " two days ago at 6P PST, 1 day ago 8p) Default: next time forward(AM/PM), EST"
+            + "\n\nOR\n\n Enter date and/or time in absolute terms\n"
+            + "(i.e. [Month/Day/Year] 3/22/2020 at 10a EST, [Month.Day.Year] 3.22.2020 at 9PM,"
+            + "[Month/Day] 3/22 at 10a EST, [Month.Day] 3.22 at 9PM)"
+            + "\n\n`<force>`: type **force** at the end of your command to **skip all of the confimation windows!**";
+
             fastStartUsageMessage = fn.getMessageEmbed(fastStartUsageMessage, `Fast: Start Help`, fastEmbedColour);
-            const fastStartHelpMessage = `Try \`${PREFIX}${commandUsed} start help\``;
+            const fastStartHelpMessage = `Try \`${PREFIX}${commandUsed} ${fastCommand} help\``;
             const fastIsRunningMessage = `You already have a **fast running!**\nIf you want to **restart** it try \`${PREFIX}${commandUsed} edit help\``
                 + `\nIf you want to **delete** the fast entry altogether try \`${PREFIX}${commandUsed} delete help\``;
             if (args[1] != undefined) {
@@ -661,12 +668,17 @@ module.exports = {
         }
 
 
-        else if (fastCommand == "end" || fastCommand == "e" || fastCommand == "s") {
-            var fastEndUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} end <DATE/TIME> <force>\`\n\n`
-                + "`<DATE/TIME>`: **now**\n\n(more features in development, end with <DATE/TIME> that is not just now)"
+        else if (fastCommand == "end" || fastCommand == "e") {
+            var fastEndUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <DATE/TIME> <force>\`\n\n`
+                + "`<DATE/TIME>` Enter date and/or time in relative terms\n"
+                + "(i.e. now, 1 hour ago, 15 minutes ago, in 15 minutes, in 1 hour, yesterday at 10pm EST,"
+                + " two days ago at 6P PST, 1 day ago 8p) Default: next time forward(AM/PM), EST"
+                + "\n\nOR\n\n Enter date and/or time in absolute terms\n"
+                + "(i.e. [Month/Day/Year] 3/22/2020 at 10a EST, [Month.Day.Year] 3.22.2020 at 9PM,"
+                + "[Month/Day] 3/22 at 10a EST, [Month.Day] 3.22 at 9PM)"
                 + "\n\n`<force>`: type **force** at the end of your command to **skip all of the confimation windows!**";
             fastEndUsageMessage = fn.getMessageEmbed(fastEndUsageMessage, `Fast: End Help`, fastEmbedColour);
-            const fastEndHelpMessage = `Try \`${PREFIX}${commandUsed} end help\``;
+            const fastEndHelpMessage = `Try \`${PREFIX}${commandUsed} ${fastCommand} help\``;
             const noFastRunningMessage = `You don't have a **fast running!**\nIf you want to **start** one \`${PREFIX}${commandUsed} start <DATE/TIME>\``;
 
             if (args[1] != undefined) {
@@ -834,8 +846,8 @@ module.exports = {
             || fastCommand == "look" || fastCommand == "lookup" || fastCommand == "show") {
             // Will add the ability to gather all of the user's data into a spreadsheet or note/JSON file!
             // **Handle users who do not yet have a fast!
-            var fastSeeUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} see past <PAST_#_OF_ENTRIES> <FIELD> <force>\`\n\`${PREFIX}${commandUsed} see <#_MOST_RECENT_ENTRY> <FIELD> <force>\``
-                + `\n\`${PREFIX}${commandUsed} see <#_OF_ENTRIES> past <STARTING_INDEX> <FIELD> <force>\`\n\`${PREFIX}${commandUsed} see <number>\``
+            var fastSeeUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} past <PAST_#_OF_ENTRIES> <FIELD> <force>\`\n\`${PREFIX}${commandUsed} ${fastCommand} <#_MOST_RECENT_ENTRY> <FIELD> <force>\``
+                + `\n\`${PREFIX}${commandUsed} ${fastCommand} <#_OF_ENTRIES> past <STARTING_INDEX> <FIELD> <force>\`\n\`${PREFIX}${commandUsed} ${fastCommand} <number>\``
                 + `\n\n\`<PAST_#_OF_ENTRIES>\`: **recent; all; 5** (\\*any number)`
                 + `\n\n\`<#_OF_ENTRIES>\` and \`<STARTING_INDEX>\`: **2** (\\*any number)`
                 + `\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; all** (returns entire history); **3 **(3rd most recent entry, \\**any number*)`
@@ -844,7 +856,7 @@ module.exports = {
                 + "\n\n`<FIELD>`(OPT.): **start; end; fastbreaker; duration; reflection** (includes mood); *Default:* all fields\n(if MULTIPLE `<FIELD>`s: separate by space!)"
                 + "\n\n`<force>`(OPT.): type **force** at the end of your command to **skip all of the confimation windows!**";
             fastSeeUsageMessage = fn.getMessageEmbed(fastSeeUsageMessage, `Fast: See Help`, fastEmbedColour);
-            const fastSeeHelpMessage = `**INVALID USAGE**... Try \`${PREFIX}${commandUsed} see help\``;
+            const fastSeeHelpMessage = `**INVALID USAGE**... Try \`${PREFIX}${commandUsed} ${fastCommand} help\``;
 
             // If the user wants fast help, do not proceed to show them the fast.
             const seeCommands = ["past", "recent", "all"];
@@ -1025,10 +1037,10 @@ module.exports = {
 
         else if (fastCommand == "delete" || fastCommand == "d" || fastCommand == "remove"
             || fastCommand == "del" || fastCommand == "clear" || fastCommand == "erase") {
-            var fastDeleteUsage = `**USAGE:**\n\`${PREFIX}${commandUsed} delete past <PAST_#_OF_ENTRIES> <FIELD> <force>\``
-                + `\n\`${PREFIX}${commandUsed} delete <#_MOST_RECENT_ENTRY> <FIELD> <force>\``
-                + `\n\`${PREFIX}${commandUsed} delete many <RECENT_ENTRIES> <FIELD> <force>\``
-                + `\n\`${PREFIX}${commandUsed} delete <#_OF_ENTRIES> past <STARTING_INDEX> <FIELD> <force>\``
+            var fastDeleteUsage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} past <PAST_#_OF_ENTRIES> <FIELD> <force>\``
+                + `\n\`${PREFIX}${commandUsed} ${fastCommand} <#_MOST_RECENT_ENTRY> <FIELD> <force>\``
+                + `\n\`${PREFIX}${commandUsed} ${fastCommand} many <RECENT_ENTRIES> <FIELD> <force>\``
+                + `\n\`${PREFIX}${commandUsed} ${fastCommand} <#_OF_ENTRIES> past <STARTING_INDEX> <FIELD> <force>\``
                 + "\n\n`<PAST_#_OF_ENTRIES>`: **recent; 5** (\\*any number); **all** \n(NOTE: ***any number or all* will delete more than 1 entry!**)"
                 + `\n\n\`<#_OF_ENTRIES>\` and \`<STARTING_INDEX>\`: **2** (\\**any number*)`
                 + "\n\n`<#_MOST_RECENT_ENTRY>`: **all; recent; 3** (3rd most recent entry, \\**any number*)\n(NOTE: Deletes just 1 entry - UNLESS `all`)"
@@ -1039,7 +1051,7 @@ module.exports = {
                 + "\n\nIF you'd like to see more of your fasts first before trying to delete: `?fast see`"
                 + "\nIF you'd like to archive the deleted fasts as well (i.e. get the data in a .txt file) - **proceed**.\nIF you'd like to archive without deletion, try: `fast archive` (FUTURE FEATURE)\\*";
             fastDeleteUsage = fn.getMessageEmbed(fastDeleteUsage, `Fast: Delete Help`, fastEmbedColour);
-            const fastDeleteHelpMessage = `Try \`${PREFIX}${commandUsed} delete help\``;
+            const fastDeleteHelpMessage = `Try \`${PREFIX}${commandUsed} ${fastCommand} help\``;
             const trySeeCommandMessage = `Try \`${PREFIX}${commandUsed} see help\``;
 
             // delete help command so that the user does not get spammed with the usage message!
@@ -1291,11 +1303,11 @@ module.exports = {
         else if (fastCommand == "edit" || fastCommand == "ed" || fastCommand == "change"
             || fastCommand == "c" || fastCommand == "ch" || fastCommand == "alter" || fastCommand == "update"
             || fastCommand == "up" || fastCommand == "upd") {
-            var fastEditUsage = `**USAGE:**\n\`${PREFIX}${commandUsed} edit <#_MOST_RECENT_ENTRY> <force>\``
+            var fastEditUsage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <#_MOST_RECENT_ENTRY> <force>\``
                 + "\n\n`<#_MOST_RECENT_ENTRY>`: **recent; 3** (3rd most recent entry, \\**any number*)"
                 + "\n\n`<force>`(OPT.): type **force** at the end of your command to **skip all of the confimation windows! (More editing capabilities in future development)**"
             fastEditUsage = fn.getMessageEmbed(fastEditUsage, `Fast: Edit Help`, fastEmbedColour);
-            const fastEditHelp = `Try \`${PREFIX}${commandUsed} edit help\``;
+            const fastEditHelp = `Try \`${PREFIX}${commandUsed} ${fastCommand} help\``;
             const fastEditTrySee = `Try \`${PREFIX}${commandUsed} see help\``;
             var pastNumberOfEntriesIndex;
 
@@ -1458,12 +1470,12 @@ module.exports = {
 
         else if (fastCommand == "post" || fastCommand == "p" || fastCommand == "send" || fastCommand == "accountability"
             || fastCommand == "share" || fastCommand == "upload") {
-            var fastPostUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} post <#_MOST_RECENT_ENTRY> <FIELD> <force>\``
+            var fastPostUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <#_MOST_RECENT_ENTRY> <FIELD> <force>\``
                 + `\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3 **(3rd most recent entry, \\**any number*)`
                 + "\n\n`<FIELD>`(OPT.): **start; end; fastbreaker; duration; reflection** (includes mood); *Default:* all fields\n(if MULTIPLE `<FIELD>`s: separate by space!)"
                 + "\n\n`<force>`(OPT.): type **force** at the end of your command to **skip all of the confimation windows!**";
             fastPostUsageMessage = fn.getMessageEmbed(fastPostUsageMessage, `Fast: Post Help`, fastEmbedColour);
-            const fastPostHelpMessage = `**INVALID USAGE**... Try \`${PREFIX}${commandUsed} post help\``;
+            const fastPostHelpMessage = `**INVALID USAGE**... Try \`${PREFIX}${commandUsed} ${fastCommand} help\``;
             const totalFastsNumber = await totalFasts(fastCollectionDocument, authorID);
             if (args[1] !== undefined) {
                 var fastData;
