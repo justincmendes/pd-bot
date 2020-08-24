@@ -2,6 +2,8 @@
  * File of all the important and universally reusable functions!
  */
 const Discord = require("discord.js");
+const e = require("express");
+const { off } = require("../djs-bot/database/schemas/fasting");
 require("dotenv").config();
 
 module.exports = {
@@ -105,8 +107,8 @@ module.exports = {
         return result;
     },
 
-    messageDataCollectFirst: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = "#ADD8E6", delayTime = 60000, 
-    deleteUserMessage = true, userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
+    messageDataCollectFirst: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = "#ADD8E6", delayTime = 60000,
+        deleteUserMessage = true, userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
         const userOriginal = userOriginalMessageObject.author.id;
         var result;
         const deleteDelay = 3000;
@@ -288,25 +290,1141 @@ module.exports = {
         return (timeString);
     },
 
+
+    getSplitTimePeriodAndTimezoneArray: function (timeArray) {
+        // timeString = timeString.toLowerCase();
+        // timeParseRegex = /(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(p|a)?(?:m)?([a-z]{2,5})?)?/;
+        // timeParse = timeParseRegex.exec(timeString);
+        // console.log({timeParse});
+        const hours = timeArray[0] || timeArray[2];
+        const minutes = timeArray[1];
+        const amPmString = timeArray[3];
+        const timezoneString = timeArray[4];
+        console.log({ hours, minutes, amPmString, timezoneString });
+        return [hours, minutes, amPmString, timezoneString];
+    },
+
+    getProperTimezoneString: function (timePeriodAndTimeZoneArgs, originalArgs) {
+        timePeriodAndTimeZoneArgs = [this.getElementFromBack(timePeriodAndTimeZoneArgs, 2), this.getElementFromBack(timePeriodAndTimeZoneArgs, 1)];
+        originalArgs = [this.getElementFromBack(originalArgs, 2), this.getElementFromBack(originalArgs, 1)];
+        if (timePeriodAndTimeZoneArgs[1] && timePeriodAndTimeZoneArgs[1] != originalArgs[1]) {
+            // If the am/pm ends with m, then it greedily took the m representing the timezone
+            if (/m$/.test(timePeriodAndTimeZoneArgs[0])) {
+                timePeriodAndTimeZoneArgs[1] = originalArgs[1];
+            }
+        }
+        return timePeriodAndTimeZoneArgs[1];
+    },
+
+    getMultipleAdjacentArrayElements: function (array, startingIndex, numberOfElements) {
+        let multipleArray = new Array();
+        for (i = startingIndex; i < (startingIndex + numberOfElements); i++) {
+            multipleArray.push(array[i]);
+        }
+        return multipleArray;
+    },
+
+    /**
+     * 
+     * @param {Number} year CE Year: 0000-xxxx
+     * @param {Number} targetMonth Month: 0-11, 0 = January, 1 = February,...
+     * @param {Number} targetDayOfWeek Day of Week: 0-6, 0 = Sunday, 1 = Monday,...
+     * @param {Number} ordinalDayOfWeek First, Second, Third, Fourth...
+     */
+    getUTCTimestampOfDayOfWeek: function (year, targetMonth, targetDayOfWeek, ordinalDayOfWeek) {
+        const DAY_IN_MS = this.getTimeScaleToMultiplyInMs("day");
+        const WEEK_IN_MS = DAY_IN_MS * 7;
+        const startOfMonth = new Date(year, targetMonth);
+        let targetDate = startOfMonth.getTime();
+        while (true) {
+            const currentDate = new Date(targetDate);
+            if (currentDate.getUTCDay() === targetDayOfWeek) {
+                targetDate += WEEK_IN_MS * (ordinalDayOfWeek - 1);
+                break;
+            }
+            else {
+                targetDate += DAY_IN_MS;
+            }
+        }
+        return targetDate;
+    },
+
+    getDaylightSavingTimeStartAndEndTimestampInMs: function (targetTimestamp) {
+        // Step 1: Convert the timestamp to since since Jan 1, xxxx (of the given timestamp's year!)
+        const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
+        const targetDate = new Date(targetTimestamp);
+        const targetYear = targetDate.getUTCFullYear();
+        // Step 2: Find the timestamp of the second Sunday of March at 2:00AM
+        // And first Sunday of November at 2:00AM
+        let daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 2, 0, 2) + (2 * HOUR_IN_MS);
+        let daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 10, 0, 1) + (2 * HOUR_IN_MS);
+        daylightEndTimestamp += 2 * HOUR_IN_MS;
+        console.log({ targetDate, daylightStartTimestamp, daylightEndTimestamp });
+        return [daylightStartTimestamp, daylightEndTimestamp];
+    },
+
+    /**
+     * 
+     * @param {Number} targetTimestamp UTC Timestamp to be checked for falling within UTC Daylight Saving Time
+     * @param {Boolean} userDaylightSavingSetting If the user opted for having Daylight Saving Time adjustments
+     */
+    isDaylightSavingTime: function (targetTimestamp, userDaylightSavingSetting) {
+        console.log({ targetTimestamp });
+        if (userDaylightSavingSetting === false)
+            return false;
+        else {
+            const [daylightStartTimestamp, daylightEndTimestamp] = this.getDaylightSavingTimeStartAndEndTimestampInMs(targetTimestamp);
+            if (targetTimestamp >= daylightStartTimestamp && targetTimestamp < daylightEndTimestamp)
+                return true;
+            else
+                return true;
+        }
+    },
+
+    // Currently only accepting abbreviations
+    // https://en.wikipedia.org/wiki/List_of_time_zone_abbreviations
+    getTimezoneOffset: function (timezoneString) {
+        if (!timezoneString) return undefined;
+        // Can be a single number, multiple numbers, time, or string of 2-5 letters
+        // In the form: 8:45
+        const timezoneFormatRegex = /(?:(\-)|(?:\+))(\d{1}(?:\d{1})?)[\:]?(\d{2})/;
+        const timezoneFormat = timezoneFormatRegex.exec(timezoneString);
+        console.log({ timezoneFormat });
+        if (timezoneFormat) {
+            const sign = timezoneFormat[1];
+            const hours = parseInt(timezoneFormat[2]);
+            if (hours < -12 || hours > 14) return undefined;
+            const minutes = parseInt(timezoneFormat[3]);
+            if (minutes >= 60) return undefined;
+            const offset = hours + (minutes / 60);
+            console.log({ offset })
+            if (offset < -12 || offset > 14) return undefined;
+            if (sign) {
+                return -offset;
+            }
+            else {
+                return offset;
+            }
+        }
+        // In the form: 11.5, 11 
+        if (!isNaN(timezoneString)) {
+            const offset = parseFloat(timezoneString);
+            // If it is a decimal number, it is properly scaled already
+            // https://en.wikipedia.org/wiki/List_of_UTC_time_offsets
+            if (offset < -12 || offset > 14) return undefined;
+            else return offset;
+        }
+
+        if (timezoneString.length < 2) return undefined;
+        timezoneString = timezoneString.toLowerCase();
+        var timezoneOffset;
+        const firstLetter = timezoneString[0];
+        switch (firstLetter) {
+            case 'a':
+                switch (timezoneString) {
+                    case "acdt": timezoneOffset = 10.5;
+                        break;
+                    case "acst": timezoneOffset = 9.5;
+                        break;
+                    case "act": timezoneOffset = -5;
+                        break;
+                    // ASEAN Common Time
+                    case "asct": timezoneOffset = 8;
+                        break;
+                    case "asean": timezoneOffset = 8;
+                        break;
+                    case "acwst": timezoneOffset = 8.75;
+                        break;
+                    case "adt": timezoneOffset = -3;
+                        break;
+                    case "aedt": timezoneOffset = 11;
+                        break;
+                    case "aest": timezoneOffset = 10;
+                        break;
+                    case "aet": timezoneOffset = 10;
+                        break;
+                    case "aft": timezoneOffset = 4.5;
+                        break;
+                    case "akdt": timezoneOffset = -8;
+                        break;
+                    case "akst": timezoneOffset = -9;
+                        break;
+                    case "almt": timezoneOffset = 6;
+                        break;
+                    case "amst": timezoneOffset = -3;
+                        break;
+                    case "amt": timezoneOffset = -4;
+                        break;
+                    // Armenia Time
+                    case "armt": timezoneOffset = 4;
+                        break;
+                    case "anat": timezoneOffset = 12;
+                        break;
+                    case "aqtt": timezoneOffset = 5;
+                        break;
+                    case "art": timezoneOffset = -3;
+                        break;
+                    // Arabia Standard Time
+                    case "arst": timezoneOffset = 3;
+                        break;
+                    case "ast": timezoneOffset = -4;
+                        break;
+                    case "awst": timezoneOffset = 8;
+                        break;
+                    case "azost": timezoneOffset = 0;
+                        break;
+                    case "azot": timezoneOffset = -1;
+                        break;
+                    case "azt": timezoneOffset = 4;
+                        break;
+                }
+                break;
+            case 'b':
+                switch (timezoneString) {
+                    case "bdt": timezoneOffset = 8;
+                        break;
+                    case "biot": timezoneOffset = 6;
+                        break;
+                    case "bit": timezoneOffset = -12;
+                        break;
+                    case "bot": timezoneOffset = -4;
+                        break;
+                    case "brst": timezoneOffset = -2;
+                        break;
+                    case "brt": timezoneOffset = -3;
+                        break;
+                    // Bangladesh Standard Time
+                    case "bdst": timezoneOffset = 6;
+                        break;
+                    // Bangladesh Standard Time
+                    case "bast": timezoneOffset = 6;
+                        break;
+                    // Bangladesh Standard Time
+                    case "banst": timezoneOffset = 6;
+                        break;
+                    // Bougainville Standard Time
+                    case "bost": timezoneOffset = 11;
+                        break;
+                    // Bougainville Standard Time
+                    case "boust": timezoneOffset = 11;
+                        break;
+                    // Bougainville Standard Time
+                    case "bvst": timezoneOffset = 11;
+                        break;
+                    case "bst": timezoneOffset = 1;
+                        break;
+                    case "btt": timezoneOffset = 6;
+                        break;
+                }
+                break;
+            case 'c':
+                switch (timezoneString) {
+                    case "cat": timezoneOffset = 2;
+                        break;
+                    case "cct": timezoneOffset = 6.5;
+                        break;
+                    case "cdt": timezoneOffset = -5;
+                        break;
+                    case "cest": timezoneOffset = -4;
+                        break;
+                    case "cet": timezoneOffset = 2;
+                        break;
+                    case "chadt": timezoneOffset = -1;
+                        break;
+                    case "chast": timezoneOffset = 13.75;
+                        break;
+                    case "chot": timezoneOffset = 12.75;
+                        break;
+                    case "chost": timezoneOffset = 8;
+                        break;
+                    case "chst": timezoneOffset = 10;
+                        break;
+                    case "chut": timezoneOffset = 10;
+                        break;
+                    case "cist": timezoneOffset = -8;
+                        break;
+                    case "cit": timezoneOffset = 8;
+                        break;
+                    case "ckt": timezoneOffset = -19;
+                        break;
+                    case "clst": timezoneOffset = -3;
+                        break;
+                    case "clt": timezoneOffset = -4;
+                        break;
+                    case "cost": timezoneOffset = -4;
+                        break;
+                    case "cot": timezoneOffset = -5;
+                        break;
+                    case "cst": timezoneOffset = -6;
+                        break;
+                    // Cuba Standard Time
+                    case "cust": timezoneOffset = -5;
+                        break;
+                    // Cuba Standard Time
+                    case "cubat": timezoneOffset = -5;
+                        break;
+                    // Cuba Standard Time
+                    case "cubst": timezoneOffset = -5;
+                        break;
+                    // Cuba Standard Time
+                    case "cuba": timezoneOffset = -5;
+                        break;
+                    // China Standard Time
+                    case "ct": timezoneOffset = 8;
+                        break;
+                    // China Standard Time
+                    case "chit": timezoneOffset = 8;
+                        break;
+                    // China Standard Time
+                    case "chst": timezoneOffset = 8;
+                        break;
+                    case "cvt": timezoneOffset = -1;
+                        break;
+                    case "cwst": timezoneOffset = 8.75;
+                        break;
+                    case "cxt": timezoneOffset = 7;
+                        break;
+                }
+                break;
+            case 'd':
+                switch (timezoneString) {
+                    case "davt": timezoneOffset = 7;
+                        break;
+                    case "ddut": timezoneOffset = 10;
+                        break;
+                    case "dft": timezoneOffset = 1;
+                        break;
+                }
+                break;
+            case 'e':
+                switch (timezoneString) {
+                    case "easst": timezoneOffset = -5;
+                        break;
+                    case "east": timezoneOffset = -6;
+                        break;
+                    case "eat": timezoneOffset = 3;
+                        break;
+                    // Eastern Caribbean Time
+                    case "eact": timezoneOffset = -4;
+                        break;
+                    // Eastern Caribbean Time
+                    case "eastc": timezoneOffset = -4;
+                        break;
+                    // Eastern Caribbean Time
+                    case "ecabt": timezoneOffset = -4;
+                        break;
+                    // Eastern Caribbean Time
+                    case "ecart": timezoneOffset = -4;
+                        break;
+                    case "ect": timezoneOffset = -5;
+                        break;
+                    case "edt": timezoneOffset = -4;
+                        break;
+                    case "eest": timezoneOffset = 3;
+                        break;
+                    case "eet": timezoneOffset = 2;
+                        break;
+                    case "egst": timezoneOffset = 0;
+                        break;
+                    case "egt": timezoneOffset = -1;
+                        break;
+                    case "eit": timezoneOffset = 9;
+                        break;
+                    case "est": timezoneOffset = -5;
+                        break;
+                }
+                break;
+            case 'f':
+                switch (timezoneString) {
+                    case "fet": timezoneOffset = 3;
+                        break;
+                    case "fjt": timezoneOffset = 12;
+                        break;
+                    case "fkst": timezoneOffset = -3;
+                        break;
+                    case "fkt": timezoneOffset = -4;
+                        break;
+                    case "fnt": timezoneOffset = -2;
+                        break;
+                }
+                break;
+            case 'g':
+                switch (timezoneString) {
+                    case "galt": timezoneOffset = 3;
+                        break;
+                    case "gamt": timezoneOffset = 12;
+                        break;
+                    case "get": timezoneOffset = -3;
+                        break;
+                    case "gft": timezoneOffset = -4;
+                        break;
+                    case "gilt": timezoneOffset = -2;
+                        break;
+                    case "git": timezoneOffset = -4;
+                        break;
+                    case "gmt": timezoneOffset = -2;
+                        break;
+                    // South Georgia and the South Sandwich Islands Time
+                    case "gsit": timezoneOffset = -2;
+                        break;
+                    case "gst": timezoneOffset = 4;
+                        break;
+                    case "gyt": timezoneOffset = -4;
+                        break;
+                }
+                break;
+            case 'h':
+                switch (timezoneString) {
+                    case "hdt": timezoneOffset = -9;
+                        break;
+                    case "haec": timezoneOffset = 2;
+                        break;
+                    case "hst": timezoneOffset = -10;
+                        break;
+                    case "hkt": timezoneOffset = 8;
+                        break;
+                    case "hmt": timezoneOffset = 5;
+                        break;
+                    // *Hovd Summer Time (not used from 2017-present)
+                    case "hovst": timezoneOffset = 8;
+                        break;
+                    case "hovt": timezoneOffset = 7;
+                        break;
+                }
+                break;
+            case 'i':
+                switch (timezoneString) {
+                    case "ict": timezoneOffset = 7;
+                        break;
+                    case "idlw": timezoneOffset = -12;
+                        break;
+                    case "idt": timezoneOffset = 3;
+                        break;
+                    case "iot": timezoneOffset = 3;
+                        break;
+                    case "irdt": timezoneOffset = 4.5;
+                        break;
+                    case "irkt": timezoneOffset = 8;
+                        break;
+                    case "irst": timezoneOffset = 3.5;
+                        break;
+                    // Indian Standard Time
+                    case "ist": timezoneOffset = 5.5;
+                        break;
+                    // Irish Standard Time
+                    case "irst": timezoneOffset = 1;
+                        break;
+                    // Israel Standard Time
+                    case "isrst": timezoneOffset = 2;
+                        break;
+                    // Israel Standard Time
+                    case "isst": timezoneOffset = 2;
+                        break;
+                }
+                break;
+            case 'j':
+                if (timezoneString == "jst") timezoneOffset = 9;
+                break;
+            case 'k':
+                switch (timezoneString) {
+                    case "kalt": timezoneOffset = 2;
+                        break;
+                    case "kgt": timezoneOffset = 6;
+                        break;
+                    case "kost": timezoneOffset = 11;
+                        break;
+                    case "krat": timezoneOffset = 7;
+                        break;
+                    case "kst": timezoneOffset = 9;
+                        break;
+                }
+                break;
+            case 'l':
+                switch (timezoneString) {
+                    // Lord Howe standard Time
+                    case "lhst": timezoneOffset = 10.5;
+                        break;
+                    // Lord Howe Summer Time
+                    case "lhsst": timezoneOffset = 11;
+                        break;
+                    // Lord Howe Summer Time
+                    case "lhdt": timezoneOffset = 11;
+                        break;
+                    case "lint": timezoneOffset = 14;
+                        break;
+                }
+                break;
+            case 'm':
+                switch (timezoneString) {
+                    case "magt": timezoneOffset = 12;
+                        break;
+                    case "mart": timezoneOffset = -9.5;
+                        break;
+                    case "mawt": timezoneOffset = 5;
+                        break;
+                    case "mdt": timezoneOffset = -6;
+                        break;
+                    case "met": timezoneOffset = 1;
+                        break;
+                    case "mest": timezoneOffset = 2;
+                        break;
+                    case "mht": timezoneOffset = 12;
+                        break;
+                    case "mist": timezoneOffset = 11;
+                        break;
+                    case "mit": timezoneOffset = -9.5;
+                        break;
+                    case "mmt": timezoneOffset = 6.5;
+                        break;
+                    case "msk": timezoneOffset = 3;
+                        break;
+                    // Mountain Standard Time
+                    case "mst": timezoneOffset = -7;
+                        break;
+                    case "mut": timezoneOffset = 4;
+                        break;
+                    case "mvt": timezoneOffset = 5;
+                        break;
+                    case "myt": timezoneOffset = 8;
+                        break;
+                }
+                break;
+            case 'n':
+                switch (timezoneString) {
+                    case "nct": timezoneOffset = 11;
+                        break;
+                    case "ndt": timezoneOffset = -2.5;
+                        break;
+                    case "nft": timezoneOffset = 11;
+                        break;
+                    case "novt": timezoneOffset = 7;
+                        break;
+                    case "npt": timezoneOffset = 5.75;
+                        break;
+                    case "nst": timezoneOffset = -3.5;
+                        break;
+                    case "nt": timezoneOffset = -3.5;
+                        break;
+                    case "nut": timezoneOffset = -11;
+                        break;
+                    case "nzdt": timezoneOffset = 13;
+                        break;
+                    case "nzst": timezoneOffset = 12;
+                        break;
+                }
+                break;
+            case 'o':
+                switch (timezoneString) {
+                    case "omst": timezoneOffset = 6;
+                        break;
+                    case "orat": timezoneOffset = 5;
+                        break;
+                }
+                break;
+            case 'p':
+                switch (timezoneString) {
+                    case "pdt": timezoneOffset = -7;
+                        break;
+                    case "pet": timezoneOffset = -5;
+                        break;
+                    case "pett": timezoneOffset = 12;
+                        break;
+                    case "pgt": timezoneOffset = 10;
+                        break;
+                    case "phot": timezoneOffset = 13;
+                        break;
+                    case "pht": timezoneOffset = 8;
+                        break;
+                    case "pkt": timezoneOffset = 5;
+                        break;
+                    case "pmdt": timezoneOffset = -2;
+                        break;
+                    case "pmst": timezoneOffset = -3;
+                        break;
+                    case "pont": timezoneOffset = 11;
+                        break;
+                    case "pst": timezoneOffset = -8;
+                        break;
+                    case "pyst": timezoneOffset = -3;
+                        break;
+                    case "pyt": timezoneOffset = -4;
+                        break;
+                }
+                break;
+            case 'r':
+                switch (timezoneString) {
+                    case "ret": timezoneOffset = 4;
+                        break;
+                    case "rott": timezoneOffset = -3;
+                        break;
+                }
+                break;
+            case 's':
+                switch (timezoneString) {
+                    case "sakt": timezoneOffset = 11;
+                        break;
+                    case "samt": timezoneOffset = 4;
+                        break;
+                    case "sast": timezoneOffset = 2;
+                        break;
+                    case "sbt": timezoneOffset = 11;
+                        break;
+                    case "sct": timezoneOffset = 4;
+                        break;
+                    case "sgt": timezoneOffset = 8;
+                        break;
+                    case "slst": timezoneOffset = 5.5;
+                        break;
+                    case "sret": timezoneOffset = 11;
+                        break;
+                    case "srt": timezoneOffset = -3;
+                        break;
+                    // Samoa Standard Time
+                    case "sst": timezoneOffset = -11;
+                        break;
+                    case "syot": timezoneOffset = 3;
+                        break;
+                }
+                break;
+            case 't':
+                switch (timezoneString) {
+                    case "taht": timezoneOffset = -10;
+                        break;
+                    case "tha": timezoneOffset = 7;
+                        break;
+                    case "tft": timezoneOffset = 5;
+                        break;
+                    case "tjt": timezoneOffset = 5;
+                        break;
+                    case "tkt": timezoneOffset = 13;
+                        break;
+                    case "tlt": timezoneOffset = 9;
+                        break;
+                    case "tmt": timezoneOffset = 5;
+                        break;
+                    case "trt": timezoneOffset = 3;
+                        break;
+                    case "tot": timezoneOffset = 13;
+                        break;
+                    case "tvt": timezoneOffset = 12;
+                        break;
+                }
+                break;
+            case 'u':
+                switch (timezoneString) {
+                    case "ulast": timezoneOffset = 9;
+                        break;
+                    case "ulat": timezoneOffset = 8;
+                        break;
+                    case "utc": timezoneOffset = 0;
+                        break;
+                    case "uyst": timezoneOffset = -2;
+                        break;
+                    case "uyt": timezoneOffset = -3;
+                        break;
+                    case "uzt": timezoneOffset = 5;
+                        break;
+                }
+                break;
+            case 'v':
+                switch (timezoneString) {
+                    case "vet": timezoneOffset = -4;
+                        break;
+                    case "vlat": timezoneOffset = 10;
+                        break;
+                    case "volt": timezoneOffset = 4;
+                        break;
+                    case "vost": timezoneOffset = 6;
+                        break;
+                    case "vut": timezoneOffset = 11;
+                        break;
+                }
+                break;
+            case 'w':
+                switch (timezoneString) {
+                    case "wakt": timezoneOffset = 12;
+                        break;
+                    case "wast": timezoneOffset = 2;
+                        break;
+                    case "wat": timezoneOffset = 1;
+                        break;
+                    case "west": timezoneOffset = 1;
+                        break;
+                    case "wet": timezoneOffset = 0;
+                        break;
+                    case "wit": timezoneOffset = 7;
+                        break;
+                    case "wgst": timezoneOffset = -2;
+                        break;
+                    case "wgt": timezoneOffset = -3;
+                        break;
+                    case "wst": timezoneOffset = 8;
+                        break;
+                }
+                break;
+            case 'y':
+                switch (timezoneString) {
+                    case "yakt": timezoneOffset = 9;
+                        break;
+                    case "yekt": timezoneOffset = 5;
+                        break;
+                }
+                break;
+        }
+        console.log({ timezoneOffset });
+        return timezoneOffset;
+    },
+
+    getProperTimeArray: function (dateAndTimeArray, originalArgs, userTimezone, userDaylightSavingSetting) {
+        // The last element in the array is expected to represent the timezone
+        const timeArrayLength = dateAndTimeArray.length;
+        const NUMBER_OF_TIME_ELEMENTS = 5;
+        const timezoneString = this.getProperTimezoneString(dateAndTimeArray, originalArgs);
+        dateAndTimeArray[timeArrayLength - 1] = timezoneString;
+        const initialTime = this.getMultipleAdjacentArrayElements(dateAndTimeArray, timeArrayLength - NUMBER_OF_TIME_ELEMENTS, NUMBER_OF_TIME_ELEMENTS);
+        const splitTimeAndPeriod = this.getSplitTimePeriodAndTimezoneArray(initialTime);
+        return splitTimeAndPeriod;
+    },
+
+    getTimezoneDaylightOffset: function (timezoneString) {
+        /**
+         * List of Potential Spring Forward Timezones:
+         * Australian Central,
+         * Australian Eastern,
+         * Alaska Standard Time,
+         * Amazon Time (Brazil),
+         * Atlantic Standard Time,
+         * Azores Standard Time,
+         * Brasília Time,
+         * British Summer Time?**,
+         * Central Standard Time (North America),
+         * Cuba Standard Time,
+         * Central European Time,
+         * Chatham Standard Time,
+         * Choibalsan Standard Time,
+         * Chile Standard Time,
+         * Colombia Time,
+         * Easter Island Standard Time,
+         * Eastern Standard Time (North America),
+         * Eastern European Time,
+         * Eastern Greenland Time,
+         * Falkland Islands Time,
+         * Hawaii–Aleutian Standard Time,
+         * Hovd Time (not used from 2017-present)**,
+         * Israel Daylight Time,
+         * Iran Standard Time,
+         * Lord Howe Standard Time** LHST: UTC-10:30-11 (NOT FULL HOUR),
+         * Mountain Standard Time (North America),
+         * Middle European Time,
+         * Newfoundland Daylight Time,
+         * New Zealand Standard Time,
+         * Pacific Standard Time (North America),
+         * Saint Pierre and Miquelon Standard Time,
+         * Paraguay Time,
+         * Samoa Time,
+         * Ulaanbaatar Standard Time,
+         * Uruguay Standard Time,
+         * West Africa Time,
+         * Western European Time,
+         * West Greenland Time,
+         */
+        const summerTimeTimezoneRegex = /(acst|aest|aet|akst|amt|ast|azot|brt|cst|cust|cubst|cubat|cuba|cet|chast|chot|clt|cot|east|est|eet|egt|fkt|hst|hovt|isrst|isst|irst|mst|met|nst|nt|nzst|pst|pmst|pyt|sst|ulat|uyt|wat|wet|wgt)/;
+        const halfHourSummerRegex = /(lhst)/;
+        if (summerTimeTimezoneRegex.test(timezoneString)) {
+            return 1;
+        }
+        else if (halfHourSummerRegex.test(timezoneString)) {
+            return 0.5;
+        }
+        else {
+            return 0;
+        }
+    },
+
+    // For timezones, allow user to select from the basic timezones or enter their own (i.e. Newfoundland And Labrador)
+    // Use select from list and have the last option open for manual entry!
+    // Have a truth value on for if Daylights Savings Time!!!
+
     // Using Regular Expressions
-    timeCommandHandler: function (args, messageCreatedTime) {
+    // Assumes that the userTimezone is NOT already daylight-savings adjusted
+    timeCommandHandler: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
+        const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
+        if (args[0].toLowerCase() == "now") {
+            return messageCreatedTimestamp + (userTimezone * HOUR_IN_MS);
+        }
+
+        // Get day of week, starting from Sunday
+        const currentDate = new Date(messageCreatedTimestamp + (userTimezone * HOUR_IN_MS));
+        const currentDayOfWeek = currentDate.getUTCDate();
+
         // Convert from space separated arguments to time arguments
         // Step 1: Combine any Dates/Times space separated
-        console.log({args});
-        const argsString = args.join("");
-        console.log(argsString);
-        var timeArgs;
-        // Allows for handling past and future dates (passing in a boolean)
-        if (args[0].toLowerCase() == "now") return messageCreatedTime;
-        // else if(past)
-        // {
+        console.log({ args });
+        const timeArgs = args.join("").toLowerCase();
+        console.log({ timeArgs });
 
-        // }
-        // else if(future)
-        // {
+        // Relative Time: Past and Future
+        const relativeTimeAgoOrFromNow = /(\d+\.?\d*|\d*\.?\d+)(minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const relativeTimeTest = relativeTimeAgoOrFromNow.exec(timeArgs);
+        console.log({ relativeTimeTest });
+        const dayOfWeekRegex = /((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior)|(?:(?:yest?(?:erday)?)|(?:(?:tod(?:ay)?))|(?:(?:tomm(?:orrow)?))|(?:tmrw)))((?:m(?:on?)?(?:days?)?)|(?:tu(?:es?)?(?:days?)?)|(?:w(?:ed?)?(?:nesdays?)?)|(?:th(?:urs?)?(?:days?)?)|(?:f(?:ri?)?(?:days?)?)|(?:sa(?:t)?(?:urdays?)?)|(?:su(?:n)?(?:days?)?))?(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const dayOfWeekTest = dayOfWeekRegex.exec(timeArgs);
+        console.log({ dayOfWeekTest });
+        // Absolute Time: Past and Future
+        const absoluteTimeRegex = /(\d{1,2})[\/\.\-](\d{1,2})[\/\.\,\-](\d{2}|\d{4})?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const absoluteTimeTest = absoluteTimeRegex.exec(timeArgs);
+        console.log({ absoluteTimeTest });
+        const monthTimeRegex = /((?:jan?(?:uary)?)|(?:f(?:eb?)?(?:ruary)?)|(?:mar?(?:ch)?)|(?:apr?(?:il)?)|(?:may?)|(?:jun(?:e)?)|(?:jul(?:y)?)|(?:aug?(?:ust)?)|(?:sept?(?:ember)?)|(?:oct?(?:ober)?)|(?:nov?(?:ember)?)|(?:dec?(?:ember)?))(\d{1}(?:\d{1})?)[\/\.\,\-]?((?:\d{4})|(?:\d{2}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const monthTimeTest = monthTimeRegex.exec(timeArgs);
+        console.log({monthTimeTest});
 
-        // }
-        else return (false);
+        // const timezone = userTimezone || Test[];
+
+        var timestampOut, timezoneString;
+        if (relativeTimeTest) {
+            if (relativeTimeTest.length > 3) {
+                // !! To Extract Truthy/Falsey value from each argument
+                // Adjust the timezone as the "m" in am or pm will be greedy
+                const properTimeArray = this.getProperTimeArray(relativeTimeTest, args, userTimezone, userDaylightSavingSetting);
+                const timeScale = relativeTimeTest[2];
+                const [hours, minutes, amPmString, timezone] = properTimeArray;
+                timezoneString = timezone;
+                console.log({ properTimeArray });
+                const argsHaveDefinedTime = (!!(hours) || !!(minutes));
+                const militaryTimeString = this.getMilitaryTimeStringFromProperTimeArray(properTimeArray);
+                console.log({ militaryTimeString });
+                if (militaryTimeString || !argsHaveDefinedTime) {
+                    // If Long Relative Time Scale and a Defined Time: Expect Whole Number First Argument
+                    if (this.isLongTimeScale(timeScale)) {
+                        let numberOfTimeScales = parseFloat(relativeTimeTest[1]);
+                        if (argsHaveDefinedTime) {
+                            numberOfTimeScales = Math.floor(numberOfTimeScales);
+                        }
+                        // Args with no defined time AND Args with defined time having a whole number first argument (i.e. 2 days)
+                        const futureTruePastFalse = this.futureTruePastFalseRegexTest(relativeTimeTest[3]);
+                        if (futureTruePastFalse === undefined) {
+                            return false;
+                        }
+                        const timeScaleToMultiply = this.getTimeScaleToMultiplyInMs(relativeTimeTest[2]);
+                        let timeDifference = numberOfTimeScales * timeScaleToMultiply;
+                        console.log({ timeDifference, timeScaleToMultiply, numberOfTimeScales, extractedTimeString: militaryTimeString });
+                        if (argsHaveDefinedTime) {
+                            timeDifference += this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone) - this.getTimePastMidnightInMs(militaryTimeString);
+                        }
+                        console.log({ timeDifference });
+                        var timestampOut;
+                        if (futureTruePastFalse) {
+                            timestampOut = messageCreatedTimestamp + timeDifference;
+                        }
+                        else {
+                            timestampOut = messageCreatedTimestamp - timeDifference;
+                        }
+                    }
+                }
+                else {
+                    return false;
+                }
+            }
+        }
+        else if (dayOfWeekTest) {
+            if (dayOfWeekTest.length > 5) {
+                const extractedTimeString = this.getMilitaryTimeStringFromProperTimeArray(splitDateAndTime, !!!(relativeTimeTest[9]));
+            }
+        }
+        else if (absoluteTimeRegex) {
+            const extractedTimeString = this.getMilitaryTimeStringFromProperTimeArray(splitDateAndTime, !!!(relativeTimeTest[9]));
+        }
+
+        // Adjust output based on timezone and daylight saving time considerations
+        console.log({ timestampOut, timezoneString, userTimezone, userDaylightSavingSetting })
+        timestampOut = this.getTimezoneUTCAdjustedTimestamp(timestampOut, userTimezone, userDaylightSavingSetting, timezoneString);
+        console.log({ timestampOut });
+        return timestampOut;
+    },
+
+    timestampToDateString: function (timestamp) {
+        if(timestamp === undefined || timestamp === null) return null;
+        const date = new Date(timestamp);
+        const year = date.getUTCFullYear();
+        const month = date.getUTCMonth() + 1;
+        const day = date.getUTCDate();
+        const standardTime = this.militaryTimeHoursToStandardTimeHoursArray(date.getUTCHours());
+        const hours = standardTime[0];
+        const amPmString = standardTime[1];
+        const minutes = this.getValidMinutesString(date.getUTCMinutes());
+        const seconds = this.getValidMinutesString(date.getUTCSeconds());
+        return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds} ${amPmString}`;
+    },
+
+    /**
+     * 
+     * @param {number} timestamp timestamp to adjust
+     * @param {number} userTimezone
+     * @param {boolean} userDaylightSavingSetting 
+     * @param {number|string} timezone give timezone in string form or UTC integer offset form
+     */
+    getTimezoneUTCAdjustedTimestamp: function (timestamp, userTimezone, userDaylightSavingSetting, timezone = undefined) {
+        if(timestamp === undefined || timestamp === null) return undefined;
+        const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
+        var timezoneOffset;
+        timezoneOffset = this.getTimezoneOffset(timezone) || userTimezone;
+        console.log({ timestamp, timezoneOffset });
+        timestamp += (HOUR_IN_MS * timezoneOffset)
+        if (this.isDaylightSavingTime(timestamp, userDaylightSavingSetting)) {
+            const daylightSavingAdjustment = this.getTimezoneDaylightOffset(timezone);
+            console.log({ daylightSavingAdjustment });
+            timestamp += (HOUR_IN_MS * daylightSavingAdjustment);
+        }
+        return timestamp;
+    },
+
+    militaryTimeHoursToStandardTimeHoursArray: function (hours) {
+        hours = parseInt(hours);
+        var amPmString;
+        if (hours < 0) return false;
+        if (hours >= 12) {
+            amPmString = "PM";
+            hours -= 12;
+        }
+        else {
+            amPmString = "AM";
+        }
+        if (hours == 0) {
+            hours = 12;
+        }
+        if (hours < 10) {
+            hours = `0${hours}`;
+            // hours = hours.replace(/(\d{1})/, "0$1");
+        }
+        return [hours, amPmString];
+    },
+
+    standardTimeHoursToMilitaryTimeHoursString: function (hours, amPmString) {
+        hours = parseInt(hours);
+        if (hours < 0) return false;
+        if (!amPmString) {
+            if (hours >= 24) return false;
+        }
+        else {
+            if (hours > 12 || hours == 0) return false;
+            if (hours == 12) {
+                hours = 0;
+            }
+            if (/pm?/.test(amPmString)) {
+                hours += 12;
+            }
+        }
+        if (hours < 10) {
+            hours = `0${hours}`;
+            // hours = hours.replace(/(\d{1})/, "0$1");
+        }
+        return hours;
+    },
+
+    getValidMinutesString: function (minutes) {
+        minutes = parseInt(minutes);
+        if (minutes >= 60) return false;
+        else if (minutes < 10) {
+            return `0${minutes}`;
+            // return minutes.replace(/(\d{1})/, "0$1");
+        }
+        else {
+            return minutes;
+        }
+    },
+
+    getHourMinSeparatedArray: function (timeToTest) {
+        const separateTimeRegex = /((?:1[0-2])|(?:0?[0-9]))([0-5][0-9])/;
+        let separatedTime = separateTimeRegex.exec(timeToTest);
+        return separatedTime;
+    },
+
+    getMilitaryTimeStringFromProperTimeArray: function (splitTime) {
+        const [hours, minutes, amPmString, timezoneOffset] = splitTime;
+        console.log({ splitTime });
+        // !! To Extract Truthy/Falsey value from each argument,
+        // and another ! to negate - time is in hours only when
+        // the second argument in undefined
+        const timeIsInHoursOnly = !!!(minutes);
+        const hoursOut = this.standardTimeHoursToMilitaryTimeHoursString(hours, amPmString);
+        const minsOut = this.getValidMinutesString(minutes);
+        console.log({ timeIsInHoursOnly, splitTime });
+        var extractedTimeString;
+        if (timeIsInHoursOnly) {
+            extractedTimeString = `${hoursOut}:00`;
+        }
+        else {
+            extractedTimeString = `${hoursOut}:${minsOut}`;
+        }
+        console.log({ extractedTimeString });
+        if (this.getMilitaryTimeRegex().test(extractedTimeString)) {
+            return extractedTimeString;
+        }
+        else {
+            return false;
+        }
+    },
+
+    getMilitaryTimeRegex: function () {
+        const properMilitaryTimeRegex = /((?:[0-1][0-9])|(?:2[0-3]))\:([0-5][0-9])/;
+        return properMilitaryTimeRegex;
+    },
+
+    getMilitaryTimeHoursAndMinsArray: function (militaryTimeString) {
+        militaryTime = this.getMilitaryTimeRegex().exec(militaryTimeString);
+        return militaryTime;
+    },
+
+    getElementFromBack: function (array, index) {
+        return array[array.length - index];
+    },
+
+    futureTruePastFalseRegexTest: function (testArgument) {
+        const pastIndicatorRegex = /(ago|prior|before)/;
+        const futureIndicatorRegex = /(fromnow|later|inthefuture)/;
+        var futureTruePastFalse;
+        if (pastIndicatorRegex.test(testArgument)) {
+            futureTruePastFalse = false;
+        }
+        else if (futureIndicatorRegex.test(testArgument)) {
+            futureTruePastFalse = true;
+        }
+        return futureTruePastFalse;
+    },
+
+    getTimeScaleToMultiplyInMs: function (relativeTimeScale) {
+        const YEAR_IN_MS = 3.154e+10;
+        const MONTH_IN_MS = 2.628e+9;
+        const WEEK_IN_MS = 6.048e+8;
+        const DAY_IN_MS = 8.64e+7;
+        const HOUR_IN_MS = 3.6e+6;
+        const MIN_IN_MS = 60000;
+        const minTestRegex = /(mins?|minutes?)/;
+        const hourTestRegex = /(hours?|hrs?)/;
+        const dayTestRegex = /(days?)/;
+        const weekTestRegex = /(weeks?)/;
+        const monthTestRegex = /(months?)/;
+        const yearTestRegex = /(years?)/;
+        var timeScaleToMultiply;
+        if (yearTestRegex.test(relativeTimeScale)) {
+            timeScaleToMultiply = YEAR_IN_MS;
+        }
+        else if (monthTestRegex.test(relativeTimeScale)) {
+            timeScaleToMultiply = MONTH_IN_MS;
+        }
+        else if (weekTestRegex.test(relativeTimeScale)) {
+            timeScaleToMultiply = WEEK_IN_MS;
+        }
+        else if (dayTestRegex.test(relativeTimeScale)) {
+            timeScaleToMultiply = DAY_IN_MS;
+        }
+        else if (hourTestRegex.test(relativeTimeScale)) {
+            timeScaleToMultiply = HOUR_IN_MS;
+        }
+        else if (minTestRegex.test(relativeTimeScale)) {
+            timeScaleToMultiply = MIN_IN_MS;
+        }
+        return timeScaleToMultiply;
+    },
+
+    isLongTimeScale: function (relativeTimeScale) {
+        const longTimeScalesRegex = /(days?|weeks?|months?|years?)/;
+        return longTimeScalesRegex.test(relativeTimeScale);
+    },
+
+    // Assuming the militaryTimeString is correctly formatted.
+    getTimePastMidnightInMs: function (militaryTimeString) {
+        const HOUR_IN_MS = 3.6e+6;
+        const MINUTE_IN_MS = 60000;
+        var timePastMidnight = 0;
+        const timeArray = this.getMilitaryTimeHoursAndMinsArray(militaryTimeString);
+        timePastMidnight += parseInt(timeArray[1]) * HOUR_IN_MS;
+        timePastMidnight += parseInt(timeArray[2]) * MINUTE_IN_MS;
+        console.log({ militaryTimeString, timeArray, timePastMidnight });
+        return timePastMidnight;
+    },
+
+    getTimeSinceMidnightInMsUTC: function (timeInMS, UTCHourOffset = 0) {
+        const DAY_IN_MS = 8.64e+7;
+        const HOUR_IN_MS = 3.6e+6;
+        return ((DAY_IN_MS + (timeInMS % DAY_IN_MS) + (HOUR_IN_MS * parseInt(UTCHourOffset))) % DAY_IN_MS);
+
+    },
+
+    timezoneToString: function (UTCHourOffset) {
+        var tz;
+        switch (parseInt(UTCHourOffset)) {
+            case -12:
+                break;
+            case -11:
+                break;
+            case -10:
+                break;
+            case -9:
+                break;
+            case -8:
+                break;
+            case -7:
+                break;
+            case -6:
+                break;
+            case -5:
+                break;
+            case -4:
+                break;
+            case -3:
+                break;
+            case -2:
+                break;
+            case -1:
+                break;
+            case 0: tz = 'UTC'
+                break;
+            case 1:
+                break;
+            case 2:
+                break;
+            case 3:
+                break;
+            case 4:
+                break;
+            case 5:
+                break;
+            case 6:
+                break;
+            case 7:
+                break;
+            case 8:
+                break;
+            case 9:
+                break;
+            case 10:
+                break;
+            case 11:
+                break;
+            case 12:
+                break;
+            case 13:
+                break;
+            case 14:
+                break;
+            default: tz = 'UTC';
+                break;
+        }
+        return tz;
+    },
+
+    getNumberBeforeStringRegex: function () {
+        return numberBeforeStringRegex = /(\d+)([^\d\W]+)/;
+    },
+
+    containsNumberBeforeString: function (string) {
+        return this.getNumberBeforeStringRegex().test(string);
+    },
+
+    getSplitNumberBeforeStringToArray: function (string) {
+        const numberBeforeString = this.getNumberBeforeStringRegex().exec(string);
+        return numberBeforeString;
     },
 
     sendErrorMessageAndUsage: async function (userOriginalMessageObject, usageMessage, errorMessage = "**INVALID INPUT...**") {

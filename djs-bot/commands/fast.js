@@ -4,6 +4,7 @@ const Fast = require("../database/schemas/fasting");
 const UserSettings = require("../database/schemas/usersettings");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
+const { timestampToDateString } = require("../../utilities/functions");
 require("dotenv").config();
 const fastEmbedColour = "#32CD32";
 
@@ -12,16 +13,10 @@ const fastEmbedColour = "#32CD32";
 // Using Object Destructuring
 
 // Function Declarations and Definitions
-function fastDataArrayToString(fastData, showFastEndMessage = false, PREFIX = '?', commandUsed = 'fast') {
+function fastDataArrayToString(fastData, userTimezone, userDaylightSavingSetting, showFastEndMessage = false, PREFIX = '?', commandUsed = 'fast') {
     const [startTimestamp, endTimestamp, fastDuration, fastBreaker, moodRating, reflectionText] = fastData;
-    const startTimeToDate = new Date(startTimestamp).toLocaleString();
-    var endTimeToDate;
-    if (endTimestamp === null) {
-        endTimeToDate = null;
-    }
-    else {
-        endTimeToDate = new Date(endTimestamp).toLocaleString();
-    }
+    const startTimeToDate = fn.timestampToDateString(fn.getTimezoneUTCAdjustedTimestamp(startTimestamp, userTimezone, userDaylightSavingSetting));
+    const endTimeToDate = fn.timestampToDateString(fn.getTimezoneUTCAdjustedTimestamp(endTimestamp, userTimezone, userDaylightSavingSetting));
     let fastDataString = `**Start Time:** ${startTimeToDate}\n` +
         `**End Time:** ${endTimeToDate}\n` +
         `**Fast Duration:** ${fn.millisecondsToTimeString(fastDuration)}\n` +
@@ -78,7 +73,7 @@ function multipleFastsToString(message, fastArray, numberOfFasts, entriesToSkip 
         else {
             fastData = fastCursorToDataArray(fastArray[i]);
         }
-        fastDataToString = fastDataToString + `__**Fast ${i + entriesToSkip + 1}:**__\n${fastDataArrayToString(fastData)}`;
+        fastDataToString = fastDataToString + `__**Fast ${i + entriesToSkip + 1}:**__\n${fastDataArrayToString(fastData, -4, true)}`;
         if (i !== numberOfFasts - 1) {
             fastDataToString += '\n\n';
         }
@@ -118,10 +113,10 @@ async function getRecentFast(message, fast, fastIsInProgress, PREFIX, commandUse
     }
     fastDataToString = "__**Fast 1:**__\n";
     if (fastIsInProgress === true) {
-        fastDataToString += fastDataArrayToString(fastData, true, PREFIX, commandUsed);
+        fastDataToString += fastDataArrayToString(fastData, -4, true, true, PREFIX, commandUsed);
     }
     else {
-        fastDataToString += fastDataArrayToString(fastData, false, PREFIX, commandUsed);
+        fastDataToString += fastDataArrayToString(fastData, -4, true, false, PREFIX, commandUsed);
     }
     fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See ${fastType} Fast`, fastEmbedColour);
     return (fastEmbed);
@@ -426,7 +421,7 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
             const addFullFastPrompt = "Are you sure you want to add your **full fast (including mood and reflection)**";
             let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, addFullFastPrompt, forceSkip, "Add Full Fast");
             if (confirmOverwrite === true) {
-                collectedMessage = `=============\n${fastDataArrayToString(fastData)}\n=============`;
+                collectedMessage = `=============\n${fastDataArrayToString(fastData, -4, true)}\n=============`;
                 if (onFirstMessageCollection) {
                     fastPost = collectedMessage;
                     onFirstMessageCollection = false;
@@ -462,13 +457,8 @@ async function showFastPost(userOriginalMessageObject, fastPost, mistakeMessage,
 }
 
 async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, PREFIX, commandUsed, forceSkip = false, fastNumber = 1) {
-    var endTimeToDate;
-    if (endTimestamp === null) {
-        endTimeToDate = new Date().toLocaleString();
-    }
-    else {
-        endTimeToDate = new Date(endTimestamp).toLocaleString();
-    }
+    const finalEndTimestamp = endTimestamp || new Date().getTime();
+    const endTimeToDate = fn.timestampToDateString(finalEndTimestamp);
     const authorID = userOriginalMessageObject.author.id;
 
     // Check all of the servers the bot is in
@@ -560,8 +550,8 @@ async function getFastsIndexOf(fastCollectionDocument, userID, fastIndex, number
 }
 function endTimeAfterStartTime(message, startTimestamp, endTimestamp) {
     if (endTimestamp < startTimestamp) {
-        const startTimestampToDate = new Date(startTimestamp).toLocaleString();
-        const endTimestampToDate = new Date(endTimestamp).toLocaleString();
+        const startTimestampToDate = fn.timestampToDateString(startTimestamp);
+        const endTimestampToDate = fn.timestampToDateString(endTimestamp);
         message.reply(`Your __fast end time__ **(${endTimestampToDate})** cannot be ***before*** your __fast start time__ **(${startTimestampToDate})**`);
         return false;
     }
@@ -611,13 +601,13 @@ module.exports = {
             // Using greater than equal to ensure error message sent even though 
             // Any given user should not be able to have more than 1 fast running at a time
             var fastStartUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <DATE/TIME> <force>\`\n\n`
-            + "`<DATE/TIME>` Enter date and/or time in relative terms\n"
-            + "(i.e. now, 1 hour ago, 15 minutes ago, in 15 minutes, in 1 hour, yesterday at 10pm EST,"
-            + " two days ago at 6P PST, 1 day ago 8p) Default: next time forward(AM/PM), EST"
-            + "\n\nOR\n\n Enter date and/or time in absolute terms\n"
-            + "(i.e. [Month/Day/Year] 3/22/2020 at 10a EST, [Month.Day.Year] 3.22.2020 at 9PM,"
-            + "[Month/Day] 3/22 at 10a EST, [Month.Day] 3.22 at 9PM)"
-            + "\n\n`<force>`: type **force** at the end of your command to **skip all of the confimation windows!**";
+                + "`<DATE/TIME>` Enter date and/or time in relative terms\n"
+                + "(i.e. now, 1 hour ago, 15 minutes ago, in 15 minutes, in 1 hour, yesterday at 10pm EST,"
+                + " two days ago at 6P PST, 1 day ago 8p) Default: next time forward(AM/PM), EST"
+                + "\n\nOR\n\n Enter date and/or time in absolute terms\n"
+                + "(i.e. [Month/Day/Year] 3/22/2020 at 10a EST, [Month.Day.Year] 3.22.2020 at 9PM,"
+                + "[Month/Day] 3/22 at 10a EST, [Month.Day] 3.22 at 9PM)"
+                + "\n\n`<force>`: type **force** at the end of your command to **skip all of the confimation windows!**";
 
             fastStartUsageMessage = fn.getMessageEmbed(fastStartUsageMessage, `Fast: Start Help`, fastEmbedColour);
             const fastStartHelpMessage = `Try \`${PREFIX}${commandUsed} ${fastCommand} help\``;
@@ -671,8 +661,8 @@ module.exports = {
         else if (fastCommand == "end" || fastCommand == "e") {
             var fastEndUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <DATE/TIME> <force>\`\n\n`
                 + "`<DATE/TIME>` Enter date and/or time in relative terms\n"
-                + "(i.e. now, 1 hour ago, 15 minutes ago, in 15 minutes, in 1 hour, yesterday at 10pm EST,"
-                + " two days ago at 6P PST, 1 day ago 8p) Default: next time forward(AM/PM), EST"
+                + "(i.e. now, 1 hour ago, 15 minutes ago, in 15 mins, in 2 hrs, yesterday at 10pm EST,"
+                + " 2 days ago at 6P PST, 1 day ago 8p)"
                 + "\n\nOR\n\n Enter date and/or time in absolute terms\n"
                 + "(i.e. [Month/Day/Year] 3/22/2020 at 10a EST, [Month.Day.Year] 3.22.2020 at 9PM,"
                 + "[Month/Day] 3/22 at 10a EST, [Month.Day] 3.22 at 9PM)"
@@ -698,13 +688,13 @@ module.exports = {
                 // Remove the "end" from the args using slice
                 const endTimeArgs = args.slice(1);
                 const endTimestamp = fn.timeCommandHandler(endTimeArgs, message.createdTimestamp);
-                if (endTimestamp == false) {
+                if (endTimestamp === false) {
                     return message.reply(fastEndHelpMessage);
                 }
                 const currentFast = await getOneFast(fastCollectionDocument, authorID, 0);
                 // Can use authorID in this case as well, but will stick to pulling the
                 // value from the database - to ensure the user is correct!
-                const startTimestamp = currentFast[0].startTime;
+                const startTimestamp = fn.getTimezoneUTCAdjustedTimestamp(currentFast[0].startTime, -4, true);
                 const validEndTime = endTimeAfterStartTime(message, startTimestamp, endTimestamp);
                 if (!validEndTime) {
                     return message.channel.send(`If you want to change the start time try \`${PREFIX}${commandUsed} edit recent\``);
@@ -1028,7 +1018,7 @@ module.exports = {
                 if (fastEndTime === null) {
                     showFastEndMessage = true;
                 }
-                fastDataToString = `__**Fast ${pastNumberOfEntriesIndex}:**__\n` + fastDataArrayToString(fastData, showFastEndMessage, PREFIX, commandUsed);
+                fastDataToString = `__**Fast ${pastNumberOfEntriesIndex}:**__\n` + fastDataArrayToString(fastData, -4, true, showFastEndMessage, PREFIX, commandUsed);
                 fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See Fast ${pastNumberOfEntriesIndex}`, fastEmbedColour);
                 message.channel.send(fastEmbed);
             }
@@ -1112,7 +1102,7 @@ module.exports = {
                             fastData = fastCursorToDataArray(fastView[i]);
                         }
                         fastTargetIDs.push(fastView[i]._id);
-                        fastDataToString = `__**Fast ${i + 1}:**__\n${fastDataArrayToString(fastData)}`;
+                        fastDataToString = `__**Fast ${i + 1}:**__\n${fastDataArrayToString(fastData, -4, true)}`;
                         // at the last element
                         if (i === numberArg - 1) {
                             deleteConfirmMessage = `${deleteConfirmMessage}${fastDataToString}`;
@@ -1176,7 +1166,7 @@ module.exports = {
                             fastData = fastCursorToDataArray(fastView[0]);
                         }
                         fastTargetIDs.push(fastView[0]._id);
-                        fastDataToString = `\n__**Fast ${toDelete[i]}:**__\n` + fastDataArrayToString(fastData);
+                        fastDataToString = `\n__**Fast ${toDelete[i]}:**__\n` + fastDataArrayToString(fastData, -4, true);
                         deleteConfirmMessage = deleteConfirmMessage + fastDataToString + "\n";
                     }
                     deleteConfirmMessage = `Are you sure you want to **delete fasts ${toDelete.toString()}?:**\n` + deleteConfirmMessage;
@@ -1247,7 +1237,7 @@ module.exports = {
                         const fastData = fastCursorToDataArray(fastView[0], true);
                         const fastTargetID = [fastView[0]._id];
                         const deleteConfirmMessage = "Are you sure you want to **delete your most recent fast?:**\n\n__**Fast 1:**__\n" +
-                            fastDataArrayToString(fastData);
+                            fastDataArrayToString(fastData, -4, true);
                         if (await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Fast: Delete Recent Fast`, 300000)) {
                             // Must Find the array of cursors first (map _id), then delete only args[3] of them
                             // Sort from greatest endtime => most recent
@@ -1289,7 +1279,7 @@ module.exports = {
                     const fastData = fastCursorToDataArray(fastView[0]);
                     const fastTargetID = [fastView[0]._id];
                     const deleteConfirmMessage = `Are you sure you want to **delete Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n` +
-                        fastDataArrayToString(fastData);
+                        fastDataArrayToString(fastData, -4, true);
                     if (await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Fast: Delete Fast ${pastNumberOfEntriesIndex}`, 300000)) {
                         console.log(`Deleting ${authorUsername}'s (${authorID}) Recent Fast`);
                         fastCollectionDocument.collection.deleteOne({ _id: { $in: fastTargetID } });
@@ -1358,11 +1348,11 @@ module.exports = {
                 var fastData, showFast;
                 if (fastView[0].endTime === null) {
                     fastData = fastCursorToDataArray(fastView[0], true);
-                    showFast = fastDataArrayToString(fastData, true, PREFIX, commandUsed);
+                    showFast = fastDataArrayToString(fastData, -4, true, true, PREFIX, commandUsed);
                 }
                 else {
                     fastData = fastCursorToDataArray(fastView[0]);
-                    showFast = fastDataArrayToString(fastData);
+                    showFast = fastDataArrayToString(fastData, -4, true);
                 }
                 var continueEdit = false;
                 do {
@@ -1453,7 +1443,7 @@ module.exports = {
                                     break;
                             }
                             console.log({ userEdit });
-                            showFast = fastDataArrayToString(fastData);
+                            showFast = fastDataArrayToString(fastData, -4, true);
                             console.log({ fastData, fastTargetID, fieldToEditIndex });
                             continueEditMessage = `Do you want to continue **editing Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n${showFast}`;
                             continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Fast: Continue Editing Fast ${pastNumberOfEntriesIndex}?`, 300000);
