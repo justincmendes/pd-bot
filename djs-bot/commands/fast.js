@@ -940,8 +940,8 @@ module.exports = {
             const fastSeeHelpMessage = `**INVALID USAGE**... Try \`${PREFIX}${commandUsed} ${fastCommand} help\``;
 
             // If the user wants fast help, do not proceed to show them the fast.
-            const seeCommands = ["past", "recent", "all"];
-            var fastDataToString, startTimeToDate, endTimeToDate, fastDuration, fastBreaker, moodRating, reflectionText;
+            const seeCommands = ["past", "recent", "current", "all"];
+            var fastDataToString, fastBreaker, reflectionText;
             currentTimestamp = new Date().getTime();
 
             // MAKE THIS OPERATION INTO A FUNCTION!
@@ -979,7 +979,7 @@ module.exports = {
                 // filter, then use the "past" functionality
                 // Handling Argument 1:
                 const isNumberArg = !isNaN(args[1]);
-                if (seeType == "recent") {
+                if (seeType == "recent" || seeType == "current") {
                     return message.channel.send(await getRecentFastEmbed(message, fastCollectionDocument, fastIsInProgress, PREFIX, commandUsed));
                 }
                 else if (seeType == "all") {
@@ -1054,7 +1054,7 @@ module.exports = {
                             if (!isNaN(args[3])) {
                                 entriesToSkip = parseInt(args[3]);
                             }
-                            else if (args[3] == "recent") {
+                            else if (args[3] == "recent" || args[3] == "current") {
                                 entriesToSkip = await getFastInProgressOrMostRecentIndex(fastCollectionDocument, authorID);
                             }
                             else {
@@ -1192,11 +1192,11 @@ module.exports = {
                                 return numberIndex;
                             }
                         }
-                        else if (index === "recent") {
+                        else if (index === "recent" || index === "current") {
                             return true;
                         }
                     }).map(async (number) => {
-                        if (number === "recent") {
+                        if (number === "recent" || number === "current") {
                             const recentIndex = await getFastInProgressOrMostRecentIndex(fastCollectionDocument, authorID)
                             return recentIndex;
                         }
@@ -1236,7 +1236,7 @@ module.exports = {
                 else if (args[2].toLowerCase() == "past") {
                     var skipEntries;
                     if (isNaN(args[3])) {
-                        if (args[3].toLowerCase() == "recent") {
+                        if (args[3].toLowerCase() == "recent" || args[3].toLowerCase() == "current") {
                             skipEntries = await getFastInProgressOrMostRecentIndex(fastCollectionDocument, authorID);
                         }
                         else {
@@ -1285,7 +1285,7 @@ module.exports = {
                 const noFastsMessage = `**NO FASTS**... try \`${PREFIX}${commandUsed} start help\``;
                 if (isNaN(args[1])) {
                     const deleteType = args[1].toLowerCase();
-                    if (deleteType == "recent") {
+                    if (deleteType == "recent" || deleteType == "current") {
                         const fastView = await getFastInProgressOrMostRecent(fastCollectionDocument, authorID);
                         if (fastView === undefined) {
                             return fn.sendErrorMessage(message, noFastsMessage);
@@ -1371,7 +1371,7 @@ module.exports = {
                 return message.reply(fastEditHelp);
             }
 
-            if (isNaN(args[1]) && args[1].toLowerCase() != "recent") {
+            if (isNaN(args[1]) && args[1].toLowerCase() != "recent" && args[1].toLowerCase() != "current") {
                 return message.reply(fastEditHelp);
             }
             else {
@@ -1381,7 +1381,7 @@ module.exports = {
                 fastFields.forEach((element, i) => {
                     fieldsList = fieldsList + `\`${i + 1}\` - ${element}\n`;
                 });
-                if (args[1].toLowerCase() == "recent") {
+                if (args[1].toLowerCase() == "recent" || args[1].toLowerCase() == "current") {
                     pastNumberOfEntriesIndex = await getFastInProgressOrMostRecentIndex(fastCollectionDocument, authorID);
                 }
                 else {
@@ -1538,7 +1538,7 @@ module.exports = {
                     return;
                 }
                 if (isNaN(args[1])) {
-                    if (args[1].toLowerCase() == "recent") {
+                    if (args[1].toLowerCase() == "recent" || args[1].toLowerCase() == "current") {
                         // If user has no recent fast, case already handed above
                         const fastView = await getFastInProgressOrMostRecent(fastCollectionDocument, authorID);
                         console.log({ fastView })
