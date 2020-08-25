@@ -1054,7 +1054,7 @@ module.exports = {
     timeCommandHandlerUTC: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
         const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         if (args[0].toLowerCase() == "now") {
-            return this.getUTCOffsetAdjustedTimestamp(messageCreatedTimestamp, userTimezone, userDaylightSavingSetting, timezoneString);
+            return this.getUTCOffsetAdjustedTimestamp(messageCreatedTimestamp, userTimezone, userDaylightSavingSetting);
         }
 
         // Get day of week, starting from Sunday
@@ -1116,7 +1116,7 @@ module.exports = {
                         let timeDifference = numberOfTimeScales * timeScaleToMultiply;
                         console.log({ timeDifference, timeScaleToMultiply, numberOfTimeScales, extractedTimeString: militaryTimeString });
                         if (argsHaveDefinedTime) {
-                            timeDifference += this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone) - this.getTimePastMidnightInMs(militaryTimeString);
+                            timeDifference += this.getTimePastMidnightInMs(militaryTimeString) - this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone);
                         }
                         console.log({ timeDifference });
                         var timestampOut;
@@ -1135,11 +1135,11 @@ module.exports = {
         }
         else if (dayOfWeekTest) {
             if (dayOfWeekTest.length > 5) {
-                const extractedTimeString = this.getMilitaryTimeStringFromProperTimeArray(splitDateAndTime, !!!(relativeTimeTest[9]));
+                
             }
         }
         else if (absoluteTimeRegex) {
-            const extractedTimeString = this.getMilitaryTimeStringFromProperTimeArray(splitDateAndTime, !!!(relativeTimeTest[9]));
+
         }
         else {
             return false;
@@ -1357,7 +1357,9 @@ module.exports = {
     getTimeSinceMidnightInMsUTC: function (timeInMS, UTCHourOffset = 0) {
         const DAY_IN_MS = 8.64e+7;
         const HOUR_IN_MS = 3.6e+6;
-        return ((DAY_IN_MS + (timeInMS % DAY_IN_MS) + (HOUR_IN_MS * parseInt(UTCHourOffset))) % DAY_IN_MS);
+        const timePastMidnight = timeInMS % DAY_IN_MS;
+        console.log({ timePastMidnight });
+        return ((timePastMidnight + (HOUR_IN_MS * parseInt(UTCHourOffset))) % DAY_IN_MS);
     },
 
     timezoneToString: function (UTCHourOffset) {
