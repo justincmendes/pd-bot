@@ -143,7 +143,7 @@ async function getRecentFastEmbed(message, fast, fastIsInProgress, PREFIX, comma
 }
 async function getEditEndConfirmation(userOriginalMessageObject, field, userEdit, forceSkip = false) {
     const resetWarningMessage = `**Are you sure you want to change your ${field} to:**\n${userEdit}`;
-    let endEditConfirmation = await fn.getUserConfirmation(userOriginalMessageObject, resetWarningMessage, forceSkip, `Fast: Edit ${field} Confirmation`, 0);
+    let endEditConfirmation = await fn.getUserConfirmation(userOriginalMessageObject, resetWarningMessage, forceSkip, `Fast: Edit ${field} Confirmation`, 60000, 0);
     return endEditConfirmation;
 }
 async function getBackToMainMenuConfirmation(userOriginalMessageObject, forceSkip) {
