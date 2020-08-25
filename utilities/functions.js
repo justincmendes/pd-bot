@@ -279,6 +279,7 @@ module.exports = {
     },
 
     millisecondsToTimeString: function (milliseconds) {
+        if (milliseconds === null || milliseconds === undefined) return null;
         const MS_PER_HOUR = 3600 * 1000;
         const MS_PER_MINUTE = 60 * 1000;
         const MS_PER_SECOND = 1000;
@@ -350,6 +351,7 @@ module.exports = {
     },
 
     getDaylightSavingTimeStartAndEndTimestampInMs: function (targetTimestamp) {
+        if (isNaN(targetTimestamp)) return false;
         // Step 1: Convert the timestamp to since since Jan 1, xxxx (of the given timestamp's year!)
         const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         const targetDate = new Date(targetTimestamp);
@@ -373,11 +375,13 @@ module.exports = {
         if (userDaylightSavingSetting === false)
             return false;
         else {
-            const [daylightStartTimestamp, daylightEndTimestamp] = this.getDaylightSavingTimeStartAndEndTimestampInMs(targetTimestamp);
+            const daylightSavingTimeArray = this.getDaylightSavingTimeStartAndEndTimestampInMs(targetTimestamp);
+            if (!daylightSavingTimeArray) return false;
+            const [daylightStartTimestamp, daylightEndTimestamp] = daylightSavingTimeArray;
             if (targetTimestamp >= daylightStartTimestamp && targetTimestamp < daylightEndTimestamp)
                 return true;
             else
-                return true;
+                return false;
         }
     },
 
@@ -1047,10 +1051,10 @@ module.exports = {
 
     // Using Regular Expressions
     // Assumes that the userTimezone is NOT already daylight-savings adjusted
-    timeCommandHandler: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
+    timeCommandHandlerUTC: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
         const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         if (args[0].toLowerCase() == "now") {
-            return messageCreatedTimestamp + (userTimezone * HOUR_IN_MS);
+            return this.getUTCOffsetAdjustedTimestamp(messageCreatedTimestamp, userTimezone, userDaylightSavingSetting, timezoneString);
         }
 
         // Get day of week, starting from Sunday
@@ -1064,7 +1068,7 @@ module.exports = {
         console.log({ timeArgs });
 
         // Relative Time: Past and Future
-        const relativeTimeAgoOrFromNow = /(\d+\.?\d*|\d*\.?\d+)(minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const relativeTimeAgoOrFromNow = /(in)?(\d+\.?\d*|\d*\.?\d+)(minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const relativeTimeTest = relativeTimeAgoOrFromNow.exec(timeArgs);
         console.log({ relativeTimeTest });
         const dayOfWeekRegex = /((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior)|(?:(?:yest?(?:erday)?)|(?:(?:tod(?:ay)?))|(?:(?:tomm(?:orrow)?))|(?:tmrw)))((?:m(?:on?)?(?:days?)?)|(?:tu(?:es?)?(?:days?)?)|(?:w(?:ed?)?(?:nesdays?)?)|(?:th(?:urs?)?(?:days?)?)|(?:f(?:ri?)?(?:days?)?)|(?:sa(?:t)?(?:urdays?)?)|(?:su(?:n)?(?:days?)?))?(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
@@ -1076,7 +1080,7 @@ module.exports = {
         console.log({ absoluteTimeTest });
         const monthTimeRegex = /((?:jan?(?:uary)?)|(?:f(?:eb?)?(?:ruary)?)|(?:mar?(?:ch)?)|(?:apr?(?:il)?)|(?:may?)|(?:jun(?:e)?)|(?:jul(?:y)?)|(?:aug?(?:ust)?)|(?:sept?(?:ember)?)|(?:oct?(?:ober)?)|(?:nov?(?:ember)?)|(?:dec?(?:ember)?))(\d{1}(?:\d{1})?)[\/\.\,\-]?((?:\d{4})|(?:\d{2}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const monthTimeTest = monthTimeRegex.exec(timeArgs);
-        console.log({monthTimeTest});
+        console.log({ monthTimeTest });
 
         // const timezone = userTimezone || Test[];
 
@@ -1086,26 +1090,29 @@ module.exports = {
                 // !! To Extract Truthy/Falsey value from each argument
                 // Adjust the timezone as the "m" in am or pm will be greedy
                 const properTimeArray = this.getProperTimeArray(relativeTimeTest, args, userTimezone, userDaylightSavingSetting);
-                const timeScale = relativeTimeTest[2];
+                const timeScale = relativeTimeTest[3];
                 const [hours, minutes, amPmString, timezone] = properTimeArray;
                 timezoneString = timezone;
                 console.log({ properTimeArray });
                 const argsHaveDefinedTime = (!!(hours) || !!(minutes));
                 const militaryTimeString = this.getMilitaryTimeStringFromProperTimeArray(properTimeArray);
                 console.log({ militaryTimeString });
+                // Args with no defined time AND Args with defined time having a whole number first argument (i.e. 2 days)
+                let futureTruePastFalse = this.futureTruePastFalseRegexTest(relativeTimeTest[4]);
+                if (futureTruePastFalse === undefined) {
+                    if (relativeTimeTest[1]) {
+                        futureTruePastFalse = true;
+                    }
+                    else return false;
+                }
                 if (militaryTimeString || !argsHaveDefinedTime) {
                     // If Long Relative Time Scale and a Defined Time: Expect Whole Number First Argument
                     if (this.isLongTimeScale(timeScale)) {
-                        let numberOfTimeScales = parseFloat(relativeTimeTest[1]);
+                        let numberOfTimeScales = parseFloat(relativeTimeTest[2]);
                         if (argsHaveDefinedTime) {
                             numberOfTimeScales = Math.floor(numberOfTimeScales);
                         }
-                        // Args with no defined time AND Args with defined time having a whole number first argument (i.e. 2 days)
-                        const futureTruePastFalse = this.futureTruePastFalseRegexTest(relativeTimeTest[3]);
-                        if (futureTruePastFalse === undefined) {
-                            return false;
-                        }
-                        const timeScaleToMultiply = this.getTimeScaleToMultiplyInMs(relativeTimeTest[2]);
+                        const timeScaleToMultiply = this.getTimeScaleToMultiplyInMs(relativeTimeTest[3]);
                         let timeDifference = numberOfTimeScales * timeScaleToMultiply;
                         console.log({ timeDifference, timeScaleToMultiply, numberOfTimeScales, extractedTimeString: militaryTimeString });
                         if (argsHaveDefinedTime) {
@@ -1134,16 +1141,19 @@ module.exports = {
         else if (absoluteTimeRegex) {
             const extractedTimeString = this.getMilitaryTimeStringFromProperTimeArray(splitDateAndTime, !!!(relativeTimeTest[9]));
         }
+        else {
+            return false;
+        }
 
         // Adjust output based on timezone and daylight saving time considerations
         console.log({ timestampOut, timezoneString, userTimezone, userDaylightSavingSetting })
-        timestampOut = this.getTimezoneUTCAdjustedTimestamp(timestampOut, userTimezone, userDaylightSavingSetting, timezoneString);
+        timestampOut = this.getUTCOffsetAdjustedTimestamp(timestampOut, userTimezone, userDaylightSavingSetting, timezoneString);
         console.log({ timestampOut });
         return timestampOut;
     },
 
     timestampToDateString: function (timestamp) {
-        if(timestamp === undefined || timestamp === null) return null;
+        if (timestamp === undefined || timestamp === null) return null;
         const date = new Date(timestamp);
         const year = date.getUTCFullYear();
         const month = date.getUTCMonth() + 1;
@@ -1159,15 +1169,15 @@ module.exports = {
     /**
      * 
      * @param {number} timestamp timestamp to adjust
-     * @param {number} userTimezone
+     * @param {number} userDefaultTimezone User Timezone UTC Offset
      * @param {boolean} userDaylightSavingSetting 
      * @param {number|string} timezone give timezone in string form or UTC integer offset form
      */
-    getTimezoneUTCAdjustedTimestamp: function (timestamp, userTimezone, userDaylightSavingSetting, timezone = undefined) {
-        if(timestamp === undefined || timestamp === null) return undefined;
+    getUTCOffsetAdjustedTimestamp: function (timestamp, userDefaultTimezone, userDaylightSavingSetting, timezone = undefined) {
+        if (timestamp === undefined || timestamp === null) return undefined;
         const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         var timezoneOffset;
-        timezoneOffset = this.getTimezoneOffset(timezone) || userTimezone;
+        timezoneOffset = this.getTimezoneOffset(timezone) || userDefaultTimezone;
         console.log({ timestamp, timezoneOffset });
         timestamp += (HOUR_IN_MS * timezoneOffset)
         if (this.isDaylightSavingTime(timestamp, userDaylightSavingSetting)) {
@@ -1348,7 +1358,6 @@ module.exports = {
         const DAY_IN_MS = 8.64e+7;
         const HOUR_IN_MS = 3.6e+6;
         return ((DAY_IN_MS + (timeInMS % DAY_IN_MS) + (HOUR_IN_MS * parseInt(UTCHourOffset))) % DAY_IN_MS);
-
     },
 
     timezoneToString: function (UTCHourOffset) {
