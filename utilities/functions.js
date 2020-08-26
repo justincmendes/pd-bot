@@ -388,6 +388,10 @@ module.exports = {
     // Currently only accepting abbreviations
     // https://en.wikipedia.org/wiki/List_of_time_zone_abbreviations
     // https://www.timetemperature.com/abbreviations/world_time_zone_abbreviations.shtml
+    /**
+     * 
+     * @param {string} timezoneString Give timezone as an abbreviation or in the numerical forms: +8:45, -900, -12:30, 11.5, 11
+     */
     getTimezoneOffset: function (timezoneString) {
         if (!timezoneString) return undefined;
         // Can be a single number, multiple numbers, time, or string of 2-5 letters
