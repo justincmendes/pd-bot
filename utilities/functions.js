@@ -1222,13 +1222,12 @@ module.exports = {
                 // !! To Extract Truthy/Falsey value from each argument
                 // Adjust the timezone as the "m" in am or pm will be greedy
                 const properTimeArray = this.getProperTimeArray(relativeTimeTest, args, userTimezone, userDaylightSavingSetting);
-                const timeScale = relativeTimeTest[3];
-                const [hours, minutes, amPmString, timezone] = properTimeArray;
+                const [hours, minutes, , timezone] = properTimeArray;
                 timezoneString = timezone;
                 console.log({ properTimeArray });
+                const timeScale = relativeTimeTest[3];
                 const argsHaveDefinedTime = (!!(hours) || !!(minutes));
-                const militaryTimeString = this.getMilitaryTimeStringFromProperTimeArray(properTimeArray);
-                console.log({ militaryTimeString });
+                const isLongTimeScaleWithTime = argsHaveDefinedTime && this.isLongTimeScale(timeScale);
                 // Args with no defined time AND Args with defined time having a whole number first argument (i.e. 2 days)
                 let futureTruePastFalse = this.futureTruePastFalseRegexTest(relativeTimeTest[4]);
                 if (futureTruePastFalse === undefined) {
@@ -1237,31 +1236,24 @@ module.exports = {
                     }
                     else return false;
                 }
-                if (militaryTimeString || !argsHaveDefinedTime) {
-                    // If Long Relative Time Scale and a Defined Time: Expect Whole Number First Argument
-                    if (this.isLongTimeScale(timeScale)) {
-                        let numberOfTimeScales = parseFloat(relativeTimeTest[2]);
-                        if (argsHaveDefinedTime) {
-                            numberOfTimeScales = Math.floor(numberOfTimeScales);
-                        }
-                        const timeScaleToMultiply = this.getTimeScaleToMultiplyInMs(relativeTimeTest[3]);
-                        let timeDifference = numberOfTimeScales * timeScaleToMultiply;
-                        console.log({ timeDifference, timeScaleToMultiply, numberOfTimeScales, extractedTimeString: militaryTimeString });
-                        if (argsHaveDefinedTime) {
-                            timeDifference += this.getTimePastMidnightInMs(militaryTimeString) - this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone);
-                        }
-                        console.log({ timeDifference });
-                        var timestampOut;
-                        if (futureTruePastFalse) {
-                            timestampOut = messageCreatedTimestamp + timeDifference;
-                        }
-                        else {
-                            timestampOut = messageCreatedTimestamp - timeDifference;
-                        }
-                    }
+                let timeDifference = 0;
+                let numberOfTimeScales = parseFloat(relativeTimeTest[2]);
+                const timeScaleToMultiply = this.getTimeScaleToMultiplyInMs(timeScale);
+                if (isLongTimeScaleWithTime) {
+                    const militaryTimeString = this.getMilitaryTimeStringFromProperTimeArray(properTimeArray);
+                    console.log({ militaryTimeString });
+                    // If Long Relative Time Scale and a Defined Time: Receive Whole Number First Argument
+                    numberOfTimeScales = Math.floor(numberOfTimeScales);
+                    timeDifference += this.getTimePastMidnightInMs(militaryTimeString) - this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone);
+                }
+                timeDifference += numberOfTimeScales * timeScaleToMultiply;
+                console.log({ timeDifference, timeScaleToMultiply, numberOfTimeScales });
+                var timestampOut;
+                if (futureTruePastFalse) {
+                    timestampOut = messageCreatedTimestamp + timeDifference;
                 }
                 else {
-                    return false;
+                    timestampOut = messageCreatedTimestamp - timeDifference;
                 }
             }
         }
@@ -1311,7 +1303,7 @@ module.exports = {
         var timezoneOffset;
         timezoneOffset = timezone ? this.getTimezoneOffset(timezone) : userDefaultTimezone;
         console.log({ timestamp, timezoneOffset });
-        timestamp += (HOUR_IN_MS * timezoneOffset)
+        timestamp += (HOUR_IN_MS * timezoneOffset);
         if (this.isDaylightSavingTime(timestamp, userDaylightSavingSetting)) {
             const daylightSavingAdjustment = this.getTimezoneDaylightOffset(timezone);
             console.log({ daylightSavingAdjustment });
