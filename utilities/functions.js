@@ -387,6 +387,7 @@ module.exports = {
 
     // Currently only accepting abbreviations
     // https://en.wikipedia.org/wiki/List_of_time_zone_abbreviations
+    // https://www.timetemperature.com/abbreviations/world_time_zone_abbreviations.shtml
     getTimezoneOffset: function (timezoneString) {
         if (!timezoneString) return undefined;
         // Can be a single number, multiple numbers, time, or string of 2-5 letters
@@ -426,6 +427,8 @@ module.exports = {
         switch (firstLetter) {
             case 'a':
                 switch (timezoneString) {
+                    case "a": timezoneOffset = 1;
+                        break;
                     case "acdt": timezoneOffset = 10.5;
                         break;
                     case "acst": timezoneOffset = 9.5;
@@ -437,9 +440,17 @@ module.exports = {
                         break;
                     case "asean": timezoneOffset = 8;
                         break;
+                    case "acwt": timezoneOffset = 8.75;
+                        break;
                     case "acwst": timezoneOffset = 8.75;
                         break;
                     case "adt": timezoneOffset = -3;
+                        break;
+                    // Arabia Daylight Time
+                    case "ardt": timezoneOffset = 3;
+                        break;
+                    // Arabia Daylight Time
+                    case "aradt": timezoneOffset = 3;
                         break;
                     case "aedt": timezoneOffset = 11;
                         break;
@@ -462,18 +473,28 @@ module.exports = {
                     // Armenia Time
                     case "armt": timezoneOffset = 4;
                         break;
+                    // Armenia Summer Time
+                    case "armst": timezoneOffset = 5;
+                        break;
+                    // Armenia Summer Time
+                    case "armdt": timezoneOffset = 5;
+                        break;
                     case "anat": timezoneOffset = 12;
+                        break;
+                    case "anast": timezoneOffset = 12;
                         break;
                     case "aqtt": timezoneOffset = 5;
                         break;
                     case "art": timezoneOffset = -3;
                         break;
-                    // Arabia Standard Time
+                    // Arabia/Arab Standard Time
                     case "arst": timezoneOffset = 3;
                         break;
                     case "ast": timezoneOffset = -4;
                         break;
                     case "awst": timezoneOffset = 8;
+                        break;
+                    case "awdt": timezoneOffset = 9;
                         break;
                     case "azost": timezoneOffset = 0;
                         break;
@@ -481,11 +502,17 @@ module.exports = {
                         break;
                     case "azt": timezoneOffset = 4;
                         break;
+                    case "azst": timezoneOffset = 5;
+                        break;
                 }
                 break;
             case 'b':
                 switch (timezoneString) {
+                    case "b": timezoneOffset = 2;
+                        break;
                     case "bdt": timezoneOffset = 8;
+                        break;
+                    case "bnt": timezoneOffset = 8;
                         break;
                     case "biot": timezoneOffset = 6;
                         break;
@@ -523,23 +550,27 @@ module.exports = {
                 break;
             case 'c':
                 switch (timezoneString) {
+                    case "c": timezoneOffset = 3;
+                        break;
                     case "cat": timezoneOffset = 2;
+                        break;
+                    case "cast": timezoneOffset = 8;
                         break;
                     case "cct": timezoneOffset = 6.5;
                         break;
                     case "cdt": timezoneOffset = -5;
                         break;
-                    case "cest": timezoneOffset = -4;
+                    case "cest": timezoneOffset = 2;
                         break;
-                    case "cet": timezoneOffset = 2;
+                    case "cet": timezoneOffset = 1;
                         break;
-                    case "chadt": timezoneOffset = -1;
+                    case "chadt": timezoneOffset = 13.75;
                         break;
-                    case "chast": timezoneOffset = 13.75;
+                    case "chast": timezoneOffset = 12.75;
                         break;
-                    case "chot": timezoneOffset = 12.75;
+                    case "chot": timezoneOffset = 8;
                         break;
-                    case "chost": timezoneOffset = 8;
+                    case "chost": timezoneOffset = 9;
                         break;
                     case "chst": timezoneOffset = 10;
                         break;
@@ -592,6 +623,8 @@ module.exports = {
                 break;
             case 'd':
                 switch (timezoneString) {
+                    case "d": timezoneOffset = 4;
+                        break;
                     case "davt": timezoneOffset = 7;
                         break;
                     case "ddut": timezoneOffset = 10;
@@ -602,6 +635,8 @@ module.exports = {
                 break;
             case 'e':
                 switch (timezoneString) {
+                    case "e": timezoneOffset = 5;
+                        break;
                     case "easst": timezoneOffset = -5;
                         break;
                     case "east": timezoneOffset = -6;
@@ -624,6 +659,8 @@ module.exports = {
                         break;
                     case "edt": timezoneOffset = -4;
                         break;
+                    case "eedt": timezoneOffset = 3;
+                        break;
                     case "eest": timezoneOffset = 3;
                         break;
                     case "eet": timezoneOffset = 2;
@@ -640,9 +677,13 @@ module.exports = {
                 break;
             case 'f':
                 switch (timezoneString) {
+                    case "f": timezoneOffset = 6;
+                        break;
                     case "fet": timezoneOffset = 3;
                         break;
                     case "fjt": timezoneOffset = 12;
+                        break;
+                    case "fjst": timezoneOffset = 13;
                         break;
                     case "fkst": timezoneOffset = -3;
                         break;
@@ -654,19 +695,21 @@ module.exports = {
                 break;
             case 'g':
                 switch (timezoneString) {
-                    case "galt": timezoneOffset = 3;
+                    case "g": timezoneOffset = 7;
                         break;
-                    case "gamt": timezoneOffset = 12;
+                    case "galt": timezoneOffset = -6;
                         break;
-                    case "get": timezoneOffset = -3;
+                    case "gamt": timezoneOffset = -9;
                         break;
-                    case "gft": timezoneOffset = -4;
+                    case "get": timezoneOffset = 4;
                         break;
-                    case "gilt": timezoneOffset = -2;
+                    case "gft": timezoneOffset = -3;
                         break;
-                    case "git": timezoneOffset = -4;
+                    case "gilt": timezoneOffset = 12;
                         break;
-                    case "gmt": timezoneOffset = -2;
+                    case "git": timezoneOffset = -9;
+                        break;
+                    case "gmt": timezoneOffset = 0;
                         break;
                     // South Georgia and the South Sandwich Islands Time
                     case "gsit": timezoneOffset = -2;
@@ -679,7 +722,13 @@ module.exports = {
                 break;
             case 'h':
                 switch (timezoneString) {
+                    case "h": timezoneOffset = 8;
+                        break;
                     case "hdt": timezoneOffset = -9;
+                        break;
+                    case "hadt": timezoneOffset = -9;
+                        break;
+                    case "hast": timezoneOffset = -10;
                         break;
                     case "haec": timezoneOffset = 2;
                         break;
@@ -698,17 +747,21 @@ module.exports = {
                 break;
             case 'i':
                 switch (timezoneString) {
+                    case "i": timezoneOffset = 9;
+                        break;
                     case "ict": timezoneOffset = 7;
                         break;
                     case "idlw": timezoneOffset = -12;
                         break;
                     case "idt": timezoneOffset = 3;
                         break;
-                    case "iot": timezoneOffset = 3;
+                    case "iot": timezoneOffset = 6;
                         break;
                     case "irdt": timezoneOffset = 4.5;
                         break;
                     case "irkt": timezoneOffset = 8;
+                        break;
+                    case "irkst": timezoneOffset = 9;
                         break;
                     case "irst": timezoneOffset = 3.5;
                         break;
@@ -731,6 +784,8 @@ module.exports = {
                 break;
             case 'k':
                 switch (timezoneString) {
+                    case "k": timezoneOffset = 10;
+                        break;
                     case "kalt": timezoneOffset = 2;
                         break;
                     case "kgt": timezoneOffset = 6;
@@ -739,12 +794,16 @@ module.exports = {
                         break;
                     case "krat": timezoneOffset = 7;
                         break;
+                    case "krast": timezoneOffset = 8;
+                        break;
                     case "kst": timezoneOffset = 9;
                         break;
                 }
                 break;
             case 'l':
                 switch (timezoneString) {
+                    case "l": timezoneOffset = 11;
+                        break;
                     // Lord Howe standard Time
                     case "lhst": timezoneOffset = 10.5;
                         break;
@@ -760,7 +819,11 @@ module.exports = {
                 break;
             case 'm':
                 switch (timezoneString) {
-                    case "magt": timezoneOffset = 12;
+                    case "m": timezoneOffset = 12;
+                        break;
+                    case "magt": timezoneOffset = 11;
+                        break;
+                    case "magst": timezoneOffset = 12;
                         break;
                     case "mart": timezoneOffset = -9.5;
                         break;
@@ -795,6 +858,8 @@ module.exports = {
                 break;
             case 'n':
                 switch (timezoneString) {
+                    case "n": timezoneOffset = -1;
+                        break;
                     case "nct": timezoneOffset = 11;
                         break;
                     case "ndt": timezoneOffset = -2.5;
@@ -802,6 +867,8 @@ module.exports = {
                     case "nft": timezoneOffset = 11;
                         break;
                     case "novt": timezoneOffset = 7;
+                        break;
+                    case "novst": timezoneOffset = 7;
                         break;
                     case "npt": timezoneOffset = 5.75;
                         break;
@@ -819,7 +886,11 @@ module.exports = {
                 break;
             case 'o':
                 switch (timezoneString) {
+                    case "o": timezoneOffset = -2;
+                        break;
                     case "omst": timezoneOffset = 6;
+                        break;
+                    case "omsst": timezoneOffset = 7;
                         break;
                     case "orat": timezoneOffset = 5;
                         break;
@@ -827,11 +898,15 @@ module.exports = {
                 break;
             case 'p':
                 switch (timezoneString) {
+                    case "p": timezoneOffset = -3;
+                        break;
                     case "pdt": timezoneOffset = -7;
                         break;
                     case "pet": timezoneOffset = -5;
                         break;
                     case "pett": timezoneOffset = 12;
+                        break;
+                    case "petst": timezoneOffset = 12;
                         break;
                     case "pgt": timezoneOffset = 10;
                         break;
@@ -849,14 +924,26 @@ module.exports = {
                         break;
                     case "pst": timezoneOffset = -8;
                         break;
+                    case "pwt": timezoneOffset = 9;
+                        break;
                     case "pyst": timezoneOffset = -3;
                         break;
                     case "pyt": timezoneOffset = -4;
                         break;
                 }
                 break;
+            case 'q':
+                switch (timezoneString) {
+                    case "q": timezoneOffset = -4;
+                        break;
+                    case "qyzt": timezoneOffset = 6;
+                        break;
+                }
+                break;
             case 'r':
                 switch (timezoneString) {
+                    case "r": timezoneOffset = -5;
+                        break;
                     case "ret": timezoneOffset = 4;
                         break;
                     case "rott": timezoneOffset = -3;
@@ -865,6 +952,8 @@ module.exports = {
                 break;
             case 's':
                 switch (timezoneString) {
+                    case "s": timezoneOffset = -6;
+                        break;
                     case "sakt": timezoneOffset = 11;
                         break;
                     case "samt": timezoneOffset = 4;
@@ -876,6 +965,8 @@ module.exports = {
                     case "sct": timezoneOffset = 4;
                         break;
                     case "sgt": timezoneOffset = 8;
+                        break;
+                    case "slt": timezoneOffset = 5.5;
                         break;
                     case "slst": timezoneOffset = 5.5;
                         break;
@@ -892,6 +983,8 @@ module.exports = {
                 break;
             case 't':
                 switch (timezoneString) {
+                    case "t": timezoneOffset = -7;
+                        break;
                     case "taht": timezoneOffset = -10;
                         break;
                     case "tha": timezoneOffset = 7;
@@ -908,6 +1001,8 @@ module.exports = {
                         break;
                     case "trt": timezoneOffset = 3;
                         break;
+                    case "trut": timezoneOffset = 10;
+                        break;
                     case "tot": timezoneOffset = 13;
                         break;
                     case "tvt": timezoneOffset = 12;
@@ -916,6 +1011,8 @@ module.exports = {
                 break;
             case 'u':
                 switch (timezoneString) {
+                    case "u": timezoneOffset = -8;
+                        break;
                     case "ulast": timezoneOffset = 9;
                         break;
                     case "ulat": timezoneOffset = 8;
@@ -932,9 +1029,13 @@ module.exports = {
                 break;
             case 'v':
                 switch (timezoneString) {
+                    case "v": timezoneOffset = -9;
+                        break;
                     case "vet": timezoneOffset = -4;
                         break;
                     case "vlat": timezoneOffset = 10;
+                        break;
+                    case "vlast": timezoneOffset = 11;
                         break;
                     case "volt": timezoneOffset = 4;
                         break;
@@ -946,15 +1047,23 @@ module.exports = {
                 break;
             case 'w':
                 switch (timezoneString) {
+                    case "w": timezoneOffset = -10;
+                        break;
                     case "wakt": timezoneOffset = 12;
                         break;
                     case "wast": timezoneOffset = 2;
                         break;
                     case "wat": timezoneOffset = 1;
                         break;
+                    case "wdt": timezoneOffset = 9;
+                        break;
+                    case "wedt": timezoneOffset = 1;
+                        break;
                     case "west": timezoneOffset = 1;
                         break;
                     case "wet": timezoneOffset = 0;
+                        break;
+                    case "wft": timezoneOffset = 12;
                         break;
                     case "wit": timezoneOffset = 7;
                         break;
@@ -962,15 +1071,34 @@ module.exports = {
                         break;
                     case "wgt": timezoneOffset = -3;
                         break;
+                    case "wib": timezoneOffset = 7;
+                        break;
+                    case "wit": timezoneOffset = 9;
+                        break;
+                    case "wita": timezoneOffset = 8;
+                        break;
                     case "wst": timezoneOffset = 8;
+                        break;
+                    case "wt": timezoneOffset = 0;
                         break;
                 }
                 break;
+            case 'x':
+                if (timezoneString == "x") timezoneOffset = -11;
+                break;
             case 'y':
                 switch (timezoneString) {
+                    case "y": timezoneOffset = -12;
+                        break;
                     case "yakt": timezoneOffset = 9;
                         break;
+                    case "yakst": timezoneOffset = 10;
+                        break;
+                    case "yap": timezoneOffset = 10;
+                        break;
                     case "yekt": timezoneOffset = 5;
+                        break;
+                    case "yekst": timezoneOffset = 6;
                         break;
                 }
                 break;
@@ -1135,7 +1263,7 @@ module.exports = {
         }
         else if (dayOfWeekTest) {
             if (dayOfWeekTest.length > 5) {
-                
+
             }
         }
         else if (absoluteTimeRegex) {
