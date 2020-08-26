@@ -84,9 +84,9 @@ bot.mongoose.init();
 
 bot.on("message", async message => {
     const guildConfig = new GuildSettings();
-    const guildID = message.guild.id;
-    const guildSettingsObject = await guildConfig.collection.find({ guildID }).limit(1).toArray();
-    const PREFIX = guildSettingsObject[0].prefix || "?";
+    const guildID = message.channel.type === 'dm' ? null : message.guild.id;
+    const guildSettingsObject = message.channel.type === 'dm' ? null : await guildConfig.collection.find({ guildID }).limit(1).toArray();
+    const PREFIX = message.channel.type === 'dm' ? "?" : guildSettingsObject[0].prefix;
 
     //If the message is from a bot, ignore
     //When the message does not start with prefix, do nothing
