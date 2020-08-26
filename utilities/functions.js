@@ -1309,7 +1309,7 @@ module.exports = {
         if (timestamp === undefined || timestamp === null) return undefined;
         const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         var timezoneOffset;
-        timezoneOffset = this.getTimezoneOffset(timezone) || userDefaultTimezone;
+        timezoneOffset = timezone ? this.getTimezoneOffset(timezone) : userDefaultTimezone;
         console.log({ timestamp, timezoneOffset });
         timestamp += (HOUR_IN_MS * timezoneOffset)
         if (this.isDaylightSavingTime(timestamp, userDaylightSavingSetting)) {
