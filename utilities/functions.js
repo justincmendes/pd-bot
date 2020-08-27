@@ -280,15 +280,8 @@ module.exports = {
 
     millisecondsToTimeString: function (milliseconds) {
         if (milliseconds === null || milliseconds === undefined) return null;
-        const MS_PER_HOUR = 3600 * 1000;
-        const MS_PER_MINUTE = 60 * 1000;
-        const MS_PER_SECOND = 1000;
-        var hours, minutes, seconds, timeString;
-        hours = Math.floor(milliseconds / MS_PER_HOUR);
-        minutes = Math.floor((milliseconds - MS_PER_HOUR * hours) / MS_PER_MINUTE);
-        seconds = Math.floor((milliseconds - MS_PER_HOUR * hours - MS_PER_MINUTE * minutes) / MS_PER_SECOND);
-        timeString = `${hours}h:${minutes}m:${seconds}s`;
-        return (timeString);
+        timeArray = this.getHoursMinutesSecondsMillisecondsArray(milliseconds);
+        return `${timeArray[0]}h:${timeArray[1]}m:${timeArray[2]}s`;
     },
 
 
@@ -1111,7 +1104,7 @@ module.exports = {
         return timezoneOffset;
     },
 
-    getProperTimeArray: function (dateAndTimeArray, originalArgs, userTimezone, userDaylightSavingSetting) {
+    getProperTimeAndTimezoneArray: function (dateAndTimeArray, originalArgs) {
         // The last element in the array is expected to represent the timezone
         const timeArrayLength = dateAndTimeArray.length;
         const NUMBER_OF_TIME_ELEMENTS = 5;
@@ -1120,6 +1113,24 @@ module.exports = {
         const initialTime = this.getMultipleAdjacentArrayElements(dateAndTimeArray, timeArrayLength - NUMBER_OF_TIME_ELEMENTS, NUMBER_OF_TIME_ELEMENTS);
         const splitTimeAndPeriod = this.getSplitTimePeriodAndTimezoneArray(initialTime);
         return splitTimeAndPeriod;
+    },
+
+    /**
+     * 
+     * @param {number} timestamp
+     * NOTE: the returned month ranges from 0-11: 0 = January, 1 = February, and so on... 
+     */
+    getUTCTimeArray: function (timestamp) {
+        const date = new Date(timestamp);
+        let timeArray = new Array();
+        timeArray.push(date.getUTCFullYear());
+        timeArray.push(date.getUTCMonth());
+        timeArray.push(date.getUTCDate());
+        timeArray.push(date.getUTCHours());
+        timeArray.push(date.getUTCMinutes());
+        timeArray.push(date.getUTCSeconds());
+        timeArray.push(date.getUTCMilliseconds());
+        return timeArray;
     },
 
     getTimezoneDaylightOffset: function (timezoneString) {
@@ -1203,14 +1214,14 @@ module.exports = {
         const relativeTimeAgoOrFromNow = /(in)?(\d+\.?\d*|\d*\.?\d+)(minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const relativeTimeTest = relativeTimeAgoOrFromNow.exec(timeArgs);
         console.log({ relativeTimeTest });
-        const dayOfWeekRegex = /((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior)|(?:(?:yest?(?:erday)?)|(?:(?:tod(?:ay)?))|(?:(?:tomm(?:orrow)?))|(?:tmrw)))((?:m(?:on?)?(?:days?)?)|(?:tu(?:es?)?(?:days?)?)|(?:w(?:ed?)?(?:nesdays?)?)|(?:th(?:urs?)?(?:days?)?)|(?:f(?:ri?)?(?:days?)?)|(?:sa(?:t)?(?:urdays?)?)|(?:su(?:n)?(?:days?)?))?(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const dayOfWeekRegex = /((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))?(?:(?:yest?(?:erday)?)|(?:thedaybefore)|(?:(?:tod(?:ay)?))|(?:(?:tomm(?:orrow)?))|(?:tmrw))((?:m(?:on?)?(?:days?)?)|(?:tu(?:es?)?(?:days?)?)|(?:w(?:ed?)?(?:nesdays?)?)|(?:th(?:urs?)?(?:days?)?)|(?:f(?:ri?)?(?:days?)?)|(?:sa(?:t)?(?:urdays?)?)|(?:su(?:n)?(?:days?)?))?(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const dayOfWeekTest = dayOfWeekRegex.exec(timeArgs);
         console.log({ dayOfWeekTest });
         // Absolute Time: Past and Future
         const absoluteTimeRegex = /(\d{1,2})[\/\.\-](\d{1,2})[\/\.\,\-](\d{2}|\d{4})?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const absoluteTimeTest = absoluteTimeRegex.exec(timeArgs);
         console.log({ absoluteTimeTest });
-        const monthTimeRegex = /((?:jan?(?:uary)?)|(?:f(?:eb?)?(?:ruary)?)|(?:mar?(?:ch)?)|(?:apr?(?:il)?)|(?:may?)|(?:jun(?:e)?)|(?:jul(?:y)?)|(?:aug?(?:ust)?)|(?:sept?(?:ember)?)|(?:oct?(?:ober)?)|(?:nov?(?:ember)?)|(?:dec?(?:ember)?))(\d{1}(?:\d{1})?)[\/\.\,\-]?((?:\d{4})|(?:\d{2}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const monthTimeRegex = /((?:(?:jan?)|(?:january))|(?:f(?:eb?)?(?:ruary)?)|(?:mar?(?:ch)?)|(?:apr?(?:il)?)|(?:may?)|(?:jun(?:e)?)|(?:jul(?:y)?)|(?:aug?(?:ust)?)|(?:sept?(?:ember)?)|(?:oct?(?:ober)?)|(?:nov?(?:ember)?)|(?:dec?(?:ember)?))(\d{1}(?:\d{1})?)[\/\.\,\-]?((?:\d{4})|(?:\d{2}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const monthTimeTest = monthTimeRegex.exec(timeArgs);
         console.log({ monthTimeTest });
 
@@ -1221,13 +1232,13 @@ module.exports = {
             if (relativeTimeTest.length > 3) {
                 // !! To Extract Truthy/Falsey value from each argument
                 // Adjust the timezone as the "m" in am or pm will be greedy
-                const properTimeArray = this.getProperTimeArray(relativeTimeTest, args, userTimezone, userDaylightSavingSetting);
-                const [hours, minutes, , timezone] = properTimeArray;
+                const properTimeArray = this.getProperTimeAndTimezoneArray(relativeTimeTest, args);
+                const [properHours, properMinutes, , timezone] = properTimeArray;
                 timezoneString = timezone;
                 console.log({ properTimeArray });
                 const timeScale = relativeTimeTest[3];
-                const argsHaveDefinedTime = (!!(hours) || !!(minutes));
-                const isLongTimeScaleWithTime = argsHaveDefinedTime && this.isLongTimeScale(timeScale);
+                const argsHaveDefinedTime = (!!(properHours) || !!(properMinutes));
+                const isLongTimeScale = this.isLongTimeScale(timeScale);
                 // Args with no defined time AND Args with defined time having a whole number first argument (i.e. 2 days)
                 let futureTruePastFalse = this.futureTruePastFalseRegexTest(relativeTimeTest[4]);
                 if (futureTruePastFalse === undefined) {
@@ -1236,30 +1247,74 @@ module.exports = {
                     }
                     else return false;
                 }
-                let timeDifference = 0;
-                let numberOfTimeScales = parseFloat(relativeTimeTest[2]);
+                // If Long Relative Time Scale and a Defined Time: Receive Whole Number First Argument
+                let numberOfTimeScales = argsHaveDefinedTime && isLongTimeScale ? parseInt(relativeTimeTest[2]) : parseFloat(relativeTimeTest[2]);
+                if (futureTruePastFalse === false) {
+                    numberOfTimeScales = -numberOfTimeScales;
+                }
                 const timeScaleToMultiply = this.getTimeScaleToMultiplyInMs(timeScale);
-                if (isLongTimeScaleWithTime) {
-                    const militaryTimeString = this.getMilitaryTimeStringFromProperTimeArray(properTimeArray);
+                let timeDifference = numberOfTimeScales * timeScaleToMultiply;
+
+                if (isLongTimeScale) {
+                    const timeArray = this.getUTCTimeArray(messageCreatedTimestamp);
+                    let [year, month, day, hour, minute, second, millisecond] = timeArray;
+                    console.log({ year, month, day, hour, minute, second, millisecond });
+                    const militaryTimeString = argsHaveDefinedTime ? this.getMilitaryTimeStringFromProperTimeArray(properTimeArray) : "00:00";
                     console.log({ militaryTimeString });
-                    // If Long Relative Time Scale and a Defined Time: Receive Whole Number First Argument
-                    numberOfTimeScales = Math.floor(numberOfTimeScales);
-                    timeDifference += this.getTimePastMidnightInMs(militaryTimeString) - this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone);
+                    const timeAdjustment = this.getTimePastMidnightInMs(militaryTimeString);
+                    // For the case of Days, timeDifference is simply numberOfTimeScales * timeScaleToMultiply
+                    // But for the case of Months and Years, proper adjustments much be made.
+                    const isYearTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("year");
+                    const isMonthTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("month");
+                    if (isYearTimeScale || isMonthTimeScale) {
+                        // Mutually Exclusive Conditions
+                        if (isYearTimeScale) {
+                            year += numberOfTimeScales;
+                        }
+                        else {
+                            month += numberOfTimeScales;
+                            // The month auto-adjust to negative values of hours
+                        }
+                        if (argsHaveDefinedTime) {
+                            const splitTimeAdjustment = this.getHoursMinutesSecondsMillisecondsArray(timeAdjustment);
+                            // Since the day should not auto-adjust, but should be fixed
+                            day -= 1;
+                            hour += splitTimeAdjustment[0] - 1;
+                            minute = splitTimeAdjustment[1];
+                            second = splitTimeAdjustment[2];
+                            millisecond = splitTimeAdjustment[3];
+                        }
+                        else {
+                            const timezoneOffset = timezoneString ? this.getTimezoneOffset(timezoneString) : userTimezone;
+                            hour += timezoneOffset;
+                            // The day auto-adjust to negative values of hours
+                        }
+                        console.log({ year, month, day, hour, minute, second, millisecond });
+                        timestampOut = new Date(year, month, day, hour, minute, second, millisecond).getTime();
+                        // Daylights Savings Adjustment:
+                        if (this.isDaylightSavingTime(messageCreatedTimestamp) && userDaylightSavingSetting) {
+                            if(!this.isDaylightSavingTime(timestampOut)) {
+                                timestampOut -= HOUR_IN_MS;
+                            }
+                        }
+                    }
+                    // Days and Weeks:
+                    else {
+                        if (argsHaveDefinedTime) {
+                            timeDifference += timeScaleToMultiply + timeAdjustment - this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone);
+                        }
+                    }
                 }
-                timeDifference += numberOfTimeScales * timeScaleToMultiply;
-                console.log({ timeDifference, timeScaleToMultiply, numberOfTimeScales });
-                var timestampOut;
-                if (futureTruePastFalse) {
+
+                console.log({ timestampOut, timeDifference, timeScaleToMultiply, numberOfTimeScales });
+                if (timestampOut === undefined) {
                     timestampOut = messageCreatedTimestamp + timeDifference;
-                }
-                else {
-                    timestampOut = messageCreatedTimestamp - timeDifference;
                 }
             }
         }
         else if (dayOfWeekTest) {
             if (dayOfWeekTest.length > 5) {
-
+                console.log("Day of week test!");
             }
         }
         else if (absoluteTimeRegex) {
@@ -1276,6 +1331,21 @@ module.exports = {
         return timestampOut;
     },
 
+    /**
+     * 
+     * @param {number} milliseconds Give the a time in milliseconds to be split into hours, minutes, seconds, and remaining milliseconds
+     */
+    getHoursMinutesSecondsMillisecondsArray: function (milliseconds) {
+        const MS_PER_HOUR = this.getTimeScaleToMultiplyInMs("hour");
+        const MS_PER_MINUTE = this.getTimeScaleToMultiplyInMs("minute");
+        const MS_PER_SECOND = this.getTimeScaleToMultiplyInMs("second");
+        const hours = Math.floor(milliseconds / MS_PER_HOUR);
+        const minutes = Math.floor((milliseconds - MS_PER_HOUR * hours) / MS_PER_MINUTE);
+        const seconds = Math.floor((milliseconds - MS_PER_HOUR * hours - MS_PER_MINUTE * minutes) / MS_PER_SECOND);
+        const ms = milliseconds - MS_PER_HOUR * hours - MS_PER_MINUTE * minutes - MS_PER_SECOND * seconds;
+        return [hours, minutes, seconds, ms];
+    },
+
     timestampToDateString: function (timestamp) {
         if (timestamp === undefined || timestamp === null) return null;
         const date = new Date(timestamp);
@@ -1288,6 +1358,27 @@ module.exports = {
         const minutes = this.getValidMinutesString(date.getUTCMinutes());
         const seconds = this.getValidMinutesString(date.getUTCSeconds());
         return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds} ${amPmString}`;
+    },
+
+    /**
+     * 
+     * @param {number} yearA 
+     * @param {number} yearB 
+     */
+    numberOfLeapYearsInBetween: function (yearA, yearB) {
+        const smallerYear = yearA < yearB ? yearA : yearB;
+        const largerYear = yearB === smallerYear ? yearA : yearB;
+        return this.numberOfLeapYearsBefore(largerYear) - this.numberOfLeapYearsBefore(smallerYear);
+    },
+
+    /**
+     * 
+     * @param {number} year 
+     */
+    numberOfLeapYearsBefore: function (year) {
+        year = parseInt(year);
+        year--;
+        return parseInt((year / 4) - (year / 100) + (year / 400));
     },
 
     /**
@@ -1367,7 +1458,7 @@ module.exports = {
         }
     },
 
-    getHourMinSeparatedArray: function (timeToTest) {
+    getHourAndMinuteSeparatedArrayFromStandardTime: function (timeToTest) {
         const separateTimeRegex = /((?:1[0-2])|(?:0?[0-9]))([0-5][0-9])/;
         let separatedTime = separateTimeRegex.exec(timeToTest);
         return separatedTime;
@@ -1432,8 +1523,10 @@ module.exports = {
         const WEEK_IN_MS = 6.048e+8;
         const DAY_IN_MS = 8.64e+7;
         const HOUR_IN_MS = 3.6e+6;
-        const MIN_IN_MS = 60000;
-        const minTestRegex = /(mins?|minutes?)/;
+        const MINUTE_IN_MS = 60000;
+        const SECOND_IN_MS = 1000;
+        const secondTestRegex = /(secs?|seconds?)/;
+        const minuteTestRegex = /(mins?|minutes?)/;
         const hourTestRegex = /(hours?|hrs?)/;
         const dayTestRegex = /(days?)/;
         const weekTestRegex = /(weeks?)/;
@@ -1455,8 +1548,11 @@ module.exports = {
         else if (hourTestRegex.test(relativeTimeScale)) {
             timeScaleToMultiply = HOUR_IN_MS;
         }
-        else if (minTestRegex.test(relativeTimeScale)) {
-            timeScaleToMultiply = MIN_IN_MS;
+        else if (minuteTestRegex.test(relativeTimeScale)) {
+            timeScaleToMultiply = MINUTE_IN_MS;
+        }
+        else if (secondTestRegex.test(relativeTimeScale)) {
+            timeScaleToMultiply = SECOND_IN_MS;
         }
         return timeScaleToMultiply;
     },
@@ -1483,7 +1579,7 @@ module.exports = {
         const HOUR_IN_MS = 3.6e+6;
         const timePastMidnight = timeInMS % DAY_IN_MS;
         console.log({ timePastMidnight });
-        return ((timePastMidnight + (HOUR_IN_MS * parseInt(UTCHourOffset))) % DAY_IN_MS);
+        return (DAY_IN_MS + timePastMidnight + (HOUR_IN_MS * parseInt(UTCHourOffset)) % DAY_IN_MS);
     },
 
     timezoneToString: function (UTCHourOffset) {
