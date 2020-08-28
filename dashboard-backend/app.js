@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const mongoDB = require('../utilities/mongoose');
 const session = require('express-session');
 const cors = require('cors')
-const Store = require('connect-mongo')(session);
+const MongoStore = require('connect-mongo')(session);
 
 const express = require('express');
 const passport = require('passport');
@@ -30,7 +30,7 @@ app.use(session( {
     },
     resave: false,
     saveUninitialized: false,
-    store: new Store({mongooseConnection: mongoose.connection}),
+    store: new MongoStore({mongooseConnection: mongoose.connection}),
 }));
 
 app.use(passport.initialize());
