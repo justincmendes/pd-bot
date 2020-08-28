@@ -235,11 +235,10 @@ async function getUserEditString(userOriginalMessageObject, field, instructionPr
         else if(!collectedEdit) return "back";
         else if (collectedEdit === "back") {
             const backToMainEdit = await getBackToMainMenuConfirmation(userOriginalMessageObject, forceSkip);
-            if (backToMainEdit === false) {
-                reset = true;
-            }
+            if (backToMainEdit === false) reset = true;
+            else return collectedEdit;
         }
-        if (collectedEdit !== "back" && !reset) {
+        if (!reset) {
             const confirmEdit = await getEditEndConfirmation(userOriginalMessageObject, field, collectedEdit, forceSkip);
             if (!confirmEdit) {
                 reset = true;
@@ -262,10 +261,7 @@ async function getUserEditNumber(userOriginalMessageObject, field, maxNumber, fo
         else if (isNaN(collectedEdit)) {
             if (collectedEdit == "back") {
                 const backToMainEdit = await getBackToMainMenuConfirmation(userOriginalMessageObject, forceSkip);
-                if (backToMainEdit === true) {
-                    userEdit = "back";
-                    break;
-                }
+                if (backToMainEdit === true) return collectedEdit;
             }
             else {
                 fn.sendReplyThenDelete(userOriginalMessageObject, numberErrorMessage, 15000);
@@ -278,13 +274,10 @@ async function getUserEditNumber(userOriginalMessageObject, field, maxNumber, fo
             }
             else {
                 let confirmEdit = await getEditEndConfirmation(userOriginalMessageObject, field, collectedEdit, forceSkip);
-                if (confirmEdit === true) {
-                    break;
-                }
+                if (confirmEdit === true) return confirmEdit;
             }
         }
     }
-    return collectedEdit;
 }
 function urlIsImage(url) {
     return (url.indexOf(".png", url.length - 4) !== -1
@@ -1449,13 +1442,13 @@ module.exports = {
                             userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                             console.log({ userEdit });
                             fastData[fieldToEditIndex] = fn.timeCommandHandlerToUTC(userEdit, timestamp, -4, true);
-                            if (!fastData[fieldToEdit]) {
+                            if (!fastData[fieldToEditIndex]) {
                                 fn.sendReplyThenDelete(message, `**INVALID TIME**... Try \`${PREFIX}${commandUsed} start help\` or \`${PREFIX}${commandUsed} end help\``, 60000);
                             }
                             console.log({ fastData });
                             // If the end time is correctly after the start time, update the fast duration as well!
                             // Otherwise, go back to the main menu
-                            const validFastDuration = fastData[fieldToEdit] ? endTimeAfterStartTime(message, fastData[0], fastData[1], -4, true) : false;
+                            const validFastDuration = fastData[fieldToEditIndex] ? endTimeAfterStartTime(message, fastData[0], fastData[1], -4, true) : false;
                             if (!validFastDuration) {
                                 continueEdit = true;
                             }
