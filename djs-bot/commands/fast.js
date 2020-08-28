@@ -228,17 +228,18 @@ async function getUserEditString(userOriginalMessageObject, field, instructionPr
     do {
         reset = false;
         collectedEdit = await fn.messageDataCollectFirst(userOriginalMessageObject, fastEditMessagePrompt, "Fast: Edit", fastEmbedColour, 600000);
-        if (!collectedEdit || collectedEdit === "stop") {
-            fn.sendReplyThenDelete(userOriginalMessageObject, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${userEdit}`, 600000)
+        if (collectedEdit === "stop") {
+            fn.sendReplyThenDelete(userOriginalMessageObject, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${collectedEdit}`, 600000);
             return false;
         }
-        else if (collectedEdit == "back") {
+        else if(!collectedEdit) return "back";
+        else if (collectedEdit === "back") {
             const backToMainEdit = await getBackToMainMenuConfirmation(userOriginalMessageObject, forceSkip);
             if (backToMainEdit === false) {
                 reset = true;
             }
         }
-        if (!reset) {
+        if (collectedEdit !== "back" && !reset) {
             const confirmEdit = await getEditEndConfirmation(userOriginalMessageObject, field, collectedEdit, forceSkip);
             if (!confirmEdit) {
                 reset = true;
@@ -254,10 +255,9 @@ async function getUserEditNumber(userOriginalMessageObject, field, maxNumber, fo
     let fastEditMessagePrompt = `**What will you change your *${field}* to?:**\n***(Please enter a number from \`1-${maxNumber}\`)***\n`
         + "\nType `back` to go **back to the main edit menu**\n";
     while (true) {
-        collectedEdit = await fn.messageDataCollectFirst(userOriginalMessageObject, fastEditMessagePrompt, "Fast: Edit", fastEmbedColour, 300000);
-        if (!collectedEdit || collectedEdit === "stop") {
-            return false;
-        }
+        collectedEdit = await fn.messageDataCollectFirst(userOriginalMessageObject, fastEditMessagePrompt, "Fast: Edit", fastEmbedColour, 600000);
+        if (collectedEdit === "stop") return false;
+        else if(!collectedEdit) return "back";
         // Check if the given message is a number
         else if (isNaN(collectedEdit)) {
             if (collectedEdit == "back") {
@@ -719,10 +719,9 @@ module.exports = {
             else {
                 // Remove the "start" from the args using slice
                 const startTimeArgs = args.slice(1);
-                startTimestamp = fn.timeCommandHandlerUTC(startTimeArgs, message.createdTimestamp, -4, true);
+                startTimestamp = fn.timeCommandHandlerToUTC(startTimeArgs, message.createdTimestamp, -4, true);
                 if (startTimestamp == false) {
-                    message.reply(fastStartHelpMessage);
-                    return;
+                    return message.reply(fastStartHelpMessage);
                 }
                 fastCollectionDocument = new Fast({
                     _id: mongoose.Types.ObjectId(),
@@ -775,7 +774,7 @@ module.exports = {
                 // FOR Handling when the user's fast ending time is not now!
                 // Remove the "end" from the args using slice
                 const endTimeArgs = args.slice(1);
-                const endTimestamp = fn.timeCommandHandlerUTC(endTimeArgs, message.createdTimestamp, -4, true);
+                const endTimestamp = fn.timeCommandHandlerToUTC(endTimeArgs, message.createdTimestamp, -4, true);
                 if (endTimestamp === false) {
                     return message.reply(fastEndHelpMessage);
                 }
@@ -1442,23 +1441,30 @@ module.exports = {
                         userEdit = await getUserMultilineEditString(message, fieldToEdit, fastEditMessagePrompt, forceSkip);
                     }
                     if (userEdit === false) return;
+                    else if (userEdit === undefined) userEdit = "back";
                     else if (userEdit !== "back") {
                         // Parse User Edit
                         if (fieldToEditIndex == 0 || fieldToEditIndex == 1) {
                             const timestamp = new Date().getTime();
                             userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                             console.log({ userEdit });
-                            fastData[fieldToEditIndex] = fn.timeCommandHandlerUTC(userEdit, timestamp, -4, true);
+                            fastData[fieldToEditIndex] = fn.timeCommandHandlerToUTC(userEdit, timestamp, -4, true);
+                            if (!fastData[fieldToEdit]) {
+                                fn.sendReplyThenDelete(message, `**INVALID TIME**... Try \`${PREFIX}${commandUsed} start help\` or \`${PREFIX}${commandUsed} end help\``, 60000);
+                            }
                             console.log({ fastData });
                             // If the end time is correctly after the start time, update the fast duration as well!
                             // Otherwise, go back to the main menu
-                            const validFastDuration = endTimeAfterStartTime(message, fastData[0], fastData[1], -4, true);
+                            const validFastDuration = fastData[fieldToEdit] ? endTimeAfterStartTime(message, fastData[0], fastData[1], -4, true) : false;
                             if (!validFastDuration) {
                                 continueEdit = true;
                             }
                             else {
                                 if (fastData[1] !== null) {
                                     fastData[2] = fastData[1] - fastData[0];
+                                }
+                                else {
+                                    fastData[2] = new Date().getTime() - fastData[0];
                                 }
                             }
                         }

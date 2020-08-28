@@ -2,8 +2,6 @@
  * File of all the important and universally reusable functions!
  */
 const Discord = require("discord.js");
-const e = require("express");
-const { off } = require("../djs-bot/database/schemas/fasting");
 require("dotenv").config();
 
 module.exports = {
@@ -388,39 +386,41 @@ module.exports = {
         return -1;
     },
 
-    getProperDateAndTimeArray: function (dateTimeArray, adjustedArgs) {
-        const yearIncluded = !!(dateTimeArray[3]);
-        const dayIndex = this.getNthNumberIndex(adjustedArgs);
-        console.log({ dayIndex });
-        console.log(adjustedArgs[dayIndex]);
-        if (dayIndex === -1) return false;
+    getProperDateAndTimeArray: function (dateTimeArray, adjustedArgs, dayYearTimeOffset = 0) {
+        const yearIncluded = !!(dateTimeArray[3 + dayYearTimeOffset]);
+        const dayIndex = this.getNthNumberIndex(adjustedArgs, dayYearTimeOffset);
+        const extractedDay = adjustedArgs[dayIndex];
+        console.log({ dayIndex, dayFromArray: extractedDay });
+        if (dayIndex == -1) return false;
+        if (extractedDay.length > 2) return false;
         const day = /(\d{1}(?:\d{1})?)/.exec(adjustedArgs[dayIndex])[1];
         var year;
         if (yearIncluded) {
-            const originalYear = dateTimeArray[this.getNthNumberIndex(dateTimeArray, dayIndex, 2)];
+            const originalYear = dateTimeArray[this.getNthNumberIndex(dateTimeArray, dayIndex + dayYearTimeOffset, 2)];
+            console.log({ originalYear })
             if (!originalYear) return false;
             year = /(\d{1,4})/.exec(adjustedArgs[dayIndex + 1])[1];
             if (!year) return false;
             if (year != originalYear) {
                 const yearOverflow = originalYear.replace(year, "");
-                dateTimeArray[4] = year;
-                const combinedHoursAndMins = dateTimeArray[5] ?
-                    `${yearOverflow}${dateTimeArray[5]}${dateTimeArray[6]}`
-                    : dateTimeArray[7] ? `${yearOverflow}${dateTimeArray[7]}` : `${yearOverflow}`;
+                dateTimeArray[4 + dayYearTimeOffset] = year;
+                const combinedHoursAndMins = dateTimeArray[5 + dayYearTimeOffset] ?
+                    `${yearOverflow}${dateTimeArray[5 + dayYearTimeOffset]}${dateTimeArray[6 + dayYearTimeOffset]}`
+                    : dateTimeArray[7 + dayYearTimeOffset] ? `${yearOverflow}${dateTimeArray[7 + dayYearTimeOffset]}` : `${yearOverflow}`;
                 console.log({ yearOverflow, year, dateTimeArray, combinedHoursAndMins })
-
+                if (!combinedHoursAndMins) return false;
                 // If the combinedHoursAndMins is greater than 2, there are minutes.
-                if (combinedHoursAndMins > 2) {
+                if (combinedHoursAndMins.length > 2) {
                     const splitHoursAndMins = /(\d{1}(?:\d{1})?)(\d{2})/.exec(combinedHoursAndMins);
                     console.log({ splitHoursAndMins });
-                    dateTimeArray[5] = splitHoursAndMins[1];
-                    dateTimeArray[6] = splitHoursAndMins[2];
-                    dateTimeArray[7] = undefined;
+                    dateTimeArray[5 + dayYearTimeOffset] = splitHoursAndMins[1];
+                    dateTimeArray[6 + dayYearTimeOffset] = splitHoursAndMins[2];
+                    dateTimeArray[7 + dayYearTimeOffset] = undefined;
                 }
                 else {
-                    dateTimeArray[5] = undefined;
-                    dateTimeArray[5] = undefined;
-                    dateTimeArray[7] = combinedHoursAndMins;
+                    dateTimeArray[5 + dayYearTimeOffset] = undefined;
+                    dateTimeArray[6 + dayYearTimeOffset] = undefined;
+                    dateTimeArray[7 + dayYearTimeOffset] = combinedHoursAndMins;
                 }
             }
         }
@@ -1260,7 +1260,7 @@ module.exports = {
 
     // Using Regular Expressions
     // Assumes that the userTimezone is NOT already daylight-savings adjusted
-    timeCommandHandlerUTC: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
+    timeCommandHandlerToUTC: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
         const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         if (args[0].toLowerCase() == "now") {
             return this.getUTCOffsetAdjustedTimestamp(messageCreatedTimestamp, userTimezone, userDaylightSavingSetting);
@@ -1281,167 +1281,196 @@ module.exports = {
         const relativeTimeAgoOrFromNow = /(in)?(\d+\.?\d*|\d*\.?\d+)(minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const relativeTimeTest = relativeTimeAgoOrFromNow.exec(timeArgs);
         console.log({ relativeTimeTest });
-        const dayOfWeekRegex = /((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:m(?:on?)?)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:w(?:ed?)?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:m(?:on?)?)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:w(?:ed?)?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const dayOfWeekTest = dayOfWeekRegex.exec(timeArgs);
         console.log({ dayOfWeekTest });
         // Absolute Time: Past and Future
-        const absoluteTimeRegex = /(\d{1,2})[\/\.\-](\d{1,2})[\/\.\,\-](\d{2}|\d{4})?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const absoluteTimeRegex = /(\d{1,2})([\/\.\,\-])?(\d{1,2})(?:([\/\.\,\-])(\d{1,4}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const absoluteTimeTest = absoluteTimeRegex.exec(timeArgs);
         console.log({ absoluteTimeTest });
         // Force the user to separate the date and year (if there is a year - this becomes an indicator for separation)
-        const monthTimeRegex = /((?:january)|(?:jan?)|(?:february)|(?:feb?)|f|(?:march)|(?:mar)|(?:april)|(?:apr?)|(?:may)|(?:june?)|(?:july?)|(?:august)|(?:aug?)|(?:september)|(?:sept?)|(?:october)|(?:oct)|(?:november)|(?:nov?)|(?:december)|(?:dec?))[\.]?(\d{1}(?:\d{1})?)([\/\.\,\-])?(\d{1,4})?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
-        // const monthTimeRegex = /((?:jan?)|(?:uary)?)|(?:f(?:eb?)?(?:ruary)?)|(?:mar?(?:ch)?)|(?:apr?(?:il)?)|(?:may?)|(?:jun(?:e)?)|(?:jul(?:y)?)|(?:aug?(?:ust)?)|(?:sept?(?:ember)?)|(?:oct?(?:ober)?)|(?:nov?(?:ember)?)|(?:dec?(?:ember)?))((?:\d{1}(?:\d{1})?)|(?:))[\/\.\,\-]?((?:\d{4})|(?:\d{2}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const monthTimeRegex = /((?:january)|(?:jan?)|(?:february)|(?:feb?)|f|(?:march)|(?:mar)|(?:april)|(?:apr?)|(?:may)|(?:june?)|(?:july?)|(?:august)|(?:aug?)|(?:september)|(?:sept?)|(?:october)|(?:oct)|(?:november)|(?:nov?)|(?:december)|(?:dec?))[\.\,]?(\d{1}(?:\d{1})?)(?:([\/\.\,\-])(\d{1,4}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const monthTimeTest = monthTimeRegex.exec(timeArgs);
         console.log({ monthTimeTest });
 
-        // const timezone = userTimezone || Test[];
+        // 1 - Relative Time Test; 2 - Day Of Week Test;
+        // 3 - Absolute Time Test; 4 - Month And Time Test;
+        const decision = this.getTimeTestChoice(relativeTimeTest, dayOfWeekTest, absoluteTimeTest, monthTimeTest);
+        console.log({ decision });
+        // 0 - All choices we're null or insufficient/not chosen.
+        if (!decision) return false;
+        else {
+            var timestampOut, timezoneString, timeWasCalculated;
+            switch (decision) {
+                case 1:
+                    if (relativeTimeTest) {
+                        console.log("Relative Time test...");
+                        // !! To Extract Truthy/Falsey value from each argument
+                        // Adjust the timezone as the "m" in am or pm will be greedy
+                        const properTimeArray = this.getProperTimeAndTimezoneArray(relativeTimeTest, adjustedArgs);
+                        const [properHours, properMinutes, , timezone] = properTimeArray;
+                        timezoneString = timezone;
+                        console.log({ properTimeArray });
+                        const timeScale = relativeTimeTest[3];
+                        const argsHaveDefinedTime = (!!(properHours) || !!(properMinutes));
+                        const isLongTimeScale = this.isLongTimeScale(timeScale);
+                        // Args with no defined time AND Args with defined time having a whole number first argument (i.e. 2 days)
+                        let futureTruePastFalse = this.futureTruePastFalseRegexTest(relativeTimeTest[4]);
+                        if (futureTruePastFalse === undefined) {
+                            if (relativeTimeTest[1]) {
+                                futureTruePastFalse = true;
+                            }
+                            else return false;
+                        }
+                        // If Long Relative Time Scale and a Defined Time: Receive Whole Number First Argument
+                        let numberOfTimeScales = argsHaveDefinedTime && isLongTimeScale ? parseInt(relativeTimeTest[2]) : parseFloat(relativeTimeTest[2]);
+                        if (futureTruePastFalse === false) {
+                            numberOfTimeScales = -numberOfTimeScales;
+                        }
+                        const timeScaleToMultiply = this.getTimeScaleToMultiplyInMs(timeScale);
+                        let timeDifference = numberOfTimeScales * timeScaleToMultiply;
 
-        var timestampOut, timezoneString, timeWasCalculated;
-        if (relativeTimeTest) {
-            console.log(relativeTimeTest.length);
-            // If there are at least 3 elements defined:
-            if (relativeTimeTest.length > 8) {
-                // !! To Extract Truthy/Falsey value from each argument
-                // Adjust the timezone as the "m" in am or pm will be greedy
-                const properTimeArray = this.getProperTimeAndTimezoneArray(relativeTimeTest, adjustedArgs);
-                const [properHours, properMinutes, , timezone] = properTimeArray;
-                timezoneString = timezone;
-                console.log({ properTimeArray });
-                const timeScale = relativeTimeTest[3];
-                const argsHaveDefinedTime = (!!(properHours) || !!(properMinutes));
-                const isLongTimeScale = this.isLongTimeScale(timeScale);
-                // Args with no defined time AND Args with defined time having a whole number first argument (i.e. 2 days)
-                let futureTruePastFalse = this.futureTruePastFalseRegexTest(relativeTimeTest[4]);
-                if (futureTruePastFalse === undefined) {
-                    if (relativeTimeTest[1]) {
-                        futureTruePastFalse = true;
-                    }
-                    else return false;
-                }
-                // If Long Relative Time Scale and a Defined Time: Receive Whole Number First Argument
-                let numberOfTimeScales = argsHaveDefinedTime && isLongTimeScale ? parseInt(relativeTimeTest[2]) : parseFloat(relativeTimeTest[2]);
-                if (futureTruePastFalse === false) {
-                    numberOfTimeScales = -numberOfTimeScales;
-                }
-                const timeScaleToMultiply = this.getTimeScaleToMultiplyInMs(timeScale);
-                let timeDifference = numberOfTimeScales * timeScaleToMultiply;
-
-                if (isLongTimeScale) {
-                    const timeArray = this.getUTCTimeArray(messageCreatedTimestamp);
-                    let [year, month, day, hour, minute, second, millisecond] = timeArray;
-                    console.log({ year, month, day, hour, minute, second, millisecond });
-                    const militaryTimeString = argsHaveDefinedTime ? this.getMilitaryTimeStringFromProperTimeArray(properTimeArray) : "00:00";
-                    console.log({ militaryTimeString });
-                    const timeAdjustment = this.getTimePastMidnightInMs(militaryTimeString);
-                    // For the case of Days, timeDifference is simply numberOfTimeScales * timeScaleToMultiply
-                    // But for the case of Months and Years, proper adjustments much be made.
-                    const isYearTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("year");
-                    const isMonthTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("month");
-                    if (isYearTimeScale || isMonthTimeScale) {
-                        // Mutually Exclusive Conditions
-                        if (isYearTimeScale) {
-                            year += numberOfTimeScales;
-                        }
-                        else {
-                            month += numberOfTimeScales;
-                            // The month auto-adjust to negative values of hours
-                        }
-                        if (argsHaveDefinedTime) {
-                            const splitTimeAdjustment = this.getHoursMinutesSecondsMillisecondsArray(timeAdjustment);
-                            // Since the day should not auto-adjust, but should be fixed
-                            day -= 1;
-                            hour += splitTimeAdjustment[0] - 1;
-                            minute = splitTimeAdjustment[1];
-                            second = splitTimeAdjustment[2];
-                            millisecond = splitTimeAdjustment[3];
-                        }
-                        else {
+                        if (isLongTimeScale) {
+                            const timeArray = this.getUTCTimeArray(messageCreatedTimestamp);
+                            let [year, month, day, hour, minute, second, millisecond] = timeArray;
+                            console.log({ year, month, day, hour, minute, second, millisecond });
+                            const militaryTimeString = argsHaveDefinedTime ? this.getMilitaryTimeStringFromProperTimeArray(properTimeArray) : "00:00";
+                            console.log({ militaryTimeString });
+                            const timeAdjustment = this.getTimePastMidnightInMs(militaryTimeString);
+                            console.log({ timeAdjustment });
+                            // For the case of Days, timeDifference is simply numberOfTimeScales * timeScaleToMultiply
+                            // But for the case of Months and Years, proper adjustments much be made.
+                            const isYearTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("year");
+                            const isMonthTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("month");
                             const timezoneOffset = timezoneString ? this.getTimezoneOffset(timezoneString) : userTimezone;
-                            hour += timezoneOffset;
-                            // The day auto-adjust to negative values of hours
+                            if (isYearTimeScale || isMonthTimeScale) {
+                                // Mutually Exclusive Conditions
+                                if (isYearTimeScale) {
+                                    year += numberOfTimeScales;
+                                }
+                                else {
+                                    month += numberOfTimeScales;
+                                    // The month auto-adjust to negative values of hours
+                                }
+                                if (argsHaveDefinedTime) {
+                                    const splitTimeAdjustment = this.getHoursMinutesSecondsMillisecondsArray(timeAdjustment);
+                                    console.log({ splitTimeAdjustment });
+                                    hour = splitTimeAdjustment[0];
+                                    minute = splitTimeAdjustment[1];
+                                    second = splitTimeAdjustment[2];
+                                    millisecond = splitTimeAdjustment[3];
+                                }
+                                else {
+                                    hour += timezoneOffset;
+                                    // The day auto-adjust to negative values of hours
+                                }
+                                console.log({ year, month, day, hour, minute, second, millisecond });
+                                timestampOut = new Date(year, month, day, hour, minute, second, millisecond).getTime();
+                                if (timestampOut < 0 && !argsHaveDefinedTime) {
+                                    timestampOut -= HOUR_IN_MS;
+                                }
+                                timeWasCalculated = true;
+                            }
+                            // Days and Weeks:
+                            else {
+                                if (argsHaveDefinedTime) {
+                                    const DAY_IN_MS = this.getTimeScaleToMultiplyInMs("day");
+                                    timeDifference += DAY_IN_MS + timeAdjustment - this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone);
+                                }
+                            }
                         }
-                        console.log({ year, month, day, hour, minute, second, millisecond });
-                        timestampOut = new Date(year, month, day, hour, minute, second, millisecond).getTime();
-                        if (timestampOut < 0 && !argsHaveDefinedTime) {
-                            timestampOut -= HOUR_IN_MS;
+
+                        console.log({ timestampOut, timeDifference, timeScaleToMultiply, numberOfTimeScales });
+                        if (timestampOut === undefined) {
+                            timestampOut = messageCreatedTimestamp + timeDifference;
+                        }
+                    }
+                    break;
+                case 2:
+                    if (dayOfWeekTest) {
+                        console.log("Day of Week test...");
+                        const numberOfTimeScales = this.getRelativeDayTimeScale(dayOfWeekTest, userTimezone);
+                        if (numberOfTimeScales === false) return false;
+                        console.log({ numberOfTimeScales });
+                        // const timeExpression = dayOfWeekTest.slice(5);
+                        const timeExpression = this.getProperTimeAndTimezoneArray(dayOfWeekTest, adjustedArgs);
+                        const [, , , , timezone] = timeExpression;
+                        timezoneString = timezone;
+                        console.log({ timeExpression, timezoneString });
+                        const timeArray = this.getUTCTimeArray(messageCreatedTimestamp);
+                        let [year, month, day, hour, minute, seconds, milliseconds] = timeArray;
+                        day += numberOfTimeScales;
+                        const timezoneOffset = timezoneString ? this.getTimezoneOffset(timezoneString) : userTimezone;
+                        // If no time arguments:
+                        if (!this.getNumberOfDefinedElements(timeExpression)) {
+                            hour += timezoneOffset
+                            timestampOut = new Date(year, month, day, hour, minute, seconds, milliseconds).getTime();
+                        }
+                        else {
+                            const militaryTimeString = this.getMilitaryTimeStringFromProperTimeArray(timeExpression);
+                            console.log({ militaryTimeString });
+                            if (!militaryTimeString) return false;
+                            const hoursAndMinutes = this.getHourAndMinuteSeparatedArrayFromMilitaryTime(militaryTimeString);
+                            hour = hoursAndMinutes[0];
+                            minute = hoursAndMinutes[1];
+                            console.log({ year, month, day, hour, minute });
+                            timestampOut = new Date(year, month, day, hour, minute).getTime();
                         }
                         timeWasCalculated = true;
+                        console.log({ timestampOut });
                     }
-                    // Days and Weeks:
-                    else {
-                        if (argsHaveDefinedTime) {
-                            timeDifference += timeScaleToMultiply + timeAdjustment - this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone);
+                    break;
+                case 3:
+                    if (absoluteTimeRegex) {
+                        console.log("Absolute Time test...");
+                        const properDateTimeArray = this.getProperDateAndTimeArray(absoluteTimeTest, adjustedArgs, 1);
+                        console.log({ properDateTimeArray });
+                        if (!properDateTimeArray) return false;
+
+                        // Now deal with the validity of the given date and time
+                        const yearMonthDay = this.getValidYearMonthDay(properDateTimeArray[0], absoluteTimeTest[1], properDateTimeArray[1]);
+                        console.log({ yearMonthDay });
+                        if (!yearMonthDay) return false;
+                        const [year, month, day] = yearMonthDay;
+                        const militaryTimeString = this.getMilitaryTimeStringFromProperTimeArray(properDateTimeArray.slice(2));
+                        console.log({ militaryTimeString });
+                        if (!militaryTimeString) return false;
+                        const hoursAndMinutes = this.getHourAndMinuteSeparatedArrayFromMilitaryTime(militaryTimeString);
+                        const [hour, minute] = hoursAndMinutes;
+                        console.log({ year, month, day, hour, minute });
+                        timestampOut = new Date(year, month, day, hour, minute).getTime();
+                        console.log({ timestampOut });
+                        timeWasCalculated = true;
+                    }
+                    break;
+                case 4:
+                    if (monthTimeTest) {
+                        // If the first element is defined: (i.e. the month)
+                        if (monthTimeTest[1]) {
+                            console.log("Relative Month and Absolute Time test...");
+                            const properDateTimeArray = this.getProperDateAndTimeArray(monthTimeTest, adjustedArgs);
+                            console.log({ properDateTimeArray });
+                            if (!properDateTimeArray) return false;
+
+                            // Now deal with the validity of the given date and time
+                            const yearMonthDay = this.getValidYearMonthDay(properDateTimeArray[0], monthTimeTest[1], properDateTimeArray[1]);
+                            console.log({ yearMonthDay });
+                            if (!yearMonthDay) return false;
+                            const [year, month, day] = yearMonthDay;
+                            const militaryTimeString = this.getMilitaryTimeStringFromProperTimeArray(properDateTimeArray.slice(2));
+                            console.log({ militaryTimeString });
+                            if (!militaryTimeString) return false;
+                            const hoursAndMinutes = this.getHourAndMinuteSeparatedArrayFromMilitaryTime(militaryTimeString);
+                            let hour = hoursAndMinutes[0];
+                            let minute = hoursAndMinutes[1];
+                            console.log({ year, month, day, hour, minute });
+                            timestampOut = new Date(year, month, day, hour, minute).getTime();
+                            console.log({ timestampOut });
+                            timeWasCalculated = true;
                         }
                     }
-                }
-
-                console.log({ timestampOut, timeDifference, timeScaleToMultiply, numberOfTimeScales });
-                if (timestampOut === undefined) {
-                    timestampOut = messageCreatedTimestamp + timeDifference;
-                }
+                    break;
             }
-        }
-        // else if (dayOfWeekTest) {
-        //     console.log(dayOfWeekTest.length);
-        //     if (dayOfWeekTest.length > 8) {
-        //         console.log("Day of week test!");
-        //     }
-        // }
-        else if (monthTimeTest) {
-            // If the first element is defined: (i.e. the month)
-            if (monthTimeTest[1]) {
-                console.log("Month Time (Relative) test!");
-                const properDateTimeArray = this.getProperDateAndTimeArray(monthTimeTest, adjustedArgs);
-                console.log({ properDateTimeArray });
-                if (!properDateTimeArray) return false;
-
-                // Now deal with the validity of the given date and time
-                const year = parseInt(properDateTimeArray[0]);
-                if (year < 0) return false;
-                const day = parseInt(properDateTimeArray[1]);
-                if (day <= 0) return false;
-                const monthString = monthTimeTest[1];
-                const month = this.getUTCMonthFromMonthString(monthString);
-                if (!month) return false;
-                // Month with 31 days: January, March, May, July, August, October, December
-                const thirtyOneMonths = [0, 2, 4, 6, 7, 9, 11];
-                const thirtyMonths = [3, 5, 8, 10];
-                if (thirtyOneMonths.includes(month)) {
-                    if (day > 31) return false;
-                }
-                // Month with 30 days: April, June, September, November
-                else if (thirtyMonths.includes(month)) {
-                    if (day > 30) return false;
-                }
-                else if (month === 1) {
-                    if (this.isLeapYear(year)) {
-                        if (day > 29) return false;
-                    }
-                    else {
-                        if (day > 28) return false;
-                    }
-                }
-                const militaryTimeString = this.getMilitaryTimeStringFromProperTimeArray(properDateTimeArray.slice(2));
-                if (!militaryTimeString) return false;
-                console.log({ militaryTimeString });
-                const hoursAndMinutes = /(\d{2}):(\d{2})/.exec(militaryTimeString);
-                let hour = parseInt(hoursAndMinutes[1]);
-                let minute = parseInt(hoursAndMinutes[2]);
-                console.log({ year, month, day, hour, minute });
-                timestampOut = new Date(year, month, day, hour, minute).getTime();
-                console.log({ timestampOut });
-                if (timestampOut < 0) {
-                    timestampOut -= HOUR_IN_MS;
-                }
-                console.log({ timestampOut });
-                timeWasCalculated = true;
-            }
-        }
-        else if (absoluteTimeRegex) {
-
-        }
-        else {
-            return false;
         }
 
         // Daylights Savings Adjustment:
@@ -1463,12 +1492,126 @@ module.exports = {
 
         // Adjust output based on timezone and daylight saving time considerations
         if (timestampOut !== undefined) {
-            console.log({ timestampOut, timezoneString, userTimezone, userDaylightSavingSetting })
+            console.log({ timestampOut, timezoneString, userTimezone, userDaylightSavingSetting });
             timestampOut = this.getUTCOffsetAdjustedTimestamp(timestampOut, userTimezone, userDaylightSavingSetting, timezoneString);
             console.log({ timestampOut });
             return timestampOut;
         }
         else timestampOut = false;
+    },
+
+    /**
+     * 
+     * @param {number} year 
+     * @param {number | string} month 
+     * @param {number} day 
+     */
+    getValidYearMonthDay: function (year, month, day) {
+        year = parseInt(year);
+        if (year < 0) return false;
+        if (year <= 99) {
+            const currentMillennium = Math.floor((new Date().getUTCFullYear()) / 1000) * 1000;
+            year += currentMillennium;
+        }
+        console.log({ year });
+        day = parseInt(day);
+        if (day <= 0) return false;
+        month = isNaN(month) ? this.getUTCMonthFromMonthString(month) : parseInt(month) - 1;
+        if (!month) return false;
+        if (!this.isValidDate(day, month, year)) return false;
+        return [year, month, day];
+    },
+
+    /**
+     * 
+     * @param {RegExpExecArray} relativeTimeTest 1
+     * @param {RegExpExecArray} dayOfWeekTest 2
+     * @param {RegExpExecArray} absoluteTimeTest 3 
+     * @param {RegExpExecArray} monthTimeTest 4
+     * Will return 0 if all are null.
+     */
+    getTimeTestChoice: function (relativeTimeTest, dayOfWeekTest, absoluteTimeTest, monthTimeTest) {
+        // Loop through each array, check if it has enough elements!
+        let choice = 0;
+        var relativeTimeElements, dayOfWeekElements, absoluteTimeElements, monthTimeElements;
+        if (relativeTimeTest) {
+            relativeTimeElements = this.getNumberOfDefinedElements(relativeTimeTest);
+            if (relativeTimeElements > 3) {
+                choice = 1;
+            }
+        }
+        if (dayOfWeekTest) {
+            dayOfWeekElements = this.getNumberOfDefinedElements(dayOfWeekTest);
+            if (dayOfWeekElements >= 2) {
+                if (relativeTimeElements) {
+                    if (dayOfWeekElements >= relativeTimeElements) {
+                        choice = 2;
+                    }
+                }
+                else {
+                    choice = 2;
+                }
+            }
+        }
+        if (absoluteTimeTest) {
+            absoluteTimeElements = this.getNumberOfDefinedElements(absoluteTimeTest)
+            if (absoluteTimeElements > 4) {
+                choice = 3;
+            }
+        }
+        if (monthTimeTest) {
+            monthTimeElements = this.getNumberOfDefinedElements(monthTimeTest);
+            if (monthTimeElements > 4) {
+                if (absoluteTimeElements) {
+                    if (monthTimeElements >= absoluteTimeElements) {
+                        choice = 4;
+                    }
+                }
+                else {
+                    choice = 4;
+                }
+            }
+        }
+        return choice;
+    },
+
+    getNumberOfDefinedElements: function (array) {
+        let elementCount = 0;
+        array.forEach((element) => {
+            if (element !== undefined) {
+                elementCount++
+            }
+        });
+        return elementCount;
+    },
+
+    /**
+     * 
+     * @param {number} day 
+     * @param {number} month Javascript month 0-11: 0 = January, 1 = February,...
+     * @param {number} year 
+     */
+    isValidDate: function (day, month, year) {
+        // Month with 31 days: January, March, May, July, August, October, December
+        const thirtyOneMonths = [0, 2, 4, 6, 7, 9, 11];
+        const thirtyMonths = [3, 5, 8, 10];
+        if (thirtyOneMonths.includes(month)) {
+            if (day > 31) return false;
+        }
+        // Month with 30 days: April, June, September, November
+        else if (thirtyMonths.includes(month)) {
+            if (day > 30) return false;
+        }
+        // February, check for leap year for valid date
+        else if (month === 1) {
+            if (this.isLeapYear(year)) {
+                if (day > 29) return false;
+            }
+            else {
+                if (day > 28) return false;
+            }
+        }
+        return true;
     },
 
     isLeapYear: function (year) {
@@ -1479,7 +1622,6 @@ module.exports = {
     getUTCMonthFromMonthString: function (monthString) {
         monthString = monthString.toLowerCase();
         var month;
-        // (?:january)|(?:jan?)|(?:february)|(?:feb?)|f|(?:march)|(?:mar)|(?:april)|(?:apr?)|(?:may)|(?:june?)|(?:july?)|(?:august)|(?:aug?)|(?:september)|(?:sept?)|(?:october)|(?:oct)|(?:november)|(?:nov?)|(?:december)|(?:dec?))
         // First Letter Switch
         switch (monthString[0]) {
             case 'a':
@@ -1512,6 +1654,111 @@ module.exports = {
                 break;
         }
         return month;
+    },
+
+    getRelativeDayTimeScale: function (relativeTimeExpressionArray, timezone) {
+        var numberOfTimeScales;
+        let relativeTime = /((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?))/.exec(relativeTimeExpressionArray[3]);
+        relativeTime = relativeTime ? relativeTime[1] : undefined;
+        let day = /((?:mondays?)|(?:m(?:on?)?)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:w(?:ed?)?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))/.exec(relativeTimeExpressionArray[3]);
+        day = day ? day[1] : undefined;
+        console.log({ relativeTimeExpressionArray, day, relativeTime });
+        // Assert Mutual Exclusive Expressions
+        if (!relativeTime && !day) return false;
+        if (relativeTime) {
+            if (/(?:yesterday)|(?:yest?)|(?:thedaybefore)/.test(relativeTime)) {
+                numberOfTimeScales = -1;
+            }
+            else if (/(?:tod(?:ay)?)/.test(relativeTime)) {
+                numberOfTimeScales = 0;
+            }
+            // Tomorrow (assumed)
+            else {
+                numberOfTimeScales = 1;
+            }
+            console.log({ numberOfTimeScales });
+            return numberOfTimeScales;
+        }
+        else if (day) {
+            let relativeDay = /((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))/.exec(relativeTimeExpressionArray[2]);
+            if (!relativeDay) return false;
+            else relativeDay = relativeDay[1];
+            if (/(?:\d+)/.test(relativeDay)) {
+                var futureTruePastFalse;
+                if (!relativeTimeExpressionArray[4]) {
+                    // In...
+                    if (relativeTimeExpressionArray[1]) {
+                        futureTruePastFalse = true;
+                    }
+                    else {
+                        return false;
+                    }
+                }
+                else {
+                    futureTruePastFalse = /(fromnow|later|inthefuture)/.test(relativeTimeExpressionArray[4]);
+                }
+                console.log({ futureTruePastFalse });
+                numberOfTimeScales = parseInt(relativeDay);
+                if (!futureTruePastFalse) {
+                    numberOfTimeScales = -numberOfTimeScales;
+                }
+            }
+            else if (/(?:last|past|previous|prior)/.test(relativeDay)) {
+                numberOfTimeScales = -1;
+            }
+            else if (/(?:next|following|this(?:coming)?)/.test(relativeDay)) {
+                numberOfTimeScales = 1;
+            }
+            else {
+                return false;
+            }
+
+            const isPastDay = numberOfTimeScales < 0 ? true : false
+            var targetDayOfWeek;
+            // First Letter Switch
+            switch (day[0]) {
+                case 'f':
+                    if (/(?:fridays?)|(?:f(?:ri?)?)/.test(day)) targetDayOfWeek = 5;
+                    break;
+                case 'm':
+                    if (/(?:mondays?)|(?:m(?:on?)?)/.test(day)) targetDayOfWeek = 1;
+                    break;
+                case 's':
+                    if (/(?:saturdays?)|(?:sat?)/.test(day)) targetDayOfWeek = 6;
+                    else if (/(?:sundays?)|(?:sun?)/.test(day)) targetDayOfWeek = 0;
+                    break;
+                case 't':
+                    if (/(?:tuesdays?)|(?:tu(?:es?)?)/.test(day)) targetDayOfWeek = 2;
+                    else if (/(?:thursdays?)|(?:th(?:urs?)?)/.test(day)) targetDayOfWeek = 4;
+                    break;
+                case 'w':
+                    if (/(?:wednesdays?)|(?:w(?:ed?)?)/.test(day)) targetDayOfWeek = 3;
+                    break;
+            }
+            if (!targetDayOfWeek) return false;
+
+            // Get how far the relative day of week is from the current day of the week
+            const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
+            let currentDate = new Date(new Date().getTime() + timezone * HOUR_IN_MS);
+            let currentDayOfWeek = currentDate.getUTCDay();
+            console.log({ currentDate, currentDayOfWeek, targetDayOfWeek });
+            // Convention: Traverse Forward along the Week, until the 
+            // Target Day of Week is found
+            var numberOfDaysForward = 0;
+            while (true) {
+                console.log({ numberOfDaysForward, currentDayOfWeek, targetDayOfWeek })
+                if (targetDayOfWeek !== currentDayOfWeek) {
+                    numberOfDaysForward++;
+                    currentDayOfWeek = (currentDayOfWeek + 1) % 7;
+                }
+                else break;
+            }
+            console.log({ numberOfDaysForward, numberOfTimeScales });
+            numberOfTimeScales = (numberOfTimeScales * 7) + numberOfDaysForward;
+            console.log({ numberOfTimeScales });
+            return numberOfTimeScales;
+        }
+        else return false;
     },
 
     /**
@@ -1641,8 +1888,22 @@ module.exports = {
         }
     },
 
-    getHourAndMinuteSeparatedArrayFromStandardTime: function (timeToTest) {
-        return /((?:1[0-2])|(?:0?[0-9]))([0-5][0-9])/.exec(timeToTest);
+    getStandardTimeRegex: function () {
+        return /((?:1[0-2])|(?:0?[0-9]))([0-5][0-9])/;
+    },
+
+    getHourAndMinuteSeparatedArrayFromStandardTime: function (standardTimeString) {
+        const hoursAndMinutes = this.getStandardTimeRegex().exec(standardTimeString);
+        hour = parseInt(hoursAndMinutes[1]);
+        minute = parseInt(hoursAndMinutes[2]);
+        return [hour, minute];
+    },
+
+    getHourAndMinuteSeparatedArrayFromMilitaryTime: function (militaryTimeString) {
+        const hoursAndMinutes = this.getMilitaryTimeRegex().exec(militaryTimeString);
+        hour = parseInt(hoursAndMinutes[1]);
+        minute = parseInt(hoursAndMinutes[2]);
+        return [hour, minute];
     },
 
     getMilitaryTimeStringFromProperTimeArray: function (splitTime) {
