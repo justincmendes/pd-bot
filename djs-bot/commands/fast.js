@@ -837,9 +837,7 @@ module.exports = {
                                 reset = true;
                             }
                         }
-                        else if (userReflection == "stop") {
-                            return;
-                        }
+                        else if (userReflection == "stop") return;
                         else if (userReflection == "skip") {
                             // Overwrite any previously collected data: Make sure the user wants to do that
                             let confirmSkip = await fn.getUserConfirmation(message, "Are you sure you want to **skip?**\nYour current reflection entry will be lost!",
@@ -1072,8 +1070,7 @@ module.exports = {
                 }
                 const fastView = await getOneFast(fastCollectionDocument, authorID, pastNumberOfEntriesIndex - 1);
                 if (fastView === undefined) {
-                    fn.sendErrorMessage(message, "**FAST DOES NOT EXIST**...");
-                    return;
+                    return fn.sendErrorMessage(message, "**FAST DOES NOT EXIST**...");
                 }
                 // NOT using the past functionality:
                 var fastData;
@@ -1118,27 +1115,23 @@ module.exports = {
             // delete help command so that the user does not get spammed with the usage message!
             if (args[1] != undefined) {
                 if (args[1].toLowerCase() == "help") {
-                    message.channel.send(fastDeleteUsage);
-                    return;
+                    return message.channel.send(fastDeleteUsage);
                 }
                 const fastView = await getTotalFasts(fastCollectionDocument, authorID);
                 // If the user has no fasts
                 if (fastView == 0) {
-                    message.reply(`NO FASTS... try \`${PREFIX}${commandUsed} start\``);
-                    return;
+                    return message.reply(`NO FASTS... try \`${PREFIX}${commandUsed} start\``);
                 }
             }
             // fast delete (only):
             else {
-                message.reply(`Try \`${PREFIX}${commandUsed} delete help\``);
-                return;
+                return message.reply(`Try \`${PREFIX}${commandUsed} delete help\``);
             }
 
             // Show the user the most recent fast
             if (args[1] == undefined || args.length == 1) {
                 message.channel.send(await getRecentFastEmbed(message, fastCollectionDocument, fastIsInProgress, PREFIX, commandUsed));
-                message.reply(fastDeleteHelpMessage);
-                return;
+                return message.reply(fastDeleteHelpMessage);
             }
 
             // delete past #:
@@ -1147,13 +1140,11 @@ module.exports = {
                 if (deleteType == "past") {
                     // If the following argument is not a number, exit!
                     if (isNaN(args[2])) {
-                        fn.sendErrorMessageAndUsage(message, fastDeleteHelpMessage);
-                        return;
+                        return fn.sendErrorMessageAndUsage(message, fastDeleteHelpMessage);
                     }
                     var numberArg = parseInt(args[2]);
                     if (numberArg <= 0) {
-                        fn.sendErrorMessageAndUsage(message, fastDeleteHelpMessage);
-                        return;
+                        return fn.sendErrorMessageAndUsage(message, fastDeleteHelpMessage);
                     }
 
                     const fastCollection = await getFastsIndexOf(fastCollectionDocument, authorID, 0, numberArg);
@@ -1169,8 +1160,7 @@ module.exports = {
                 }
                 if (deleteType == "many") {
                     if (args[2] === undefined) {
-                        message.reply(fastDeleteHelpMessage);
-                        return;
+                        return message.reply(fastDeleteHelpMessage);
                     }
                     // Get the arguments after keyword MANY
                     // Filter out the empty inputs and spaces due to multiple commas (e.g. ",,,, ,,, ,   ,")
@@ -1199,8 +1189,7 @@ module.exports = {
                     console.log(toDelete);
                     // Send error message if none of the given fasts exist
                     if (toDelete.length === 0) {
-                        fn.sendErrorMessage(message, "All of these **fasts DO NOT exist**...");
-                        return;
+                        return fn.sendErrorMessage(message, "All of these **fasts DO NOT exist**...");
                     }
                     var deleteConfirmMessage = "";
                     var fastTargetIDs = new Array();
@@ -1232,8 +1221,7 @@ module.exports = {
                             skipEntries = await getFastInProgressOrMostRecentIndex(fastCollectionDocument, authorID);
                         }
                         else {
-                            message.reply(fastDeleteHelpMessage);
-                            return;
+                            return message.reply(fastDeleteHelpMessage);
                         }
                     }
                     else {
@@ -1241,14 +1229,11 @@ module.exports = {
                     }
                     const pastNumberOfEntries = parseInt(args[1]);
                     if (pastNumberOfEntries <= 0 || skipEntries < 0) {
-                        fn.sendErrorMessageAndUsage(message, fastDeleteHelpMessage);
-                        return;
+                        return fn.sendErrorMessageAndUsage(message, fastDeleteHelpMessage);
                     }
                     const fastCollection = await getFastsIndexOf(fastCollectionDocument, authorID, skipEntries, pastNumberOfEntries);
                     const showFasts = multipleFastsToString(message, fastCollection, pastNumberOfEntries, skipEntries);
-                    if (skipEntries >= totalFastNumber) {
-                        return;
-                    }
+                    if (skipEntries >= totalFastNumber) return;
                     // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                     const multipleDeleteMessage = `Are you sure you want to **delete ${fastCollection.length} fast(s) past fast ${skipEntries}**:\n\n${showFasts}`;
                     const multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, forceSkip, "Fast: Multiple Delete Warning!");
@@ -1259,14 +1244,8 @@ module.exports = {
                     return;
                 }
                 // They haven't specified the field for the fast delete past function
-                else if (deleteType == "past") {
-                    message.reply(fastDeleteHelpMessage);
-                    return;
-                }
-                else {
-                    message.reply(fastDeleteHelpMessage);
-                    return;
-                }
+                else if (deleteType == "past") return message.reply(fastDeleteHelpMessage);
+                else return message.reply(fastDeleteHelpMessage);
             }
             // Next: FAST DELETE ALL
             // Next: FAST DELETE MANY
@@ -1300,8 +1279,7 @@ module.exports = {
                             `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
                         const pastNumberOfEntriesIndex = await getTotalFasts(fastCollectionDocument, authorID);
                         if (pastNumberOfEntriesIndex == 0) {
-                            fn.sendErrorMessage(message, noFastsMessage);
-                            return;
+                            return fn.sendErrorMessage(message, noFastsMessage);
                         }
                         let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, "Fast: Delete All Fasts WARNING!");
                         if (!confirmDeleteAll) return;
@@ -1314,16 +1292,14 @@ module.exports = {
                         return;
                     }
                     else {
-                        message.reply(fastDeleteHelpMessage);
-                        return;
+                        return message.reply(fastDeleteHelpMessage);
                     }
                 }
                 else {
                     const pastNumberOfEntriesIndex = parseInt(args[1]);
                     const fastView = await getOneFast(fastCollectionDocument, authorID, pastNumberOfEntriesIndex - 1);
                     if (fastView === undefined) {
-                        fn.sendErrorMessageAndUsage(message, trySeeCommandMessage, "**FAST DOES NOT EXIST**...");
-                        return;
+                        return fn.sendErrorMessageAndUsage(message, trySeeCommandMessage, "**FAST DOES NOT EXIST**...");
                     }
                     const fastData = fastCursorToDataArray(fastView);
                     const fastTargetID = [fastView._id];
@@ -1528,13 +1504,11 @@ module.exports = {
             if (args[1] !== undefined) {
                 var fastData;
                 if (args[1].toLowerCase() == "help") {
-                    message.channel.send(fastPostUsageMessage);
-                    return;
+                    return message.channel.send(fastPostUsageMessage);
                 }
                 // If the user has no fasts
                 if (totalFastsNumber == 0) {
-                    message.reply(`NO FASTS... try \`${PREFIX}${commandUsed} start help\``);
-                    return;
+                    return message.reply(`NO FASTS... try \`${PREFIX}${commandUsed} start help\``);
                 }
                 if (isNaN(args[1])) {
                     if (args[1].toLowerCase() == "recent" || args[1].toLowerCase() == "current") {
@@ -1556,8 +1530,7 @@ module.exports = {
                         return;
                     }
                     else {
-                        message.reply(fastPostHelpMessage);
-                        return;
+                        return message.reply(fastPostHelpMessage);
                     }
                 }
                 else {
@@ -1565,8 +1538,7 @@ module.exports = {
                     let pastNumberOfEntriesIndex = parseInt(args[1]) - 1;
                     const fastView = await getFastsIndexOf(fastCollectionDocument, authorID, pastNumberOfEntriesIndex);
                     if (fastView === undefined) {
-                        fn.sendErrorMessage(message, "**FAST DOES NOT EXIST**...");
-                        return;
+                        return fn.sendErrorMessage(message, "**FAST DOES NOT EXIST**...");
                     }
                     const shownFast = fastView[0];
                     if (pastNumberOfEntriesIndex === 0 && shownFast.endTime === null) {
@@ -1589,15 +1561,13 @@ module.exports = {
             }
             // fast post (only):
             else {
-                message.reply(fastPostHelpMessage);
-                return;
+                return message.reply(fastPostHelpMessage);
             }
         }
 
 
         else {
-            message.reply(fastHelpMessage);
-            return;
+            return message.reply(fastHelpMessage);
         }
     }
 };
