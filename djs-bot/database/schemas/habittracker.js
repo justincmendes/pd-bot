@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const Reminder = require("./reminder");
 
 // Last time tracked/checked will be the most recent of: log
 // Can map log to checkInMessage and show user all of the past logs!
@@ -54,5 +55,10 @@ const habitSchema = mongoose.Schema({
 
     },
 });
+
+// habitSchema.pre('remove', (next) => {
+//     Reminder.collection.deleteMany({ connectedDocument: this._id }, next);
+//     console.log(`Habit: Removing Associated Reminders (${this._id})...`);
+// });
 
 module.exports = mongoose.model("Habit", habitSchema, "habits");

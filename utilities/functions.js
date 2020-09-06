@@ -2,7 +2,11 @@
  * File of all the important and universally reusable functions!
  */
 const Discord = require("discord.js");
+const mongoose = require('mongoose');
+const Reminder = require('../djs-bot/database/schemas/reminder');
 require("dotenv").config();
+
+// Private Function Declarations
 
 module.exports = {
     getUserConfirmation: async function (userOriginalMessageObject, confirmationMessage, forceSkip = false, embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,
@@ -197,6 +201,145 @@ module.exports = {
         return result;
     },
 
+    // START of Mongoose Functions
+
+    /**
+     * 
+     * @param {mongoose.Model} Model 
+     * @param {[mongoose.objectId]} objectID 
+     * Delete many by Object ID and each of the associated reminders.
+     * _id - field for ObjectId convention (Parent)
+     * connectedDocument - field for ObjectId reference to parent document (Child)
+     */
+    deleteManyByIDAndConnectedReminders: async function (Model, objectID) {
+        try {
+            const documents = await Model.find({ _id: { $in: objectID } });
+            console.log({ documents });
+            if (!documents) {
+                console.log(`No ${Model.modelName} documents (${objectID}) can be found...`);
+                return false;
+            }
+            else {
+                console.log(`Deleting ${Model.modelName} documents (${objectID}) and it's associated reminders...`);
+                await documents.deleteMany();
+            }
+            documents.toArray().forEach(async (document) => {
+                const reminders = await Reminder.deleteMany({ connectedDocument: documents._id });
+                if (reminders.deletedCount === 0) {
+                    console.log(`No reminders associated to ${documents._id.toString()}`);
+                }
+                else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents._id.toString()}`);
+            });
+            return true;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
+    /**
+     * 
+     * @param {mongoose.Model} Model 
+     * @param {import("mongoose").MongooseFilterQuery} query In the form of an object (i.e. - {colour: red, objectType: "Function", count: 5})
+     */
+    deleteManyAndConnectedReminders: async function (Model, query) {
+        try {
+            console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
+            const documents = await Model.find(query);
+            console.log({ documents });
+            if (!documents) {
+                console.log(`No ${Model.modelName} documents found with query: ${query}, can be found...`);
+                return false;
+            }
+            else {
+                console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
+                await documents.deleteMany();
+            }
+            documents.toArray().forEach(async (document) => {
+                const reminders = await Reminder.deleteMany({ connectedDocument: documents._id });
+                if (reminders.deletedCount === 0) {
+                    console.log(`No reminders associated to ${documents._id.toString()}`);
+                }
+                else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents._id.toString()}`);
+            });
+            return true;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
+    /**
+     * 
+     * @param {mongoose.Model} Model 
+     * @param {mongoose.objectId} objectID 
+     * Delete one by Object ID and each of the associated reminders. Assumed Convention:
+     * _id - field for ObjectId convention (Parent)
+     * connectedDocument - field for reference to parent document (Child: ObjectId)
+     */
+    deleteOneByIDAndConnectedReminders: async function (Model, objectID) {
+        try {
+            const documents = await Model.findByIdAndDelete(objectID);
+            console.log({ documents });
+            if (!documents) {
+                console.log(`No ${Model.modelName} document (${objectID.toString()}) can be found...`);
+                return false;
+            }
+            else {
+                console.log(`Deleting ${Model.modelName} document (${objectID.toString()}) and it's associated reminders...`);
+            }
+
+            const reminders = await Reminder.deleteMany({ connectedDocument: documents._id });
+            if (reminders.deletedCount === 0) {
+                console.log(`No reminders associated to ${documents._id.toString()}`);
+            }
+            else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents._id.toString()}`);
+
+            return true;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
+    /**
+     * 
+     * @param {mongoose.Model} Model 
+     * @param {import("mongoose").MongooseFilterQuery} query In the form of an object (i.e. - {colour: red, objectType: "Function", count: 5})
+     */
+    deleteOneAndConnectedReminders: async function (Model, query) {
+        try {
+            console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
+            const documents = await Model.findOneAndDelete(query);
+            console.log({ documents });
+            if (!documents) {
+                console.log(`No ${Model.modelName} document found with query: ${query}, can be found...`);
+                return false;
+            }
+            else {
+                console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
+            }
+
+            const reminders = await Reminder.deleteMany({ connectedDocument: documents._id });
+            const deletedCount = reminders.deletedCount;
+            if (deletedCount === 0) {
+                console.log(`No reminders associated to ${documents._id.toString()}`);
+            }
+            else console.log(`Deleted ${deletedCount} reminders associated to ${documents._id.toString()}`);
+
+            return true;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
+    // END of Mongoose Functions
+
     userAndBotMutualServerIDs: async function (bot, userID, botServersIDs) {
         var botUserServers = new Array();
         for (i = 0; i < botServersIDs.length; i++) {
@@ -217,8 +360,8 @@ module.exports = {
     },
 
     // Note: This function displays values from 1 onwards but returns a properly indexed value (for arrays)
-    userSelectFromList: async function (userOriginalMessageObject, list, numberOfEntries, instructions, selectTitle, messageColour = "#ADD8E6",
-        delayTime = 120000, userMessageDeleteDelay = 0, messageAfterList = "") {
+    userSelectFromList: async function (userOriginalMessageObject, list, numberOfEntries, instructions, selectTitle,
+        messageColour = "#ADD8E6", delayTime = 120000, userMessageDeleteDelay = 0, messageAfterList = "") {
         do {
             targetIndex = await this.messageDataCollectFirst(userOriginalMessageObject, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
                 messageColour, delayTime, true, userMessageDeleteDelay);
@@ -278,8 +421,20 @@ module.exports = {
 
     millisecondsToTimeString: function (milliseconds) {
         if (milliseconds === null || milliseconds === undefined) return null;
+        var sign = ""
+        if (milliseconds < 0) {
+            sign = "-";
+            milliseconds = Math.abs(milliseconds);
+        }
         timeArray = this.getHoursMinutesSecondsMillisecondsArray(milliseconds);
-        return `${timeArray[0]}h:${timeArray[1]}m:${timeArray[2]}s`;
+        var timeString = "";
+        const days = Math.floor(parseInt(timeArray[0]) / 24);
+        if (days > 0) {
+            timeArray[0] -= days * 24;
+            timeString = `${days}d:`;
+        }
+        timeString += `${timeArray[0]}h:${timeArray[1]}m:${timeArray[2]}s`;
+        return `${sign}${timeString}`;
     },
 
 
@@ -453,7 +608,7 @@ module.exports = {
         if (!timezoneString) return undefined;
         // Can be a single number, multiple numbers, time, or string of 2-5 letters
         // In the form: 8:45
-        const timezoneFormatRegex = /(?:(\-)|(?:\+))(\d{1}(?:\d{1})?)[\:]?(\d{2})/;
+        const timezoneFormatRegex = /(?:(\-)|(?:\+))(\d{1}(?:\d{1})?)\:?(\d{2})/;
         const timezoneFormat = timezoneFormatRegex.exec(timezoneString);
         console.log({ timezoneFormat });
         if (timezoneFormat) {
@@ -481,7 +636,7 @@ module.exports = {
             else return offset;
         }
 
-        if (timezoneString.length < 2) return undefined;
+        if (timezoneString.length < 1) return undefined;
         timezoneString = timezoneString.toLowerCase();
         var timezoneOffset;
         const firstLetter = timezoneString[0];
@@ -1254,21 +1409,25 @@ module.exports = {
         }
     },
 
+    adjustYearDayHourMinuteTest: function (yearDayHourMinuteTest, adjustedArgs) {
+        const numOfDef = this.getNumberOfDefinedElements(yearDayHourMinuteTest);
+        const timezone = this.getElementFromBack(yearDayHourMinuteTest, 1);
+        // If the only two elements is the input string and the allowed text of the timezone
+        if (numOfDef === 2 && timezone) return null;
+        if (timezone) if (timezone !== this.getElementFromBack(adjustedArgs, 1)) return null;
+        return yearDayHourMinuteTest;
+    },
     // For timezones, allow user to select from the basic timezones or enter their own (i.e. Newfoundland And Labrador)
     // Use select from list and have the last option open for manual entry!
     // Have a truth value on for if Daylights Savings Time!!!
 
     // Using Regular Expressions
-    // Assumes that the userTimezone is NOT already daylight-savings adjusted
+    // Assumes that the userTimezone is already daylight-savings adjusted
     timeCommandHandlerToUTC: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
         const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         if (args[0].toLowerCase() == "now") {
             return this.getUTCOffsetAdjustedTimestamp(messageCreatedTimestamp, userTimezone, userDaylightSavingSetting);
         }
-
-        // Get day of week, starting from Sunday
-        const currentDate = new Date(messageCreatedTimestamp + (userTimezone * HOUR_IN_MS));
-        const currentDayOfWeek = currentDate.getUTCDate();
 
         // Convert from space separated arguments to time arguments
         // Step 1: Combine any Dates/Times space separated
@@ -1278,24 +1437,28 @@ module.exports = {
         console.log({ timeArgs });
 
         // Relative Time: Past and Future
-        const relativeTimeAgoOrFromNow = /(in)?(\d+\.?\d*|\d*\.?\d+)(minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const relativeTimeAgoOrFromNow = /(in)?(\d+\.?\d*|\d*\.?\d+)(minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const relativeTimeTest = relativeTimeAgoOrFromNow.exec(timeArgs);
         console.log({ relativeTimeTest });
-        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:m(?:on?)?)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:w(?:ed?)?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:m(?:on?)?)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:w(?:ed?)?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const dayOfWeekTest = dayOfWeekRegex.exec(timeArgs);
         console.log({ dayOfWeekTest });
         // Absolute Time: Past and Future
-        const absoluteTimeRegex = /(\d{1,2})([\/\.\,\-])?(\d{1,2})(?:([\/\.\,\-])(\d{1,4}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const absoluteTimeRegex = /(\d{1,2})([\/\.\,\-])?(\d{1,2})(?:([\/\.\,\-])(\d{1,4}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const absoluteTimeTest = absoluteTimeRegex.exec(timeArgs);
         console.log({ absoluteTimeTest });
         // Force the user to separate the date and year (if there is a year - this becomes an indicator for separation)
-        const monthTimeRegex = /((?:january)|(?:jan?)|(?:february)|(?:feb?)|f|(?:march)|(?:mar)|(?:april)|(?:apr?)|(?:may)|(?:june?)|(?:july?)|(?:august)|(?:aug?)|(?:september)|(?:sept?)|(?:october)|(?:oct)|(?:november)|(?:nov?)|(?:december)|(?:dec?))[\.\,]?(\d{1}(?:\d{1})?)(?:([\/\.\,\-])(\d{1,4}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)[\:]?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]{2,})|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)[\:]?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const monthTimeRegex = /((?:january)|(?:jan?)|(?:february)|(?:feb?)|f|(?:march)|(?:mar)|(?:april)|(?:apr?)|(?:may)|(?:june?)|(?:july?)|(?:august)|(?:aug?)|(?:september)|(?:sept?)|(?:october)|(?:oct)|(?:november)|(?:nov?)|(?:december)|(?:dec?))[\.\,]?(\d{1}(?:\d{1})?)(?:([\/\.\,\-])(\d{1,4}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const monthTimeTest = monthTimeRegex.exec(timeArgs);
         console.log({ monthTimeTest });
+        const yearDayHourMinuteRegex = /(in)?(?:((?:\d+\.?\d*|\d*\.?\d+)y))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)d))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)h))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)m))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)s))?(?<!\:+|^$)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at|in|with)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?/;
+        const yearDayHourMinuteTest = this.adjustYearDayHourMinuteTest(yearDayHourMinuteRegex.exec(timeArgs), adjustedArgs);
+        console.log({ yearDayHourMinuteTest });
 
-        // 1 - Relative Time Test; 2 - Day Of Week Test;
-        // 3 - Absolute Time Test; 4 - Month And Time Test;
-        const decision = this.getTimeTestChoice(relativeTimeTest, dayOfWeekTest, absoluteTimeTest, monthTimeTest);
+        // 1 - Relative Time; 2 - Day Of Week;
+        // 3 - Absolute Time; 4 - Month And Time;
+        // 5 - Year-Day-Hour-Minute;
+        const decision = this.getTimeTestChoice(relativeTimeTest, dayOfWeekTest, absoluteTimeTest, monthTimeTest, yearDayHourMinuteTest);
         console.log({ decision });
         // 0 - All choices we're null or insufficient/not chosen.
         if (!decision) return false;
@@ -1317,9 +1480,7 @@ module.exports = {
                         // Args with no defined time AND Args with defined time having a whole number first argument (i.e. 2 days)
                         let futureTruePastFalse = this.futureTruePastFalseRegexTest(relativeTimeTest[4]);
                         if (futureTruePastFalse === undefined) {
-                            if (relativeTimeTest[1]) {
-                                futureTruePastFalse = true;
-                            }
+                            if (relativeTimeTest[1]) futureTruePastFalse = true;
                             else return false;
                         }
                         // If Long Relative Time Scale and a Defined Time: Receive Whole Number First Argument
@@ -1470,6 +1631,41 @@ module.exports = {
                         }
                     }
                     break;
+                case 5:
+                    if (yearDayHourMinuteTest) {
+                        let futureTruePastFalse = this.futureTruePastFalseRegexTest(yearDayHourMinuteTest[7]);
+                        if (futureTruePastFalse === undefined) {
+                            if (yearDayHourMinuteTest[1]) futureTruePastFalse = true;
+                            else return false;
+                        }
+                        var timeDifference = 0;
+                        for (i = 2; i <= 6; i++) {
+                            if (yearDayHourMinuteTest[i]) {
+                                // Extract y-h-d-m-s
+                                const timeScale = /(\d+\.?\d*|\d*\.?\d+)(\w)/.exec(yearDayHourMinuteTest[i]);
+                                if (timeScale) {
+                                    switch (timeScale[2]) {
+                                        case 'y': timeDifference += timeScale[1] * this.getTimeScaleToMultiplyInMs("year");
+                                            break;
+                                        case 'd': timeDifference += timeScale[1] * this.getTimeScaleToMultiplyInMs("day");
+                                            break;
+                                        case 'h': timeDifference += timeScale[1] * this.getTimeScaleToMultiplyInMs("hour");
+                                            break;
+                                        case 'm': timeDifference += timeScale[1] * this.getTimeScaleToMultiplyInMs("minute");
+                                            break;
+                                        case 's': timeDifference += timeScale[1] * this.getTimeScaleToMultiplyInMs("second");
+                                            break;
+                                    }
+                                }
+                            }
+                        }
+                        if (timeDifference === 0) return false;
+                        timeDifference = futureTruePastFalse ? timeDifference : -timeDifference;
+                        timestampOut = messageCreatedTimestamp + timeDifference;
+                        timezoneString = yearDayHourMinuteTest[8];
+                        timeWasCalculated = false;
+                    }
+                    break;
             }
         }
 
@@ -1528,9 +1724,10 @@ module.exports = {
      * @param {RegExpExecArray} dayOfWeekTest 2
      * @param {RegExpExecArray} absoluteTimeTest 3 
      * @param {RegExpExecArray} monthTimeTest 4
+     * @param {RegExpExecArray} yearDayHourMinuteTest 5
      * Will return 0 if all are null.
      */
-    getTimeTestChoice: function (relativeTimeTest, dayOfWeekTest, absoluteTimeTest, monthTimeTest) {
+    getTimeTestChoice: function (relativeTimeTest, dayOfWeekTest, absoluteTimeTest, monthTimeTest, yearDayHourMinuteTest) {
         // Loop through each array, check if it has enough elements!
         let choice = 0;
         var relativeTimeElements, dayOfWeekElements, absoluteTimeElements, monthTimeElements;
@@ -1571,6 +1768,10 @@ module.exports = {
                     choice = 4;
                 }
             }
+        }
+        if (yearDayHourMinuteTest) {
+            const yearDayHourMinuteElements = this.getNumberOfDefinedElements(yearDayHourMinuteTest);
+            if (yearDayHourMinuteElements >= 2) choice = 5;
         }
         return choice;
     },
@@ -1777,7 +1978,7 @@ module.exports = {
     },
 
     timestampToDateString: function (timestamp) {
-        if (timestamp === undefined || timestamp === null) return null;
+        if (timestamp === undefined || timestamp === null || timestamp === false) return null;
         const date = new Date(timestamp);
         const year = date.getUTCFullYear();
         const month = date.getUTCMonth() + 1;

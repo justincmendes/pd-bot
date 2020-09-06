@@ -2,7 +2,7 @@
  * @author Justin Mendes
  * @license MIT
  * Date Created: July 18, 2020
- * Last Updated: August 10, 2020
+ * Last Updated: September 1, 2020
  */
 
 // TO-DO ALIASES ON COMMANDS!
@@ -14,12 +14,14 @@ const TOKEN = process.env.TOKEN;
 const Discord = require("discord.js");
 const bot = new Discord.Client({ partials: ["MESSAGE", "CHANNEL", "REACTION"] });
 const fn = require("../utilities/functions");
+const rm = require("../utilities/reminder");
 const fs = require("fs");
 bot.commands = new Discord.Collection();
 const cooldowns = new Discord.Collection();
 
 const mongoose = require("mongoose");
 const GuildSettings = require("./database/schemas/guildsettings");
+const Reminder = require("./database/schemas/reminder");
 bot.mongoose = require("../utilities/mongoose");
 
 //This shouldn't happen, this would be on Node.js
@@ -42,12 +44,15 @@ fs.readdir("./djs-bot/commands", (err, files) => {
     });
 });
 
-
+bot.mongoose.init();
 
 bot.on("ready", async () => {
     console.log(`${bot.user.username} is now online!`);
 
     bot.user.setActivity(`you thrive! | ?help`, { type: "WATCHING" });
+
+    // Reinstantiating the current reminders:
+    await rm.resetReminders(bot);
 
     // //Generating Link
     //Method 1:
@@ -80,30 +85,28 @@ bot.on("ready", async () => {
 //     }
 // });
 
-bot.mongoose.init();
-
 bot.on("message", async message => {
     const guildConfig = new GuildSettings();
     const guildID = message.channel.type === 'dm' ? null : message.guild.id;
     const guildSettingsObject = message.channel.type === 'dm' ? null : await guildConfig.collection.find({ guildID }).limit(1).toArray();
     const PREFIX = message.channel.type === 'dm' ? "?" : guildSettingsObject[0].prefix;
 
-    //If the message is from a bot, ignore
-    //When the message does not start with prefix, do nothing
+    // If the message is from a bot, ignore
+    // When the message does not start with prefix, do nothing
     if (message.author.bot || !message.content.startsWith(PREFIX)) return;
 
-    //Args/Arguments:
-    //.slice to remove the first part of message containing the prefix
-    //.split to section off multiple parts of the command (i.e. "?fast start now")
-    //.shift() takes the first elements of the array
-    //args will give all of the arguments passed in from the user
+    // Args/Arguments:
+    // .slice to remove the first part of message containing the prefix
+    // .split to section off multiple parts of the command (i.e. "?fast start now")
+    // .shift() takes the first elements of the array
+    // args will give all of the arguments passed in from the user
     const messageArray = message.content.split(/ +/);
-    //Get the command (Word after prefix)
+    // Get the command (Word after prefix)
     const commandName = messageArray[0].slice(PREFIX.length).toLowerCase();
-    //Get all of the arguments after the initial command
+    // Get all of the arguments after the initial command
     let args = messageArray.slice(1);
 
-    //Otherwise, begin checking if the message is a viable command!
+    // Otherwise, begin checking if the message is a viable command!
     // With ALIASES
     const command = bot.commands.get(commandName)
         || bot.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
@@ -143,7 +146,7 @@ bot.on("message", async message => {
     else {
         forceSkip = false;
     }
-    
+
     try {
         command.run(bot, message, commandName, args, PREFIX, forceSkip);
     } catch (err) {
@@ -227,3 +230,5 @@ bot.on('guildDelete', async (guild) => {
 })
 
 bot.login(TOKEN);
+
+module.exports = { bot: bot, };
