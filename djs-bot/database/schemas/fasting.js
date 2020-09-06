@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const Reminder = require("./reminder");
+// const Reminder = require("./reminder");
 
 const fastSchema = new mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,

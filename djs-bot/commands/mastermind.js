@@ -98,7 +98,7 @@ module.exports = {
         // Variable Declarations and Initializations
         let mastermindUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\``
             + "\n\n\`<ACTION>\`: **template/templates/temp/t; help**"
-            + `\n\n*__ALIASES:__* **${this.name}; ${this.aliases.join('; ')}**`
+            + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`
             + "\n\n**FUTURE FEATURES: settings; create; reflection; goals**";
         mastermindUsageMessage = fn.getMessageEmbed(mastermindUsageMessage, "Mastermind: Help", mastermindEmbedColour);
         const mastermindHelpMessage = `Try \`${PREFIX}${commandUsed} help\`...`;

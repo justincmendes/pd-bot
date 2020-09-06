@@ -1,32 +1,41 @@
-// // Global Variable Declarations and Initializations
-// const Discord = require("discord.js");
-// const Reminders = require("../database/schemas/reminders");
-// const mongoose = require("mongoose");
-// const fn = require("../../utilities/functions");
-// require("dotenv").config();
-// const goalsEmbedColour = "#0000FF";
+// Global Variable Declarations and Initializations
+const Discord = require("discord.js");
+const Reminder = require("../database/schemas/reminder");
+const mongoose = require("mongoose");
+const fn = require("../../utilities/functions");
+require("dotenv").config();
+const goalsEmbedColour = "#0000FF";
+const reminderType = "Reminder";
 
-// // Function Declarations and Definitions
+// Function Declarations and Definitions
 
-// module.exports = {
-//     name: "remindme",
-//     description: "Set personal reminders",
-//     aliases: ["rm"],
-//     cooldown: 5,
-//     args: true,
-//     run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
-//         // Variable Declarations and Initializations
-//         // See - with markdown option!
-//         let goalsUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
-//             + "\n\n\`<ACTION>\`: **template/templates/temp/t; see; add; edit; delete/remove; post**"
-//             + `\n\n*__ALIASES:__* **${this.name}; ${this.aliases.join('; ')}**`;
-//         goalsUsageMessage = fn.getMessageEmbed(goalsUsageMessage, "Goals: Help", goalsEmbedColour);
-//         const goalsHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
-//         var goalsCommand = args[0].toLowerCase();
+module.exports = {
+    name: "reminder",
+    description: "Set personal reminders or group",
+    aliases: ["rm", "remindme", "remind", "reminders"],
+    cooldown: 5,
+    args: true,
+    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
+        // Variable Declarations and Initializations
+        let reminderUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <DATE/TIME> <CHANNEL> <MESSAGE> <force?>\``
+            + "\n\n\`<DATE/TIME>\`: **any\*\***"
+            + "\n\n\`<CHANNEL>\`: **dm, #channel_name**"
+            + "\n\n\`<MESSAGE>\`: To send at the given time __*(Remember to tag the roles/users you want to ping in the message!)*__"
+            + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**"
+            + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
+        reminderUsageMessage = fn.getMessageEmbed(reminderUsageMessage, "Reminder: Help", goalsEmbedColour);
+        const reminderHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
+        var reminderCommand = args[0].toLowerCase();
+        if (reminderCommand === "help") {
+            return message.channel.send(reminderUsageMessage);
+        }
 
-//         if (goalsCommand == "help") {
-//             message.channel.send(goalsUsageMessage);
-//             return;
-//         }
-//     }
-// };
+
+        // Add confirmation window to ask if the user wants a repeat! (Recurring Reminder)
+        // Other functions: Edit, Remove
+        // else if()
+        else {
+            return message.reply(reminderHelpMessage);
+        }
+    }
+};

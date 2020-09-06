@@ -19,7 +19,7 @@ module.exports = {
         // See - with markdown option!
         let goalsUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
             + "\n\n\`<ACTION>\`: **template/templates/temp/t; see; add; edit; delete/remove; post**"
-            + `\n\n*__ALIASES:__* **${this.name}; ${this.aliases.join('; ')}**`;
+            + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         goalsUsageMessage = fn.getMessageEmbed(goalsUsageMessage, "Goals: Help", goalsEmbedColour);
         const goalsHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
         var goalsCommand = args[0].toLowerCase();

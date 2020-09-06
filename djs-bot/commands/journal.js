@@ -73,7 +73,7 @@ module.exports = {
         // Variable Declarations and Initializations
         let journalUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
             + "\n\n\`<ACTION>\`: **template/templates/temp/t; help**"
-            + `\n\n*__ALIASES:__* **${this.name}; ${this.aliases.join('; ')}**`
+            + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`
             + "\n\n**FUTURE FEATURES: create; see; edit; end**";
         journalUsageMessage = fn.getMessageEmbed(journalUsageMessage, "Journal: Help", journalEmbedColour);
         const journalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;

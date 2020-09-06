@@ -678,7 +678,7 @@ module.exports = {
         // Variable Declarations and Initializations
         var fastUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\`\n\n`
             + "`<ACTION>`: **help; start; end; see; edit; delete; post**"
-            + `\n\n*__ALIASES:__* **${this.name}; ${this.aliases.join('; ')}**`;
+            + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         fastUsageMessage = fn.getMessageEmbed(fastUsageMessage, "Fast: Help", fastEmbedColour);
         const fastHelpMessage = `Try \`${PREFIX}fast help\``;
         const authorID = message.author.id;
@@ -1368,25 +1368,6 @@ module.exports = {
                         const deleteIsConfirmed = await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Fast: Delete Recent Fast`, 300000)
                         if (deleteIsConfirmed) {
                             await fn.deleteOneByIDAndConnectedReminders(Fast, fastTargetID);
-
-                            // try {
-                            //     const find = await Fast.findById({ _id: fastTargetID });
-                            //     console.log({ find });
-                            //     if (find) {
-                            //         console.log(`Deleting ${authorUsername}'s (${authorID}) Recent Fast`);
-                            //         await Fast.deleteOne({ _id: fastTargetID });
-                            //     }
-                            // }
-                            // catch (err) {
-                            //     console.error(err);
-                            // }
-
-                            // const deleteOne = await Fast.findOneAndDelete({ _id: fastTargetID }, (err, res) => {
-                            //     if (err) console.error(err);
-                            //     console.log({res});
-                            // });
-
-                            // fastCollectionDocument.deleteOne({ _id: { $in: fastTargetID } });
                             return;
                         }
                     }

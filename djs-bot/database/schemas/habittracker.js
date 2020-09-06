@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const Reminder = require("./reminder");
+// const Reminder = require("./reminder");
 
 // Last time tracked/checked will be the most recent of: log
 // Can map log to checkInMessage and show user all of the past logs!
@@ -13,18 +13,24 @@ const habitSchema = mongoose.Schema({
     totalMissed: Number,
     totalSkip: Number,
     totalDays: Number,
-    // Past 7 Days
+    // Past 7 Days since weekly cron
     pastWeek: Number,
+    // Past 7 Days
+    pastSeven: Number,
     // Past 30 Days
-    pastMonth: Number,
+    pastThirty: Number,
     allTimeAvg: Number,
     monthAvg: Number,
     // Relative to January 1, 1970 00:00:00 UTC.
-    cronTime: Number,
+    dailyCronTime: Number,
+    weeklyCronDay: Number,
 
     // For Habits that have a daily/general counter!
     countHabitSettings: {
-        "isCountType": Boolean,
+        "isCountType": {
+            type: Boolean,
+            required: true,
+        },
         // To automatically mark complete or incomplete on day!
         "autoMarkCountGoal": {
             type: Boolean,
@@ -48,11 +54,10 @@ const habitSchema = mongoose.Schema({
         "Title": String,
         "Description": String,
         // Ensure there is only one log per cron
-        "timeLog": [Number],
+        "log": [Number],
         // Allow for Checked: ✅; Missed: ❌; Skip: ➖ (still counts as a log)
         "checkInType": [String],
         "checkInMessage": [String],
-
     },
 });
 

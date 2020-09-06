@@ -22,6 +22,7 @@ const cooldowns = new Discord.Collection();
 const mongoose = require("mongoose");
 const GuildSettings = require("./database/schemas/guildsettings");
 const Reminder = require("./database/schemas/reminder");
+const { SSL_OP_EPHEMERAL_RSA } = require("constants");
 bot.mongoose = require("../utilities/mongoose");
 
 //This shouldn't happen, this would be on Node.js
@@ -210,7 +211,7 @@ bot.on("guildCreate", async (guild) => {
     catch (err) {
         console.error(err);
     }
-})
+});
 
 // Remove the settings and preset data if PD is removed from guild
 bot.on('guildDelete', async (guild) => {
@@ -227,8 +228,19 @@ bot.on('guildDelete', async (guild) => {
     catch (err) {
         console.error(err);
     }
-})
+});
 
-bot.login(TOKEN);
+// To ensure that the MongoDB is connected before logging in
+// the bot as the "ready" even resets lingering reminders
+// which relies on MongoDB to be online!
+const ensureDB = setInterval(() => {
+    if (mongoose.connection.readyState === 1) {
+        bot.login(TOKEN);
+        clearInterval(ensureDB);
+    }
+    else {
+        console.log("Waiting for MongoDB to connect...");
+    }
+}, 600);
 
 module.exports = { bot: bot, };

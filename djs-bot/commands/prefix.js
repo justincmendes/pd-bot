@@ -35,7 +35,7 @@ module.exports = {
             message.channel.send(showCurrentPrefix);
         }
         else if (args[0].toLowerCase() == "help") {
-            message.channel.send(showCurrentPrefix);
+            message.channel.send(`${showCurrentPrefix}\n__*ALIASES:*__ **${this.name} - ${this.aliases.join('; ')}**`);
         }
         else {
             if (message.author.id === message.guild.owner.id) {
