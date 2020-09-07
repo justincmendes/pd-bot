@@ -815,9 +815,9 @@ module.exports = {
                 console.log({ fastDocumentID });
                 if (reminderEndTime || reminderEndTime === 0) {
                     // First Reminder: 1 Hour Warning/Motivation
-                    setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime + userTimezoneOffset * HOUR_IN_MS, 1);
+                    setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, currentTimestamp, currentTimestamp + userTimezoneOffset * HOUR_IN_MS, reminderEndTime + userTimezoneOffset * HOUR_IN_MS, 1);
                     // Second Reminder: End Time
-                    setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime + userTimezoneOffset * HOUR_IN_MS);
+                    setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, currentTimestamp + userTimezoneOffset * HOUR_IN_MS, reminderEndTime + userTimezoneOffset * HOUR_IN_MS);
                 }
                 newFast.save()
                     .then(result => console.log(result))

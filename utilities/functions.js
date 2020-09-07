@@ -1490,7 +1490,7 @@ module.exports = {
                         let timeDifference = numberOfTimeScales * timeScaleToMultiply;
 
                         if (isLongTimeScale) {
-                            const timeArray = this.getUTCTimeArray(messageCreatedTimestamp);
+                            const timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
                             let [year, month, day, hour, minute, second, millisecond] = timeArray;
                             console.log({ year, month, day, hour, minute, second, millisecond });
                             const militaryTimeString = argsHaveDefinedTime ? this.getMilitaryTimeStringFromProperTimeArray(properTimeArray) : "00:00";
@@ -1556,13 +1556,13 @@ module.exports = {
                         const [, , , , timezone] = timeExpression;
                         timezoneString = timezone;
                         console.log({ timeExpression, timezoneString });
-                        const timeArray = this.getUTCTimeArray(messageCreatedTimestamp);
+                        const timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
                         let [year, month, day, hour, minute, seconds, milliseconds] = timeArray;
                         day += numberOfTimeScales;
                         const timezoneOffset = timezoneString ? this.getTimezoneOffset(timezoneString) : userTimezone;
                         // If no time arguments:
                         if (!this.getNumberOfDefinedElements(timeExpression)) {
-                            hour += timezoneOffset
+                            hour += timezoneOffset;
                             timestampOut = new Date(year, month, day, hour, minute, seconds, milliseconds).getTime();
                         }
                         else {
@@ -1770,8 +1770,8 @@ module.exports = {
         if (yearDayHourMinuteTest) {
             const yearDayHourMinuteElements = this.getNumberOfDefinedElements(yearDayHourMinuteTest);
             if (yearDayHourMinuteElements >= 2) {
-                if(relativeTimeElements) {
-                    if(relativeTimeElements < 4) {
+                if (relativeTimeElements) {
+                    if (relativeTimeElements < 4) {
                         choice = 5;
                     }
                 }
