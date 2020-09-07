@@ -10,31 +10,7 @@ require("dotenv").config();
 
 const fastEmbedColour = "#32CD32";
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
-const dateAndTimeInstructions =
-    "`<DATE/TIME>`: **NOT Case-Sensitive!**\nEnter **timezone (optional)** at the **end**.\nThe **\"at\"** before the time is **optional.**"
-    // + "\n**? = optional, # = number**\n`<in?>`: (OPT.) **future date/time**\n`<RELATIVE TIME>`: **(PAST) ago/prior/before**\nOR **(FUTURE) from now/later/in the future**"
-    // + "\n`<DAY OF WEEK>`: **Mon/Monday, Tues/Tuesday,..., Sun/Sunday**\n`<RELATIVE TO NOW>`: **yesterday/yest/the day before**\nOR **today/tod**\nOR **tomorrow/tom/tmrw**"
-    // + "\n`<TIME SCALES>`: **minutes/min, hours/hr, days, weeks, months, years/yrs**"
-    // + "\n`<TIME>`: **Military or Standard**\n***(e.g. 13:00, 159am, 1:59, 1259p, 1pm, 6a, 645p, 23:59)***"
-    // + "\n`<TIMEZONE?>`: (OPT. - CAN BE ADDED TO THE END OF ANY DATE/TIME)\nEnter the timezone in as **abbreviation or a UTC offset**\n***(e.g. est, pst, cdt, amt, -4:00, +12, +130)*** - **DEFAULT:** Your Timezone (settings)"
-    + "\n\n__**`Enter date and/or time in relative terms`**__:"
-    // + "\n`<in?> # <TIME SCALES> <RELATIVE TIME> <at?> <TIME?> <TIMEZONE?>`"
-    // + "\n`<in?> # <DAY OF WEEK> <RELATIVE TIME> <at?> <TIME?> <TIMEZONE?>`\n`<previous/last/past/next/this> <DAY OF WEEK> <at?> <TIME?> <TIMEZONE?>`"
-    // + "\n`<RELATIVE TO NOW> <at?> <TIME?> <TIMEZONE?>`\n`<in?> #y:#d:#h:#m:#s <RELATIVE TIME> <TIMEZONE?>`"
-    + "\ni.e. **now **\|** 1 hour ago **\|** 15.5 minutes ago **\|** in 72 mins **\|** 2.5 hrs from now"
-    + "\n**\|** yesterday at 10pm EST **\|** tmrw 9pm **\|** today at 8pm mst"
-    + "\n**\|** 2 days ago 6P PST **\|** 1 year ago 13:59 **\|** in 5 months at 830p -130"
-    + "\n**\|** last monday at 159 CDT **\|** next friday at 645a **\|** 5 mondays ago 1259a -4:00"
-    + "\n**\|** in 5y3d2s +12 **\|** 5d ago **\|** 4h:2m:25s from now EDT**"
-    // + "`<DATE SEPARATORS>`: **\. \, \/ \-**\n`<MONTH>`: Name (january/jan, february/feb,..., december/dec) or Number (1-12)"
-    // + "\n`<DAY>`: Number - #\n`<YEAR?>`: (OPT.) Number - #"
-    + "\n\n***\-\-OR\-\-***"
-    + "\n\n__**`Enter date and time in absolute terms`**__:\n**FORMAT: <MONTH/DAY/YEAR>** (YEAR is optional, **Default: Current Year**)\n- Each must be **separated** by one of the following: **\. \, \/ \-**"
-    // + "\n`<MONTH> <DATE SEPARATOR?> <DAY> <DATE SEPARATOR?> <YEAR?> <at?> <TIME> <TIMEZONE?>`\n"
-    + "\ni.e. **3/22/2020 at 10a EST **\|** 3.22.2020 at 9PM **\|** 3-22-2020 120a"
-    + "\n**\|** 3.22 9p **\|** 2/28 13:59 +8:00 **\|** 10-1 at 15:00"
-    + "\n**\|** Jan 5, 2020 00:00 -5:00 **\|** Aug 31/20 12a PDT **\|** September 8, 2020 559 CDT**"
-    + "\n\nRemember **Daylight Saving Time (DST)** when entering **abbreviated timezones**:\n**EST and EDT** for example, are **different** because of DST.";
+const dateAndTimeInstructions = fn.getDateAndTimeInstructions;
 
 
 // REDESIGNED:
@@ -902,7 +878,7 @@ module.exports = {
                 const quickEndMessage = `**✅ - Log additional information: fast breaker, mood, reflection**` +
                     `\n**⌚ - Quickly log** your **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast now` +
                     `\n**❌ - Exit**` +
-                    `\n\n\\*IF \`<DATE/TIME>\` is at a **FUTURE time**: (use ⌚)\\* (you can always \`${PREFIX}${commandUsed} edit\`)`;
+                    `\n\n\\*IF \`<DATE/TIME>\` is at a **FUTURE time**: you can always \`${PREFIX}${commandUsed} edit\``;
                 const quickEndEmojis = ["✅", "❌", "⌚"];
                 var endConfirmation = `Are you sure you want to **end** your **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast?`;
                 const fastBreakerPrompt = "**What did you break your fast with?** \n\nType `skip` to **skip** (will **continue**, but log it as blank)";
@@ -996,22 +972,24 @@ module.exports = {
                     }, async (err, doc) => {
                         if (err) return console.error(`Failed to end fast:\n${err}`);
                         // Removing any lingering reminders
-                        const removeReminders = await Reminder.deleteMany({ connectedDocument: doc._id });
-                        console.log({ removeReminders });
-                        // Posting the fast
-                        message.reply(`You have successfully logged your **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!`);
-                        const confirmPostFastMessage = "Would you like to take a **picture** of your **fast breaker** *and/or* **send a message** to a server channel? (for accountability!)"
-                            + "\n\n(if ✅, I will list the servers you're in to find the channel you want to post to!)";
-                        let confirmPostFast = await fn.getUserConfirmation(message, confirmPostFastMessage, forceSkip, "Send Message for Accountability?", 180000, 0);
-                        if (!confirmPostFast) return;
-                        else {
-                            let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
-                            if (!fastPost) return;
-                            if (endTimestamp === null) {
-                                await postFast(bot, message, fastPost, startTimestamp, PREFIX, commandUsed, forceSkip);
-                            }
+                        if (doc) {
+                            const removeReminders = await Reminder.deleteMany({ connectedDocument: doc._id });
+                            console.log({ removeReminders });
+                            // Posting the fast
+                            message.reply(`You have successfully logged your **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!`);
+                            const confirmPostFastMessage = "Would you like to take a **picture** of your **fast breaker** *and/or* **send a message** to a server channel? (for accountability!)"
+                                + "\n\n(if ✅, I will list the servers you're in to find the channel you want to post to!)";
+                            let confirmPostFast = await fn.getUserConfirmation(message, confirmPostFastMessage, forceSkip, "Send Message for Accountability?", 180000, 0);
+                            if (!confirmPostFast) return;
                             else {
-                                await postFast(bot, message, fastPost, endTimestamp, PREFIX, commandUsed, forceSkip);
+                                let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
+                                if (!fastPost) return;
+                                if (endTimestamp === null) {
+                                    await postFast(bot, message, fastPost, startTimestamp, PREFIX, commandUsed, forceSkip);
+                                }
+                                else {
+                                    await postFast(bot, message, fastPost, endTimestamp, PREFIX, commandUsed, forceSkip);
+                                }
                             }
                         }
                     })
@@ -1231,7 +1209,7 @@ module.exports = {
                 + "\n\n`<PAST_#_OF_ENTRIES>`: **recent; 5** (\\*any number); **all** \n(NOTE: ***any number or all* will delete more than 1 entry!**)"
                 + `\n\n\`<#_OF_ENTRIES>\` and \`<STARTING_INDEX>\`: **2** (\\**any number*)`
                 + "\n\n`<#_MOST_RECENT_ENTRY>`: **all; recent; 3** (3rd most recent entry, \\**any number*)\n(NOTE: Deletes just 1 entry - UNLESS `all`)"
-                + "\n\n`<RECENT_ENTRIES>`: **3,5,recent,7,1,25**\n(**COMMA SEPARATED, NO SPACES:** with 1 being the most recent fast, 25 the 25th most recent, etc.)"
+                + "\n\n`<RECENT_ENTRIES>`: **3,5,recent,7,1,25**\n(**COMMA SEPARATED, NO SPACES:**\n1 being the most recent fast, 25 the 25th most recent, etc.)"
                 + "\n\n`<recent?>`(OPT.): type **recent** at the indicated spot to sort the fasts by **time created instead of fast start time!**"
                 + "\n\n`<FIELD?>`(OPT.): **start; end; fastbreaker; duration; mood; reflection** (any field you'd like to clear, doesn't remove whole fast)"
                 + "\n(if MULTIPLE `<FIELD>`s: separate by **space**!)"

@@ -33,18 +33,21 @@ module.exports = {
      * @param {Number} endTimestamp Ensure Timestamp is in UTC for system restarts
      * @param {String} reminderMessage
      * @param {String | false} type Valid Types: "Reminder", "Habit", "Fast" (case sensitive)
-     * @param {mongoose.ObjectId | String | Number | false} connectedDocumentID 
+     * @param {mongoose.ObjectId | String | Number} connectedDocumentID 
      * @param {Boolean} isRecurring 
-     * @param {Number | false} interval Ensure this is properly defined when the reminder is recurring
+     * @param {Number} interval Ensure this is properly defined when the reminder is recurring
      * 
      * Will auto-delete the reminder instance in the database after sending the reminder
      */
     setNewDMReminder: async function (bot, userID, currentTimestamp, startTimestamp, endTimestamp, reminderMessage, type,
-        connectedDocumentID = false, isRecurring = false, interval = undefined) {
+        connectedDocumentID = undefined, isRecurring = false, interval = undefined) {
         // Variable Declarations and Initializations
         // See - with markdown option!
-        if (type) if (!validTypes.includes(type)) type = false;
-        if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = false;
+        if (type) {
+            if (!validTypes.includes(type)) type = "Reminder";
+        }
+        else type = "Reminder";
+        if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = undefined;
         if (isNaN(interval)) isRecurring = false;
         console.log({ connectedDocumentID });
         await this.putNewReminderInDatabase(userID, userID, startTimestamp, endTimestamp, reminderMessage,
@@ -63,20 +66,20 @@ module.exports = {
      * @param {Number} endTimestamp Ensure Timestamp is in UTC for system restarts
      * @param {String} reminderMessage 
      * @param {String | false} type Valid Types: "Reminder", "Habit", "Fast" (case sensitive)
-     * @param {mongoose.ObjectId | String | Number | false} connectedDocumentID 
+     * @param {mongoose.ObjectId | String | Number} connectedDocumentID 
      * @param {Boolean} isRecurring 
      * @param {Number} interval Ensure that if the interval isRecurring, the interval is a number
      * Will auto-delete the reminder instance in the database after sending the reminder
      */
     setNewChannelReminder: async function (bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-        type, connectedDocumentID = false, isRecurring = false, interval = undefined) {
+        type, connectedDocumentID = undefined, isRecurring = false, interval = undefined) {
         // Variable Declarations and Initializations
         // See - with markdown option!
         if (type) {
             if (!validTypes.includes(type)) type = "Reminder";
         }
         else type = "Reminder";
-        if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = false;
+        if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = undefined;
         if (isNaN(interval)) isRecurring = false;
         console.log({ connectedDocumentID });
         await this.putNewReminderInDatabase(userID, channel, startTimestamp, endTimestamp, reminderMessage,
@@ -182,19 +185,19 @@ module.exports = {
     putNewReminderInDatabase: async function (userID, channelToSend, startTime, endTime, reminderMessage,
         type, connectedDocument, isDM, isRecurring = false, interval = undefined,) {
         var putNewReminder;
-            putNewReminder = new Reminder({
-                _id: mongoose.Types.ObjectId(),
-                userID,
-                channel: channelToSend,
-                startTime,
-                endTime,
-                message: reminderMessage,
-                type,
-                connectedDocument,
-                isDM,
-                isRecurring,
-                interval,
-            });
+        putNewReminder = new Reminder({
+            _id: mongoose.Types.ObjectId(),
+            userID,
+            channel: channelToSend,
+            startTime,
+            endTime,
+            message: reminderMessage,
+            type,
+            connectedDocument,
+            isDM,
+            isRecurring,
+            interval,
+        });
         putNewReminder.save()
             .then(result => console.log(result))
             .catch(err => console.log(err));
