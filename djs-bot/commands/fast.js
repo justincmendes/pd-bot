@@ -1588,6 +1588,7 @@ module.exports = {
                                     var changeReminders = true;
                                     var newDuration = false;
                                     var end = false;
+                                    var endTimeIsDefined = false;
                                     const connectedReminderQuery = { connectedDocument: fastTargetID };
                                     let oldReminders = await Reminder.find(connectedReminderQuery).sort({ endTime: -1 });
                                     // Automatically update the end time if the start time is edited
@@ -1598,6 +1599,7 @@ module.exports = {
                                             + "\n(i.e. altering the 1 hour prior and fast end DM reminders vs. just removing all reminders and ending the fast)";
                                         end = !(await fn.getUserConfirmation(message, changeRemindersMessage, false, "Fast: Update End Reminders or End Fast", 60000, 3000,
                                             "\n\nSelect ✅ to **update your fast end reminders**\nSelect ❌ to **end fast**"));
+                                        endTimeIsDefined = true;
                                         if (end) {
                                             await Reminder.deleteMany(connectedReminderQuery);
                                             changeReminders = false;
@@ -1613,25 +1615,28 @@ module.exports = {
 
                                     if (changeReminders) {
                                         const currentTimestamp = new Date().getTime();
-                                        var reminderDuration;
-                                        if (oldReminders.length && !newDuration) {
+                                        var reminderEndTime;
+                                        if (endTimeIsDefined) {
+                                            const endTimestamp = fastData[1];
+                                            reminderEndTime = endTimestamp;
+                                        }
+                                        else if (oldReminders.length && !newDuration) {
                                             // The largest endTimestamp is assumed to be the fast end time!
                                             // oldReminders is sorted from greatest to least.
-                                            reminderDuration = oldReminders[0].endTime - oldReminders[0].startTime;
-                                            if (!reminderDuration) changeReminders = false;
+                                            reminderEndTime = startTimestamp + oldReminders[0].endTime - oldReminders[0].startTime;
+                                            if (!reminderEndTime) changeReminders = false;
                                             await Reminder.deleteMany(connectedReminderQuery);
                                         }
                                         else {
-                                            reminderDuration = await getUserReminderEndTime(message, startTimestamp, fastEditMessagePrompt,
-                                                userTimezoneOffset, userDaylightSavingSetting, forceSkip) - currentTimestamp;
-                                            if (!reminderDuration && reminderDuration !== 0) changeReminders = false;
+                                                reminderEndTime = await getUserReminderEndTime(message, startTimestamp, fastEditMessagePrompt,
+                                                    userTimezoneOffset, userDaylightSavingSetting, forceSkip);
+                                                if (!reminderEndTime && reminderEndTime !== 0) changeReminders = false;
                                         }
                                         if (changeReminders) {
                                             console.log({
-                                                userTimezoneOffset, authorID, fastTargetID, currentTimestamp,
-                                                startTimestamp, reminderDuration
+                                                userTimezoneOffset, authorID, fastTargetID,
+                                                currentTimestamp, startTimestamp, reminderEndTime
                                             });
-                                            const reminderEndTime = startTimestamp + reminderDuration;
                                             // First Reminder: 1 Hour Warning/Motivation
                                             if ((reminderEndTime + userTimezoneOffset * HOUR_IN_MS) > currentTimestamp) {
                                                 setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastTargetID, currentTimestamp,
@@ -1644,7 +1649,7 @@ module.exports = {
                                         else fastData[1] = null;
                                     }
                                 }
-                                if (fastData[1] !== null) {
+                                if (endTimeIsDefined) {
                                     const endTimestamp = fastData[1];
                                     fastData[2] = endTimestamp - startTimestamp;
                                 }
