@@ -13,6 +13,7 @@ const validTypes = ["Reminder", "Habit", "Fast"];
 // Deal with user inputs in the front-end aka Discord bot.js or functions using this api
 // ALL SECURITY and authorization access will be dealt with at the front-end calls and inputs
 // In front-end add the tags to the reminder message.
+// Ensure that if it's a channel reminder that the user at least tags 1 person or role!
 
 // Make a sendRecurringReminder(interval), resetRecurringReminder()
 // (with setInterval(sendReminder, interval))
@@ -20,9 +21,6 @@ const validTypes = ["Reminder", "Habit", "Fast"];
 // Design choice - include params isRecurring and interval to main function and edit logic
 // OR make a separate function for each recurring and interval situations!
 // Leaning towards first one, makes api easier to use
-
-// If it's a channel reminder - make sure to gather the roles/users to tag in an array
-// i.e. if it's a DM, tags are not expected. 
 
 // Private Function Declarations
 
@@ -66,13 +64,12 @@ module.exports = {
      * @param {String} reminderMessage 
      * @param {String | false} type Valid Types: "Reminder", "Habit", "Fast" (case sensitive)
      * @param {mongoose.ObjectId | String | Number | false} connectedDocumentID 
-     * @param {[String] | false} tags In the @<TAG> format, ensure that the user is able to ping the given tags. If not, don't add them since the bot will be able to ping any tags.
      * @param {Boolean} isRecurring 
      * @param {Number} interval Ensure that if the interval isRecurring, the interval is a number
      * Will auto-delete the reminder instance in the database after sending the reminder
      */
     setNewChannelReminder: async function (bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-        type, connectedDocumentID = false, tags, isRecurring = false, interval = undefined) {
+        type, connectedDocumentID = false, isRecurring = false, interval = undefined) {
         // Variable Declarations and Initializations
         // See - with markdown option!
         if (type) {
@@ -83,10 +80,10 @@ module.exports = {
         if (isNaN(interval)) isRecurring = false;
         console.log({ connectedDocumentID });
         await this.putNewReminderInDatabase(userID, channel, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, false, tags, isRecurring, interval)
+            type, connectedDocumentID, false, isRecurring, interval)
             .catch(err => console.error(err));
         await this.sendReminder(bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, false, tags, isRecurring, interval);
+            type, connectedDocumentID, false, isRecurring, interval);
     },
 
     /**
@@ -101,27 +98,22 @@ module.exports = {
      * @param {String | false} type Valid Types: "Reminder", "Habit", "Fast" (case sensitive)
      * @param {mongoose.ObjectId | String | Number | false} connectedDocumentID 
      * @param {Boolean} isDM 
-     * @param {[String] | false} tags 
      * @param {Boolean} isRecurring 
      * @param {Number} interval 
      * @param {String} embedColour 
      */
     sendReminder: async function (bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage, type, connectedDocumentID,
-        isDM, tags, isRecurring = false, interval = undefined, embedColour = "#FFFF00") {
-        const originalReminderMessage = reminderMessage;
+        isDM, isRecurring = false, interval = undefined, embedColour = "#FFFF00") {
         const reminderDelay = endTimestamp - currentTimestamp;
         const duration = isRecurring ? interval : endTimestamp - startTimestamp;
         const channel = isDM ? bot.users.cache.get(userID) : bot.channels.cache.get(channelToSend);
         const channelID = channel.id;
-        var tagString;
-        if (tags) tagString = tags.length > 0 ? `${tags.join(" ")}\n` : "";
-        else tagString = "";
         const username = isDM ? bot.users.cache.get(userID).username :
             bot.guilds.cache.get(channelToSend).member(userID).displayName;
-        console.log({ connectedDocumentID, type, reminderDelay, tagString, username, channelID });
+        console.log({ connectedDocumentID, type, reminderDelay, username, channelID });
         reminderMessage = new Discord.MessageEmbed()
             .setTitle(`${type}`)
-            .setDescription(`${tagString}${reminderMessage}`)
+            .setDescription(`${reminderMessage}`)
             .setFooter(`A ${fn.millisecondsToTimeString(duration, true)} reminder set by ${username}`)
             .setColor(embedColour);
         console.log(`Setting ${username}'s ${fn.millisecondsToTimeString(duration, true)} reminder!`
@@ -133,7 +125,7 @@ module.exports = {
             try {
                 setTimeout(async () => {
                     await this.updateRecurringReminderStartAndEndTime(userID, channelID, startTimestamp, endTimestamp,
-                        originalReminderMessage, type, connectedDocumentID, isDM, isRecurring, interval)
+                        reminderMessage, type, connectedDocumentID, isDM, isRecurring, interval)
                         .then((complete) => {
                             console.log({ complete });
                             if (complete) {
@@ -143,7 +135,7 @@ module.exports = {
                                 endTimestamp += interval;
                                 const recurringReminder = setInterval(async () => {
                                     await this.updateRecurringReminderStartAndEndTime(userID, channelID, startTimestamp, endTimestamp,
-                                        originalReminderMessage, type, connectedDocumentID, isDM, isRecurring, interval)
+                                        reminderMessage, type, connectedDocumentID, isDM, isRecurring, interval)
                                         .then((update) => {
                                             console.log({ update });
                                             startTimestamp += interval;
@@ -169,7 +161,7 @@ module.exports = {
             setTimeout(async () => {
                 channel.send(reminderMessage);
                 await this.deleteOneReminder(userID, channelID, startTimestamp, endTimestamp,
-                    type, connectedDocumentID, originalReminderMessage, isDM, isRecurring)
+                    type, connectedDocumentID, reminderMessage, isDM, isRecurring)
                     .catch(err => console.error(err));
                 console.log("Deleted Reminder in Database!");
             }, reminderDelay);
@@ -182,15 +174,13 @@ module.exports = {
         allReminders.forEach(async (reminder) => {
             await this.sendReminder(bot, reminder.userID, reminder.channel, new Date().getTime(), reminder.startTime,
                 reminder.endTime, reminder.message, reminder.type, reminder.connectedDocument,
-                reminder.isDM, reminder.tags, reminder.isRecurring, reminder.interval);
+                reminder.isDM, reminder.isRecurring, reminder.interval);
         });
     },
 
     putNewReminderInDatabase: async function (userID, channelToSend, startTime, endTime, reminderMessage,
-        type, connectedDocument, isDM, tags, isRecurring = false, interval = undefined,) {
+        type, connectedDocument, isDM, isRecurring = false, interval = undefined,) {
         var putNewReminder;
-        console.log({ tags })
-        if (isDM || !tags) {
             putNewReminder = new Reminder({
                 _id: mongoose.Types.ObjectId(),
                 userID,
@@ -204,23 +194,6 @@ module.exports = {
                 isRecurring,
                 interval,
             });
-        }
-        else {
-            putNewReminder = new Reminder({
-                _id: mongoose.Types.ObjectId(),
-                userID,
-                channel: channelToSend,
-                startTime,
-                endTime,
-                message: reminderMessage,
-                type,
-                connectedDocument,
-                isDM,
-                tags,
-                isRecurring,
-                interval,
-            });
-        }
         putNewReminder.save()
             .then(result => console.log(result))
             .catch(err => console.log(err));

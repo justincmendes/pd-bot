@@ -12,10 +12,6 @@ const reminderSchema = mongoose.Schema({
         required: true,
         default: false,
     },
-    tags: {
-        type: [String],
-        required: false,
-    },
     isRecurring: {
         type: Boolean,
         required: true,
