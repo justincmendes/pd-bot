@@ -11,9 +11,7 @@ require("dotenv").config();
 module.exports = {
     getUserConfirmation: async function (userOriginalMessageObject, confirmationMessage, forceSkip = false, embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,
         confirmationInstructions = "\n\nSelect ✅ to **proceed**\nSelect ❌ to **cancel**") {
-        if (forceSkip === true) {
-            return true;
-        }
+        if (forceSkip === true) return true;
         const agree = "✅";
         const disagree = "❌";
         const userOriginal = userOriginalMessageObject.author.id;
@@ -1771,7 +1769,16 @@ module.exports = {
         }
         if (yearDayHourMinuteTest) {
             const yearDayHourMinuteElements = this.getNumberOfDefinedElements(yearDayHourMinuteTest);
-            if (yearDayHourMinuteElements >= 2) choice = 5;
+            if (yearDayHourMinuteElements >= 2) {
+                if(relativeTimeElements) {
+                    if(relativeTimeElements < 4) {
+                        choice = 5;
+                    }
+                }
+                else {
+                    choice = 5;
+                }
+            }
         }
         return choice;
     },

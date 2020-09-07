@@ -159,7 +159,8 @@ async function getUserMultilineEditString(userOriginalMessageObject, field, inst
         messageIndex++;
         collectedEdit = await fn.messageDataCollectFirst(userOriginalMessageObject, fastEditMessagePrompt, "Fast: Edit", fastEmbedColour, 600000);
         if (!collectedEdit || collectedEdit === "stop") {
-            fn.sendReplyThenDelete(userOriginalMessageObject, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${userEdit}`, 600000)
+            if (collectedEdit !== "stop")
+                fn.sendReplyThenDelete(userOriginalMessageObject, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${userEdit}`, 600000)
             return false;
         }
         if (messageIndex === 1 || reset === true) {
@@ -224,10 +225,7 @@ async function getUserEditString(userOriginalMessageObject, field, instructionPr
     do {
         reset = false;
         collectedEdit = await fn.messageDataCollectFirst(userOriginalMessageObject, fastEditMessagePrompt, "Fast: Edit", fastEmbedColour, 600000);
-        if (collectedEdit === "stop") {
-            fn.sendReplyThenDelete(userOriginalMessageObject, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${collectedEdit}`, 600000);
-            return false;
-        }
+        if (collectedEdit === "stop") return false;
         else if (!collectedEdit) return "back";
         else if (collectedEdit === "back") {
             const backToMainEdit = await getBackToMainMenuConfirmation(userOriginalMessageObject, forceSkip);
@@ -661,6 +659,74 @@ function endTimeAfterStartTime(message, startTimestamp, endTimestamp) {
     }
     else return true;
 }
+/**
+ * 
+ * @param {Discord.Client} bot 
+ * @param {String} authorID 
+ * @param {mongoose.ObjectId} fastDocumentID 
+ * @param {Number} currentTimestamp In UTC timezone
+ * @param {Number} startTimestamp In relative user timezone
+ * @param {Number} endTimestamp Reminder End Time in relative user timezone
+ * @param {Number} sendHoursBeforeEnd 
+ */
+function setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, currentTimestamp, startTimestamp, endTimestamp, sendHoursBeforeEnd = 1) {
+    const intendedFastDuration = endTimestamp - startTimestamp;
+    sendHoursBeforeEnd = intendedFastDuration > 0 ? (sendHoursBeforeEnd > 0 ? sendHoursBeforeEnd : 0) : 0;
+    const preEndMessage = `**${sendHoursBeforeEnd} more hour(s) left of your ${fn.millisecondsToTimeString(intendedFastDuration)} fast!** (Started: ${fn.timestampToDateString(startTimestamp)})`
+        + `\nYou're at least **${(((intendedFastDuration - HOUR_IN_MS * sendHoursBeforeEnd) / intendedFastDuration) * 100).toFixed(2)}% finished!**\n\nFinish strong - I'm cheering you on 😁`;
+    rm.setNewDMReminder(bot, authorID, currentTimestamp, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * (userTimezoneOffset + sendHoursBeforeEnd),
+        preEndMessage, "Fast", fastDocumentID, false);
+}
+/**
+ * 
+ * @param {Discord.Client} bot 
+ * @param {String} commandUsed 
+ * @param {String} authorID 
+ * @param {mongoose.ObjectId} fastDocumentID 
+ * @param {Number} currentTimestamp In UTC timezone
+ * @param {Number} startTimestamp In relative user timezone
+ * @param {Number} endTimestamp Reminder End Time in relative user timezone
+ */
+function setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, startTimestamp, endTimestamp) {
+    const intendedFastDuration = endTimestamp - startTimestamp;
+    const endMessage = `**Your ${fn.millisecondsToTimeString(intendedFastDuration)} fast is done!** (Started: ${fn.timestampToDateString(startTimestamp)})`
+        + `\nGreat job tracking and completing your fast!\nIf you want to **edit** your fast before ending, type \`?${commandUsed} edit current\``
+        + `\nIf you want to **end** your fast, type \`?${commandUsed} end <DATE/TIME>\` (i.e. \`<DATE/TIME>\`: **\`now\`**)`;
+    rm.setNewDMReminder(bot, authorID, currentTimestamp, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * userTimezoneOffset, endMessage, "Fast",
+        fastDocumentID, false);
+}
+
+async function getUserReminderEndTime(message, fastTimeHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
+    // Setup Reminder:
+    const currentTimestamp = new Date().getTime();
+    let setReminder = true;
+    var reminderEndTime;
+    do {
+        const reminderPrompt = "__**How long do you intend to fast?**__\nI will DM you **when your fast is done and an hour before it's done**"
+            + "\n\nType `skip` to **start your fast without setting up an end of fast reminder**";
+        const userTimeInput = await fn.messageDataCollectFirst(message, reminderPrompt, "Fast Duration", fastEmbedColour);
+        if (userTimeInput === "skip") return undefined
+        if (userTimeInput === "stop" || userTimeInput === false) return false;
+        // Undo the timezoneOffset to get the end time in UTC
+        reminderEndTime = fn.timeCommandHandlerToUTC(["in"].concat(userTimeInput.toLowerCase().split(/[\s\n]+/)), currentTimestamp, userTimezoneOffset, userDaylightSavingSetting)
+            - userTimezoneOffset * HOUR_IN_MS;
+        const intendedFastDuration = reminderEndTime - currentTimestamp;
+        console.log({ userTimeInput, currentTimestamp, reminderEndTime, intendedFastDuration });
+        if (reminderEndTime > currentTimestamp && intendedFastDuration >= HOUR_IN_MS) setReminder = true;
+        else {
+            setReminder = false;
+            fn.sendReplyThenDelete(message, `**Please enter a proper time in the future __> 1 hour__!**... ${fastTimeHelpMessage} for **valid time inputs!**`, 30000);
+        }
+        if (setReminder) {
+            const fastDurationString = fn.millisecondsToTimeString(intendedFastDuration);
+            const confirmReminder = await fn.getUserConfirmation(message,
+                `Are you sure you want to be reminded after **${fastDurationString}** of fasting?`,
+                forceSkip, "Fast Reminder Confirmation");
+            if (confirmReminder) return reminderEndTime;
+        }
+    }
+    while (true)
+}
 
 
 //==========================
@@ -728,37 +794,8 @@ module.exports = {
                 startTimestamp = fn.timeCommandHandlerToUTC(startTimeArgs, message.createdTimestamp, userTimezoneOffset, userDaylightSavingSetting);
                 if (startTimestamp === false) return message.reply(fastStartHelpMessage);
                 // Setup Reminder:
-                const currentTimestamp = message.createdTimestamp;
-                let setReminder = true;
-                var reminderEndTime, fastDurationString, intendedFastDuration;
-                do {
-                    const reminderPrompt = "__**How long do you intend to fast?**__\nI will DM you **when your fast is done and an hour before it's done**"
-                        + "\n\nType `skip` to **start your fast without setting up an end of fast reminder**";
-                    const userTimeInput = await fn.messageDataCollectFirst(message, reminderPrompt, "Fast Duration", fastEmbedColour);
-                    if (userTimeInput === "skip") {
-                        setReminder = false;
-                        break;
-                    }
-                    if (userTimeInput === "stop" || userTimeInput === false) return;
-                    // Undo the timezoneOffset to get the end time in UTC
-                    reminderEndTime = fn.timeCommandHandlerToUTC(["in"].concat(userTimeInput.toLowerCase().split(/[\s\n]+/)), currentTimestamp, userTimezoneOffset, userDaylightSavingSetting)
-                        - userTimezoneOffset * HOUR_IN_MS;
-                    intendedFastDuration = reminderEndTime - currentTimestamp;
-                    console.log({ userTimeInput, currentTimestamp, reminderEndTime, intendedFastDuration });
-                    if (reminderEndTime > currentTimestamp && intendedFastDuration >= HOUR_IN_MS) setReminder = true;
-                    else {
-                        setReminder = false;
-                        fn.sendReplyThenDelete(message, `**Please enter a proper time in the future __> 1 hour__!**... ${fastStartHelpMessage} for **valid time inputs!**`, 30000);
-                    }
-                    if (setReminder) {
-                        fastDurationString = fn.millisecondsToTimeString(intendedFastDuration);
-                        const confirmReminder = await fn.getUserConfirmation(message,
-                            `Are you sure you want to be reminded after **${fastDurationString}** of fasting?`,
-                            forceSkip, "Fast Reminder Confirmation");
-                        if (confirmReminder) break;
-                    }
-                }
-                while (true)
+                const reminderEndTime = await getUserReminderEndTime(message, fastStartHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip);
+                if (reminderEndTime === false) return;
 
                 let newFast = new Fast({
                     _id: mongoose.Types.ObjectId(),
@@ -773,18 +810,14 @@ module.exports = {
                     mood: null,
                     reflection: null
                 });
+                const currentTimestamp = message.createdTimestamp;
                 const fastDocumentID = newFast._id;
                 console.log({ fastDocumentID });
-                if (setReminder) {
+                if (reminderEndTime || reminderEndTime === 0) {
                     // First Reminder: 1 Hour Warning/Motivation
-                    const preEndMessage = `**1 more hour left of your ${fastDurationString} fast!** (Started: ${fn.timestampToDateString(startTimestamp)})`
-                        + `\nYou're **${(((intendedFastDuration - HOUR_IN_MS) / intendedFastDuration) * 100).toFixed(2)}% finished!**\n\nFinish strong - I'm cheering you on 😁`;
-                    rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp, reminderEndTime - HOUR_IN_MS, preEndMessage, "Fast", fastDocumentID, false);
+                    setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime + userTimezoneOffset * HOUR_IN_MS, 1);
                     // Second Reminder: End Time
-                    const endMessage = `**Your ${fastDurationString} fast is done!** (Started: ${fn.timestampToDateString(startTimestamp)})`
-                        + `\nGreat job tracking and completing your fast!\nIf you want to **edit** your fast before ending, type \`?${commandUsed} edit current\``
-                        + `\nIf you want to **end** your fast, type \`?${commandUsed} end <DATE/TIME>\` (i.e. \`<DATE/TIME>\`: **\`now\`**)`;
-                    rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp, reminderEndTime, endMessage, "Fast", fastDocumentID, false);
+                    setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime + userTimezoneOffset * HOUR_IN_MS);
                 }
                 newFast.save()
                     .then(result => console.log(result))
@@ -1468,20 +1501,21 @@ module.exports = {
                     }
                 }
                 var fastView;
-                if (indexByRecency) fastView = await getFastsByRecency(authorID, pastNumberOfEntriesIndex - 1);
-                else fastView = await getFastsByStartTime(authorID, pastNumberOfEntriesIndex - 1);
+                if (indexByRecency) fastView = await getOneFastByRecency(authorID, pastNumberOfEntriesIndex - 1);
+                else fastView = await getOneFastByStartTime(authorID, pastNumberOfEntriesIndex - 1);
                 if (fastView.length === 0) {
                     return fn.sendErrorMessageAndUsage(message, fastEditHelp, `**FAST ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
                 }
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
-                const fastTargetID = fastView[0]._id;
-                var fastData, showFast, continueEdit;
+                const fastTargetID = fastView._id;
+                var fastData, showFast, continueEdit, isCurrent;
                 do {
+                    isCurrent = false;
                     continueEdit = false;
-                    fastView = await Fast.findById(fastTargetID);
                     if (fastView.endTime === null) {
                         fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true);
                         showFast = fastDataArrayToString(fastData, true, PREFIX, commandUsed);
+                        isCurrent = true;
                     }
                     else {
                         fastData = fastDocumentToDataArray(fastView);
@@ -1540,11 +1574,74 @@ module.exports = {
                                 continueEdit = true;
                             }
                             else {
-                                if (fastData[1] !== null) {
-                                    fastData[2] = fastData[1] - fastData[0];
+                                const startTimestamp = fastData[0];
+                                if (isCurrent) {
+                                    var changeReminders = true;
+                                    var newDuration = false;
+                                    var end = false;
+                                    const connectedReminderQuery = { connectedDocument: fastTargetID };
+                                    let oldReminders = await Reminder.find(connectedReminderQuery).sort({ endTime: -1 });
+                                    // Automatically update the end time if the start time is edited
+                                    // If the end time is edited remove ambiguity of user intent
+                                    // By prompting if they wish to end their fast or update their fast end time!
+                                    if (fieldToEditIndex === 1) {
+                                        const changeRemindersMessage = "Do you want to **update your fast end reminders** OR **just end your fast completely?**"
+                                            + "\n(i.e. altering the 1 hour prior and fast end DM reminders vs. just removing all reminders and ending the fast)";
+                                        end = !(await fn.getUserConfirmation(message, changeRemindersMessage, false, "Fast: Update End Reminders or End Fast", 60000, 3000,
+                                            "\n\nSelect ✅ to **update your fast end reminders**\nSelect ❌ to **end fast**"));
+                                        if (end) {
+                                            await Reminder.deleteMany(connectedReminderQuery);
+                                            changeReminders = false;
+                                        }
+                                    }
+                                    else if (fieldToEditIndex === 0) {
+                                        const updateRemindersMessage = "Do you want to **update your intended fast duration?**";
+                                        newDuration = await fn.getUserConfirmation(message, updateRemindersMessage, false, "Fast: Update Fast Duration");
+                                        if (!newDuration) {
+                                            if (!oldReminders.length) changeReminders = false;
+                                        }
+                                    }
+
+                                    if (changeReminders) {
+                                        const currentTimestamp = new Date().getTime();
+                                        var reminderDuration;
+                                        if (oldReminders.length && !newDuration) {
+                                            // The largest endTimestamp is assumed to be the fast end time!
+                                            // oldReminders is sorted from greatest to least.
+                                            reminderDuration = oldReminders[0].endTime - oldReminders[0].startTime;
+                                            if (!reminderDuration) changeReminders = false;
+                                            await Reminder.deleteMany(connectedReminderQuery);
+                                        }
+                                        else {
+                                            reminderDuration = await getUserReminderEndTime(message, fastEditMessagePrompt, userTimezoneOffset,
+                                                userDaylightSavingSetting, forceSkip) - currentTimestamp;
+                                            if (!reminderDuration && reminderDuration !== 0) changeReminders = false;
+                                        }
+                                        if (changeReminders) {
+                                            console.log({
+                                                userTimezoneOffset, authorID, fastTargetID, currentTimestamp,
+                                                startTimestamp, reminderDuration
+                                            });
+                                            const reminderEndTime = startTimestamp + reminderDuration;
+                                            // First Reminder: 1 Hour Warning/Motivation
+                                            if ((reminderEndTime + userTimezoneOffset * HOUR_IN_MS) > currentTimestamp) {
+                                                setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastTargetID, currentTimestamp,
+                                                    startTimestamp, reminderEndTime, 1);
+                                            }
+                                            // Second Reminder: End Time
+                                            setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastTargetID, currentTimestamp,
+                                                startTimestamp, reminderEndTime);
+                                        }
+                                        else fastData[1] = null;
+                                    }
                                 }
-                                else {
-                                    fastData[2] = new Date().getTime() - fastData[0];
+                                if (fastData[1] !== null) {
+                                    const endTimestamp = fastData[1];
+                                    fastData[2] = endTimestamp - startTimestamp;
+                                }
+                                if (!end) {
+                                    fastData[1] = null;
+                                    fastData[2] = null;
                                 }
                             }
                         }
@@ -1561,7 +1658,6 @@ module.exports = {
                         else if (fieldToEditIndex === 4) {
                             fastData[fieldToEditIndex] = userEdit;
                         }
-                        console.log({ continueEdit, userEdit });
                         if (!continueEdit) {
                             try {
                                 console.log(`Editing ${authorID}'s Fast ${pastNumberOfEntriesIndex} (${sortType})`);
@@ -1582,16 +1678,27 @@ module.exports = {
                                         await Fast.updateOne({ _id: fastTargetID }, { $set: { reflection: fastData[5] } })
                                         break;
                                 }
-                                console.log({ userEdit });
+                                console.log({ continueEdit, userEdit });
                                 pastNumberOfEntriesIndex = await getFastRecencyIndex(authorID, fastTargetID);
+                                fastView = await Fast.findById(fastTargetID);
+                                console.log({ fastView, fastData, fastTargetID, fieldToEditIndex });
+                                fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true);
                                 showFast = fastDataArrayToString(fastData);
-                                console.log({ fastData, fastTargetID, fieldToEditIndex });
+                                console.log({ userEdit });
                                 continueEditMessage = `Do you want to continue **editing Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n${showFast}`;
                                 continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Fast: Continue Editing Fast ${pastNumberOfEntriesIndex}?`, 300000);
                             }
                             catch (err) {
                                 return console.log(err);
                             }
+                        }
+                        else {
+                            console.log({ continueEdit, userEdit });
+                            pastNumberOfEntriesIndex = await getFastRecencyIndex(authorID, fastTargetID);
+                            fastView = await Fast.findById(fastTargetID);
+                            console.log({ fastView, fastData, fastTargetID, fieldToEditIndex });
+                            fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true);
+                            showFast = fastDataArrayToString(fastData);
                         }
                     }
                     else continueEdit = true;
