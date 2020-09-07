@@ -695,24 +695,31 @@ function setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fast
     rm.setNewDMReminder(bot, authorID, currentTimestamp, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * userTimezoneOffset, endMessage, "Fast",
         fastDocumentID, false);
 }
-
-async function getUserReminderEndTime(message, fastTimeHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
+/**
+ * 
+ * @param {*} message 
+ * @param {*} fastTimeHelpMessage 
+ * @param {*} userTimezoneOffset 
+ * @param {*} userDaylightSavingSetting 
+ * @param {*} forceSkip 
+ * In relative terms (NOT UTC)
+ */
+async function getUserReminderEndTime(message, startTimestamp, fastTimeHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
     // Setup Reminder:
-    const currentTimestamp = new Date().getTime();
     let setReminder = true;
     var reminderEndTime;
     do {
         const reminderPrompt = "__**How long do you intend to fast?**__\nI will DM you **when your fast is done and an hour before it's done**"
             + "\n\nType `skip` to **start your fast without setting up an end of fast reminder**";
         const userTimeInput = await fn.messageDataCollectFirst(message, reminderPrompt, "Fast Duration", fastEmbedColour);
-        if (userTimeInput === "skip") return undefined
+        if (userTimeInput === "skip") return undefined;
         if (userTimeInput === "stop" || userTimeInput === false) return false;
         // Undo the timezoneOffset to get the end time in UTC
-        reminderEndTime = fn.timeCommandHandlerToUTC(["in"].concat(userTimeInput.toLowerCase().split(/[\s\n]+/)), currentTimestamp, userTimezoneOffset, userDaylightSavingSetting)
-            - userTimezoneOffset * HOUR_IN_MS;
-        const intendedFastDuration = reminderEndTime - currentTimestamp;
-        console.log({ userTimeInput, currentTimestamp, reminderEndTime, intendedFastDuration });
-        if (reminderEndTime > currentTimestamp && intendedFastDuration >= HOUR_IN_MS) setReminder = true;
+        reminderEndTime = fn.timeCommandHandlerToUTC(["in"].concat(userTimeInput.toLowerCase().split(/[\s\n]+/)), startTimestamp - HOUR_IN_MS * userTimezoneOffset,
+            userTimezoneOffset, userDaylightSavingSetting);
+        const intendedFastDuration = reminderEndTime - startTimestamp;
+        console.log({ userTimeInput, startTimestamp, reminderEndTime, intendedFastDuration });
+        if (reminderEndTime > startTimestamp && intendedFastDuration >= HOUR_IN_MS) setReminder = true;
         else {
             setReminder = false;
             fn.sendReplyThenDelete(message, `**Please enter a proper time in the future __> 1 hour__!**... ${fastTimeHelpMessage} for **valid time inputs!**`, 30000);
@@ -794,7 +801,7 @@ module.exports = {
                 startTimestamp = fn.timeCommandHandlerToUTC(startTimeArgs, message.createdTimestamp, userTimezoneOffset, userDaylightSavingSetting);
                 if (startTimestamp === false) return message.reply(fastStartHelpMessage);
                 // Setup Reminder:
-                const reminderEndTime = await getUserReminderEndTime(message, fastStartHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip);
+                const reminderEndTime = await getUserReminderEndTime(message, startTimestamp, fastStartHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip);
                 if (reminderEndTime === false) return;
 
                 let newFast = new Fast({
@@ -815,9 +822,11 @@ module.exports = {
                 console.log({ fastDocumentID });
                 if (reminderEndTime || reminderEndTime === 0) {
                     // First Reminder: 1 Hour Warning/Motivation
-                    setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, currentTimestamp, currentTimestamp + userTimezoneOffset * HOUR_IN_MS, reminderEndTime + userTimezoneOffset * HOUR_IN_MS, 1);
+                    if (currentTimestamp + HOUR_IN_MS * userTimezoneOffset < reminderEndTime) {
+                        setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime, 1);
+                    }
                     // Second Reminder: End Time
-                    setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, currentTimestamp + userTimezoneOffset * HOUR_IN_MS, reminderEndTime + userTimezoneOffset * HOUR_IN_MS);
+                    setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime);
                 }
                 newFast.save()
                     .then(result => console.log(result))
@@ -1613,8 +1622,8 @@ module.exports = {
                                             await Reminder.deleteMany(connectedReminderQuery);
                                         }
                                         else {
-                                            reminderDuration = await getUserReminderEndTime(message, fastEditMessagePrompt, userTimezoneOffset,
-                                                userDaylightSavingSetting, forceSkip) - currentTimestamp;
+                                            reminderDuration = await getUserReminderEndTime(message, startTimestamp, fastEditMessagePrompt,
+                                                userTimezoneOffset, userDaylightSavingSetting, forceSkip) - currentTimestamp;
                                             if (!reminderDuration && reminderDuration !== 0) changeReminders = false;
                                         }
                                         if (changeReminders) {
