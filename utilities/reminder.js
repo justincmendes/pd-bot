@@ -104,6 +104,7 @@ module.exports = {
      */
     sendReminder: async function (bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage, type, connectedDocumentID,
         isDM, isRecurring = false, interval = undefined, embedColour = "#FFFF00") {
+        const originalReminderMessage = reminderMessage
         const reminderDelay = endTimestamp - currentTimestamp;
         const duration = isRecurring ? interval : endTimestamp - startTimestamp;
         const channel = isDM ? bot.users.cache.get(userID) : bot.channels.cache.get(channelToSend);
@@ -125,7 +126,7 @@ module.exports = {
             try {
                 setTimeout(async () => {
                     await this.updateRecurringReminderStartAndEndTime(userID, channelID, startTimestamp, endTimestamp,
-                        reminderMessage, type, connectedDocumentID, isDM, isRecurring, interval)
+                        originalReminderMessage, type, connectedDocumentID, isDM, isRecurring, interval)
                         .then((complete) => {
                             console.log({ complete });
                             if (complete) {
@@ -135,7 +136,7 @@ module.exports = {
                                 endTimestamp += interval;
                                 const recurringReminder = setInterval(async () => {
                                     await this.updateRecurringReminderStartAndEndTime(userID, channelID, startTimestamp, endTimestamp,
-                                        reminderMessage, type, connectedDocumentID, isDM, isRecurring, interval)
+                                        originalReminderMessage, type, connectedDocumentID, isDM, isRecurring, interval)
                                         .then((update) => {
                                             console.log({ update });
                                             startTimestamp += interval;
@@ -161,7 +162,7 @@ module.exports = {
             setTimeout(async () => {
                 channel.send(reminderMessage);
                 await this.deleteOneReminder(userID, channelID, startTimestamp, endTimestamp,
-                    type, connectedDocumentID, reminderMessage, isDM, isRecurring)
+                    type, connectedDocumentID, originalReminderMessage, isDM, isRecurring)
                     .catch(err => console.error(err));
                 console.log("Deleted Reminder in Database!");
             }, reminderDelay);
