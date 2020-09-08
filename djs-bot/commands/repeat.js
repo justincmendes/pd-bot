@@ -19,32 +19,41 @@ const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 // OR
 // Add confirmation window to ask if the user wants a repeat! (Recurring Reminder)
 
+// ADD Feature to prevent spam:
+// The getUserFirstEndTime must be at least 1 minute from the start time!
+
 // Function Declarations and Definitions
-async function getUserFirstEndTime(message, repeatHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
-    const startTimestamp = new Date().getTime();
-    var firstEndTime;
-    var error = false;
+async function getUserEndDuration(message, repeatHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
+    var firstEndTime, error, startTimestamp;
     do {
+        error = false;
         const reminderPrompt = "__**When do you intend to start the first recurring reminder?**__"
             + "\n\nType `skip` to **start it now**";
         const userTimeInput = await fn.messageDataCollectFirst(message, reminderPrompt, "Repeat Reminder: First Reminder", reminderEmbedColour);
+        startTimestamp = new Date().getTime();
         if (userTimeInput === "skip") firstEndTime = startTimestamp;
         else {
+            console.log({ error });
             if (userTimeInput === "stop" || userTimeInput === false) return false;
             // Undo the timezoneOffset to get the end time in UTC
-            firstEndTime = fn.timeCommandHandlerToUTC(["in"].concat(userTimeInput.toLowerCase().split(/[\s\n]+/)), startTimestamp,
-                userTimezoneOffset, userDaylightSavingSetting) - HOUR_IN_MS * userTimezoneOffset;
+            const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
+            firstEndTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
+                startTimestamp, userTimezoneOffset, userDaylightSavingSetting) - HOUR_IN_MS * userTimezoneOffset;
             if (!firstEndTime) error = true;
+            console.log({ error });
         }
+        console.log({ error });
         if (!error) {
-            if (firstEndTime + 60000 > startTimestamp) {
+            if (firstEndTime > startTimestamp) {
+                const duration = firstEndTime - startTimestamp;
                 const confirmReminder = await fn.getUserConfirmation(message,
-                    `Are you sure you want to **start the first reminder** at **${fn.timestampToDateString(firstEndTime + HOUR_IN_MS * userTimezoneOffset)}**?`,
+                    `Are you sure you want to **start the first reminder** after **${fn.millisecondsToTimeString(duration)}**?`,
                     forceSkip, "Repeat Reminder: First Reminder Confirmation");
-                if (confirmReminder) return firstEndTime;
+                if (confirmReminder) return duration;
             }
             else error = true;
         }
+        console.log({ error });
         if (error) fn.sendReplyThenDelete(message, `**Please enter a proper time in the future**... ${repeatHelpMessage} for **valid time inputs!**`, 30000);
     }
     while (true)
@@ -84,15 +93,19 @@ module.exports = {
             console.log({ splitArgs });
             if (!splitArgs) return message.reply(repeatHelpMessage);
             else {
-                const currentTimestamp = message.createdTimestamp;
-                const interval = fn.timeCommandHandlerToUTC((["in"]).concat(splitArgs[0].split(' ')), currentTimestamp, userTimezoneOffset, userDaylightSavingSetting)
+                let currentTimestamp = message.createdTimestamp;
+                const timeArgs = splitArgs[0].toLowerCase().split(' ');
+                const interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
+                    currentTimestamp, userTimezoneOffset, userDaylightSavingSetting)
                     - HOUR_IN_MS * userTimezoneOffset - currentTimestamp;
                 if (!interval || interval <= 0) return message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
-                const firstEndTime = await getUserFirstEndTime(message, repeatHelpMessage, currentTimestamp, userTimezoneOffset, userDaylightSavingSetting, forceSkip);
-                if (!firstEndTime) return;
+                else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
+                let duration = await getUserEndDuration(message, repeatHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip);
+                if (!duration) return;
+                else currentTimestamp = new Date().getTime();
                 if (splitArgs[1].toLowerCase() === "dm") {
                     await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp,
-                        firstEndTime, splitArgs[2], reminderType, false, true, interval);
+                        currentTimestamp + duration, splitArgs[2], reminderType, false, true, interval);
                 }
                 else {
                     const channelID = /\<\#(\d+)\>/.exec(splitArgs[1])[1];
@@ -100,11 +113,10 @@ module.exports = {
                     console.log({ userPermissions });
                     if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL")) {
                         await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp, currentTimestamp,
-                            firstEndTime, splitArgs[2], reminderType, false, true, interval);
+                            currentTimestamp + duration, splitArgs[2], reminderType, false, true, interval);
                     }
                     else return message.reply(`You are **not authorized to send messages** to that channel...`);
                 }
-                let duration = interval - currentTimestamp;
                 duration = duration > 0 ? duration : 0;
                 return message.reply(`Your **recurring reminder** has been set to trigger in **${fn.millisecondsToTimeString(duration)}!**`);
             }

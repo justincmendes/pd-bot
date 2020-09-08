@@ -42,19 +42,18 @@ module.exports = {
         // Other functions: See, Edit, Remove
         // else if()
         else {
-
             const splitArgs = this.getReminderSplitArgs(args);
             console.log({ splitArgs });
             if (!splitArgs) return message.reply(reminderHelpMessage);
             else {
                 const currentTimestamp = message.createdTimestamp;
                 const reminderEndTime = fn.timeCommandHandlerToUTC((["in"]).concat(splitArgs[0].split(' ')), currentTimestamp, userTimezoneOffset, userDaylightSavingSetting)
-                    - HOUR_IN_MS * userTimezoneOffset;
+                - HOUR_IN_MS * userTimezoneOffset;
                 console.log({ reminderEndTime });
                 if (!reminderEndTime) return message.reply(`**INVALID Time**... ${reminderHelpMessage}`);
                 if (splitArgs[1].toLowerCase() === "dm") {
                     await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp,
-                        reminderEndTime, splitArgs[2], reminderType);
+                        reminderEndTime, splitArgs[2], reminderType, false, false, false, reminderEmbedColour);
                 }
                 else {
                     const channelID = /\<\#(\d+)\>/.exec(splitArgs[1])[1];
@@ -62,7 +61,7 @@ module.exports = {
                     console.log({ userPermissions });
                     if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL")) {
                         await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp, currentTimestamp,
-                            reminderEndTime, splitArgs[2], reminderType);
+                            reminderEndTime, splitArgs[2], reminderType, false, false, false);
                     }
                     else return message.reply(`You are **not authorized to send messages** to that channel...`);
                 }

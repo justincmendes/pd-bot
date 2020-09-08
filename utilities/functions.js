@@ -339,29 +339,29 @@ module.exports = {
     // END of Mongoose Functions
 
     getDateAndTimeInstructions: "`<DATE/TIME>`: **NOT Case-Sensitive!**\nEnter **timezone (optional)** at the **end**.\nThe **\"at\"** before the time is **optional.**"
-    // + "\n**? = optional, # = number**\n`<in?>`: (OPT.) **future date/time**\n`<RELATIVE TIME>`: **(PAST) ago/prior/before**\nOR **(FUTURE) from now/later/in the future**"
-    // + "\n`<DAY OF WEEK>`: **Mon/Monday, Tues/Tuesday,..., Sun/Sunday**\n`<RELATIVE TO NOW>`: **yesterday/yest/the day before**\nOR **today/tod**\nOR **tomorrow/tom/tmrw**"
-    // + "\n`<TIME SCALES>`: **minutes/min, hours/hr, days, weeks, months, years/yrs**"
-    // + "\n`<TIME>`: **Military or Standard**\n***(e.g. 13:00, 159am, 1:59, 1259p, 1pm, 6a, 645p, 23:59)***"
-    // + "\n`<TIMEZONE?>`: (OPT. - CAN BE ADDED TO THE END OF ANY DATE/TIME)\nEnter the timezone in as **abbreviation or a UTC offset**\n***(e.g. est, pst, cdt, amt, -4:00, +12, +130)*** - **DEFAULT:** Your Timezone (settings)"
-    + "\n\n__**`Enter date and/or time in relative terms`**__:"
-    // + "\n`<in?> # <TIME SCALES> <RELATIVE TIME> <at?> <TIME?> <TIMEZONE?>`"
-    // + "\n`<in?> # <DAY OF WEEK> <RELATIVE TIME> <at?> <TIME?> <TIMEZONE?>`\n`<previous/last/past/next/this> <DAY OF WEEK> <at?> <TIME?> <TIMEZONE?>`"
-    // + "\n`<RELATIVE TO NOW> <at?> <TIME?> <TIMEZONE?>`\n`<in?> #y:#d:#h:#m:#s <RELATIVE TIME> <TIMEZONE?>`"
-    + "\ni.e. **now **\|** 1 hour ago **\|** 15.5 minutes ago **\|** in 72 mins **\|** 2.5 hrs from now"
-    + "\n**\|** yesterday at 10pm EST **\|** tmrw 9pm **\|** today at 8pm mst"
-    + "\n**\|** 2 days ago 6P PST **\|** 1 year ago 13:59 **\|** in 5 months at 830p -130"
-    + "\n**\|** last monday at 159 CDT **\|** next friday at 645a **\|** 5 mondays ago 1259a -4:00"
-    + "\n**\|** in 5y3d2s +12 **\|** 5d ago **\|** 4h:2m:25s from now EDT**"
-    // + "`<DATE SEPARATORS>`: **\. \, \/ \-**\n`<MONTH>`: Name (january/jan, february/feb,..., december/dec) or Number (1-12)"
-    // + "\n`<DAY>`: Number - #\n`<YEAR?>`: (OPT.) Number - #"
-    + "\n\n***\-\-OR\-\-***"
-    + "\n\n__**`Enter date and time in absolute terms`**__:\n**FORMAT: <MONTH/DAY/YEAR>** (YEAR is optional, **Default: Current Year**)\n- Each must be **separated** by one of the following: **\. \, \/ \-**"
-    // + "\n`<MONTH> <DATE SEPARATOR?> <DAY> <DATE SEPARATOR?> <YEAR?> <at?> <TIME> <TIMEZONE?>`\n"
-    + "\ni.e. **3/22/2020 at 10a EST **\|** 3.22.2020 at 9PM **\|** 3-22-2020 120a"
-    + "\n**\|** 3.22 9p **\|** 2/28 13:59 +8:00 **\|** 10-1 at 15:00"
-    + "\n**\|** Jan 5, 2020 00:00 -5:00 **\|** Aug 31/20 12a PDT **\|** September 8, 2020 559 CDT**"
-    + "\n\nRemember **Daylight Saving Time (DST)** when entering **abbreviated timezones**:\n**EST and EDT** for example, are **different** because of DST.",
+        // + "\n**? = optional, # = number**\n`<in?>`: (OPT.) **future date/time**\n`<RELATIVE TIME>`: **(PAST) ago/prior/before**\nOR **(FUTURE) from now/later/in the future**"
+        // + "\n`<DAY OF WEEK>`: **Mon/Monday, Tues/Tuesday,..., Sun/Sunday**\n`<RELATIVE TO NOW>`: **yesterday/yest/the day before**\nOR **today/tod**\nOR **tomorrow/tom/tmrw**"
+        // + "\n`<TIME SCALES>`: **minutes/min, hours/hr, days, weeks, months, years/yrs**"
+        // + "\n`<TIME>`: **Military or Standard**\n***(e.g. 13:00, 159am, 1:59, 1259p, 1pm, 6a, 645p, 23:59)***"
+        // + "\n`<TIMEZONE?>`: (OPT. - CAN BE ADDED TO THE END OF ANY DATE/TIME)\nEnter the timezone in as **abbreviation or a UTC offset**\n***(e.g. est, pst, cdt, amt, -4:00, +12, +130)*** - **DEFAULT:** Your Timezone (settings)"
+        + "\n\n__**`Enter date and/or time in relative terms`**__:"
+        // + "\n`<in?> # <TIME SCALES> <RELATIVE TIME> <at?> <TIME?> <TIMEZONE?>`"
+        // + "\n`<in?> # <DAY OF WEEK> <RELATIVE TIME> <at?> <TIME?> <TIMEZONE?>`\n`<previous/last/past/next/this> <DAY OF WEEK> <at?> <TIME?> <TIMEZONE?>`"
+        // + "\n`<RELATIVE TO NOW> <at?> <TIME?> <TIMEZONE?>`\n`<in?> #y:#d:#h:#m:#s <RELATIVE TIME> <TIMEZONE?>`"
+        + "\ni.e. **now **\|** 1 hour ago **\|** 15.5 minutes ago **\|** in 72 mins **\|** 2.5 hrs from now"
+        + "\n**\|** yesterday at 10pm EST **\|** tmrw 9pm **\|** today at 8pm mst"
+        + "\n**\|** 2 days ago 6P PST **\|** 1 year ago 13:59 **\|** in 5 months at 830p -130"
+        + "\n**\|** last monday at 159 CDT **\|** next friday at 645a **\|** 5 mondays ago 1259a -4:00"
+        + "\n**\|** in 5y3d2s +12 **\|** 5d ago **\|** 4h:2m:25s from now EDT**"
+        // + "`<DATE SEPARATORS>`: **\. \, \/ \-**\n`<MONTH>`: Name (january/jan, february/feb,..., december/dec) or Number (1-12)"
+        // + "\n`<DAY>`: Number - #\n`<YEAR?>`: (OPT.) Number - #"
+        + "\n\n***\-\-OR\-\-***"
+        + "\n\n__**`Enter date and time in absolute terms`**__:\n**FORMAT: <MONTH/DAY/YEAR>** (YEAR is optional, **Default: Current Year**)\n- Each must be **separated** by one of the following: **\. \, \/ \-**"
+        // + "\n`<MONTH> <DATE SEPARATOR?> <DAY> <DATE SEPARATOR?> <YEAR?> <at?> <TIME> <TIMEZONE?>`\n"
+        + "\ni.e. **3/22/2020 at 10a EST **\|** 3.22.2020 at 9PM **\|** 3-22-2020 120a"
+        + "\n**\|** 3.22 9p **\|** 2/28 13:59 +8:00 **\|** 10-1 at 15:00"
+        + "\n**\|** Jan 5, 2020 00:00 -5:00 **\|** Aug 31/20 12a PDT **\|** September 8, 2020 559 CDT**"
+        + "\n\nRemember **Daylight Saving Time (DST)** when entering **abbreviated timezones**:\n**EST and EDT** for example, are **different** because of DST.",
 
     userAndBotMutualServerIDs: async function (bot, userID, botServersIDs) {
         var botUserServers = new Array();
@@ -446,8 +446,9 @@ module.exports = {
         if (milliseconds === null || milliseconds === undefined) return null;
         var sign = ""
         if (milliseconds < 0) {
-            sign = "-";
-            milliseconds = Math.abs(milliseconds);
+            // sign = "-";
+            // milliseconds = Math.abs(milliseconds);
+            milliseconds = 0;
         }
         timeArray = this.getHoursMinutesSecondsMillisecondsArray(milliseconds);
         var timeString = "";
@@ -565,10 +566,10 @@ module.exports = {
     },
 
     getProperDateAndTimeArray: function (dateTimeArray, adjustedArgs, dayYearTimeOffset = 0) {
-        const yearIncluded = !!(dateTimeArray[3 + dayYearTimeOffset]);
+        const yearIncluded = !!(dateTimeArray[2 + dayYearTimeOffset]);
         const dayIndex = this.getNthNumberIndex(adjustedArgs, dayYearTimeOffset);
         const extractedDay = adjustedArgs[dayIndex];
-        console.log({ dayIndex, dayFromArray: extractedDay });
+        console.log({ dayIndex, extractedDay });
         if (dayIndex == -1) return false;
         if (extractedDay.length > 2) return false;
         const day = /(\d{1}(?:\d{1})?)/.exec(adjustedArgs[dayIndex])[1];
@@ -581,29 +582,57 @@ module.exports = {
             if (!year) return false;
             if (year != originalYear) {
                 const yearOverflow = originalYear.replace(year, "");
-                dateTimeArray[4 + dayYearTimeOffset] = year;
-                const combinedHoursAndMins = dateTimeArray[5 + dayYearTimeOffset] ?
-                    `${yearOverflow}${dateTimeArray[5 + dayYearTimeOffset]}${dateTimeArray[6 + dayYearTimeOffset]}`
-                    : dateTimeArray[7 + dayYearTimeOffset] ? `${yearOverflow}${dateTimeArray[7 + dayYearTimeOffset]}` : `${yearOverflow}`;
-                console.log({ yearOverflow, year, dateTimeArray, combinedHoursAndMins })
+                dateTimeArray[2 + dayYearTimeOffset] = year;
+                const combinedHoursAndMins = dateTimeArray[3 + dayYearTimeOffset] ?
+                    `${yearOverflow}${dateTimeArray[3 + dayYearTimeOffset]}${dateTimeArray[3 + dayYearTimeOffset]}`
+                    : dateTimeArray[5 + dayYearTimeOffset] ? `${yearOverflow}${dateTimeArray[5 + dayYearTimeOffset]}` : `${yearOverflow}`;
+                console.log({ yearOverflow, year, dateTimeArray, combinedHoursAndMins });
                 if (!combinedHoursAndMins) return false;
                 // If the combinedHoursAndMins is greater than 2, there are minutes.
                 if (combinedHoursAndMins.length > 2) {
                     const splitHoursAndMins = /(\d{1}(?:\d{1})?)(\d{2})/.exec(combinedHoursAndMins);
                     console.log({ splitHoursAndMins });
-                    dateTimeArray[5 + dayYearTimeOffset] = splitHoursAndMins[1];
-                    dateTimeArray[6 + dayYearTimeOffset] = splitHoursAndMins[2];
-                    dateTimeArray[7 + dayYearTimeOffset] = undefined;
+                    dateTimeArray[3 + dayYearTimeOffset] = splitHoursAndMins[1];
+                    dateTimeArray[4 + dayYearTimeOffset] = splitHoursAndMins[2];
+                    dateTimeArray[5 + dayYearTimeOffset] = undefined;
                 }
                 else {
-                    dateTimeArray[5 + dayYearTimeOffset] = undefined;
-                    dateTimeArray[6 + dayYearTimeOffset] = undefined;
-                    dateTimeArray[7 + dayYearTimeOffset] = combinedHoursAndMins;
+                    dateTimeArray[3 + dayYearTimeOffset] = undefined;
+                    dateTimeArray[4 + dayYearTimeOffset] = undefined;
+                    dateTimeArray[5 + dayYearTimeOffset] = combinedHoursAndMins;
                 }
             }
         }
         else {
+            // **POTENTIAL PROBLEM/ISSUE** - the year will be off at New Year's when different people are in different
+            // years depending on their timezone offset
             year = new Date().getUTCFullYear();
+            if (day !== dateTimeArray[2]) {
+                const extractedTime = dateTimeArray[2].replace(day, "");
+                console.log({ extractedTime, day });
+                if (!extractedTime) return false;
+                dateTimeArray[2] = day;
+                if (dateTimeArray[6]) {
+                    if (dateTimeArray[6].length === 2) {
+                        dateTimeArray[4] = extractedTime;
+                        dateTimeArray[5] = dateTimeArray[6];
+                    }
+                    // dateTimeArray[6].length === 1
+                    else {
+                        if (extractedTime.length === 1) {
+                            dateTimeArray[6] = `${extractedTime}${dateTimeArray[6]}`;
+                        }
+                        // extractedTime.length === 2
+                        else {
+                            dateTimeArray[4] = extractedTime;
+                            dateTimeArray[5] = dateTimeArray[6];
+                        }
+                    }
+                }
+                else if (dateTimeArray[4]) {
+                    dateTimeArray[4] = `${extractedTime}${dateTimeArray[4]}`;
+                }
+            }
         }
         const timeArray = this.getProperTimeAndTimezoneArray(dateTimeArray, adjustedArgs);
         console.log({ timeArray, year, day });
@@ -1448,7 +1477,7 @@ module.exports = {
     // Assumes that the userTimezone is already daylight-savings adjusted
     timeCommandHandlerToUTC: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
         const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
-        if (args[0].toLowerCase() == "now") {
+        if (args[0].toLowerCase() === "now") {
             return this.getUTCOffsetAdjustedTimestamp(messageCreatedTimestamp, userTimezone, userDaylightSavingSetting);
         }
 
@@ -1467,11 +1496,11 @@ module.exports = {
         const dayOfWeekTest = dayOfWeekRegex.exec(timeArgs);
         console.log({ dayOfWeekTest });
         // Absolute Time: Past and Future
-        const absoluteTimeRegex = /(\d{1,2})([\/\.\,\-])?(\d{1,2})(?:([\/\.\,\-])(\d{1,4}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const absoluteTimeRegex = /(\d{1,2})[\/\.\,\-](\d{1,2})(?:[\/\.\,\-](\d{1,4}))?(?:at)?(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?/;
         const absoluteTimeTest = absoluteTimeRegex.exec(timeArgs);
         console.log({ absoluteTimeTest });
         // Force the user to separate the date and year (if there is a year - this becomes an indicator for separation)
-        const monthTimeRegex = /((?:january)|(?:jan?)|(?:february)|(?:feb?)|f|(?:march)|(?:mar)|(?:april)|(?:apr?)|(?:may)|(?:june?)|(?:july?)|(?:august)|(?:aug?)|(?:september)|(?:sept?)|(?:october)|(?:oct)|(?:november)|(?:nov?)|(?:december)|(?:dec?))[\.\,]?(\d{1}(?:\d{1})?)(?:([\/\.\,\-])(\d{1,4}))?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const monthTimeRegex = /((?:january)|(?:jan?)|(?:february)|(?:feb?)|f|(?:march)|(?:mar)|(?:april)|(?:apr?)|(?:may)|(?:june?)|(?:july?)|(?:august)|(?:aug?)|(?:september)|(?:sept?)|(?:october)|(?:oct)|(?:november)|(?:nov?)|(?:december)|(?:dec?))[\.\,]?(\d{1}(?:\d{1})?)(?:[\/\.\,\-](\d{1,4}))?(?:at)?(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?/;
         const monthTimeTest = monthTimeRegex.exec(timeArgs);
         console.log({ monthTimeTest });
         const yearDayHourMinuteRegex = /(in)?(?:((?:\d+\.?\d*|\d*\.?\d+)y))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)d))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)h))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)m))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)s))?(?<!\:+|^$)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at|in|with)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?/;
@@ -1632,7 +1661,7 @@ module.exports = {
                         // If the first element is defined: (i.e. the month)
                         if (monthTimeTest[1]) {
                             console.log("Relative Month and Absolute Time test...");
-                            const properDateTimeArray = this.getProperDateAndTimeArray(monthTimeTest, adjustedArgs);
+                            const properDateTimeArray = this.getProperDateAndTimeArray(monthTimeTest, adjustedArgs, 1);
                             console.log({ properDateTimeArray });
                             if (!properDateTimeArray) return false;
 
@@ -1775,13 +1804,13 @@ module.exports = {
         }
         if (absoluteTimeTest) {
             absoluteTimeElements = this.getNumberOfDefinedElements(absoluteTimeTest)
-            if (absoluteTimeElements > 4) {
+            if (absoluteTimeElements > 3) {
                 choice = 3;
             }
         }
         if (monthTimeTest) {
             monthTimeElements = this.getNumberOfDefinedElements(monthTimeTest);
-            if (monthTimeElements > 4) {
+            if (monthTimeElements > 3) {
                 if (absoluteTimeElements) {
                     if (monthTimeElements >= absoluteTimeElements) {
                         choice = 4;

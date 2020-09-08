@@ -717,7 +717,8 @@ async function getUserReminderEndTime(message, startTimestamp, fastTimeHelpMessa
         if (userTimeInput === "skip") return undefined;
         if (userTimeInput === "stop" || userTimeInput === false) return false;
         // Undo the timezoneOffset to get the end time in UTC
-        reminderEndTime = fn.timeCommandHandlerToUTC(["in"].concat(userTimeInput.toLowerCase().split(/[\s\n]+/)), startTimestamp - HOUR_IN_MS * userTimezoneOffset,
+        const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/)
+        reminderEndTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, startTimestamp - HOUR_IN_MS * userTimezoneOffset,
             userTimezoneOffset, userDaylightSavingSetting);
         const intendedFastDuration = reminderEndTime - startTimestamp;
         console.log({ userTimeInput, startTimestamp, reminderEndTime, intendedFastDuration });

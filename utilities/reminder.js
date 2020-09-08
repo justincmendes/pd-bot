@@ -53,10 +53,10 @@ module.exports = {
         if (isNaN(interval)) isRecurring = false;
         console.log({ connectedDocumentID });
         await this.putNewReminderInDatabase(userID, userID, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, true, false, isRecurring, interval, embedColour)
+            type, connectedDocumentID, true, isRecurring, interval, embedColour)
             .catch(err => console.error(err));
         await this.sendReminder(bot, userID, userID, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, true, false, isRecurring, interval, embedColour);
+            type, connectedDocumentID, true, isRecurring, interval, embedColour);
     },
 
     /**
@@ -74,7 +74,7 @@ module.exports = {
      * Will auto-delete the reminder instance in the database after sending the reminder
      */
     setNewChannelReminder: async function (bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-        type, connectedDocumentID = undefined, isRecurring = false, interval = undefined, embedColour = "#FFFF00") {
+        type, connectedDocumentID = undefined, isRecurring = false, interval = undefined) {
         // Variable Declarations and Initializations
         // See - with markdown option!
         if (type) {
@@ -85,10 +85,10 @@ module.exports = {
         if (isNaN(interval)) isRecurring = false;
         console.log({ connectedDocumentID });
         await this.putNewReminderInDatabase(userID, channelToSend, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, false, isRecurring, interval, embedColour)
+            type, connectedDocumentID, false, isRecurring, interval)
             .catch(err => console.error(err));
         await this.sendReminder(bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, false, isRecurring, interval, embedColour);
+            type, connectedDocumentID, false, isRecurring, interval);
     },
 
     /**
@@ -109,7 +109,7 @@ module.exports = {
      */
     sendReminder: async function (bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage, type, connectedDocumentID,
         isDM, isRecurring = false, interval = undefined, embedColour = "#FFFF00") {
-        const originalReminderMessage = reminderMessage
+        const originalReminderMessage = reminderMessage;
         const reminderDelay = endTimestamp - currentTimestamp;
         const duration = isRecurring ? interval : endTimestamp - startTimestamp;
         const channel = isDM ? bot.users.cache.get(userID) : bot.channels.cache.get(channelToSend);
@@ -186,7 +186,7 @@ module.exports = {
     },
 
     putNewReminderInDatabase: async function (userID, channelToSend, startTime, endTime, reminderMessage,
-        type, connectedDocument, isDM, isRecurring = false, interval = undefined,) {
+        type, connectedDocument, isDM, isRecurring = false, interval = undefined) {
         var putNewReminder;
         putNewReminder = new Reminder({
             _id: mongoose.Types.ObjectId(),
