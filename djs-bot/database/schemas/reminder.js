@@ -26,6 +26,10 @@ const reminderSchema = mongoose.Schema({
     connectedDocument: {
         type: mongoose.Schema.Types.ObjectId | false,
         required: false,
+    },
+    guildID: {
+        type: String,
+        required: false,
     }
 });
 

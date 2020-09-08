@@ -21,6 +21,13 @@ const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 
 // ADD Feature to prevent spam:
 // The getUserFirstEndTime must be at least 1 minute from the start time!
+// <BLACKLISTING>: Preventing certain roles or certain users from setting repeat reminders
+// THAT @MENTION OTHER ROLES! (diffuse their pings)
+
+// For channel reminders, as the user for confirmation when no @mentions are found
+// in the message - so that the user is aware that no one will directly be notified!
+
+// STORE the guild with NON-DM Reminders!
 
 // Function Declarations and Definitions
 async function getUserEndDuration(message, repeatHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
