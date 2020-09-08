@@ -50,16 +50,21 @@ module.exports = {
                 const currentTimestamp = message.createdTimestamp;
                 const reminderEndTime = fn.timeCommandHandlerToUTC((["in"]).concat(splitArgs[0].split(' ')), currentTimestamp, userTimezoneOffset, userDaylightSavingSetting)
                     - HOUR_IN_MS * userTimezoneOffset;
-                console.log({reminderEndTime});
+                console.log({ reminderEndTime });
                 if (!reminderEndTime) return message.reply(`**INVALID Time**... ${reminderHelpMessage}`);
-                if (splitArgs[1] === "dm") {
+                if (splitArgs[1].toLowerCase() === "dm") {
                     await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp,
                         reminderEndTime, splitArgs[2], reminderType);
                 }
                 else {
                     const channelID = /\<\#(\d+)\>/.exec(splitArgs[1])[1];
-                    await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp, currentTimestamp,
-                        reminderEndTime, splitArgs[2], reminderType);
+                    const userPermissions = bot.channels.cache.get(channelID).permissionsFor(authorID);
+                    console.log({ userPermissions });
+                    if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL")) {
+                        await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp, currentTimestamp,
+                            reminderEndTime, splitArgs[2], reminderType);
+                    }
+                    else return message.reply(`You are **not authorized to send messages** to that channel...`);
                 }
                 let duration = reminderEndTime - currentTimestamp;
                 duration = duration > 0 ? duration : 0;

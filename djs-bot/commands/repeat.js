@@ -90,14 +90,19 @@ module.exports = {
                 if (!interval || interval <= 0) return message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
                 const firstEndTime = await getUserFirstEndTime(message, repeatHelpMessage, currentTimestamp, userTimezoneOffset, userDaylightSavingSetting, forceSkip);
                 if (!firstEndTime) return;
-                if (splitArgs[1] === "dm") {
+                if (splitArgs[1].toLowerCase() === "dm") {
                     await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp,
                         firstEndTime, splitArgs[2], reminderType, false, true, interval);
                 }
                 else {
                     const channelID = /\<\#(\d+)\>/.exec(splitArgs[1])[1];
-                    await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp, currentTimestamp,
-                        firstEndTime, splitArgs[2], reminderType, false, true, interval);
+                    const userPermissions = bot.channels.cache.get(channelID).permissionsFor(authorID);
+                    console.log({ userPermissions });
+                    if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL")) {
+                        await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp, currentTimestamp,
+                            firstEndTime, splitArgs[2], reminderType, false, true, interval);
+                    }
+                    else return message.reply(`You are **not authorized to send messages** to that channel...`);
                 }
                 let duration = interval - currentTimestamp;
                 duration = duration > 0 ? duration : 0;

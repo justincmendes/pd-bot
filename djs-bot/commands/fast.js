@@ -529,7 +529,7 @@ async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, 
             await showFastPost(userOriginalMessageObject, fastPost, mistakeMessage);
             return false;
         }
-        console.log({ targetChannelIndex })
+        console.log({ targetChannelIndex });
         let targetChannelName = await bot.channels.cache.get(channelList[targetChannelIndex]).name;
         confirmSendToChannel = await fn.getUserConfirmation(userOriginalMessageObject, `Are you sure you want to send it to **#${targetChannelName}**?`, forceSkip);
     }

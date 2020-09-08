@@ -42,7 +42,7 @@ module.exports = {
      * Will auto-delete the reminder instance in the database after sending the reminder
      */
     setNewDMReminder: async function (bot, userID, currentTimestamp, startTimestamp, endTimestamp, reminderMessage, type,
-        connectedDocumentID = undefined, isRecurring = false, interval = undefined) {
+        connectedDocumentID = undefined, isRecurring = false, interval = undefined, embedColour = "#FFFF00") {
         // Variable Declarations and Initializations
         // See - with markdown option!
         if (type) {
