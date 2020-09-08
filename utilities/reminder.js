@@ -22,6 +22,8 @@ const validTypes = ["Reminder", "Habit", "Fast"];
 // OR make a separate function for each recurring and interval situations!
 // Leaning towards first one, makes api easier to use
 
+// MAYBE move embedColour parameter before is Recurring or Connected Document
+
 // Private Function Declarations
 
 module.exports = {
@@ -51,10 +53,10 @@ module.exports = {
         if (isNaN(interval)) isRecurring = false;
         console.log({ connectedDocumentID });
         await this.putNewReminderInDatabase(userID, userID, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, true, false, isRecurring, interval)
+            type, connectedDocumentID, true, false, isRecurring, interval, embedColour)
             .catch(err => console.error(err));
         await this.sendReminder(bot, userID, userID, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, true, false, isRecurring, interval);
+            type, connectedDocumentID, true, false, isRecurring, interval, embedColour);
     },
 
     /**
@@ -72,7 +74,7 @@ module.exports = {
      * Will auto-delete the reminder instance in the database after sending the reminder
      */
     setNewChannelReminder: async function (bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-        type, connectedDocumentID = undefined, isRecurring = false, interval = undefined) {
+        type, connectedDocumentID = undefined, isRecurring = false, interval = undefined, embedColour = "#FFFF00") {
         // Variable Declarations and Initializations
         // See - with markdown option!
         if (type) {
@@ -82,11 +84,11 @@ module.exports = {
         if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = undefined;
         if (isNaN(interval)) isRecurring = false;
         console.log({ connectedDocumentID });
-        await this.putNewReminderInDatabase(userID, channel, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, false, isRecurring, interval)
+        await this.putNewReminderInDatabase(userID, channelToSend, startTimestamp, endTimestamp, reminderMessage,
+            type, connectedDocumentID, false, isRecurring, interval, embedColour)
             .catch(err => console.error(err));
         await this.sendReminder(bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, false, isRecurring, interval);
+            type, connectedDocumentID, false, isRecurring, interval, embedColour);
     },
 
     /**
@@ -113,13 +115,14 @@ module.exports = {
         const channel = isDM ? bot.users.cache.get(userID) : bot.channels.cache.get(channelToSend);
         const channelID = channel.id;
         const username = isDM ? bot.users.cache.get(userID).username :
-            bot.guilds.cache.get(channelToSend).member(userID).displayName;
+            bot.guilds.cache.get(channel.guild.id).member(userID).displayName;
         console.log({ connectedDocumentID, type, reminderDelay, username, channelID });
-        reminderMessage = new Discord.MessageEmbed()
+        reminderMessage = isDM ? new Discord.MessageEmbed()
             .setTitle(`${type}`)
             .setDescription(`${reminderMessage}`)
             .setFooter(`A ${fn.millisecondsToTimeString(duration, true)} reminder set by ${username}`)
-            .setColor(embedColour);
+            .setColor(embedColour)
+            : reminderMessage;
         console.log(`Setting ${username}'s ${fn.millisecondsToTimeString(duration, true)} reminder!`
             + `\nTime Left: ${reminderDelay < 0 ? fn.millisecondsToTimeString(0, true) : fn.millisecondsToTimeString(reminderDelay, true)}`
             + `\nRecurring: ${isRecurring}\nDM: ${isDM}\nChannel: ${channelID}`);

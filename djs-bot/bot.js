@@ -120,22 +120,22 @@ bot.on("message", async message => {
         return message.reply(`Try \`${PREFIX}${commandName} help\`...`);
     }
 
-    // // Cooldowns:
-    // if (!cooldowns.has(command.name)) {
-    //     cooldowns.set(command.name, new Discord.Collection());
-    // }
-    // const now = Date.now();
-    // const timestamps = cooldowns.get(command.name);
-    // const cooldownAmount = (command.cooldown) * 1000;
-    // if (timestamps.has(message.author.id)) {
-    //     const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
-    //     if (now < expirationTime) {
-    //         const timeLeft = (expirationTime - now) / 1000;
-    //         return fn.sendReplyThenDelete(message, `Please **wait ${timeLeft.toFixed(1)} more second(s)** before reusing the **\`${command.name}\` command**`, timeLeft * 1000);
-    //     }
-    // }
-    // timestamps.set(message.author.id, now);
-    // setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
+    // Cooldowns:
+    if (!cooldowns.has(command.name)) {
+        cooldowns.set(command.name, new Discord.Collection());
+    }
+    const now = Date.now();
+    const timestamps = cooldowns.get(command.name);
+    const cooldownAmount = (command.cooldown) * 1000;
+    if (timestamps.has(message.author.id)) {
+        const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
+        if (now < expirationTime) {
+            const timeLeft = (expirationTime - now) / 1000;
+            return fn.sendReplyThenDelete(message, `Please **wait ${timeLeft.toFixed(1)} more second(s)** before reusing the **\`${command.name}\` command**`, timeLeft * 1000);
+        }
+    }
+    timestamps.set(message.author.id, now);
+    setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
 
     // Check if user wants to skip confirmation windows
     var forceSkip;

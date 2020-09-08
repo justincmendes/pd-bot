@@ -6,30 +6,12 @@ const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 require("dotenv").config();
 
-const goalsEmbedColour = "#0000FF";
+const reminderEmbedColour = "#FFFF00";
 const reminderType = "Reminder";
 const dateAndTimeInstructions = fn.getDateAndTimeInstructions;
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 
-// Repeating Reminders?
-// MAKE function: "repeat" aliases: ["schedule", "sch", "sched", "auto", "ar", "rr", "recur", "recurring"]
-// **USAGE**\n\`${PREFIX}${commandUsed} <INTERVAL> <CHANNEL> <MESSAGE> <force?>
-// Then prompt for when to start the first one!
-// OR
-// Add confirmation window to ask if the user wants a repeat! (Recurring Reminder)
-
 // Function Declarations and Definitions
-
-function getReminderSplitArgs(args) {
-    args = args.join(" ").toLowerCase();
-    const splitArgs = /(.+)\s((?:dm)|(?:\<\#\d+\>))\s(.+)/.exec(args);
-    if (splitArgs) {
-        splitArgs.forEach((arg) => {
-            if (arg === undefined) return false;
-        });
-    }
-    return splitArgs.slice(1, 4);
-}
 
 module.exports = {
     name: "reminder",
@@ -42,7 +24,7 @@ module.exports = {
         const authorID = message.author.id;
         const userTimezoneOffset = -4;
         const userDaylightSavingSetting = true;
-        let reminderUsageMessage = `**USAGE** (Single-use Reminder)\n\`${PREFIX}${commandUsed} <DATE/TIME> <CHANNEL> <MESSAGE> <force?>\``
+        let reminderUsageMessage = `**USAGE** (One-time Reminder)\n\`${PREFIX}${commandUsed} <DATE/TIME> <CHANNEL> <MESSAGE> <force?>\``
             + `\n\`${PREFIX}${commandUsed} <ACTION>\``
             + "\n\n\`<CHANNEL>\`: **dm, #channel_name**"
             + "\n\n\`<MESSAGE>\`: To send at the given time __*(Remember to tag the roles/users you want to ping in the message!)*__"
@@ -51,7 +33,7 @@ module.exports = {
             + `\n\n${dateAndTimeInstructions}`
             + `If you want to set a recurring reminder, try \`${PREFIX}repeat <INTERVAL> <CHANNEL> <MESSAGE> <force?>\` (then you will be prompted for the intended starting <DATE/TIME>)`
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
-        reminderUsageMessage = fn.getMessageEmbed(reminderUsageMessage, "Reminder: Help", goalsEmbedColour);
+        reminderUsageMessage = fn.getMessageEmbed(reminderUsageMessage, "One-Time Reminder: Help", reminderEmbedColour);
         const reminderHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
         var reminderCommand = args[0].toLowerCase();
         if (reminderCommand === "help") {
@@ -61,25 +43,39 @@ module.exports = {
         // else if()
         else {
 
-            const splitArgs = getReminderSplitArgs(args);
+            const splitArgs = this.getReminderSplitArgs(args);
             console.log({ splitArgs });
             if (!splitArgs) return message.reply(reminderHelpMessage);
             else {
                 const currentTimestamp = message.createdTimestamp;
                 const reminderEndTime = fn.timeCommandHandlerToUTC((["in"]).concat(splitArgs[0].split(' ')), currentTimestamp, userTimezoneOffset, userDaylightSavingSetting)
-                - HOUR_IN_MS * userTimezoneOffset;
+                    - HOUR_IN_MS * userTimezoneOffset;
+                console.log({reminderEndTime});
                 if (!reminderEndTime) return message.reply(`**INVALID Time**... ${reminderHelpMessage}`);
                 if (splitArgs[1] === "dm") {
                     await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp,
                         reminderEndTime, splitArgs[2], reminderType);
                 }
                 else {
-                    const channelID = /(\<\#(\d+)\>)/.exec(splitArgs[1])[1];
+                    const channelID = /\<\#(\d+)\>/.exec(splitArgs[1])[1];
                     await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp, currentTimestamp,
                         reminderEndTime, splitArgs[2], reminderType);
                 }
+                let duration = reminderEndTime - currentTimestamp;
+                duration = duration > 0 ? duration : 0;
+                return message.reply(`Your **one-time reminder** has been set to trigger in **${fn.millisecondsToTimeString(duration)}!**`);
             }
         }
-
+    },
+    getReminderSplitArgs: function (args) {
+        args = args.join(" ");
+        const splitArgs = /(.+)\s?((?:[Dd][Mm])|(?:\<\#\d+\>))\s?(.+)/.exec(args);
+        if (splitArgs) {
+            splitArgs.forEach((arg) => {
+                if (arg === undefined) return false;
+            });
+        }
+        else return false;
+        return splitArgs.slice(1, 4);
     }
 };
