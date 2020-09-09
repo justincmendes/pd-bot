@@ -12,22 +12,15 @@ const reminderType = "Reminder";
 const dateAndTimeInstructions = fn.getDateAndTimeInstructions;
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 
-// Repeating Reminders?
-// MAKE function: "repeat" aliases: ["schedule", "sch", "sched", "auto", "ar", "rr", "recur", "recurring"]
-// **USAGE**\n\`${PREFIX}${commandUsed} <INTERVAL> <CHANNEL> <MESSAGE> <force?>
-// Then prompt for when to start the first one!
-// OR
-// Add confirmation window to ask if the user wants a repeat! (Recurring Reminder)
-
 // ADD Feature to prevent spam:
-// The getUserFirstEndTime must be at least 1 minute from the start time!
 // <BLACKLISTING>: Preventing certain roles or certain users from setting repeat reminders
 // THAT @MENTION OTHER ROLES! (diffuse their pings)
 
 // For channel reminders, as the user for confirmation when no @mentions are found
 // in the message - so that the user is aware that no one will directly be notified!
 
-// STORE the guild with NON-DM Reminders!
+// When Starting the reminder and setting the reminder time
+// If they enter a time (not skip), send them a reply you have set your ##:## fast!
 
 // Function Declarations and Definitions
 async function getUserEndDuration(message, repeatHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {

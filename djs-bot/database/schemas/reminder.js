@@ -24,7 +24,7 @@ const reminderSchema = mongoose.Schema({
     type: String,
     // Delete the reminder if a connectedDocument get deleted
     connectedDocument: {
-        type: mongoose.Schema.Types.ObjectId | false,
+        type: mongoose.Schema.Types.ObjectId,
         required: false,
     },
     guildID: {

@@ -674,7 +674,7 @@ function endTimeAfterStartTime(message, startTimestamp, endTimestamp) {
 function setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, currentTimestamp, startTimestamp, endTimestamp, sendHoursBeforeEnd = 1) {
     const intendedFastDuration = endTimestamp - startTimestamp;
     sendHoursBeforeEnd = intendedFastDuration > 0 ? (sendHoursBeforeEnd > 0 ? sendHoursBeforeEnd : 0) : 0;
-    const preEndMessage = `**${sendHoursBeforeEnd} more hour(s) left of your ${fn.millisecondsToTimeString(intendedFastDuration)} fast!** (Started: ${fn.timestampToDateString(startTimestamp)})`
+    const preEndMessage = `**At least __${sendHoursBeforeEnd}__ more hour(s) left of your ${fn.millisecondsToTimeString(intendedFastDuration)} fast!**\n(**Started: __${fn.timestampToDateString(startTimestamp)}__**)`
         + `\nYou're at least **${(((intendedFastDuration - HOUR_IN_MS * sendHoursBeforeEnd) / intendedFastDuration) * 100).toFixed(2)}% finished!**\n\nFinish strong - I'm cheering you on 😁`;
     rm.setNewDMReminder(bot, authorID, currentTimestamp, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * (userTimezoneOffset + sendHoursBeforeEnd),
         preEndMessage, "Fast", fastDocumentID, false);
@@ -691,7 +691,7 @@ function setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentI
  */
 function setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, startTimestamp, endTimestamp) {
     const intendedFastDuration = endTimestamp - startTimestamp;
-    const endMessage = `**Your ${fn.millisecondsToTimeString(intendedFastDuration)} fast is done!** (Started: ${fn.timestampToDateString(startTimestamp)})`
+    const endMessage = `**Your __${fn.millisecondsToTimeString(intendedFastDuration)}__ fast is done!** (**Started: __${fn.timestampToDateString(startTimestamp)}__**)`
         + `\nGreat job tracking and completing your fast!\nIf you want to **edit** your fast before ending, type \`?${commandUsed} edit current\``
         + `\nIf you want to **end** your fast, type \`?${commandUsed} end <DATE/TIME>\` (i.e. \`<DATE/TIME>\`: **\`now\`**)`;
     rm.setNewDMReminder(bot, authorID, currentTimestamp, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * userTimezoneOffset, endMessage, "Fast",
@@ -817,19 +817,22 @@ module.exports = {
                 const currentTimestamp = message.createdTimestamp;
                 const fastDocumentID = newFast._id;
                 console.log({ fastDocumentID });
-                if (reminderEndTime || reminderEndTime === 0) {
+                const reminderEndTimeExists = reminderEndTime || reminderEndTime === 0;
+                if (reminderEndTimeExists) {
                     // First Reminder: 1 Hour Warning/Motivation
                     if (currentTimestamp + HOUR_IN_MS * userTimezoneOffset < reminderEndTime) {
                         setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime, 1);
                     }
                     // Second Reminder: End Time
                     setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime);
+                    message.reply(`Your fast ${fn.millisecondsToTimeString(reminderEndTime - startTimestamp)} fast `)
                 }
                 newFast.save()
                     .then(result => console.log(result))
                     .catch(err => console.log(err));
 
-                message.reply(`Your fast starting **${startTimeArgs.join(' ')}** is being recorded!`);
+                message.reply(`Your fast starting **${startTimeArgs.join(' ')}${reminderEndTimeExists ? `, for ${fn.millisecondsToTimeString(reminderEndTime - startTimestamp)},` : ","}**`
+                + ` is being recorded!`);
             }
         }
 

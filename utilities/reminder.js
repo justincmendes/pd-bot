@@ -49,11 +49,12 @@ module.exports = {
             if (!validTypes.includes(type)) type = "Reminder";
         }
         else type = "Reminder";
+        console.log({ connectedDocumentID });
         if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = undefined;
         if (isNaN(interval)) isRecurring = false;
         console.log({ connectedDocumentID });
         await this.putNewReminderInDatabase(userID, userID, startTimestamp, endTimestamp, reminderMessage,
-            type, connectedDocumentID, true, isRecurring, interval, embedColour)
+            type, connectedDocumentID, true, isRecurring, interval)
             .catch(err => console.error(err));
         await this.sendReminder(bot, userID, userID, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
             type, connectedDocumentID, true, isRecurring, interval, embedColour);
@@ -84,7 +85,7 @@ module.exports = {
         if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = undefined;
         if (isNaN(interval)) isRecurring = false;
         const guildID = bot.channels.cache.get(channelToSend).guild.id;
-        console.log({ connectedDocumentID,  guildID});
+        console.log({ connectedDocumentID, guildID });
         await this.putNewReminderInDatabase(userID, channelToSend, startTimestamp, endTimestamp, reminderMessage,
             type, connectedDocumentID, false, isRecurring, interval, guildID)
             .catch(err => console.error(err));
@@ -188,8 +189,7 @@ module.exports = {
 
     putNewReminderInDatabase: async function (userID, channelToSend, startTime, endTime, reminderMessage,
         type, connectedDocument, isDM, isRecurring = false, interval = undefined, guildID = undefined) {
-        var putNewReminder;
-        putNewReminder = new Reminder({
+        const putNewReminder = new Reminder({
             _id: mongoose.Types.ObjectId(),
             userID,
             channel: channelToSend,
@@ -201,8 +201,9 @@ module.exports = {
             isDM,
             isRecurring,
             interval,
-            guildID
+            guildID,
         });
+        console.log({ putNewReminder })
         putNewReminder.save()
             .then(result => console.log(result))
             .catch(err => console.log(err));
