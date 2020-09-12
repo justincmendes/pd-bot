@@ -144,9 +144,7 @@ bot.on("message", async message => {
         forceSkip = true
         args = args.slice(0, -1);
     }
-    else {
-        forceSkip = false;
-    }
+    else forceSkip = false;
 
     try {
         command.run(bot, message, commandName, args, PREFIX, forceSkip);
@@ -164,7 +162,7 @@ bot.on("message", async message => {
 //         if (user.bot) return;
 //         if (user != userOriginal) return;
 
-//         if (reaction.emoji.name == agree) {
+//         if (reaction.emoji.name === "✅") {
 //             confirm.delete({ timeout: deleteDelay });
 //             confirmation = true;
 //             console.log("About to return!");

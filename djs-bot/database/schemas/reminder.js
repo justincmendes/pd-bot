@@ -30,6 +30,10 @@ const reminderSchema = mongoose.Schema({
     guildID: {
         type: String,
         required: false,
+    },
+    lastEdited: {
+        type: Number,
+        required: false,
     }
 });
 

@@ -4,7 +4,7 @@ const Goals = require("../database/schemas/longtermgoals");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
-const goalsEmbedColour = "#0000FF";
+const goalsEmbedColour = fn.goalsEmbedColour;
 
 // Function Declarations and Definitions
 

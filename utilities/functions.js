@@ -61,53 +61,59 @@ module.exports = {
     },
 
     // BUG: When user reacts too soon, the code breaks, figure out how to let it keep running!
-    reactionDataCollect: async function (userOriginalMessageObject, prompt, emojiArray, title = "Reaction", colour = "#ADD8E6", delayTime = 60000, promptMessageDelete = true) {
-        const userOriginal = userOriginalMessageObject.author.id;
-        var result;
-        const deleteDelay = 3000;
-        const MS_TO_SECONDS = 1000;
-        const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
-        const embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
-        await userOriginalMessageObject.channel.send(embed)
-            .then(async confirm => {
-                await emojiArray.forEach((emoji) => {
-                    confirm.react(emoji)
-                        .catch(err => console.error(err));
-                });
-                const filter = (reaction, user) => {
-                    const filterOut = user.id == userOriginal && (emojiArray.includes(reaction.emoji.name));
-                    // console.log(`For ${user.username}'s ${reaction.emoji.name} reaction, the filter value is: ${filterOut}`);
-                    return filterOut;
-                };
-
-                // Create the awaitReactions promise object for the confirmation message just sent
-                result = await confirm.awaitReactions(filter, { time: delayTime, max: 1 })
-                    .then(reacted => {
-                        console.log(`User's ${reacted.first().emoji.name} collected!`);
-                        if (promptMessageDelete) {
-                            confirm.delete();
-                        }
-                        console.log(`Reaction Value (in function): ${reacted.first().emoji.name}`);
-                        return reacted.first().emoji.name;
-                    })
-                    // When the user DOESN'T react!
-                    .catch(err => {
-                        console.error(err);
-                        confirm.delete();
-                        console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
-                        console.log("Ending (reactionDataCollect) promise...");
-                        this.sendMessageThenDelete(userOriginalMessageObject, "Exiting...", deleteDelay);
-                        console.log(`Reaction Value (in function): undefined`);
-                        return false;
+    reactionDataCollect: async function (userOriginalMessageObject, prompt, emojiArray, title = "Reaction", colour = this.defaultEmbedColour, delayTime = 60000, promptMessageDelete = true) {
+        try {
+            const userOriginal = userOriginalMessageObject.author.id;
+            var result;
+            const deleteDelay = 3000;
+            const MS_TO_SECONDS = 1000;
+            const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+            const embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
+            await userOriginalMessageObject.channel.send(embed)
+                .then(async confirm => {
+                    await emojiArray.forEach((emoji) => {
+                        confirm.react(emoji)
+                            .catch(err => console.error(err));
                     });
-            }).catch(err => {
-                console.error(err);
-                return;
-            });
-        return result;
+                    const filter = (reaction, user) => {
+                        const filterOut = user.id == userOriginal && (emojiArray.includes(reaction.emoji.name));
+                        // console.log(`For ${user.username}'s ${reaction.emoji.name} reaction, the filter value is: ${filterOut}`);
+                        return filterOut;
+                    };
+
+                    // Create the awaitReactions promise object for the confirmation message just sent
+                    result = await confirm.awaitReactions(filter, { time: delayTime, max: 1 })
+                        .then(reacted => {
+                            console.log(`User's ${reacted.first().emoji.name} collected!`);
+                            if (promptMessageDelete) {
+                                confirm.delete();
+                            }
+                            console.log(`Reaction Value (in function): ${reacted.first().emoji.name}`);
+                            return reacted.first().emoji.name;
+                        })
+                        // When the user DOESN'T react!
+                        .catch(err => {
+                            console.error(err);
+                            confirm.delete();
+                            console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
+                            console.log("Ending (reactionDataCollect) promise...");
+                            this.sendMessageThenDelete(userOriginalMessageObject, "Exiting...", deleteDelay);
+                            console.log(`Reaction Value (in function): undefined`);
+                            return false;
+                        });
+                }).catch(err => {
+                    console.error(err);
+                    return;
+                });
+            return result;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
     },
 
-    messageDataCollectFirst: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = "#ADD8E6", delayTime = 60000,
+    messageDataCollectFirst: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000,
         deleteUserMessage = true, userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
         const userOriginal = userOriginalMessageObject.author.id;
         var result;
@@ -153,7 +159,7 @@ module.exports = {
         return result;
     },
 
-    messageDataCollectFirstObject: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = "#ADD8E6", delayTime = 60000, deleteUserMessage = true,
+    messageDataCollectFirstObject: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000, deleteUserMessage = true,
         userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
         const userOriginal = userOriginalMessageObject.author.id;
         var result;
@@ -211,7 +217,8 @@ module.exports = {
      */
     deleteManyByIDAndConnectedReminders: async function (Model, objectID) {
         try {
-            const documents = await Model.find({ _id: { $in: objectID } });
+            const query = { _id: { $in: objectID } };
+            const documents = await Model.find(query);
             console.log({ documents });
             if (!documents) {
                 console.log(`No ${Model.modelName} documents (${objectID}) can be found...`);
@@ -219,14 +226,14 @@ module.exports = {
             }
             else {
                 console.log(`Deleting ${Model.modelName} documents (${objectID}) and it's associated reminders...`);
-                await documents.deleteMany();
+                await Model.deleteMany(query);
             }
-            documents.toArray().forEach(async (document) => {
-                const reminders = await Reminder.deleteMany({ connectedDocument: documents._id });
+            documents.forEach(async (document, i) => {
+                const reminders = await Reminder.deleteMany({ connectedDocument: documents[i]._id });
                 if (reminders.deletedCount === 0) {
-                    console.log(`No reminders associated to ${documents._id.toString()}`);
+                    console.log(`No reminders associated to ${documents[i]._id.toString()}`);
                 }
-                else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents._id.toString()}`);
+                else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents[i]._id.toString()}`);
             });
             return true;
         }
@@ -252,14 +259,14 @@ module.exports = {
             }
             else {
                 console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
-                await documents.deleteMany();
+                await Model.deleteMany(query);
             }
-            documents.toArray().forEach(async (document) => {
-                const reminders = await Reminder.deleteMany({ connectedDocument: documents._id });
+            documents.forEach(async (document, i) => {
+                const reminders = await Reminder.deleteMany({ connectedDocument: documents[i]._id });
                 if (reminders.deletedCount === 0) {
-                    console.log(`No reminders associated to ${documents._id.toString()}`);
+                    console.log(`No reminders associated to ${documents[i]._id.toString()}`);
                 }
-                else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents._id.toString()}`);
+                else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents[i]._id.toString()}`);
             });
             return true;
         }
@@ -338,6 +345,115 @@ module.exports = {
 
     // END of Mongoose Functions
 
+    /**
+     * @param {String} string
+     */
+    toTitleCase: function (string) {
+        try {
+            if (string && typeof string === "string") {
+                if (string.length > 0) {
+                    string = string.toLowerCase();
+                    return `${string[0].toUpperCase()}${string.slice(1)}`;
+                }
+            }
+            return false;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
+    // START CRUD Operations Help
+
+    /**
+     * 
+     * @param {String} PREFIX 
+     * @param {String} commandUsed 
+     * @param {String} crudCommandName 
+     * @param {Boolean} supportsStartTimeAndRecency 
+     * @param {[String] | false}
+     * @param {Boolean} canDeleteByFields 
+     * @param {[String] | false} fields 
+     * @param {[String] | false} additionalCommands 
+     * @param {String | false} additionalInformation 
+     */
+    getReadOrDeleteUsageMessage: function (PREFIX, commandUsed, crudCommandName, supportsStartTimeAndRecency = false,
+        entryName = ["entry", "entries"], supportsFields = false, fields = false, additionalCommands = false, additionalInformation = "") {
+        entryName = Array.isArray(entryName) ? entryName.length >= 2 ? entryName : ["entry", "entries"] : ["entry", "entries"];
+        const entrySingular = entryName[0].toLowerCase();
+        const entryPlural = entryName[1].toLowerCase();
+        const recent = supportsStartTimeAndRecency ? " <recent?>" : "";
+        const recentInstructions = supportsStartTimeAndRecency ? `\n\n\`<recent?>\`: (OPT.) type **recent** at the indicated spot to sort the ${entryPlural} by **time created instead of ${entrySingular} start time!**` : ""
+        const field = supportsFields ? " <FIELDS?>" : "";
+        fields = fields ? (fields.length > 0 ? fields : false) : false;
+        additionalCommands = additionalCommands ? (additionalCommands.length > 0 ? additionalCommands : "") : "";
+        additionalInformation = additionalInformation ? additionalInformation : "";
+        const fieldInstructions = supportsFields ? (fields ? `\n\n\`<FIELDS?>\`(OPT.): **${fields.join("**;** ")}** (any field you'd like to clear, doesn't remove whole ${entrySingular})`
+            + "\n(if MULTIPLE `<FIELDS>`: separate by **commas**!)" : "") : "";
+        return `**USAGE:**\n\`${PREFIX}${commandUsed} ${crudCommandName} past <PAST_#_OF_ENTRIES>${recent}${field} <force?>\``
+            + `\n\`${PREFIX}${commandUsed} ${crudCommandName} <#_MOST_RECENT_ENTRY>${recent}${field} <force?>\``
+            + `\n\`${PREFIX}${commandUsed} ${crudCommandName} many <RECENT_ENTRIES>${recent}${field} <force?>\``
+            + `\n\`${PREFIX}${commandUsed} ${crudCommandName} <#_OF_ENTRIES>${recent} past <STARTING_INDEX>${field} <force?>\``
+            + additionalCommands
+            + `\n\n\`<PAST_#_OF_ENTRIES>\`: **recent; 5** (\\*any number); **all** \n(NOTE: ***__any number > 1__* will get more than 1 ${entrySingular}!**)`
+            + `\n\n\`<#_OF_ENTRIES>\` and \`<STARTING_INDEX>\`: **2** (\\**any number*)`
+            + `\n\n\`<#_MOST_RECENT_ENTRY>\`: **all; recent; 3** (3rd most recent ${entrySingular}, \\**any number*)\n(NOTE: Gets just 1 ${entrySingular} - UNLESS \`all\`)`
+            + `\n\n\`<RECENT_ENTRIES>\`: **3,5,recent,7,1,25**\n(**COMMA SEPARATED, NO SPACES:**\n1 being the most recent ${entrySingular}, 25 the 25th most recent, etc.)`
+            + `${recentInstructions}${fieldInstructions}\n\n\`<force?>\`: (OPT.) type **force** at the end of your command to **skip all of the confirmation windows!**${additionalInformation}`;
+    },
+
+    getEntriesByStartTime: async function (Model, query, entryIndex, numberOfEntries = 1) {
+        try {
+            const entries = await Model
+                .find(query)
+                .sort({ startTime: -1 })
+                .limit(numberOfEntries)
+                .skip(entryIndex);
+            console.log(entries);
+            return entries;
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
+    getEntriesByEarliestEndTime: async function (Model, query, entryIndex, numberOfEntries = 1) {
+        try {
+            const entries = await Model
+                .find(query)
+                .sort({ endTime: +1 })
+                .limit(numberOfEntries)
+                .skip(entryIndex);
+            console.log(entries);
+            return entries;
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
+    getEntriesByRecency: async function (Model, query, entryIndex, numberOfEntries = 1) {
+        try {
+            const entries = await Model
+                .find(query)
+                .sort({ _id: -1 })
+                .limit(numberOfEntries)
+                .skip(entryIndex);
+            console.log(entries);
+            return entries;
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
+    // END CRUD Operations Help
+
+
     getDateAndTimeInstructions: "`<DATE/TIME>`: **NOT Case-Sensitive!**\nEnter **timezone (optional)** at the **end**.\nThe **\"at\"** before the time is **optional.**"
         // + "\n**? = optional, # = number**\n`<in?>`: (OPT.) **future date/time**\n`<RELATIVE TIME>`: **(PAST) ago/prior/before**\nOR **(FUTURE) from now/later/in the future**"
         // + "\n`<DAY OF WEEK>`: **Mon/Monday, Tues/Tuesday,..., Sun/Sunday**\n`<RELATIVE TO NOW>`: **yesterday/yest/the day before**\nOR **today/tod**\nOR **tomorrow/tom/tmrw**"
@@ -384,37 +500,35 @@ module.exports = {
 
     // Note: This function displays values from 1 onwards but returns a properly indexed value (for arrays)
     userSelectFromList: async function (userOriginalMessageObject, list, numberOfEntries, instructions, selectTitle,
-        messageColour = "#ADD8E6", delayTime = 120000, userMessageDeleteDelay = 0, messageAfterList = "") {
-        do {
-            targetIndex = await this.messageDataCollectFirst(userOriginalMessageObject, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
-                messageColour, delayTime, true, userMessageDeleteDelay);
-            if (isNaN(targetIndex)) {
-                if (targetIndex.toLowerCase() == "stop") {
-                    return false;
+        messageColour = this.defaultEmbedColour, delayTime = 120000, userMessageDeleteDelay = 0, messageAfterList = "") {
+        try {
+            do {
+                targetIndex = await this.messageDataCollectFirst(userOriginalMessageObject, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
+                    messageColour, delayTime, true, userMessageDeleteDelay);
+                const errorMessage = "**Please enter a number on the given list!**";
+                const timeout = 15000;
+                if (isNaN(targetIndex)) {
+                    if (targetIndex.toLowerCase() == "stop") {
+                        return false;
+                    }
+                    else this.sendReplyThenDelete(userOriginalMessageObject, errorMessage, timeout);
+                }
+                else if (parseInt(targetIndex) > numberOfEntries || parseInt(targetIndex) <= 0) {
+                    this.sendReplyThenDelete(userOriginalMessageObject, errorMessage, timeout);
                 }
                 else {
-                    userOriginalMessageObject.reply("Please enter a number on the given list!")
-                        .then(msg => {
-                            msg.delete({ timeout: 5000 });
-                        })
-                        .catch(err => console.error(err));
+                    // Minus 1 to convert to back array index (was +1 for user understanding)
+                    targetIndex = parseInt(targetIndex) - 1;
+                    break;
                 }
             }
-            else if (parseInt(targetIndex) > numberOfEntries || parseInt(targetIndex) <= 0) {
-                userOriginalMessageObject.reply("Please enter a number on the given list!")
-                    .then(msg => {
-                        msg.delete({ timeout: 5000 });
-                    })
-                    .catch(err => console.error(err));
-            }
-            else {
-                // Minus 1 to convert to back array index (was +1 for user understanding)
-                targetIndex = parseInt(targetIndex) - 1;
-                break;
-            }
+            while (true);
+            return targetIndex;
         }
-        while (true);
-        return targetIndex;
+        catch (err) {
+            console.error(err);
+            return false;
+        }
     },
 
     listOfServerTextChannelsUserCanSendTo: async function (bot, userOriginalMessageObject, serverID) {
@@ -1616,7 +1730,7 @@ module.exports = {
                         const timezoneOffset = timezoneString ? this.getTimezoneOffset(timezoneString) : userTimezone;
                         // If no time arguments:
                         if (!this.getNumberOfDefinedElements(timeExpression)) {
-                            hour += timezoneOffset;
+                            // hour += timezoneOffset;
                             timestampOut = new Date(year, month, day, hour, minute, seconds, milliseconds).getTime();
                         }
                         else {
@@ -1743,7 +1857,8 @@ module.exports = {
             console.log({ timestampOut, timezoneString, userTimezone, userDaylightSavingSetting });
             timestampOut = this.getUTCOffsetAdjustedTimestamp(timestampOut, userTimezone, userDaylightSavingSetting, timezoneString);
             console.log({ timestampOut });
-            return timestampOut;
+            if (isNaN(timestampOut)) return false;
+            else return timestampOut;
         }
         else timestampOut = false;
     },
@@ -1945,6 +2060,7 @@ module.exports = {
             let relativeDay = /((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))/.exec(relativeTimeExpressionArray[2]);
             if (!relativeDay) return false;
             else relativeDay = relativeDay[1];
+            let isThis = false;
             if (/(?:\d+)/.test(relativeDay)) {
                 var futureTruePastFalse;
                 if (!relativeTimeExpressionArray[4]) {
@@ -1952,30 +2068,30 @@ module.exports = {
                     if (relativeTimeExpressionArray[1]) {
                         futureTruePastFalse = true;
                     }
-                    else {
-                        return false;
-                    }
+                    else return false;
                 }
-                else {
-                    futureTruePastFalse = /(fromnow|later|inthefuture)/.test(relativeTimeExpressionArray[4]);
-                }
+                else futureTruePastFalse = /(fromnow|later|inthefuture)/.test(relativeTimeExpressionArray[4]);
                 console.log({ futureTruePastFalse });
                 numberOfTimeScales = parseInt(relativeDay);
                 if (!futureTruePastFalse) {
                     numberOfTimeScales = -numberOfTimeScales;
                 }
             }
-            else if (/(?:last|past|previous|prior)/.test(relativeDay)) {
+            else if (/last|past|previous|prior/.test(relativeDay)) {
                 numberOfTimeScales = -1;
             }
-            else if (/(?:next|following|this(?:coming)?)/.test(relativeDay)) {
+            else if (/next|following/.test(relativeDay)) {
                 numberOfTimeScales = 1;
             }
-            else {
-                return false;
+            else if (/thiscoming/.test(relativeDay)) {
+                numberOfTimeScales = 0;
             }
+            else if (/this/.test(relativeDay)) {
+                numberOfTimeScales = 0;
+                isThis = true;
+            }
+            else return false;
 
-            const isPastDay = numberOfTimeScales < 0 ? true : false
             var targetDayOfWeek;
             // First Letter Switch
             switch (day[0]) {
@@ -2007,14 +2123,22 @@ module.exports = {
             // Convention: Traverse Forward along the Week, until the 
             // Target Day of Week is found
             var numberOfDaysForward = 0;
+            const isPastDay = targetDayOfWeek < currentDayOfWeek;
             while (true) {
                 console.log({ numberOfDaysForward, currentDayOfWeek, targetDayOfWeek })
                 if (targetDayOfWeek !== currentDayOfWeek) {
                     numberOfDaysForward++;
                     currentDayOfWeek = (currentDayOfWeek + 1) % 7;
                 }
-                else break;
+                else {
+                    if (numberOfDaysForward === 0 && numberOfTimeScales === 0) {
+                        numberOfDaysForward = isThis ? 0 : 7;
+                        break;
+                    }
+                    else break;
+                }
             }
+            if (numberOfTimeScales === 1 && isPastDay) numberOfTimeScales = 0;
             console.log({ numberOfDaysForward, numberOfTimeScales });
             numberOfTimeScales = (numberOfTimeScales * 7) + numberOfDaysForward;
             console.log({ numberOfTimeScales });
@@ -2374,7 +2498,7 @@ module.exports = {
         await userOriginalMessageObject.reply(errorMessage)
             .then(msg => {
                 msg.channel.send(usageMessage);
-                msg.delete(5000);
+                msg.delete({ timeout: 5000 });
             })
             .catch(err => console.error(err));
     },
@@ -2383,14 +2507,14 @@ module.exports = {
         userOriginalMessageObject.reply(errorMessage);
     },
 
-    sendDescriptionOnlyEmbed: function (userOriginalMessageObject, embedMessage, embedColour = "#ADD8E6") {
+    sendDescriptionOnlyEmbed: function (userOriginalMessageObject, embedMessage, embedColour = this.defaultEmbedColour) {
         embedMessage = new Discord.MessageEmbed()
             .setColor(embedColour)
             .setDescription(embedMessage);
         userOriginalMessageObject.channel.send(embedMessage);
     },
 
-    getMessageEmbed: function (embedMessage, embedTitle, embedColour = "#ADD8E6") {
+    getMessageEmbed: function (embedMessage, embedTitle, embedColour = this.defaultEmbedColour) {
         embedMessage = new Discord.MessageEmbed()
             .setColor(embedColour)
             .setTitle(embedTitle)
@@ -2398,14 +2522,14 @@ module.exports = {
         return embedMessage;
     },
 
-    getMessageDescriptionOnlyEmbed: function (embedMessage, embedColour = "#ADD8E6") {
+    getMessageDescriptionOnlyEmbed: function (embedMessage, embedColour = this.defaultEmbedColour) {
         embedMessage = new Discord.MessageEmbed()
             .setColor(embedColour)
             .setDescription(embedMessage);
         return embedMessage;
     },
 
-    getMessageImageEmbed: function (embedImageURL, embedMessage, embedTitle, embedColour = "#ADD8E6") {
+    getMessageImageEmbed: function (embedImageURL, embedMessage, embedTitle, embedColour = this.defaultEmbedColour) {
         embedMessage = new Discord.MessageEmbed()
             .setColor(embedColour)
             .setTitle(embedTitle)
@@ -2414,7 +2538,7 @@ module.exports = {
         return embedMessage;
     },
 
-    sendDescriptionOnlyMessageEmbed: function (userOriginalMessageObject, embedMessage, embedColour = "#ADD8E6") {
+    sendDescriptionOnlyMessageEmbed: function (userOriginalMessageObject, embedMessage, embedColour = this.defaultEmbedColour) {
         embedMessage = this.getMessageDescriptionOnlyEmbed(embedMessage, embedColour);
         userOriginalMessageObject.channel.send(embedMessage);
     },
@@ -2534,6 +2658,235 @@ module.exports = {
                 msg.delete({ timeout: deleteDelay });
             })
             .catch(err => console.error(err));
-    }
+    },
+
+    getEditEndConfirmation: async function (message, field, userEdit, type, forceSkip = false) {
+        const resetWarningMessage = `**Are you sure you want to change your ${field} to:**\n${userEdit}`;
+        let endEditConfirmation = await this.getUserConfirmation(message, resetWarningMessage, forceSkip, `${this.toTitleCase(type)}: Edit ${field} Confirmation`, 60000, 0);
+        return endEditConfirmation;
+    },
+
+    getBackToMainMenuConfirmation: async function (message, forceSkip) {
+        const backToMainEditMessage = "Are you sure you want to go **back to the main edit menu?**";
+        const backToMainEdit = await this.getUserConfirmation(message, backToMainEditMessage, forceSkip, "Edit: Back to Main Menu");
+        return backToMainEdit;
+    },
+
+    /**
+     * 
+     * @param {Discord.Message} message 
+     * @param {String} field 
+     * @param {String} instructionPrompt 
+     * @param {String} type 
+     * @param {Boolean} forceSkip 
+     * @param {String} embedColour 
+     */
+    getUserEditString: async function (message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+        var collectedEdit, reset;
+        let editMessagePrompt = `**What will you change your *${field}* to?:**\n${instructionPrompt}\n`;
+        editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**\n`;
+        do {
+            reset = false;
+            collectedEdit = await this.messageDataCollectFirst(message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            if (collectedEdit === "stop") return false;
+            else if (!collectedEdit) return "back";
+            else if (collectedEdit === "back") {
+                const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
+                if (backToMainEdit === false) reset = true;
+                else return collectedEdit;
+            }
+            if (!reset) {
+                const confirmEdit = await this.getEditEndConfirmation(message, field, collectedEdit, type, forceSkip);
+                if (!confirmEdit) {
+                    reset = true;
+                }
+            }
+        }
+        while (reset);
+        return collectedEdit;
+    },
+
+    /**
+     * 
+     * @param {Discord.Message} message 
+     * @param {String} field 
+     * @param {String} instructionPrompt 
+     * @param {[String]} emojiArray Ensure you enter at least 2 emojis (NOT ↩ or ❌ - they are taken for "BACK" and "CANCEL")
+     * @param {String} type 
+     * @param {Boolean} forceSkip 
+     * @param {String} embedColour 
+     */
+    getUserEditBoolean: async function (message, field, instructionPrompt, emojiArray, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+        var collectedEdit, reset;
+        let editMessagePrompt = `**What will you change your *${field}* to?:**\n${instructionPrompt}\n`;
+        const backEmoji = '↩';
+        const cancelEmoji = '❌';
+        editMessagePrompt = editMessagePrompt + `\nPress ${backEmoji} to go **back to the main edit menu**\n`
+            + `Press ${cancelEmoji} to **cancel**`;
+        emojiArray.push(backEmoji);
+        emojiArray.push(cancelEmoji);
+        do {
+            reset = false;
+            collectedEdit = await this.reactionDataCollect(message, editMessagePrompt, emojiArray, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            if (collectedEdit === "❌") return false;
+            else if (!collectedEdit) return "back";
+            else if (collectedEdit === backEmoji) {
+                const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
+                if (backToMainEdit === false) reset = true;
+                else return collectedEdit;
+            }
+            if (!reset) {
+                const confirmEdit = await this.getEditEndConfirmation(message, field, collectedEdit, type, forceSkip);
+                if (!confirmEdit) {
+                    reset = true;
+                }
+            }
+        }
+        while (reset);
+        return collectedEdit;
+    },
+
+    /**
+     * 
+     * @param {Discord.Message} message 
+     * @param {String} field 
+     * @param {String} instructionPrompt 
+     * @param {String} type 
+     * @param {Boolean} forceSkip 
+     * @param {String} embedColour 
+     */
+    getUserMultilineEditString: async function (message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+        let messageIndex = 0;
+        let reset = false;
+        var collectedEdit, userEdit = "";
+        let editMessagePrompt = `**What will you change your *${field}* to?:**\n${instructionPrompt}\n`;
+        editMessagePrompt = editMessagePrompt + `\nType \`0\` to **restart/clear** your current edit!`
+            + `\nType \`1\` when you're **done!**\nType \`back\` to go **back to the main edit menu**\n`;
+        const originalEditMessagePrompt = editMessagePrompt;
+        do {
+            messageIndex++;
+            collectedEdit = await this.messageDataCollectFirst(message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            if (!collectedEdit || collectedEdit === "stop") {
+                if (collectedEdit !== "stop")
+                    this.sendReplyThenDelete(message, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${userEdit}`, 600000)
+                return false;
+            }
+            if (messageIndex === 1 || reset === true) {
+                if (collectedEdit === "1") {
+                    const endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit, type, forceSkip);
+                    if (endEditConfirmation === true) {
+                        break;
+                    }
+                }
+                else if (collectedEdit !== "0" && collectedEdit !== "back") {
+                    editMessagePrompt = editMessagePrompt + "\n**Current Edit:**\n" + collectedEdit + "\n";
+                    userEdit = collectedEdit;
+                    reset = false;
+                }
+                else if (collectedEdit === "back") {
+                    const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
+                    if (backToMainEdit === true) {
+                        userEdit = "back";
+                        break;
+                    }
+                }
+            }
+            else if (collectedEdit === "back") {
+                const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
+                if (backToMainEdit === true) {
+                    userEdit = "back";
+                    break;
+                }
+            }
+            else if (collectedEdit === "1") {
+                let endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit, type, forceSkip);
+                if (endEditConfirmation === true) {
+                    break;
+                }
+            }
+            else if (collectedEdit === "0") {
+                if (userEdit === "") {
+                    reset = true;
+                }
+                else {
+                    const resetWarningMessage = "Are you sure you want to __**reset**__ your current edit?\n*(All of your current edit will be lost...)*";
+                    let resetConfirmation = await getUserConfirmation(message, resetWarningMessage, forceSkip, `${this.toTitleCase(type)}: Edit ${field} Reset`);
+                    if (resetConfirmation === true) {
+                        editMessagePrompt = originalEditMessagePrompt;
+                        userEdit = "";
+                        reset = true;
+                    }
+                }
+            }
+            else {
+                editMessagePrompt = editMessagePrompt + collectedEdit + "\n";
+                userEdit = `${userEdit}\n${collectedEdit}`;
+            }
+        }
+        while (true)
+        return userEdit;
+    },
+
+    /**
+     * 
+     * @param {Discord.Message} message 
+     * @param {String} field 
+     * @param {Number} maxNumber 
+     * @param {String} type 
+     * @param {Boolean} forceSkip 
+     * @param {String} embedColour 
+     */
+    getUserEditNumber: async function (message, field, maxNumber, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+        var collectedEdit;
+        const numberErrorMessage = `**INVALID INPUT... Please Enter a Number from 1-${maxNumber}**`;
+        let editMessagePrompt = `**What will you change your *${field}* to?:**\n***(Please enter a number from \`1-${maxNumber}\`)***\n`
+            + "\nType `back` to go **back to the main edit menu**\n";
+        while (true) {
+            collectedEdit = await this.messageDataCollectFirst(message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            if (collectedEdit === "stop") return false;
+            else if (!collectedEdit) return "back";
+            // Check if the given message is a number
+            else if (isNaN(collectedEdit)) {
+                if (collectedEdit === "back") {
+                    const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
+                    if (backToMainEdit === true) return collectedEdit;
+                }
+                else this.sendReplyThenDelete(message, numberErrorMessage, 15000);
+            }
+            else if (collectedEdit !== undefined) {
+                collectedEdit = parseInt(collectedEdit);
+                if (collectedEdit < 1 || collectedEdit > maxNumber) {
+                    this.sendReplyThenDelete(message, numberErrorMessage, 15000);
+                }
+                else {
+                    let confirmEdit = await this.getEditEndConfirmation(message, field, collectedEdit, type, forceSkip);
+                    if (confirmEdit === true) return collectedEdit;
+                }
+            }
+        }
+    },
+
+    endTimeAfterStartTime: function (message, startTimestamp, endTimestamp, type) {
+        if (endTimestamp) {
+            if (endTimestamp < startTimestamp) {
+                const startTimestampToDate = this.timestampToDateString(startTimestamp);
+                const endTimestampToDate = this.timestampToDateString(endTimestamp);
+                message.reply(`A __${type ? type.toLowerCase() : ""} end time__ **(${endTimestampToDate})** cannot be ***before*** a __${type ? type.toLowerCase() : ""} start time__ **(${startTimestampToDate})**`);
+                return false;
+            }
+        }
+        return true;
+    },
+
+
+    reminderTypes: ["Reminder", "Habit", "Fast"],
+    fastEmbedColour: "#32CD32",
+    mastermindEmbedColour: "#FF6A00",
+    journalEmbedColour: "#EE82EE",
+    reminderEmbedColour: "#FFFF00",
+    repeatReminderEmbedColour: "#FFFF66",
+    goalsEmbedColour: "#007FFF",
+    habitEmbedColour: "#0000FF",
+    defaultEmbedColour: "#ADD8E6",
 
 };

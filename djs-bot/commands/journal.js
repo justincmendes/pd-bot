@@ -5,10 +5,10 @@ const WeeklyJournal = require("../database/schemas/weeklyjournal");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
-const journalEmbedColour = "#EE82EE";
+const journalEmbedColour = fn.journalEmbedColour;
 
 // Function Declarations and Definitions
-function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = "#EE82EE") {
+function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = fn.journalEmbedColour) {
     var journalView;
     if (args[1] !== undefined) {
         let journalType = args[1].toLowerCase();

@@ -6,7 +6,7 @@ const UserSettings = require("../database/schemas/usersettings");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
-const mastermindEmbedColour = "#ff6a00";
+const mastermindEmbedColour = fn.mastermindEmbedColour;
 
 // Function Declarations and Initializations
 // Use WeeklyJournalEntry function to create empty entries and format in backticks for Discord markdown
@@ -16,7 +16,7 @@ function sendGeneratedTemplate(message, numberOfUsers, namesForTemplate, withMar
         if (namesForTemplate[templateIndex] == undefined) namesForTemplate.push(`NAME_${templateIndex + 1}`);
         if (numberOfUsers == 1) {
             templateOutput = `\`**__${date.toString()}__**\`\n\n${fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex], withMarkdown)}`;
-            fn.sendDescriptionOnlyEmbed(message, templateOutput, templateEmbedColour);
+            message.channel.send(fn.getMessageEmbed(templateOutput, "Mastermind: Weekly Reflection And Goals Template", templateEmbedColour));
             break;
         }
         if (templateIndex == 0) {
@@ -24,12 +24,12 @@ function sendGeneratedTemplate(message, numberOfUsers, namesForTemplate, withMar
         }
         else if (templateIndex == numberOfUsers - 1) {
             templateOutput = templateOutput + fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex], withMarkdown);
-            fn.sendDescriptionOnlyEmbed(message, templateOutput, templateEmbedColour);
+            message.channel.send(fn.getMessageEmbed(templateOutput, "Mastermind: Weekly Reflection And Goals Template", templateEmbedColour));
             break;
         }
         else if (templateIndex % 5 == 0) {
             templateOutput = templateOutput + fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex], withMarkdown);
-            fn.sendDescriptionOnlyEmbed(message, templateOutput, templateEmbedColour);
+            message.channel.send(fn.getMessageEmbed(templateOutput, "Mastermind: Weekly Reflection And Goals Template", templateEmbedColour));
             templateOutput = "";
         }
         else {
@@ -41,7 +41,7 @@ function sendGeneratedTemplate(message, numberOfUsers, namesForTemplate, withMar
 module.exports = {
     name: "mastermind",
     description: "Mastermind Meeting/Group Helper",
-    aliases: ["master", "mm", "m"],
+    aliases: ["m", "mm", "master", "masterminds"],
     cooldown: 5,
     args: true,
     run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {

@@ -5,10 +5,12 @@ const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
 
+const habitEmbedColour = fn.habitEmbedColour;
+
 module.exports = {
-    name: "habit",
+    name: "habits",
     description: "Long-term goal setting handler",
-    aliases: ["habits", "hab", "ha", "log", "track", "check"],
+    aliases: ["h", "habit", "hab", "ha", "log", "track", "check"],
     cooldown: 3,
     args: true,
     run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
@@ -24,6 +26,6 @@ module.exports = {
         // FOR SUPER quick and easy habit logging for the week!
 
         // Currently: will only show 
-        message.reply("Habits in development!");
+        message.channel.send(fn.getMessageEmbed("Habits in development!", "Habits: Help", habitEmbedColour));
     }
 };
