@@ -92,8 +92,8 @@ module.exports = {
                     }
                     const sortType = indexByRecency ? "By Recency" : "By End Time";
                     var reminderCollection;
-                    if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, 0, numberArg);
-                    else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, 0, numberArg);
+                    if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: true }, 0, numberArg);
+                    else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, 0, numberArg);
                     const showReminders = rm.multipleRemindersToString(bot, message, reminderCollection, numberArg, userTimezoneOffset);
                     // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} reminder(s)**:\n\n${showReminders}`;
@@ -199,8 +199,8 @@ module.exports = {
                                 return fn.sendErrorMessageAndUsage(message, reminderActionHelpMessage);
                             }
                             var reminderCollection;
-                            if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, skipEntries, pastNumberOfEntries);
-                            else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, skipEntries, pastNumberOfEntries);
+                            if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: true }, skipEntries, pastNumberOfEntries);
+                            else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, skipEntries, pastNumberOfEntries);
                             const showReminders = rm.multipleRemindersToString(bot, message, reminderCollection, pastNumberOfEntries, userTimezoneOffset, skipEntries);
                             if (skipEntries >= totalReminderNumber) return;
                             // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
@@ -258,7 +258,7 @@ module.exports = {
                     let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, false, "Reminders: Delete ALL Reminders FINAL Warning!");
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Reminders`);
-                    await Reminder.deleteMany({ userID: authorID, isRecurring: false });
+                    await Reminder.deleteMany({ userID: authorID, isRecurring: true });
                     return;
                 }
                 else return message.reply(reminderActionHelpMessage);
@@ -402,8 +402,8 @@ module.exports = {
                         pastNumberOfEntriesIndex = parseInt(args[2]);
                     }
                     var reminderView;
-                    if (indexByRecency) reminderView = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, 0, pastNumberOfEntriesIndex);
-                    else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, 0, pastNumberOfEntriesIndex);
+                    if (indexByRecency) reminderView = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: true }, 0, pastNumberOfEntriesIndex);
+                    else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, 0, pastNumberOfEntriesIndex);
                     console.log({ reminderView });
                     const reminderDataToString = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, userTimezoneOffset);
                     const reminderEmbed = fn.getMessageEmbed(reminderDataToString, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, reminderEmbedColour);
@@ -441,8 +441,8 @@ module.exports = {
                                 const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Repeat Reminder: See ${args[1]} Reminders Past ${entriesToSkip} WARNING! (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var reminderView;
-                                if (indexByRecency) reminderView = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, entriesToSkip, pastNumberOfEntriesIndex);
-                                else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, entriesToSkip, pastNumberOfEntriesIndex);
+                                if (indexByRecency) reminderView = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: true }, entriesToSkip, pastNumberOfEntriesIndex);
+                                else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ reminderView });
                                 const reminderDataToString = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, userTimezoneOffset, entriesToSkip);
                                 const reminderEmbed = fn.getMessageEmbed(reminderDataToString, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`, reminderEmbedColour);
