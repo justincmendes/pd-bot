@@ -1944,6 +1944,11 @@ module.exports = {
                         choice = 5;
                     }
                 }
+                else if (dayOfWeekElements) {
+                    if (dayOfWeekElements < 4) {
+                        choice = 5;
+                    }
+                }
                 else {
                     choice = 5;
                 }
@@ -2057,11 +2062,16 @@ module.exports = {
             return numberOfTimeScales;
         }
         else if (day) {
-            let relativeDay = /((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))/.exec(relativeTimeExpressionArray[2]);
-            if (!relativeDay) return false;
-            else relativeDay = relativeDay[1];
             let isThis = false;
-            if (/(?:\d+)/.test(relativeDay)) {
+            let relativeDay = /((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))/.exec(relativeTimeExpressionArray[2]);
+            let isDigit = /(?:\d+)/.test(relativeDay);
+            if (!relativeDay) {
+                relativeDay = "this";
+                isThis = true;
+            }
+            else relativeDay = relativeDay[1];
+
+            if (isDigit) {
                 var futureTruePastFalse;
                 if (!relativeTimeExpressionArray[4]) {
                     // In...
@@ -2072,10 +2082,7 @@ module.exports = {
                 }
                 else futureTruePastFalse = /(fromnow|later|inthefuture)/.test(relativeTimeExpressionArray[4]);
                 console.log({ futureTruePastFalse });
-                numberOfTimeScales = parseInt(relativeDay);
-                if (!futureTruePastFalse) {
-                    numberOfTimeScales = -numberOfTimeScales;
-                }
+                numberOfTimeScales = parseInt(relativeDay) - 1;
             }
             else if (/last|past|previous|prior/.test(relativeDay)) {
                 numberOfTimeScales = -1;
@@ -2113,17 +2120,18 @@ module.exports = {
                     if (/(?:wednesdays?)|(?:w(?:ed?)?)/.test(day)) targetDayOfWeek = 3;
                     break;
             }
-            if (!targetDayOfWeek) return false;
+            if (!targetDayOfWeek && targetDayOfWeek !== 0) return false;
 
             // Get how far the relative day of week is from the current day of the week
             const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
             let currentDate = new Date(new Date().getTime() + timezone * HOUR_IN_MS);
             let currentDayOfWeek = currentDate.getUTCDay();
             console.log({ currentDate, currentDayOfWeek, targetDayOfWeek });
+            const isPastDay = targetDayOfWeek < currentDayOfWeek;
+
             // Convention: Traverse Forward along the Week, until the 
             // Target Day of Week is found
             var numberOfDaysForward = 0;
-            const isPastDay = targetDayOfWeek < currentDayOfWeek;
             while (true) {
                 console.log({ numberOfDaysForward, currentDayOfWeek, targetDayOfWeek })
                 if (targetDayOfWeek !== currentDayOfWeek) {
@@ -2138,13 +2146,19 @@ module.exports = {
                     else break;
                 }
             }
-            if (numberOfTimeScales === 1 && isPastDay) numberOfTimeScales = 0;
+            if (numberOfTimeScales === 1 && isPastDay && !isDigit) numberOfTimeScales = 0;
             console.log({ numberOfDaysForward, numberOfTimeScales });
+            if (isDigit) {
+                if (!futureTruePastFalse) {
+                    numberOfTimeScales = -numberOfTimeScales;
+                }
+            }
             numberOfTimeScales = (numberOfTimeScales * 7) + numberOfDaysForward;
             console.log({ numberOfTimeScales });
             return numberOfTimeScales;
         }
         else return false;
+
     },
 
     /**
