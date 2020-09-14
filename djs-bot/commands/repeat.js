@@ -31,6 +31,7 @@ module.exports = {
     run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
         // Variable Declarations and Initializations
         const authorID = message.author.id;
+        const authorUsername = message.author.username;
         const userTimezoneOffset = -4;
         const userDaylightSavingSetting = true;
         let repeatUsageMessage = `**USAGE** (Recurring Reminder)\n\`${PREFIX}${commandUsed} <INTERVAL> <CHANNEL> <MESSAGE> <force?>\``
@@ -885,18 +886,16 @@ module.exports = {
                     currentTimestamp, userTimezoneOffset, userDaylightSavingSetting)
                     - HOUR_IN_MS * userTimezoneOffset - currentTimestamp;
                 if (!interval || interval <= 0) return message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
-                else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
+                // else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
                 let duration = await rm.getUserFirstRecurringEndDuration(message, repeatHelpMessage, userTimezoneOffset, userDaylightSavingSetting, true);
                 console.log({ duration })
                 if (!duration && duration !== 0) return;
-                duration = duration > 0 ? duration : 0;;
-                const confirmCreationMessage = `Are you sure you want to set the following **recurring reminder** to send -\n**in ${splitArgs[1]} after ${fn.millisecondsToTimeString(duration)}**`
+                duration = duration > 0 ? duration : 0;
+                const confirmCreationMessage = `Are you sure you want to set the following **recurring reminder** to send -\n**in ${splitArgs[1]} after ${fn.millisecondsToTimeString(duration)} from now**`
                     + ` (and repeat every **${fn.millisecondsToTimeString(interval)}**):\n\n${splitArgs[2]}`;
                 const confirmCreation = await fn.getUserConfirmation(message, confirmCreationMessage, forceSkip, "Recurring Repeat Reminder: Confirm Creation", 180000);
                 if (!confirmCreation) return;
                 else {
-                    currentTimestamp = new Date().getTime();
-                    console.log({ currentTimestamp });
                     if (splitArgs[1].toLowerCase() === "dm") {
                         await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp,
                             currentTimestamp + duration, splitArgs[2], reminderType, true, true, interval);

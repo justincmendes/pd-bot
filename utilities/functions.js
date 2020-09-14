@@ -1606,7 +1606,7 @@ module.exports = {
         const relativeTimeAgoOrFromNow = /(in)?(\d+\.?\d*|\d*\.?\d+)(seconds?|secs?|minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?|yrs?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const relativeTimeTest = relativeTimeAgoOrFromNow.exec(timeArgs);
         console.log({ relativeTimeTest });
-        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:m(?:on?)?)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:w(?:ed?)?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:m(?:on?)?)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:weds?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const dayOfWeekTest = dayOfWeekRegex.exec(timeArgs);
         console.log({ dayOfWeekTest });
         // Absolute Time: Past and Future
@@ -1727,7 +1727,7 @@ module.exports = {
                         const timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
                         let [year, month, day, hour, minute, seconds, milliseconds] = timeArray;
                         day += numberOfTimeScales;
-                        const timezoneOffset = timezoneString ? this.getTimezoneOffset(timezoneString) : userTimezone;
+                        // const timezoneOffset = timezoneString ? this.getTimezoneOffset(timezoneString) : userTimezone;
                         // If no time arguments:
                         if (!this.getNumberOfDefinedElements(timeExpression)) {
                             // hour += timezoneOffset;
@@ -2878,6 +2878,49 @@ module.exports = {
         return true;
     },
 
+    stringToDiscordStringMaxArray: function (string) {
+        return string.match(/.{1,2032}/g);
+    },
+
+    /**
+     * Generates embeds of suitable size for pagination
+     * @param {[String]} elements 
+     * @param {String} title 
+     * @param {String} embedColour 
+     */
+    getEmbedStringArray: function (elements, title, embedColour = this.defaultEmbedColour) {
+        try {
+            var embedString = new Array();
+            var maxString = "";
+            if (elements) {
+                if (Array.isArray(elements)) {
+                    elements.forEach((element, i) => {
+                        const combinedStringLength = (maxString + element).length;
+                        if (element.length >= 2030) {
+                            maxString = element;
+                            embedString.push(maxString);
+                        }
+                        else if (combinedStringLength <= 2032) {
+                            if (combinedStringLength >= 2030) {
+                                maxString += element + "\n\n";
+                            }
+                        }
+                        else {
+                            // Remove the last two characters - expected to be the new line escape characters
+
+                            embedString.push(maxString);
+                            maxString = element + "\n\n";
+                        }
+                    })
+                }
+            }
+
+            return false;
+        }
+        catch (err) {
+            console.error(err);
+        }
+    },
 
     reminderTypes: ["Reminder", "Habit", "Fast"],
     fastEmbedColour: "#32CD32",

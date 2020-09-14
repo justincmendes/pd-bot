@@ -881,7 +881,7 @@ module.exports = {
                 if (!reminderEndTime) return message.reply(`**INVALID Time**... ${reminderHelpMessage}`);
                 let duration = reminderEndTime - currentTimestamp;
                 duration = fn.millisecondsToTimeString(duration > 0 ? duration : 0);
-                const confirmCreationMessage = `Are you sure you want to set the following **one-time reminder** to send -\n**in ${splitArgs[1]} after ${duration}**:\n\n${splitArgs[2]}`;
+                const confirmCreationMessage = `Are you sure you want to set the following **one-time reminder** to send -\n**in ${splitArgs[1]} after ${duration} from now**:\n\n${splitArgs[2]}`;
                 const confirmCreation = await fn.getUserConfirmation(message, confirmCreationMessage, forceSkip, "Reminder: Confirm Creation", 180000);
                 if (!confirmCreation) return;
                 else {
