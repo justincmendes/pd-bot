@@ -2150,7 +2150,7 @@ module.exports = {
             console.log({ numberOfDaysForward, numberOfTimeScales });
             if (isDigit) {
                 if (!futureTruePastFalse) {
-                    numberOfTimeScales = -numberOfTimeScales;
+                    numberOfTimeScales = -numberOfTimeScales - 1;
                 }
             }
             numberOfTimeScales = (numberOfTimeScales * 7) + numberOfDaysForward;
