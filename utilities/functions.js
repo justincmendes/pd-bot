@@ -2879,7 +2879,7 @@ module.exports = {
     },
 
     stringToDiscordStringMaxArray: function (string) {
-        return string.match(/.{1,2032}/g);
+        return string.match(/.{1,2048}/g);
     },
 
     /**
@@ -2895,23 +2895,23 @@ module.exports = {
             if (elements) {
                 if (Array.isArray(elements)) {
                     elements.forEach((element, i) => {
-                        const combinedStringLength = (maxString + element).length;
-                        if (element.length >= 2030) {
+                        const combinedString = maxString + element;
+                        if (maxString === "" && element.length >= 2046) {
                             maxString = element;
                             embedString.push(maxString);
+                            maxString = "";
                         }
-                        else if (combinedStringLength <= 2032) {
-                            if (combinedStringLength >= 2030) {
-                                maxString += element + "\n\n";
+                        else if (combinedString.length <= 2048) {
+                            if (combinedString.length >= 2046) {
+                                maxString += element;
                             }
+                            else maxString += element + "\n\n";
                         }
                         else {
-                            // Remove the last two characters - expected to be the new line escape characters
-
                             embedString.push(maxString);
                             maxString = element + "\n\n";
                         }
-                    })
+                    });
                 }
             }
 
@@ -2921,6 +2921,7 @@ module.exports = {
             console.error(err);
         }
     },
+
 
     reminderTypes: ["Reminder", "Habit", "Fast"],
     fastEmbedColour: "#32CD32",

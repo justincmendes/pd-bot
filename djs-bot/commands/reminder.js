@@ -337,7 +337,7 @@ module.exports = {
                     return message.channel.send(await rm.getMostRecentReminder(bot, authorID, false, userTimezoneOffset, reminderEmbedColour));
                 }
                 else if (seeType === "all") {
-                    pastNumberOfEntriesIndex = totalReminderNumber - 1;
+                    pastNumberOfEntriesIndex = totalReminderNumber;
                     pastFunctionality = true;
                 }
                 else if (isNumberArg) {
