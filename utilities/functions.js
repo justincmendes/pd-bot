@@ -9,7 +9,7 @@ require("dotenv").config();
 // Private Function Declarations
 
 module.exports = {
-    quickReact: async function (message, emoji, timeoutMultiplier = 1, TIMEOUT = 450) {
+    quickReact: async function (message, emoji, timeoutMultiplier = 1, TIMEOUT = 375) {
         try {
             if (message) {
                 console.log(!message.deleted);
