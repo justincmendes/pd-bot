@@ -21,8 +21,8 @@ const cooldowns = new Discord.Collection();
 
 const mongoose = require("mongoose");
 const GuildSettings = require("./database/schemas/guildsettings");
+const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
-const { SSL_OP_EPHEMERAL_RSA } = require("constants");
 bot.mongoose = require("../utilities/mongoose");
 
 //This shouldn't happen, this would be on Node.js

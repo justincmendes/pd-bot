@@ -1,6 +1,6 @@
 const Discord = require("discord.js");
 const Habit = require("../database/schemas/habittracker");
-const UserSettings = require("../database/schemas/usersettings");
+const User = require("../database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();

@@ -2,7 +2,7 @@
 const Discord = require("discord.js");
 const DailyJournal = require("../database/schemas/dailyjournal");
 const WeeklyJournal = require("../database/schemas/weeklyjournal");
-const UserSettings = require("../database/schemas/usersettings");
+const User = require("../database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();

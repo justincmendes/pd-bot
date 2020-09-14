@@ -1,9 +1,8 @@
 const router = require('express').Router();
 const { getBotGuilds } = require('../utils/api');
-const User = require('../database/schemas/User');
+const User = require('../../djs-bot/database/schemas/user');
 const fn = require('../utils/functions');
 const GuildConfig = require('../database/schemas/guildsettings');
-const UserSettings = require('../../djs-bot/database/schemas/usersettings');
 
 router.get('/guilds', async (req, res) => {
     const guilds = await getBotGuilds();
@@ -43,7 +42,7 @@ router.put('/user/:userID/settings', async (req, res) => {
         return res.status(400).send({ message: "Settings Required." });
     }
     // The front-end will check if thes settings are valid
-    const update = await UserSettings.findOneAndUpdate({userID}, {$set: {
+    const update = await User.findOneAndUpdate({userID}, {$set: {
         //...
     }});
     return update ? res.send(update) : res.status(404).send({message: 'Could not find document'});
@@ -51,10 +50,9 @@ router.put('/user/:userID/settings', async (req, res) => {
 
 router.get('/user/:userID/reminders', async (req, res) => {
     const {userID} = req.params;
-    const reminders = await UserSettings.collection
+    const reminders = await User
     .find({userID})
-    .sort({endTime: -1})
-    .toArray();
+    .sort({endTime: -1});
     return reminders ? res.send(reminders) : res.status(404).send({message: 'No reminders set.'});;
 });
 

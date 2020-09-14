@@ -18,7 +18,14 @@ const guildSettingsSchema = mongoose.Schema({
         type: String,
         required: true,
         default: "EST",
-    }
+    },
+    // The role that allows others to write the mastermind reflection for each other!
+    mastermindRoles: {
+        type: [Number],
+        required: true,
+        default: [],
+    },
+
 });
 
 module.exports = mongoose.model("GuildSetting", guildSettingsSchema, "guildsettings");

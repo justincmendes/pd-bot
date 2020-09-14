@@ -9,21 +9,37 @@ require("dotenv").config();
 // Private Function Declarations
 
 module.exports = {
-    getUserConfirmation: async function (userOriginalMessageObject, confirmationMessage, forceSkip = false, embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,
+    quickReact: async function (message, emoji, timeoutMultiplier = 1, TIMEOUT = 450) {
+        try {
+            if (message) {
+                console.log(!message.deleted);
+                if (!message.deleted) {
+                    setTimeout(async () => {
+                        await message.react(emoji);
+                    }, TIMEOUT * timeoutMultiplier);
+                }
+            }
+        }
+        catch (err) {
+            console.error(err);
+        }
+    },
+
+    getUserConfirmation: async function (message, confirmationMessage, forceSkip = false, embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,
         confirmationInstructions = "\n\nSelect ✅ to **proceed**\nSelect ❌ to **cancel**") {
         if (forceSkip === true) return true;
         const agree = "✅";
         const disagree = "❌";
-        const userOriginal = userOriginalMessageObject.author.id;
+        const userOriginal = message.author.id;
         const MS_TO_SECONDS = 1000;
         const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
         var confirmation;
         confirmationMessage = confirmationMessage + confirmationInstructions;
         const embed = this.getMessageEmbed(confirmationMessage, embedTitle, "#FF0000").setFooter(footerText);
-        await userOriginalMessageObject.channel.send(embed)
+        await message.channel.send(embed)
             .then(async confirm => {
-                await confirm.react(agree);
-                await confirm.react(disagree);
+                await this.quickReact(confirm, agree);
+                await this.quickReact(confirm, disagree, 2);
                 const filter = (reaction, user) => {
                     const filterOut = user.id == userOriginal && (reaction.emoji.name == agree || reaction.emoji.name == disagree);
                     // console.log(`For ${user.username}'s ${reaction.emoji.name} reaction, the filter value is: ${filterOut}`);
@@ -36,14 +52,14 @@ module.exports = {
                         console.log(`User's ${reacted.first().emoji.name} collected!`);
                         if (reacted.first().emoji.name == agree) {
                             confirm.delete();
-                            this.sendMessageThenDelete(userOriginalMessageObject, "Confirmed!", deleteDelay);
+                            this.sendMessageThenDelete(message, "Confirmed!", deleteDelay);
                             console.log(`Confirmation Value (in function): true`);
                             return true;
                         }
                         else {
                             confirm.delete();
                             console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
-                            this.sendMessageThenDelete(userOriginalMessageObject, "Exiting...", deleteDelay);
+                            this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
                             return false;
                         }
                     })
@@ -53,7 +69,7 @@ module.exports = {
                         confirm.delete();
                         console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
                         console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
-                        this.sendMessageThenDelete(userOriginalMessageObject, "Exiting...", deleteDelay);
+                        this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
                         return false;
                     });
             }).catch(err => console.error(err));
@@ -61,19 +77,19 @@ module.exports = {
     },
 
     // BUG: When user reacts too soon, the code breaks, figure out how to let it keep running!
-    reactionDataCollect: async function (userOriginalMessageObject, prompt, emojiArray, title = "Reaction", colour = this.defaultEmbedColour, delayTime = 60000, promptMessageDelete = true) {
+    reactionDataCollect: async function (message, prompt, emojiArray, title = "Reaction",
+        colour = this.defaultEmbedColour, delayTime = 60000, promptMessageDelete = true) {
         try {
-            const userOriginal = userOriginalMessageObject.author.id;
+            const userOriginal = message.author.id;
             var result;
             const deleteDelay = 3000;
             const MS_TO_SECONDS = 1000;
             const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
             const embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
-            await userOriginalMessageObject.channel.send(embed)
+            await message.channel.send(embed)
                 .then(async confirm => {
-                    await emojiArray.forEach((emoji) => {
-                        confirm.react(emoji)
-                            .catch(err => console.error(err));
+                    emojiArray.forEach(async (emoji, i) => {
+                        await this.quickReact(confirm, emoji, i);
                     });
                     const filter = (reaction, user) => {
                         const filterOut = user.id == userOriginal && (emojiArray.includes(reaction.emoji.name));
@@ -97,13 +113,10 @@ module.exports = {
                             confirm.delete();
                             console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
                             console.log("Ending (reactionDataCollect) promise...");
-                            this.sendMessageThenDelete(userOriginalMessageObject, "Exiting...", deleteDelay);
+                            this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
                             console.log(`Reaction Value (in function): undefined`);
                             return false;
                         });
-                }).catch(err => {
-                    console.error(err);
-                    return;
                 });
             return result;
         }
@@ -113,9 +126,9 @@ module.exports = {
         }
     },
 
-    messageDataCollectFirst: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000,
+    messageDataCollectFirst: async function (message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000,
         deleteUserMessage = true, userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
-        const userOriginal = userOriginalMessageObject.author.id;
+        const userOriginal = message.author.id;
         var result;
         const deleteDelay = 3000;
         const MS_TO_SECONDS = 1000;
@@ -126,7 +139,7 @@ module.exports = {
         if (attachImage == true) {
             embed = embed.setImage(imageURL);
         }
-        await userOriginalMessageObject.channel.send(embed)
+        await message.channel.send(embed)
             .then(async confirm => {
                 const filter = response => {
                     const filterOut = response.author.id == userOriginal;
@@ -135,7 +148,7 @@ module.exports = {
                 };
 
                 // Create the awaitMessages promise object for the confirmation message just sent
-                result = await userOriginalMessageObject.channel.awaitMessages(filter, { time: delayTime, max: 1 })
+                result = await message.channel.awaitMessages(filter, { time: delayTime, max: 1 })
                     .then(async reacted => {
                         console.log(`${reacted.first().author.username}'s message was collected!`);
                         confirm.delete();
@@ -151,7 +164,7 @@ module.exports = {
                         confirm.delete();
                         console.log(`ERROR: User didn't respond within ${delayTime / MS_TO_SECONDS}s!`);
                         console.log("Ending (messageDataCollect) promise...");
-                        this.sendMessageThenDelete(userOriginalMessageObject, "Ending...", deleteDelay);
+                        this.sendMessageThenDelete(message, "Ending...", deleteDelay);
                         console.log(`Message Sent (in function): false`);
                         return false;
                     });
@@ -159,9 +172,9 @@ module.exports = {
         return result;
     },
 
-    messageDataCollectFirstObject: async function (userOriginalMessageObject, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000, deleteUserMessage = true,
+    messageDataCollectFirstObject: async function (message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000, deleteUserMessage = true,
         userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
-        const userOriginal = userOriginalMessageObject.author.id;
+        const userOriginal = message.author.id;
         var result;
         const deleteDelay = 3000;
         const MS_TO_SECONDS = 1000;
@@ -172,7 +185,7 @@ module.exports = {
         if (attachImage == true) {
             embed = embed.setImage(imageURL);
         }
-        await userOriginalMessageObject.channel.send(embed)
+        await message.channel.send(embed)
             .then(async confirm => {
                 const filter = response => {
                     const filterOut = response.author.id == userOriginal;
@@ -181,7 +194,7 @@ module.exports = {
                 };
 
                 // Create the awaitMessages promise object for the confirmation message just sent
-                result = await userOriginalMessageObject.channel.awaitMessages(filter, { time: delayTime, max: 1 })
+                result = await message.channel.awaitMessages(filter, { time: delayTime, max: 1 })
                     .then(async reacted => {
                         console.log(`${reacted.first().author.username}'s message was collected!`);
                         confirm.delete();
@@ -197,7 +210,7 @@ module.exports = {
                         confirm.delete();
                         console.log(`ERROR: User didn't respond within ${delayTime / MS_TO_SECONDS}s!`);
                         console.log("Ending (messageDataCollect) promise...");
-                        this.sendMessageThenDelete(userOriginalMessageObject, "Ending...", deleteDelay);
+                        this.sendMessageThenDelete(message, "Ending...", deleteDelay);
                         console.log(`Message Sent (in function): false`);
                         return false;
                     });

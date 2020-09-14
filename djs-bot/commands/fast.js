@@ -1,7 +1,7 @@
 // Global Variable Declarations and Initializations
 const Discord = require("discord.js");
 const Fast = require("../database/schemas/fasting");
-const UserSettings = require("../database/schemas/usersettings");
+const UserSettings = require("../database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
