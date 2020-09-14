@@ -726,8 +726,9 @@ module.exports = {
                     else if (fastBreaker == "skip") fastBreaker = null;
 
                     // +1 to convert the returned index back to natural numbers
-                    moodValue = await fn.userSelectFromList(message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour) + 1;
+                    moodValue = await fn.userSelectFromList(message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour);
                     if (moodValue === false) return;
+                    else moodValue++;
                     var reflectionText = "";
                     let messageIndex = 0;
                     let reset = false;
