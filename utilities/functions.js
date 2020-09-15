@@ -26,19 +26,18 @@ module.exports = {
     },
 
     getUserConfirmation: async function (message, confirmationMessage, forceSkip = false, embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,
-        confirmationInstructions = "\n\nSelect ✅ to **proceed**\nSelect ❌ to **cancel**") {
+        confirmationInstructions = "✅ to proceed\n❌ to cancel") {
         if (forceSkip === true) return true;
         const agree = "✅";
         const disagree = "❌";
         const userOriginal = message.author.id;
         const MS_TO_SECONDS = 1000;
-        const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+        const footerText = `${confirmationInstructions}\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
         var confirmation;
-        confirmationMessage = confirmationMessage + confirmationInstructions;
         const embed = this.getMessageEmbed(confirmationMessage, embedTitle, "#FF0000").setFooter(footerText);
         await message.channel.send(embed)
             .then(async confirm => {
-                await this.quickReact(confirm, agree);
+                await this.quickReact(confirm, agree, 1);
                 await this.quickReact(confirm, disagree, 2);
                 const filter = (reaction, user) => {
                     const filterOut = user.id == userOriginal && (reaction.emoji.name == agree || reaction.emoji.name == disagree);
@@ -74,6 +73,98 @@ module.exports = {
                     });
             }).catch(err => console.error(err));
         return confirmation;
+    },
+
+    getPaginatedUserConfirmation: async function (message, embedArray, confirmationMessage, forceSkip = false,
+        embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,
+        confirmationInstructions = "✅ to proceed\n❌ to cancel\n⬅ to scroll left\n➡ to scroll right") {
+        try {
+            if (forceSkip === true) return true;
+            const temp = embedArray[0];
+            embedArray[0] = this.getMessageEmbed(confirmationMessage, embedTitle);
+            embedArray = [embedArray[0], temp].concat(embedArray.slice(1));
+            const MS_TO_SECONDS = 1000;
+            const footerText = `${confirmationInstructions}\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+            if (embedArray) {
+                if (embedArray.length) {
+                    embedArray.forEach((embed) => {
+                        embed.setTitle(embedTitle)
+                            .setFooter(footerText)
+                            .setColor("#FF0000");
+                    });
+                }
+                else return false;
+            }
+            else return false;
+            let currentPage = 0;
+            const embed = await message.channel.send(embedArray[currentPage]);
+            const agree = "✅";
+            const disagree = "❌";
+            const left = '⬅';
+            const right = '➡';
+            const emojis = [agree, disagree, left, right];
+            emojis.forEach(async (emoji, i) => {
+                await this.quickReact(embed, emoji, i);
+            });
+
+            const filter = (reaction, user) => emojis.includes(reaction.emoji.name) && (message.author.id === user.id);
+            const collector = embed.createReactionCollector(filter, { time: delayTime, dispose: true });
+
+            collector.on('collect', async (reaction, user) => {
+                console.log(`${user.username}'s ${reaction.emoji.name} collected!`);
+                switch (reaction.emoji.name) {
+                    case right:
+                        if (currentPage < embedArray.length - 1) {
+                            currentPage++;
+                        }
+                        else if (currentPage === embedArray.length - 1) {
+                            currentPage = 0;
+                        }
+                        break;
+                    case left:
+                        if (currentPage !== 0) {
+                            --currentPage;
+                        }
+                        else if (currentPage === 0) {
+                            currentPage = embedArray.length - 1;
+                        }
+                        break;
+                    case agree:
+                        embed.delete();
+                        this.sendMessageThenDelete(message, "Confirmed!", deleteDelay);
+                        console.log(`Confirmation Value (in function): true`);
+                        return true;
+                    case disagree:
+                        embed.delete();
+                        console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
+                        this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+                        return false;
+                }
+                embed.edit(embedArray[currentPage]);
+                if (message.channel.type !== 'dm') reaction.users.remove(user);
+            });
+
+            collector.on('end', (collected) => {
+                collected = collected.map(reaction => reaction.emoji.name);
+                if (!collected.length) {
+                    if (!(collected.includes(agree) || collected.includes(disagree))) {
+                        console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
+                        console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
+                        this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+                        embed.delete();
+                    }
+                }
+                return false;
+            });
+        }
+        catch (err) {
+            console.error(err);
+            embed.delete();
+            console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
+            console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
+            this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+            return false;
+        }
     },
 
     // BUG: When user reacts too soon, the code breaks, figure out how to let it keep running!
@@ -2915,33 +3006,59 @@ module.exports = {
      * @param {String} title 
      * @param {String} embedColour 
      */
-    getEmbedStringArray: function (elements, title, embedColour = this.defaultEmbedColour) {
+    getEmbedArray: function (elements, title, includesFile = false, embedColour = this.defaultEmbedColour) {
         try {
-            var embedString = new Array();
-            var maxString = "";
+            let embedString = new Array();
+            let maxString = "";
             if (elements) {
                 if (Array.isArray(elements)) {
                     elements.forEach((element, i) => {
                         const combinedString = maxString + element;
-                        if (maxString === "" && element.length >= 2046) {
-                            maxString = element;
-                            embedString.push(maxString);
+                        if (element.length >= 2046) {
+                            if (maxString === "") {
+                                maxString += element;
+                                embedString.push(maxString);
+                            }
+                            else {
+                                embedString.push(maxString);
+                                embedString.push(element);
+                            }
                             maxString = "";
                         }
-                        else if (combinedString.length <= 2048) {
+                        else if (combinedString.length <= 2048 && i !== elements.length - 1) {
                             if (combinedString.length >= 2046) {
                                 maxString += element;
+                                embedString.push(maxString);
                             }
                             else maxString += element + "\n\n";
                         }
                         else {
-                            embedString.push(maxString);
-                            maxString = element + "\n\n";
+                            if (i === elements.length - 1) {
+                                if (combinedString.length <= 2048) {
+                                    maxString += element;
+                                }
+                                else {
+                                    embedString.push(maxString);
+                                    maxString = element;
+                                }
+                                embedString.push(maxString);
+                            } else {
+                                embedString.push(maxString);
+                                maxString = element + "\n\n";
+                            }
                         }
                     });
+                    // console.log({ embedString });
+                    let embedArray = new Array();
+                    embedString.forEach((string) => {
+                        const embed = this.getMessageEmbed(string, title, embedColour);
+                        embedArray.push(includesFile ? embed
+                            .setFooter(this.fileFooterText)
+                            : embed);
+                    });
+                    return embedArray;
                 }
             }
-
             return false;
         }
         catch (err) {
@@ -2949,6 +3066,53 @@ module.exports = {
         }
     },
 
+    // With to file capability
+    sendPaginationEmbed: async function (message, embedArray) {
+        let currentPage = 0;
+        const embed = await message.channel.send(embedArray[currentPage]);
+        const left = '⬅';
+        const right = '➡';
+        const cancel = '🗑️';
+        const file = '📎';
+        const emojis = embedArray[0].footer.text === this.fileFooterText ? [left, right, cancel, file] : [left, right, cancel];
+        emojis.forEach(async (emoji, i) => {
+            await this.quickReact(embed, emoji, i);
+        });
+
+        const filter = (reaction, user) => emojis.includes(reaction.emoji.name) && (message.author.id === user.id);
+        const collector = embed.createReactionCollector(filter);
+
+        collector.on('collect', async (reaction, user) => {
+            switch (reaction.emoji.name) {
+                case right:
+                    if (currentPage < embedArray.length - 1) {
+                        currentPage++;
+                    }
+                    else if (currentPage === embedArray.length - 1) {
+                        currentPage = 0;
+                    }
+                    break;
+                case left:
+                    if (currentPage !== 0) {
+                        --currentPage;
+                    }
+                    else if (currentPage === 0) {
+                        currentPage = embedArray.length - 1;
+                    }
+                    break;
+                case cancel:
+                    collector.stop();
+                    console.log("Stopped pagination");
+                    await embed.delete();
+                    return;
+            }
+            embed.edit(embedArray[currentPage]);
+            if (message.channel.type !== 'dm') reaction.users.remove(user);
+        });
+        return embed;
+    },
+
+    fileFooterText: `Press the 📎 to get all of this in a text file`,
 
     reminderTypes: ["Reminder", "Habit", "Fast"],
     fastEmbedColour: "#32CD32",

@@ -88,10 +88,10 @@ module.exports = {
                     var reminderCollection;
                     if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, 0, numberArg);
                     else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, 0, numberArg);
-                    const showReminders = rm.multipleRemindersToString(bot, message, reminderCollection, numberArg, userTimezoneOffset);
-                    // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
-                    const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} reminder(s)**:\n\n${showReminders}`;
-                    const multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, forceSkip, `Reminder: Delete Past ${numberArg} Reminders (${sortType})`, 600000);
+                    const reminderStringArray = rm.multipleRemindersToString(bot, message, reminderCollection, numberArg, userTimezoneOffset, 0, true);
+                    const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} reminder(s)?**`;
+                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(message, reminderStringArray, multipleDeleteMessage, forceSkip,
+                        `Reminder: Delete Past ${numberArg} Reminders (${sortType})`, 600000);
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await reminderCollection.map(reminder => reminder._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Reminders (${sortType})`);
@@ -135,8 +135,8 @@ module.exports = {
                             indexByRecency = true;
                         }
                     }
-                    var deleteConfirmMessage = "";
                     var reminderTargetIDs = new Array();
+                    var reminderDataToStringArray = new Array();
                     for (i = 0; i < toDelete.length; i++) {
                         var reminderView;
                         if (indexByRecency) {
@@ -153,12 +153,12 @@ module.exports = {
                             reminderData = rm.reminderDocumentToDataArray(reminderView);
                         }
                         reminderTargetIDs.push(reminderView._id);
-                        reminderDataToString = `\n__**Reminder ${toDelete[i]}:**__\n` + rm.reminderDataArrayToString(bot, reminderData, userTimezoneOffset);
-                        deleteConfirmMessage = deleteConfirmMessage + reminderDataToString + "\n";
+                        reminderDataToStringArray.push(`__**Reminder ${toDelete[i]}:**__\n${rm.reminderDataArrayToString(bot, reminderData, userTimezoneOffset)}`);
                     }
-                    deleteConfirmMessage = `Are you sure you want to **delete reminders ${toDelete.toString()}?:**\n` + deleteConfirmMessage;
+                    const deleteConfirmMessage = `Are you sure you want to **delete reminders ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By End Time";
-                    const confirmDeleteMany = await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Reminder: Delete Reminders ${toDelete} (${sortType})`, 600000)
+                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(message, reminderDataToStringArray, deleteConfirmMessage,
+                        forceSkip, `Reminder: Delete Reminders ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Reminders ${toDelete} (${sortType})`);
                         await Reminder.deleteMany({ _id: { $in: reminderTargetIDs } });
@@ -195,12 +195,12 @@ module.exports = {
                             var reminderCollection;
                             if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, skipEntries, pastNumberOfEntries);
                             else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, skipEntries, pastNumberOfEntries);
-                            const showReminders = rm.multipleRemindersToString(bot, message, reminderCollection, pastNumberOfEntries, userTimezoneOffset, skipEntries);
+                            const reminderStringArray = rm.multipleRemindersToString(bot, message, reminderCollection, pastNumberOfEntries, userTimezoneOffset, skipEntries, true);
                             if (skipEntries >= totalReminderNumber) return;
-                            // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                             const sortType = indexByRecency ? "By Recency" : "By End Time";
-                            const multipleDeleteMessage = `Are you sure you want to **delete ${reminderCollection.length} reminder(s) past reminder ${skipEntries}**:\n\n${showReminders}`;
-                            const multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, forceSkip, `Reminder: Multiple Delete Warning! (${sortType})`);
+                            const multipleDeleteMessage = `Are you sure you want to **delete ${reminderCollection.length} reminder(s) past reminder ${skipEntries}?**`;
+                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(message, reminderStringArray, multipleDeleteMessage,
+                                forceSkip, `Reminder: Multiple Delete Warning! (${sortType})`);
                             if (!multipleDeleteConfirmation) return;
                             const targetIDs = await reminderCollection.map(reminder => reminder._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} reminder(s) past ${skipEntries} (${sortType})`);
@@ -399,9 +399,9 @@ module.exports = {
                     if (indexByRecency) reminderView = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, 0, pastNumberOfEntriesIndex);
                     else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, 0, pastNumberOfEntriesIndex);
                     console.log({ reminderView });
-                    const reminderDataToString = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, userTimezoneOffset);
-                    const reminderEmbed = fn.getMessageEmbed(reminderDataToString, `Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, reminderEmbedColour);
-                    return message.channel.send(reminderEmbed);
+                    const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, userTimezoneOffset, 0, true);
+                    await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, true, reminderEmbedColour));
+                    return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
                 if (args[2] !== undefined) {
@@ -438,9 +438,8 @@ module.exports = {
                                 if (indexByRecency) reminderView = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, entriesToSkip, pastNumberOfEntriesIndex);
                                 else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ reminderView });
-                                const reminderDataToString = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, userTimezoneOffset, entriesToSkip);
-                                const reminderEmbed = fn.getMessageEmbed(reminderDataToString, `Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`, reminderEmbedColour);
-                                message.channel.send(reminderEmbed);
+                                const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, userTimezoneOffset, entriesToSkip, true);
+                                await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`, true, reminderEmbedColour));
                                 return;
                             }
                         }
@@ -519,7 +518,7 @@ module.exports = {
                     var reminderData, showReminder, continueEdit;
                     do {
                         const checkFast = await rm.getOneReminderByObjectID(reminderTargetID);
-                        if(!checkFast) return;
+                        if (!checkFast) return;
                         continueEdit = false;
                         reminderData = rm.reminderDocumentToDataArray(reminderView);
                         showReminder = rm.reminderDataArrayToString(bot, reminderData, userTimezoneOffset);

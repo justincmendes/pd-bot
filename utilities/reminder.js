@@ -111,127 +111,6 @@ module.exports = {
         await this.sendReminderByObject(bot, currentTimestamp, reminder);
     },
 
-    // /**
-    //  * 
-    //  * @param {Discord.Client} bot 
-    //  * @param {String} userID 
-    //  * @param {String} channelToSend 
-    //  * @param {Number} currentTimestamp Ensure Timestamp is in UTC for system restarts
-    //  * @param {Number} startTimestamp Ensure Timestamp is in UTC for system restarts
-    //  * @param {Number} endTimestamp Ensure Timestamp is in UTC for system restarts
-    //  * @param {String} reminderMessage
-    //  * @param {String | false} type Valid Types: "Reminder", "Habit", "Fast" (case sensitive)
-    //  * @param {mongoose.ObjectId | String | Number | false} connectedDocumentID 
-    //  * @param {Boolean} isDM 
-    //  * @param {Boolean} isRecurring 
-    //  * @param {Number} interval 
-    //  * @param {String} embedColour 
-    //  */
-    // sendReminder: async function (bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage, type, connectedDocumentID,
-    //     isDM, isRecurring = false, interval = undefined, embedColour = reminderEmbedColour) {
-    //     const originalReminderMessage = reminderMessage;
-    //     const reminderDelay = endTimestamp - currentTimestamp;
-    //     const duration = isRecurring ? interval : endTimestamp - startTimestamp;
-    //     const channel = isDM ? bot.users.cache.get(userID) : bot.channels.cache.get(channelToSend);
-    //     const channelID = channel.id;
-    //     const username = isDM ? bot.users.cache.get(userID).username :
-    //         bot.guilds.cache.get(channel.guild.id).member(userID).displayName;
-    //     if (isDM) {
-    //         switch (type) {
-    //             case "Fast": embedColour = fastEmbedColour;
-    //                 break;
-    //             case "Habit": embedColour = habitEmbedColour;
-    //                 break;
-    //         }
-    //         var typeOut = type;
-    //         if (type === "Reminder" && isRecurring) {
-    //             typeOut = "Repeating Reminder";
-    //             embedColour = repeatReminderEmbedColour;
-    //         }
-    //         reminderMessage = new Discord.MessageEmbed()
-    //             .setTitle(typeOut)
-    //             .setDescription(reminderMessage)
-    //             .setFooter(`A ${fn.millisecondsToTimeString(duration, true)} reminder set by ${username}`)
-    //             .setColor(embedColour);
-    //     }
-    //     var mentions;
-    //     // if (!isDM) {
-    //     //     const discordMentionRegex = /(?:\<\@\!\d+\>)|(?:\<\@\&\d+\>)/g;
-    //     //     const tags = originalReminderMessage.match(discordMentionRegex);
-    //     //     console.log({ tags });
-    //     //     if (tags) mentions = `${tags.join(' ')}\n`;
-    //     // }
-    //     // reminderMessage = isDM ? reminderMessage : originalReminderMessage.mentions.users
-    //     console.log({ connectedDocumentID, type, reminderDelay, username, channelID, mentions });
-    //     console.log(`Setting ${username}'s ${fn.millisecondsToTimeString(duration, true)} reminder!`
-    //         + `\nTime Left: ${reminderDelay < 0 ? fn.millisecondsToTimeString(0, true) : fn.millisecondsToTimeString(reminderDelay, true)}`
-    //         + `\nRecurring: ${isRecurring}\nDM: ${isDM}\nChannel: ${channelID}`);
-    //     if (isRecurring) {
-    //         // If it's recurring and should have been triggered when the bot was down
-    //         // Trigger it once right away then follow the intervals.
-    //         try {
-    //             setTimeout(async () => {
-    //                 await this.updateRecurringReminderStartAndEndTime(userID, channelID, startTimestamp, endTimestamp,
-    //                     originalReminderMessage, type, connectedDocumentID, isDM, isRecurring, interval)
-    //                     .then(async (complete) => {
-    //                         console.log({ complete });
-    //                         if (complete) {
-    //                             var lastEditedFirst = complete.lastEdited ? complete.lastEdited : complete.endTime + 1;
-    //                             console.log({ lastEdited })
-    //                             if (lastEditedFirst <= complete.startTime || lastEditedFirst >= complete.endTime) {
-    //                                 console.log("Updated Recurring Reminder in Database!");
-    //                                 channel.send(reminderMessage);
-    //                                 startTimestamp = endTimestamp;
-    //                                 endTimestamp += interval;
-    //                                 const recurringReminder = setInterval(async () => {
-    //                                     await this.updateRecurringReminderStartAndEndTime(userID, channelID, startTimestamp, endTimestamp,
-    //                                         originalReminderMessage, type, connectedDocumentID, isDM, isRecurring, interval)
-    //                                         .then((update) => {
-    //                                             console.log({ update });
-    //                                             if (update) {
-    //                                                 var lastEdited = update.lastEdited ? update.lastEdited : update.endTime + 1;
-    //                                                 console.log({ lastEdited });
-    //                                                 if (lastEdited <= update.startTime || lastEdited >= update.endTime) {
-    //                                                     startTimestamp += interval;
-    //                                                     endTimestamp += interval;
-    //                                                     console.log("Updated Recurring Reminder in Database!");
-    //                                                     channel.send(reminderMessage);
-    //                                                 }
-    //                                             }
-    //                                             else clearInterval(recurringReminder);
-    //                                         })
-    //                                         .catch(err => console.error(err));
-    //                                 }, interval);
-    //                             }
-    //                         }
-    //                     })
-    //                     .catch(err => console.error(err));
-    //             }, reminderDelay);
-    //         }
-    //         catch (err) {
-    //             console.error(err);
-    //         }
-    //     }
-    //     else {
-    //         setTimeout(async () => {
-    //             const reminderExists = await this.getOneReminder(userID, channelID, startTimestamp,
-    //                 endTimestamp, type, connectedDocumentID, originalReminderMessage, isDM, isRecurring);
-    //             console.log({ reminderExists })
-    //             if (reminderExists) {
-    //                 var lastEdited = reminderExists.lastEdited ? reminderExists.lastEdited : reminderExists.endTime + 1;
-    //                 console.log({ lastEdited });
-    //                 if (lastEdited <= reminderExists.startTime || lastEdited >= reminderExists.endTime) {
-    //                     channel.send(reminderMessage);
-    //                     await this.deleteOneReminder(userID, channelID, startTimestamp, endTimestamp,
-    //                         type, connectedDocumentID, originalReminderMessage, isDM, isRecurring)
-    //                         .catch(err => console.error(err));
-    //                     console.log("Deleted Reminder in Database!");
-    //                 }
-    //             }
-    //         }, reminderDelay);
-    //     }
-    // },
-
     sendReminderByObject: async function (bot, currentTimestamp, reminderObject, embedColour = reminderEmbedColour) {
         console.log({ reminderObject });
         let { isDM, isRecurring, _id: reminderID, userID, channel, startTime, endTime, message, type,
@@ -240,6 +119,7 @@ module.exports = {
             isDM, isRecurring, reminderID, userID, channel, startTime, endTime, message, type,
             connectedDocument, interval, guildID, lastUpdateTime
         });
+        // const originalMessage = message;
         const reminderDelay = endTime - currentTimestamp;
         const duration = isRecurring ? interval : endTime - startTime;
         const channelObject = isDM ? bot.users.cache.get(userID) : bot.channels.cache.get(channel);
@@ -261,18 +141,18 @@ module.exports = {
             message = new Discord.MessageEmbed()
                 .setTitle(typeOut)
                 .setDescription(message)
-                .setFooter(`A ${fn.millisecondsToTimeString(duration, true)} reminder set by ${username}`)
-                .setColor(embedColour);
+                .setFooter(`A ${fn.millisecondsToTimeString(duration, true)} reminder set by ${username}`, channelObject.avatarURL())
+                .setColor(embedColour)
+            // .setThumbnail(channelObject.avatarURL());
         }
         else message += `\n\n(__*A **${fn.millisecondsToTimeString(duration, true)} ${typeOut}** set by **${username}***__)`;
         // var mentions;
         // if (!isDM) {
         //     const discordMentionRegex = /(?:\<\@\!\d+\>)|(?:\<\@\&\d+\>)/g;
-        //     const tags = originalReminderMessage.match(discordMentionRegex);
+        //     const tags = originalMessage.match(discordMentionRegex);
         //     console.log({ tags });
-        //     if (tags) mentions = `${tags.join(' ')}\n`;
+        //     if (tags) mentions = `${tags.join(' ')}`;
         // }
-        // reminderMessage = isDM ? reminderMessage : originalReminderMessage.mentions.users
         console.log({ connectedDocument, type, reminderDelay, username, channelID });
         console.log(`Setting ${username}'s ${fn.millisecondsToTimeString(duration, true)} reminder!`
             + `\nTime Left: ${reminderDelay < 0 ? fn.millisecondsToTimeString(0, true) : fn.millisecondsToTimeString(reminderDelay, true)}`
@@ -320,9 +200,7 @@ module.exports = {
                 if (reminderExists) {
                     const noEdit = reminderExists.lastEdited === lastUpdateTime;
                     console.log({ noEdit });
-                    if (noEdit) {
-                        channelObject.send(message);
-                    }
+                    if (noEdit) channelObject.send(message);
                     await this.deleteOneReminderByObjectID(reminderID)
                         .catch(err => console.error(err));
                     console.log("Deleted Reminder in Database!");
@@ -540,8 +418,8 @@ module.exports = {
             return false;
         }
     },
-    multipleRemindersToString: function (bot, message, reminderArray, numberOfReminders, userTimezoneOffset, entriesToSkip = 0) {
-        var remindersToString = "";
+    multipleRemindersToString: function (bot, message, reminderArray, numberOfReminders, userTimezoneOffset, entriesToSkip = 0, toArray = false) {
+        var remindersToString = toArray ? new Array() : "";
         console.log({ numberOfReminders });
         for (i = 0; i < numberOfReminders; i++) {
             if (reminderArray[i] === undefined) {
@@ -551,10 +429,14 @@ module.exports = {
             }
             var reminderData;
             reminderData = this.reminderDocumentToDataArray(reminderArray[i]);
-            remindersToString = `${remindersToString}__**Reminder ${i + entriesToSkip + 1}:**__`
+            const reminderString = `__**Reminder ${i + entriesToSkip + 1}:**__`
                 + `\n${this.reminderDataArrayToString(bot, reminderData, userTimezoneOffset)}`;
-            if (i !== numberOfReminders - 1) {
-                remindersToString += '\n\n';
+            if (toArray) remindersToString.push(reminderString);
+            else {
+                remindersToString = `${remindersToString$}${reminderString}`;
+                if (i !== numberOfReminders - 1) {
+                    remindersToString += '\n\n';
+                }
             }
         }
         return remindersToString;
