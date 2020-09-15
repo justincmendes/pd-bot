@@ -234,7 +234,7 @@ module.exports = {
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent reminder?:**\n\n__**Reminder ${reminderIndex}:**__\n${rm.reminderDataArrayToString(bot, reminderData, userTimezoneOffset)}`;
                     const deleteIsConfirmed = await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Reminder: Delete Recent Reminder`, 300000)
                     if (deleteIsConfirmed) {
-                        await Reminder.deleteOne({ _id: targetID });
+                        await Reminder.deleteOne({ _id: reminderTargetID });
                         return;
                     }
                 }
