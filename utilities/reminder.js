@@ -141,11 +141,19 @@ module.exports = {
             message = new Discord.MessageEmbed()
                 .setTitle(typeOut)
                 .setDescription(message)
-                .setFooter(`A ${fn.millisecondsToTimeString(duration, true)} reminder set by ${username}`, channelObject.avatarURL())
+                .setFooter(`A ${fn.millisecondsToTimeString(duration, true)} reminder set by ${username}`, channelObject.displayAvatarURL())
                 .setColor(embedColour)
-            // .setThumbnail(channelObject.avatarURL());
         }
-        else message += `\n\n(__*A **${fn.millisecondsToTimeString(duration, true)} ${typeOut}** set by **${username}***__)`;
+        else {
+            // Add a zero-width space between the @everyone/@here mentions for users who are not
+            // originally able to mention the given roles with their current permissions
+            const targetChannel = bot.guilds.cache.get(guildID).channels.cache.get(channelID);
+            const userPermissions = targetChannel.permissionsFor(bot.users.cache.get(userID));
+            if (!userPermissions.has("MENTION_EVERYONE")) {
+                message = message.replace(/\@(everyone|here)/g, `\@\u200b$1`);
+            }
+            message += `\n\n(__*A **${fn.millisecondsToTimeString(duration, true)} ${typeOut}** set by **${username}***__)`;
+        }
         // var mentions;
         // if (!isDM) {
         //     const discordMentionRegex = /(?:\<\@\!\d+\>)|(?:\<\@\&\d+\>)/g;
@@ -354,25 +362,6 @@ module.exports = {
         console.log(`Deleting all of ${userID}'s reminders`);
     },
 
-    // updateRecurringReminderStartAndEndTime: async function (userID, channel, startTime, endTime, message,
-    //     type, connectedDocument, isDM, isRecurring, interval, lastUpdateTime) {
-    //     console.log({
-    //         userID, channel, startTime, endTime, message,
-    //         type, connectedDocument, isDM, isRecurring, interval, lastUpdateTime
-    //     });
-    //     if (isRecurring && interval) {
-    //         const newStartTime = endTime;
-    //         const newEndTime = endTime + interval;
-    //         const updateReminder = await Reminder
-    //             .findOneAndUpdate({ userID, channel, startTime, endTime, message, type, connectedDocument, isDM, isRecurring, interval },
-    //                 { $set: { startTime: newStartTime, endTime: newEndTime, } });
-    //         console.log({ updateReminder });
-    //         if (updateReminder) return updateReminder;
-    //         else return false;
-    //     }
-    //     else return false;
-    // },
-
     updateRecurringReminderStartAndEndTimeByObjectID: async function (reminderID, lastUpdateTime) {
         if (reminderID) {
             const reminder = await this.getOneReminderByObjectID(reminderID);
@@ -433,7 +422,7 @@ module.exports = {
                 + `\n${this.reminderDataArrayToString(bot, reminderData, userTimezoneOffset)}`;
             if (toArray) remindersToString.push(reminderString);
             else {
-                remindersToString = `${remindersToString$}${reminderString}`;
+                remindersToString = `${remindersToString}${reminderString}`;
                 if (i !== numberOfReminders - 1) {
                     remindersToString += '\n\n';
                 }
@@ -447,7 +436,7 @@ module.exports = {
         return [isDM, isRecurring, _id, userID, channel, startTime, endTime, message, type, interval, guildID];
     },
 
-    reminderDataArrayToString: function (bot, reminderData, userTimezoneOffset = 0) {
+    reminderDataArrayToString: function (bot, reminderData, userTimezoneOffset = 0, replaceRoles = true) {
         const [isDM, isRecurring, , , channel, startTime, endTime, message, type, interval, guildID] = reminderData;
         const reminderType = type === "Reminder" ? "" : `, ${type}`;
         const typeString = "**Type:**" + (isRecurring ? " Repeating" : " One-Time") + reminderType + (isDM ? ", DM" : ", Channel");
@@ -457,7 +446,16 @@ module.exports = {
         console.log({ reminderData });
         return `${typeString}\n${intervalString}${guildString}${channelName}`
             + `**Start Time:** ${fn.timestampToDateString(startTime + HOUR_IN_MS * userTimezoneOffset)}`
-            + `\n**End Time:** ${fn.timestampToDateString(endTime + HOUR_IN_MS * userTimezoneOffset)}\n**Message:** ${message}`;
+            + `\n**End Time:** ${fn.timestampToDateString(endTime + HOUR_IN_MS * userTimezoneOffset)}`
+            + `\n**Message:** ${replaceRoles ? this.getProperReminderMessageRoles(bot, guildID, message) : message}`;
+    },
+
+    getProperReminderMessageRoles: function (bot, guildID, message) {
+        const roleRegex = /\<\@\&(\d+)\>/g;
+        const roles = message.replace(roleRegex, (match, roleID, offset, string) => {
+            return `**\@${bot.guilds.cache.get(guildID).roles.cache.get(roleID).name}**`
+        });
+        return roles;
     },
 
     getRecentReminderIndex: async function (userID, isRecurring = undefined) {

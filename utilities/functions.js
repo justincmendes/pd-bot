@@ -1666,17 +1666,21 @@ module.exports = {
          * Western European Time,
          * West Greenland Time,
          */
-        const summerTimeTimezoneRegex = /(acst|aest|aet|akst|amt|ast|azot|brt|cst|cust|cubst|cubat|cuba|cet|chast|chot|clt|cot|east|est|eet|egt|fkt|hst|hovt|isrst|isst|irst|mst|met|nst|nt|nzst|pst|pmst|pyt|sst|ulat|uyt|wat|wet|wgt)/;
-        const halfHourSummerRegex = /(lhst)/;
-        if (summerTimeTimezoneRegex.test(timezoneString)) {
-            return 1;
+        if (timezoneString) {
+            timezoneString = timezoneString.toLowerCase();
+            const summerTimeTimezoneRegex = /(acst|aest|aet|akst|amt|ast|azot|brt|cst|cust|cubst|cubat|cuba|cet|chast|chot|clt|cot|east|est|eet|egt|fkt|hst|hovt|isrst|isst|irst|mst|met|nst|nt|nzst|pst|pmst|pyt|sst|ulat|uyt|wat|wet|wgt)/;
+            const halfHourSummerRegex = /(lhst)/;
+            if (summerTimeTimezoneRegex.test(timezoneString)) {
+                return 1;
+            }
+            else if (halfHourSummerRegex.test(timezoneString)) {
+                return 0.5;
+            }
+            else {
+                return 0;
+            }
         }
-        else if (halfHourSummerRegex.test(timezoneString)) {
-            return 0.5;
-        }
-        else {
-            return 0;
-        }
+        else return 0;
     },
 
     adjustYearDayHourMinuteTest: function (yearDayHourMinuteTest, adjustedArgs) {
@@ -2146,7 +2150,7 @@ module.exports = {
         var numberOfTimeScales;
         let relativeTime = /((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?))/.exec(relativeTimeExpressionArray[3]);
         relativeTime = relativeTime ? relativeTime[1] : undefined;
-        let day = /((?:mondays?)|(?:m(?:on?)?)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:w(?:ed?)?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))/.exec(relativeTimeExpressionArray[3]);
+        let day = /((?:mondays?)|(?:mon)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:weds?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))/.exec(relativeTimeExpressionArray[3]);
         day = day ? day[1] : undefined;
         console.log({ relativeTimeExpressionArray, day, relativeTime });
         // Assert Mutual Exclusive Expressions
@@ -2210,7 +2214,7 @@ module.exports = {
                     if (/(?:fridays?)|(?:f(?:ri?)?)/.test(day)) targetDayOfWeek = 5;
                     break;
                 case 'm':
-                    if (/(?:mondays?)|(?:m(?:on?)?)/.test(day)) targetDayOfWeek = 1;
+                    if (/(?:mondays?)|(?:mon)/.test(day)) targetDayOfWeek = 1;
                     break;
                 case 's':
                     if (/(?:saturdays?)|(?:sat?)/.test(day)) targetDayOfWeek = 6;
@@ -2221,14 +2225,14 @@ module.exports = {
                     else if (/(?:thursdays?)|(?:th(?:urs?)?)/.test(day)) targetDayOfWeek = 4;
                     break;
                 case 'w':
-                    if (/(?:wednesdays?)|(?:w(?:ed?)?)/.test(day)) targetDayOfWeek = 3;
+                    if (/(?:wednesdays?)|(?:weds?)/.test(day)) targetDayOfWeek = 3;
                     break;
             }
             if (!targetDayOfWeek && targetDayOfWeek !== 0) return false;
 
             // Get how far the relative day of week is from the current day of the week
             const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
-            let currentDate = new Date(new Date().getTime() + timezone * HOUR_IN_MS);
+            let currentDate = new Date(Date.now() + timezone * HOUR_IN_MS);
             let currentDayOfWeek = currentDate.getUTCDay();
             console.log({ currentDate, currentDayOfWeek, targetDayOfWeek });
             const isPastDay = targetDayOfWeek < currentDayOfWeek;
@@ -3122,6 +3126,8 @@ module.exports = {
     repeatReminderEmbedColour: "#FFFF66",
     goalsEmbedColour: "#007FFF",
     habitEmbedColour: "#0000FF",
+    userSettingsEmbedColour: "#778899",
+    guildSettingsEmbedColour: "#964b00",
     defaultEmbedColour: "#ADD8E6",
 
 };

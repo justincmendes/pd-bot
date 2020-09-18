@@ -29,7 +29,8 @@ module.exports = {
     aliases: ["p", "pre", "changeprefix", "prefixchange"],
     cooldown: 5,
     args: false,
-    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
+    run: async function run(bot, message, commandUsed, args, PREFIX,
+        timezoneOffset, daylightSavings, forceSkip) {
         const showCurrentPrefix = `This server's **current prefix** is **${PREFIX}**\nThe server owner can change prefix using: \`${PREFIX}${commandUsed} <NEW_PREFIX>\``;
         if (args[0] === undefined) {
             message.channel.send(showCurrentPrefix);

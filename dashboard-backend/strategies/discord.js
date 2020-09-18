@@ -24,6 +24,7 @@ passport.use(
         callbackURL: process.env.DASHBOARD_CALLBACK_URL,
         scope: ['identify', 'guilds'],
     }, async (accessToken, refreshToken, profile, done) => {
+        console.log({ profile });
         const { id, username, discriminator, avatar, guilds } = profile;
         try {
             const findUser = await User.findOneAndUpdate({ discordID: id }, {
@@ -37,6 +38,9 @@ passport.use(
                     discordTag: `${username}#${discriminator}`,
                     avatar,
                     guilds,
+                    timezone: "EST",
+                    habitCron: 0,
+                    likesPesteringAccountability: false,
                 });
                 return done(null, newUser);
             }

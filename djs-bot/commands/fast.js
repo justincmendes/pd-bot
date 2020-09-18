@@ -1,7 +1,7 @@
 // Global Variable Declarations and Initializations
 const Discord = require("discord.js");
 const Fast = require("../database/schemas/fasting");
-const UserSettings = require("../database/schemas/user");
+const User = require("../database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
@@ -50,7 +50,7 @@ function fastDocumentToDataArray(fastDocument, userTimezone = 0, calculateFastDu
             fastDuration = givenEndTimestamp - startTimestamp;
         }
         else {
-            let currentUTCTimestamp = new Date().getTime();
+            let currentUTCTimestamp = Date.now();
             fastDuration = currentUTCTimestamp + (userTimezone * HOUR_IN_MS) - startTimestamp;
         }
     }
@@ -362,7 +362,7 @@ async function showFastPost(userOriginalMessageObject, fastPost, mistakeMessage,
 }
 
 async function postFast(bot, userOriginalMessageObject, fastPost, endTimestamp, PREFIX, commandUsed, forceSkip = false, fastNumber = 1) {
-    const finalEndTimestamp = endTimestamp || new Date().getTime();
+    const finalEndTimestamp = endTimestamp || Date.now();
     const endTimeToDate = fn.timestampToDateString(finalEndTimestamp);
     const authorID = userOriginalMessageObject.author.id;
 
@@ -577,7 +577,8 @@ module.exports = {
     aliases: ["f", "if", "fasts", "fasting"],
     cooldown: 5,
     args: true,
-    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
+    run: async function run(bot, message, commandUsed, args, PREFIX,
+        timezoneOffset, daylightSavingSetting, forceSkip) {
         // Variable Declarations and Initializations
         var fastUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\`\n\n`
             + "`<ACTION>`: **help; start; end; see; edit; delete; post**"
@@ -594,8 +595,6 @@ module.exports = {
         const fastIsInProgress = (await fastInProgress.countDocuments() > 0);
         const totalFastNumber = await getTotalFasts(authorID);
         if (totalFastNumber === false) return;
-        const userTimezoneOffset = -4;
-        const userDaylightSavingSetting = true;
         const fastFieldList = ["start", "end", "fastbreaker", "duration", "mood", "reflection"];
         // Computed Property Names: Reduces code footprint
         console.log({ authorUsername, authorID, fastIsInProgress });
@@ -623,16 +622,16 @@ module.exports = {
             else {
                 // Remove the "start" from the args using slice
                 const startTimeArgs = args.slice(1);
-                startTimestamp = fn.timeCommandHandlerToUTC(startTimeArgs, message.createdTimestamp, userTimezoneOffset, userDaylightSavingSetting);
+                startTimestamp = fn.timeCommandHandlerToUTC(startTimeArgs, message.createdTimestamp, timezoneOffset, daylightSavingSetting);
                 if (startTimestamp === false) return message.reply(fastStartHelpMessage);
                 // Setup Reminder:
-                const reminderEndTime = await getUserReminderEndTime(message, startTimestamp, fastStartHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip);
+                const reminderEndTime = await getUserReminderEndTime(message, startTimestamp, fastStartHelpMessage, timezoneOffset, daylightSavingSetting, forceSkip);
                 if (reminderEndTime === false) return;
 
                 let newFast = new Fast({
                     _id: mongoose.Types.ObjectId(),
                     userID: authorID,
-                    //using new Date().getTime() gives the time in milliseconds since Jan 1, 1970 00:00:00
+                    //using Date.now() gives the time in milliseconds since Jan 1, 1970 00:00:00
                     startTime: startTimestamp,
 
                     //if the endTime or fastDuration is null that indicates that the fast is still going
@@ -648,11 +647,11 @@ module.exports = {
                 const reminderEndTimeExists = reminderEndTime || reminderEndTime === 0;
                 if (reminderEndTimeExists) {
                     // First Reminder: 1 Hour Warning/Motivation
-                    if (currentTimestamp + HOUR_IN_MS * userTimezoneOffset < reminderEndTime) {
-                        setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime, 1);
+                    if (currentTimestamp + HOUR_IN_MS * timezoneOffset < reminderEndTime) {
+                        setFastEndHourReminder(bot, timezoneOffset, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime, 1);
                     }
                     // Second Reminder: End Time
-                    setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime);
+                    setFastEndReminder(bot, timezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime);
                 }
                 await newFast.save()
                     .then(result => console.log(result))
@@ -686,7 +685,7 @@ module.exports = {
                 // FOR Handling when the user's fast ending time is not now!
                 // Remove the "end" from the args using slice
                 const endTimeArgs = args.slice(1);
-                const endTimestamp = fn.timeCommandHandlerToUTC(endTimeArgs, message.createdTimestamp, userTimezoneOffset, userDaylightSavingSetting);
+                const endTimestamp = fn.timeCommandHandlerToUTC(endTimeArgs, message.createdTimestamp, timezoneOffset, daylightSavingSetting);
                 if (endTimestamp === false) {
                     return message.reply(fastEndHelpMessage);
                 }
@@ -841,7 +840,7 @@ module.exports = {
             // If the user wants fast help, do not proceed to show them the fast.
             const seeCommands = ["past", "recent", "current", "all"];
             var fastBreaker, reflectionText;
-            currentTimestamp = new Date().getTime();
+            currentTimestamp = Date.now();
 
             // MAKE THIS OPERATION INTO A FUNCTION!
             if (args[1] !== undefined) {
@@ -862,7 +861,7 @@ module.exports = {
             // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
             // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
             if (!seeCommands.includes(args[1]) && isNaN(args[1])) {
-                message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed));
+                message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                 return message.reply(fastSeeHelpMessage);
             }
             // Do not show the most recent fast embed, when a valid command is called
@@ -878,7 +877,7 @@ module.exports = {
                 // Handling Argument 1:
                 const isNumberArg = !isNaN(args[1]);
                 if (seeType === "recent" || seeType === "current") {
-                    return message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed));
+                    return message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                 }
                 else if (seeType === "all") {
                     pastNumberOfEntriesIndex = totalFastNumber;
@@ -897,7 +896,7 @@ module.exports = {
                 // After this filter:
                 // If the first argument after "see" is not past, then it is not a valid call
                 else {
-                    message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed));
+                    message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                     return message.reply(fastSeeHelpMessage);
                 }
                 console.log({ pastNumberOfEntriesIndex, pastFunctionality });
@@ -913,26 +912,26 @@ module.exports = {
                     if (args[2] !== undefined) {
                         // If the next argument is NotaNumber, invalid "past" command call
                         if (isNaN(args[2])) {
-                            message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed));
+                            message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                             return message.reply(fastSeeHelpMessage);
                         }
                         if (parseInt(args[2]) <= 0) {
-                            message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed));
+                            message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                             return message.reply(fastSeeHelpMessage);
                         }
                         const confirmSeeMessage = `Are you sure you want to **see ${args[2]} fasts?**`;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Fast: See ${args[2]} Fasts WARNING! (${sortType})`);
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Fast: See ${args[2]} Fasts (${sortType})`);
                         if (!confirmSeeAll) return;
                     }
                     else {
                         // If the next argument is undefined, implied "see all" command call unless "all" was not called:
                         // => empty "past" command call
                         if (seeType !== "all") {
-                            message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed));
+                            message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                             return message.reply(fastSeeHelpMessage);
                         }
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your fast history?";
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Fast: See All Fasts WARNING!");
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Fast: See All Fasts");
                         if (!confirmSeeAll) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
@@ -943,7 +942,7 @@ module.exports = {
                     if (indexByRecency) fastView = await fn.getEntriesByRecency(Fast, { userID: authorID }, 0, pastNumberOfEntriesIndex);
                     else fastView = await fn.getEntriesByStartTime(Fast, { userID: authorID }, 0, pastNumberOfEntriesIndex);
                     console.log({ fastView });
-                    const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, userTimezoneOffset, 0, true);
+                    const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
                     await fn.sendPaginationEmbed(message, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts (${sortType})`, true, fastEmbedColour));
                     return;
                 }
@@ -976,13 +975,13 @@ module.exports = {
                                     return fn.sendErrorMessageAndUsage(message, fastSeeHelpMessage, "**FAST(S) DO NOT EXIST**...");
                                 }
                                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} fasts past ${entriesToSkip}?**`;
-                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Fast: See ${args[1]} Fasts Past ${entriesToSkip} WARNING! (${sortType})`);
+                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Fast: See ${args[1]} Fasts Past ${entriesToSkip} (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var fastView;
                                 if (indexByRecency) fastView = await fn.getEntriesByRecency(Fast, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
                                 else fastView = await fn.getEntriesByStartTime(Fast, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ fastView });
-                                const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, userTimezoneOffset, entriesToSkip, true);
+                                const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
                                 await fn.sendPaginationEmbed(message, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip} (${sortType})`, true, fastEmbedColour));
                                 return;
                             }
@@ -1006,7 +1005,7 @@ module.exports = {
                 var fastData;
                 const fastEndTime = fastView.endTime;
                 if (fastEndTime === null) {
-                    fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true, false, currentTimestamp);
+                    fastData = fastDocumentToDataArray(fastView, timezoneOffset, true, false, currentTimestamp);
                 }
                 else {
                     fastData = fastDocumentToDataArray(fastView);
@@ -1046,7 +1045,7 @@ module.exports = {
 
             // Show the user the most recent fast
             if (args[1] === undefined || args.length === 1) {
-                message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed));
+                message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                 return message.reply(fastDeleteHelpMessage);
             }
 
@@ -1074,7 +1073,7 @@ module.exports = {
                     var fastCollection;
                     if (indexByRecency) fastCollection = await fn.getEntriesByRecency(Fast, { userID: authorID }, 0, numberArg);
                     else fastCollection = await fn.getEntriesByStartTime(Fast, { userID: authorID }, 0, numberArg);
-                    const fastDataToStringArray = multipleFastsToString(message, fastCollection, numberArg, userTimezoneOffset, 0, true);
+                    const fastDataToStringArray = multipleFastsToString(message, fastCollection, numberArg, timezoneOffset, 0, true);
                     const fastArray = fn.getEmbedArray(fastDataToStringArray, ``, false, fastEmbedColour);
                     console.log({ fastArray });
                     // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
@@ -1136,7 +1135,7 @@ module.exports = {
                             }
                             var fastData;
                             if (toDelete[i] === 1) {
-                                fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true);
+                                fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                             }
                             else {
                                 fastData = fastDocumentToDataArray(fastView);
@@ -1184,7 +1183,7 @@ module.exports = {
                             var fastCollection;
                             if (indexByRecency) fastCollection = await fn.getEntriesByRecency(Fast, { userID: authorID }, skipEntries, pastNumberOfEntries);
                             else fastCollection = await fn.getEntriesByStartTime(Fast, { userID: authorID }, skipEntries, pastNumberOfEntries);
-                            const showFasts = multipleFastsToString(message, fastCollection, pastNumberOfEntries, userTimezoneOffset, skipEntries, true);
+                            const showFasts = multipleFastsToString(message, fastCollection, pastNumberOfEntries, timezoneOffset, skipEntries, true);
                             if (skipEntries >= totalFastNumber) return;
                             // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                             const sortType = indexByRecency ? "By Recency" : "By Start Time";
@@ -1218,7 +1217,7 @@ module.exports = {
                     if (fastView.length === 0) {
                         return fn.sendErrorMessage(message, noFastsMessage);
                     }
-                    const fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true);
+                    const fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                     const fastTargetID = fastView._id;
                     console.log({ fastTargetID });
                     const fastIndex = await getCurrentOrRecentFastIndex(authorID);
@@ -1339,7 +1338,7 @@ module.exports = {
                     isCurrent = false;
                     continueEdit = false;
                     if (fastView.endTime === null) {
-                        fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true);
+                        fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                         showFast = fastDataArrayToString(fastData, true, PREFIX, commandUsed);
                         isCurrent = true;
                     }
@@ -1385,10 +1384,10 @@ module.exports = {
                     else if (userEdit !== "back") {
                         // Parse User Edit
                         if (fieldToEditIndex === 0 || fieldToEditIndex === 1) {
-                            const timestamp = new Date().getTime();
+                            const timestamp = Date.now();
                             userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                             console.log({ userEdit });
-                            fastData[fieldToEditIndex] = fn.timeCommandHandlerToUTC(userEdit, timestamp, userTimezoneOffset, userDaylightSavingSetting);
+                            fastData[fieldToEditIndex] = fn.timeCommandHandlerToUTC(userEdit, timestamp, timezoneOffset, daylightSavingSetting);
                             if (!fastData[fieldToEditIndex]) {
                                 fn.sendReplyThenDelete(message, `**INVALID TIME**... Try \`${PREFIX}${commandUsed} start help\` or \`${PREFIX}${commandUsed} end help\``, 60000);
                             }
@@ -1440,7 +1439,7 @@ module.exports = {
                                     }
 
                                     if (changeReminders) {
-                                        const currentTimestamp = new Date().getTime();
+                                        const currentTimestamp = Date.now();
                                         var reminderEndTime;
                                         if (endTimeIsDefined) {
                                             const endTimestamp = fastData[1];
@@ -1456,21 +1455,21 @@ module.exports = {
                                         else {
                                             reminderEndTime = await getUserReminderEndTime(message, startTimestamp,
                                                 `Try \`${fieldToEditIndex === 0 ? `${PREFIX}${commandUsed} start help` : `${PREFIX}${commandUsed} end help`}\``,
-                                                userTimezoneOffset, userDaylightSavingSetting, forceSkip);
+                                                timezoneOffset, daylightSavingSetting, forceSkip);
                                             if (!reminderEndTime && reminderEndTime !== 0) changeReminders = false;
                                         }
                                         if (changeReminders) {
                                             console.log({
-                                                userTimezoneOffset, authorID, fastTargetID,
+                                                userTimezoneOffset: timezoneOffset, authorID, fastTargetID,
                                                 currentTimestamp, startTimestamp, reminderEndTime
                                             });
                                             // First Reminder: 1 Hour Warning/Motivation
-                                            if ((reminderEndTime + userTimezoneOffset * HOUR_IN_MS) > currentTimestamp) {
-                                                setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastTargetID, currentTimestamp,
+                                            if ((reminderEndTime + timezoneOffset * HOUR_IN_MS) > currentTimestamp) {
+                                                setFastEndHourReminder(bot, timezoneOffset, authorID, fastTargetID, currentTimestamp,
                                                     startTimestamp, reminderEndTime, 1);
                                             }
                                             // Second Reminder: End Time
-                                            setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastTargetID, currentTimestamp,
+                                            setFastEndReminder(bot, timezoneOffset, commandUsed, authorID, fastTargetID, currentTimestamp,
                                                 startTimestamp, reminderEndTime);
                                         }
                                         else fastData[1] = null;
@@ -1506,28 +1505,26 @@ module.exports = {
                                 console.log(`Editing ${authorID}'s Fast ${pastNumberOfEntriesIndex} (${sortType})`);
                                 switch (fieldToEditIndex) {
                                     case 0:
-                                        await Fast.updateOne({ _id: fastTargetID }, { $set: { startTime: fastData[0], fastDuration: fastData[2] } });
+                                        fastView = await Fast.findOneAndUpdate({ _id: fastTargetID }, { $set: { startTime: fastData[0], fastDuration: fastData[2] } }, { new: true });
                                         break;
                                     case 1:
-                                        await Fast.updateOne({ _id: fastTargetID }, { $set: { endTime: fastData[1], fastDuration: fastData[2] } });
+                                        fastView = await Fast.findOneAndUpdate({ _id: fastTargetID }, { $set: { endTime: fastData[1], fastDuration: fastData[2] } }, { new: true });
                                         break;
                                     case 2:
-                                        await Fast.updateOne({ _id: fastTargetID }, { $set: { fastBreaker: fastData[3] } });
+                                        fastView = await Fast.findOneAndUpdate({ _id: fastTargetID }, { $set: { fastBreaker: fastData[3] } }, { new: true });
                                         break;
                                     case 3:
-                                        await Fast.updateOne({ _id: fastTargetID }, { $set: { mood: fastData[4] } });
+                                        fastView = await Fast.findOneAndUpdate({ _id: fastTargetID }, { $set: { mood: fastData[4] } }, { new: true });
                                         break;
                                     case 4:
-                                        await Fast.updateOne({ _id: fastTargetID }, { $set: { reflection: fastData[5] } });
+                                        fastView = await Fast.findOneAndUpdate({ _id: fastTargetID }, { $set: { reflection: fastData[5] } }, { new: true });
                                         break;
                                 }
                                 console.log({ continueEdit, userEdit });
-                                fastView = await Fast.findById(fastTargetID);
                                 if (fastView) {
                                     pastNumberOfEntriesIndex = await getFastRecencyIndex(authorID, fastTargetID);
-
                                     console.log({ fastView, fastData, fastTargetID, fieldToEditIndex });
-                                    fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true);
+                                    fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                                     showFast = fastDataArrayToString(fastData);
                                     console.log({ userEdit });
                                     const continueEditMessage = `Do you want to continue **editing Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n${showFast}`;
@@ -1548,7 +1545,7 @@ module.exports = {
                             if (fastView) {
                                 pastNumberOfEntriesIndex = await getFastRecencyIndex(authorID, fastTargetID);
                                 console.log({ fastView, fastData, fastTargetID, fieldToEditIndex });
-                                fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true);
+                                fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                                 showFast = fastDataArrayToString(fastData);
                             }
                             else {
@@ -1586,7 +1583,7 @@ module.exports = {
                         // If user has no recent fast, case already handed above
                         const fastView = await getCurrentOrMostRecentFast(authorID);
                         console.log({ fastView });
-                        const fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true);
+                        const fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                         console.log({ fastData });
                         const startTimestamp = fastData[0];
                         const endTimestamp = fastData[1];
@@ -1615,7 +1612,7 @@ module.exports = {
                     }
                     var fastData;
                     if (pastNumberOfEntriesIndex === 0 && fastView.endTime === null) {
-                        fastData = fastDocumentToDataArray(fastView, userTimezoneOffset, true);
+                        fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                     }
                     else fastData = fastDocumentToDataArray(fastView);
                     console.log({ fastData });

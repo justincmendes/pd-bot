@@ -14,7 +14,8 @@ module.exports = {
     aliases: ["goal", "g"],
     cooldown: 3,
     args: true,
-    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
+    run: async function run(bot, message, commandUsed, args, PREFIX,
+        timezoneOffset, daylightSavings, forceSkip) {
         // Variable Declarations and Initializations
         // See - with markdown option!
         let goalsUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``

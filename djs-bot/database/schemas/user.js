@@ -17,15 +17,33 @@ const userSettingsSchema = mongoose.Schema({
     },
     guilds: {
         type: Array,
-        required: true,
+        required: false,
     },
     // Consider mapping the timezone to Integers to save space/data?
-    timeZone: String,
+    timezone: {
+        name: {
+            type: String,
+            required: true,
+            default: "EST",
+        },
+        offset: {
+            type: Number,
+            required: true,
+            default: -5,
+        },
+        daylightSavings: {
+            type: Boolean,
+            required: true,
+            default: true,
+        },
+    },
+    // The timestamp in ms after 00:00 / 12AM for when to reset the Daily Habits!
     habitCron: Number,
     likesPesteringAccountability: {
         type: Boolean,
+        required: true,
         default: false,
     },
 });
 
-module.exports = mongoose.model("User", userSettingsSchema, "user");
+module.exports = mongoose.model("User", userSettingsSchema, "users");

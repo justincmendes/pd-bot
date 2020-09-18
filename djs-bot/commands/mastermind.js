@@ -44,7 +44,8 @@ module.exports = {
     aliases: ["m", "mm", "master", "masterminds"],
     cooldown: 5,
     args: true,
-    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
+    run: async function run(bot, message, commandUsed, args, PREFIX,
+        timezoneOffset, daylightSavings, forceSkip) {
         // FUTURE FEATURE: Cap mastermind at 6 maximum, any more => Create .txt file with FULL entry and react with paperclip for user to download the file
 
         // Will allow for text collection of notes during meeting and output it in a nice format!

@@ -2,6 +2,7 @@
 const Discord = require("discord.js");
 const DailyJournal = require("../database/schemas/dailyjournal");
 const WeeklyJournal = require("../database/schemas/weeklyjournal");
+const User = require("../database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
@@ -66,7 +67,8 @@ module.exports = {
     aliases: ["j", "jour", "journ"],
     cooldown: 5,
     args: true,
-    run: async function run(bot, message, commandUsed, args, PREFIX, forceSkip) {
+    run: async function run(bot, message, commandUsed, args, PREFIX,
+        timezoneOffset, daylightSavings, forceSkip) {
         //At the end of every week, or when they submit their weekly journal reflection, send them a textfile of their weeks entries (press the paperclip)
         //create, see, edit, end, templates <= return both the weekly reflection/weekly goals and daily journal template!
 

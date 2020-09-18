@@ -12,18 +12,32 @@ const guildSettingsSchema = mongoose.Schema({
     prefix: {
         type: mongoose.SchemaTypes.String,
         required: true,
-        default: "?",
+        default: '?',
     },
-    primaryTimezone: {
-        type: String,
-        required: true,
-        default: "EST",
+    timezone: {
+        name: {
+            type: String,
+            required: true,
+            default: "EST",
+        },
+        offset: {
+            type: Number,
+            required: true,
+            default: -5,
+        },
+        daylightSavings: {
+            type: Boolean,
+            required: true,
+            default: true,
+        },
     },
     // The role that allows others to write the mastermind reflection for each other!
-    mastermindRoles: {
-        type: [Number],
-        required: true,
-        default: [],
+    mastermind: {
+        roles: {
+            type: [Number],
+            required: true,
+            default: [],
+        },
     },
 
 });
