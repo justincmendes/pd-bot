@@ -34,7 +34,20 @@ const guildSettingsSchema = mongoose.Schema({
     // The role that allows others to write the mastermind reflection for each other!
     mastermind: {
         roles: {
-            type: [Number],
+            type: [String],
+            required: true,
+            default: [],
+        },
+        resetDay: {
+            type: Number,
+            required: true,
+            default: 0,
+        }
+    },
+
+    quote: {
+        roles: {
+            type: [String],
             required: true,
             default: [],
         },

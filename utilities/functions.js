@@ -175,7 +175,7 @@ module.exports = {
             var result;
             const deleteDelay = 3000;
             const MS_TO_SECONDS = 1000;
-            const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+            const footerText = `*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
             const embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
             await message.channel.send(embed)
                 .then(async confirm => {
@@ -223,7 +223,7 @@ module.exports = {
         var result;
         const deleteDelay = 3000;
         const MS_TO_SECONDS = 1000;
-        const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+        const footerText = `*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
         const textEntryInstructions = `\n\n\*P.S. use \`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**`;
         prompt = prompt + textEntryInstructions;
         let embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
@@ -269,7 +269,7 @@ module.exports = {
         var result;
         const deleteDelay = 3000;
         const MS_TO_SECONDS = 1000;
-        const footerText = `\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+        const footerText = `*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
         const textEntryInstructions = `\n\n\*P.S. use \`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**`;
         prompt = prompt + textEntryInstructions;
         let embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
@@ -558,13 +558,14 @@ module.exports = {
     // END CRUD Operations Help
 
 
-    getDateAndTimeInstructions: "`<DATE/TIME>`: **NOT Case-Sensitive!**\nEnter **timezone (optional)** at the **end**.\nThe **\"at\"** before the time is **optional.**"
+    getDateAndTimeInstructions: "`<DATE/TIME>`:"
+        // + " **NOT Case-Sensitive!**\nEnter **timezone (optional)** at the **end**.\nThe **\"at\"** before the time is **optional.**\n"
         // + "\n**? = optional, # = number**\n`<in?>`: (OPT.) **future date/time**\n`<RELATIVE TIME>`: **(PAST) ago/prior/before**\nOR **(FUTURE) from now/later/in the future**"
         // + "\n`<DAY OF WEEK>`: **Mon/Monday, Tues/Tuesday,..., Sun/Sunday**\n`<RELATIVE TO NOW>`: **yesterday/yest/the day before**\nOR **today/tod**\nOR **tomorrow/tom/tmrw**"
         // + "\n`<TIME SCALES>`: **minutes/min, hours/hr, days, weeks, months, years/yrs**"
         // + "\n`<TIME>`: **Military or Standard**\n***(e.g. 13:00, 159am, 1:59, 1259p, 1pm, 6a, 645p, 23:59)***"
         // + "\n`<TIMEZONE?>`: (OPT. - CAN BE ADDED TO THE END OF ANY DATE/TIME)\nEnter the timezone in as **abbreviation or a UTC offset**\n***(e.g. est, pst, cdt, amt, -4:00, +12, +130)*** - **DEFAULT:** Your Timezone (settings)"
-        + "\n\n__**`Enter date and/or time in relative terms`**__:"
+        + "\n__**`Enter relative date and/or time`**__:"
         // + "\n`<in?> # <TIME SCALES> <RELATIVE TIME> <at?> <TIME?> <TIMEZONE?>`"
         // + "\n`<in?> # <DAY OF WEEK> <RELATIVE TIME> <at?> <TIME?> <TIMEZONE?>`\n`<previous/last/past/next/this> <DAY OF WEEK> <at?> <TIME?> <TIMEZONE?>`"
         // + "\n`<RELATIVE TO NOW> <at?> <TIME?> <TIMEZONE?>`\n`<in?> #y:#d:#h:#m:#s <RELATIVE TIME> <TIMEZONE?>`"
@@ -576,7 +577,7 @@ module.exports = {
         // + "`<DATE SEPARATORS>`: **\. \, \/ \-**\n`<MONTH>`: Name (january/jan, february/feb,..., december/dec) or Number (1-12)"
         // + "\n`<DAY>`: Number - #\n`<YEAR?>`: (OPT.) Number - #"
         + "\n\n***\-\-OR\-\-***"
-        + "\n\n__**`Enter date and time in absolute terms`**__:\n**FORMAT: <MONTH/DAY/YEAR>** (YEAR is optional, **Default: Current Year**)\n- Each must be **separated** by one of the following: **\. \, \/ \-**"
+        + "\n\n__**`Enter precise date and time`**__:\n**FORMAT: <MONTH/DAY/YEAR>** (YEAR is optional, **Default: Current Year**)\n- Each must be **separated** by one of the following: **\. \, \/ \-**"
         // + "\n`<MONTH> <DATE SEPARATOR?> <DAY> <DATE SEPARATOR?> <YEAR?> <at?> <TIME> <TIMEZONE?>`\n"
         + "\ni.e. **3/22/2020 at 10a EST **\|** 3.22.2020 at 9PM **\|** 3-22-2020 120a"
         + "\n**\|** 3.22 9p **\|** 2/28 13:59 +8:00 **\|** 10-1 at 15:00"
@@ -612,7 +613,7 @@ module.exports = {
                 const errorMessage = "**Please enter a number on the given list!**";
                 const timeout = 15000;
                 if (isNaN(targetIndex)) {
-                    if (targetIndex.toLowerCase() == "stop") {
+                    if (targetIndex.toLowerCase() === "stop") {
                         return false;
                     }
                     else this.sendReplyThenDelete(userOriginalMessageObject, errorMessage, timeout);
@@ -1714,7 +1715,7 @@ module.exports = {
         const relativeTimeAgoOrFromNow = /(in)?(\d+\.?\d*|\d*\.?\d+)(seconds?|secs?|minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?|yrs?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const relativeTimeTest = relativeTimeAgoOrFromNow.exec(timeArgs);
         console.log({ relativeTimeTest });
-        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:mon)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:weds?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:mon)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:weds?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const dayOfWeekTest = dayOfWeekRegex.exec(timeArgs);
         console.log({ dayOfWeekTest });
         // Absolute Time: Past and Future
@@ -2150,7 +2151,7 @@ module.exports = {
         var numberOfTimeScales;
         let relativeTime = /((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?))/.exec(relativeTimeExpressionArray[3]);
         relativeTime = relativeTime ? relativeTime[1] : undefined;
-        let day = /((?:mondays?)|(?:mon)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:weds?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat?)|(?:sundays?)|(?:sun?))/.exec(relativeTimeExpressionArray[3]);
+        let day = /((?:mondays?)|(?:mon)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:weds?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat)|(?:sundays?)|(?:sun?))/.exec(relativeTimeExpressionArray[3]);
         day = day ? day[1] : undefined;
         console.log({ relativeTimeExpressionArray, day, relativeTime });
         // Assert Mutual Exclusive Expressions
@@ -2217,7 +2218,7 @@ module.exports = {
                     if (/(?:mondays?)|(?:mon)/.test(day)) targetDayOfWeek = 1;
                     break;
                 case 's':
-                    if (/(?:saturdays?)|(?:sat?)/.test(day)) targetDayOfWeek = 6;
+                    if (/(?:saturdays?)|(?:sat)/.test(day)) targetDayOfWeek = 6;
                     else if (/(?:sundays?)|(?:sun?)/.test(day)) targetDayOfWeek = 0;
                     break;
                 case 't':
@@ -2603,6 +2604,59 @@ module.exports = {
         return tz;
     },
 
+    msToTimeFromMidnight: function (milliseconds, inMilitaryTime = false) {
+        const defaultTime = "00:00:00";
+        if (isNaN(milliseconds)) return defaultTime;
+        const DAY_IN_MS = this.getTimeScaleToMultiplyInMs("day");
+        milliseconds = milliseconds % DAY_IN_MS;
+        let [hours, mins, seconds,] = this.getHoursMinutesSecondsMillisecondsArray(milliseconds);
+        var timeString;
+        hours = hours < 10 ? `0${hours}` : hours;
+        mins = mins < 10 ? `0${mins}` : mins;
+        seconds = seconds < 10 ? `0${seconds}` : seconds;
+        if (!inMilitaryTime) {
+            const standardTime = this.militaryTimeHoursToStandardTimeHoursArray(hours);
+            if (!standardTime) return defaultTime;
+            [hours, amPmString] = standardTime;
+            timeString = `${hours}:${mins}:${seconds} ${amPmString}`;
+        }
+        else timeString = `${hours}:${mins}:${seconds}`;
+        return timeString ? timeString : defaultTime;
+    },
+
+    hoursToUTCOffset: function (hours) {
+        if (!isNaN(hours)) {
+            const sign = hours < 0 ? "-" : "+";
+            hours = Math.abs(hours);
+            let hoursOut = parseInt(hours);
+            hoursOut = hoursOut < 10 ? `0${hoursOut}` : hoursOut;
+            let minsOut = parseInt((hours - hoursOut) / 60);
+            minsOut = minsOut < 10 ? `0${minsOut}` : minsOut;
+            return `${sign}${hoursOut}:${minsOut}`;
+        }
+        else return hours;
+    },
+
+    /**
+     * 
+     * @param {Number} dayOfWeek 0-6: 0 - Sunday, 1 - Monday,..., 6 - Saturday
+     */
+    getDayOfWeekToString: function (dayOfWeek) {
+        if (!isNaN(dayOfWeek)) {
+            dayOfWeek = parseInt(dayOfWeek);
+            switch (dayOfWeek) {
+                case 0: return "Sunday";
+                case 1: return "Monday";
+                case 2: return "Tuesday";
+                case 3: return "Wednesday";
+                case 4: return "Thursday";
+                case 5: return "Friday";
+                case 6: return "Saturday";
+            }
+        }
+        return false;
+    },
+
     getNumberBeforeStringRegex: function () {
         return numberBeforeStringRegex = /(\d+)([^\d\W]+)/;
     },
@@ -2806,7 +2860,7 @@ module.exports = {
     getUserEditString: async function (message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         var collectedEdit, reset;
         let editMessagePrompt = `**What will you change your *${field}* to?:**\n${instructionPrompt}\n`;
-        editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**\n`;
+        editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**`;
         do {
             reset = false;
             collectedEdit = await this.messageDataCollectFirst(message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
@@ -2883,7 +2937,7 @@ module.exports = {
         var collectedEdit, userEdit = "";
         let editMessagePrompt = `**What will you change your *${field}* to?:**\n${instructionPrompt}\n`;
         editMessagePrompt = editMessagePrompt + `\nType \`0\` to **restart/clear** your current edit!`
-            + `\nType \`1\` when you're **done!**\nType \`back\` to go **back to the main edit menu**\n`;
+            + `\nType \`1\` when you're **done!**\nType \`back\` to go **back to the main edit menu**`;
         const originalEditMessagePrompt = editMessagePrompt;
         do {
             messageIndex++;
@@ -2958,11 +3012,12 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserEditNumber: async function (message, field, maxNumber, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+    getUserEditNumber: async function (message, field, maxNumber, type, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = '') {
         var collectedEdit;
         const numberErrorMessage = `**INVALID INPUT... Please Enter a Number from 1-${maxNumber}**`;
-        let editMessagePrompt = `**What will you change your *${field}* to?:**\n***(Please enter a number from \`1-${maxNumber}\`)***\n`
-            + "\nType `back` to go **back to the main edit menu**\n";
+        let editMessagePrompt = `**What will you change your *${field}* to?:**`
+        editMessagePrompt += `\n${additionalInstructions === '' ? `***(Please enter a number from \`1-${maxNumber}\`)***` : additionalInstructions}`
+            + `\n\nType \`back\` to go **back to the main edit menu**`;
         while (true) {
             collectedEdit = await this.messageDataCollectFirst(message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
             if (collectedEdit === "stop") return false;
@@ -3010,7 +3065,7 @@ module.exports = {
      * @param {String} title 
      * @param {String} embedColour 
      */
-    getEmbedArray: function (elements, title, includesFile = false, embedColour = this.defaultEmbedColour) {
+    getEmbedArray: function (elements, title, doubleSpace = true, includesFile = false, embedColour = this.defaultEmbedColour, ) {
         try {
             let embedString = new Array();
             let maxString = "";
@@ -3034,7 +3089,7 @@ module.exports = {
                                 maxString += element;
                                 embedString.push(maxString);
                             }
-                            else maxString += element + "\n\n";
+                            else maxString += doubleSpace ? `${element}\n\n` : `${element}\n`;
                         }
                         else {
                             if (i === elements.length - 1) {
@@ -3048,7 +3103,7 @@ module.exports = {
                                 embedString.push(maxString);
                             } else {
                                 embedString.push(maxString);
-                                maxString = element + "\n\n";
+                                maxString = doubleSpace ? `${element}\n\n` : `${element}\n`;
                             }
                         }
                     });
@@ -3078,7 +3133,7 @@ module.exports = {
         const right = '➡';
         const cancel = '🗑️';
         const file = '📎';
-        const emojis = embedArray[0].footer.text === this.fileFooterText ? [left, right, cancel, file] : [left, right, cancel];
+        const emojis = embedArray[0].footer ? (embedArray[0].footer.text === this.fileFooterText ? [left, right, cancel, file] : [left, right, cancel]) : [left, right, cancel];
         emojis.forEach(async (emoji, i) => {
             await this.quickReact(embed, emoji, i);
         });
@@ -3116,9 +3171,12 @@ module.exports = {
         return embed;
     },
 
+
+    invalidPrefixes: ['\*', '\_', '\~', '\>', '\\', '\/', '\:', '\`', '\@'],
     fileFooterText: `Press the 📎 to get all of this in a text file`,
 
-    reminderTypes: ["Reminder", "Habit", "Fast"],
+
+    reminderTypes: ["Reminder", "Habit", "Fast", "Quote"],
     fastEmbedColour: "#32CD32",
     mastermindEmbedColour: "#FF6A00",
     journalEmbedColour: "#EE82EE",
@@ -3128,6 +3186,7 @@ module.exports = {
     habitEmbedColour: "#0000FF",
     userSettingsEmbedColour: "#778899",
     guildSettingsEmbedColour: "#964b00",
+    pesterEmbedColour: "#FF4500",
     defaultEmbedColour: "#ADD8E6",
 
 };

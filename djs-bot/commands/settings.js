@@ -1,52 +1,25 @@
-const Discord = require("discord.js");
 const User = require("../database/schemas/user");
-const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 require("dotenv").config();
 
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 const userEmbedColour = fn.userSettingsEmbedColour;
-
+const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const daysOfWeekList = daysOfWeek.map((day, i) => {
+    return `\`${i + 1}\` - **${day}**`;
+}).join(`\n`);
 // Private Function Declarations
-function msToTimeFromMidnight(milliseconds, inMilitaryTime = false) {
-    const defaultTime = "00:00:00";
-    if (isNaN(milliseconds)) return defaultTime;
-    const DAY_IN_MS = fn.getTimeScaleToMultiplyInMs("day");
-    milliseconds = milliseconds % DAY_IN_MS;
-    let [hours, mins, seconds,] = fn.getHoursMinutesSecondsMillisecondsArray(milliseconds);
-    var timeString;
-    hours = hours < 10 ? `0${hours}` : hours;
-    mins = mins < 10 ? `0${mins}` : mins;
-    seconds = seconds < 10 ? `0${seconds}` : seconds;
-    if (!inMilitaryTime) {
-        const standardTime = fn.militaryTimeHoursToStandardTimeHoursArray(hours);
-        if (!standardTime) return defaultTime;
-        [hours, amPmString] = standardTime;
-        timeString = `${hours}:${mins}:${seconds} ${amPmString}`;
-    }
-    else timeString = `${hours}:${mins}:${seconds}`;
-    return timeString ? timeString : defaultTime;
-}
-
-function hoursToUTCOffset(hours) {
-    if (!isNaN(hours)) {
-        const sign = hours < 0 ? "-" : "+";
-        hours = Math.abs(hours);
-        let hoursOut = parseInt(hours);
-        hoursOut = hoursOut < 10 ? `0${hoursOut}` : hoursOut;
-        let minsOut = parseInt((hours - hoursOut) / 60);
-        minsOut = minsOut < 10 ? `0${minsOut}` : minsOut;
-        return `${sign}${hoursOut}:${minsOut}`;
-    }
-    else return hours;
-}
 
 function userDocumentToString(userSettings) {
     const { timezone: { name, offset, daylightSavings }, likesPesteringAccountability: likesAccountability,
-        habitCron } = userSettings
-    const output = `__**Timezone:**__ ${name}\n- **UTC Offset (in hours):** ${hoursToUTCOffset(offset)}`
+        habitCron, getQuote, quoteInterval, nextQuote, } = userSettings
+    const output = `__**Timezone:**__ ${name}\n- **UTC Offset (in hours):** ${fn.hoursToUTCOffset(offset)}`
         + `\n- **Daylight Savings Time:** ${daylightSavings ? "Yes" : "No"}`
-        + `\n\n__**Habit Reset Time (daily):**__ ${msToTimeFromMidnight(habitCron)}`
+        + `\n\n__**Habit Reset Time:**__\n- **Daily:** ${fn.msToTimeFromMidnight(habitCron.daily)}`
+        + `\n- **Weekly:** ${fn.getDayOfWeekToString(habitCron.weekly)}`
+        + `\n\n__**Get Quotes:**__ ${getQuote ? "Yes" : "No"}`
+        + `\n- **Next Quote:** ${getQuote ? fn.timestampToDateString(nextQuote + (offset * HOUR_IN_MS)) : "N/A"}`
+        + `\n- **Quote Interval:** ${getQuote ? fn.millisecondsToTimeString(quoteInterval) : "N/A"}`
         + `\n\n__**Likes Pestering Accountability:**__ ${likesAccountability ? "YES!!!" : "No"}`;
     return output;
 }
@@ -55,7 +28,7 @@ module.exports = {
     name: "settings",
     description: "User Settings/Preferences: Timezone, Habits, Reminders, etc.",
     aliases: ["setting", "set", "s", "preferences",
-        "user", "usersettings", "userconfig"],
+        "user", "u", "usersettings", "userconfig"],
     cooldown: 5,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
@@ -64,7 +37,8 @@ module.exports = {
         let userSettings = await User.findOne({ discordID: authorID });
         const authorUsername = message.author.username;
         const settingCommand = args[0] ? args[0].toLowerCase() : false;
-        let settingUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION> <force?>\``
+        let settingUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed}\` - **(to see your settings)**`
+            + `\n\`${PREFIX}${commandUsed} <ACTION> <force?>\``
             + "\n\n\`<ACTION>\`: **edit/change**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         settingUsageMessage = fn.getMessageEmbed(settingUsageMessage, "User Settings: Help", userEmbedColour);
@@ -74,7 +48,7 @@ module.exports = {
         const showUserSettings = fn.getMessageEmbed(userDocumentToString(userSettings),
             `${username}'s Settings`,
             userEmbedColour)
-            .setThumbnail(message.author.displayAvatarURL())
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
             .setFooter(settingHelpMessage);
 
         if (settingCommand === "help") {
@@ -85,7 +59,8 @@ module.exports = {
         //see, edit (when edit, show see first then usage),
         else if (settingCommand === "edit" || settingCommand === "ed" || settingCommand === "e"
             || settingCommand === "change" || settingCommand === "ch" || settingCommand === "c") {
-            var userFields = ["Timezone", "Daylight Savings Time", "Habit Reset Time", "Likes Pestering Accountability",];
+            var userFields = ["Timezone", "Daylight Savings Time", "Habit Daily Reset Time", "Habit Weekly Reset Time",
+                "Get Quotes", "Next Quote", "Quote Interval", "Likes Pestering Accountability",];
             let fieldsList = "";
             userFields.forEach((field, i) => {
                 fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
@@ -117,6 +92,41 @@ module.exports = {
                         userEdit = await fn.getUserEditString(message, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
                         break;
                     case 3:
+                        userSettingsPrompt = `Enter the number corresponding to the __**day of the week**__ when you would like your **weekly habits counter to reset:**`;
+                        userEdit = await fn.getUserEditNumber(message, fieldToEdit, daysOfWeek.length, type, forceSkip, userEmbedColour, `${userSettingsPrompt}\n\n${daysOfWeekList}`);
+                        if (userEdit !== false && !isNaN(userEdit)) userEdit--;
+                        console.log({ userEdit });
+                        break;
+                    case 4:
+                        userSettingsPrompt = `Do you want to regularly recieve an **inspirational quote?**`;
+                        userEdit = await fn.getUserEditBoolean(message, fieldToEdit, userSettingsPrompt,
+                            ['🙌', '⛔'], type, forceSkip, userEmbedColour);
+                        break;
+                    case 5:
+                        if (userSettings.getQuote) {
+                            userSettingsPrompt = `__**When do you intend to start the next quote?**__`
+                                + "\n\nType `skip` to **start it now**"
+                            userEdit = await fn.getUserEditString(message, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
+                        }
+                        else {
+                            fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
+                            userEdit = "back";
+                            continueEdit = true;
+                        }
+                        break;
+                    case 6:
+                        if (userSettings.getQuote) {
+                            userSettingsPrompt = `How often do you want to receive an inspiration quote?`
+                                + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
+                            userEdit = await fn.getUserEditString(message, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
+                        }
+                        else {
+                            fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
+                            userEdit = "back";
+                            continueEdit = true;
+                        }
+                        break;
+                    case 7:
                         userSettingsPrompt = `Are you into **pestering accountability** (💪) or not so much (🙅‍♀️)?`;
                         userEdit = await fn.getUserEditBoolean(message, fieldToEdit, userSettingsPrompt,
                             ['💪', '🙅‍♀️'], type, forceSkip, userEmbedColour);
@@ -151,6 +161,8 @@ module.exports = {
                                     continueEdit = true;
                                 }
                                 console.log({ continueEdit });
+                                timezoneOffset = updatedTimezone;
+                                daylightSavings = userEdit;
                             }
                             break;
                         case 1:
@@ -182,6 +194,8 @@ module.exports = {
                                     console.log({ userSettings })
                                 }
                                 else continueEdit = true;
+                                timezoneOffset = updatedTimezoneOffset;
+                                daylightSavings = userEdit;
                             }
                             break;
                         case 2:
@@ -211,16 +225,222 @@ module.exports = {
                                         // the logic above fails..
                                         const DAY_IN_MS = fn.getTimeScaleToMultiplyInMs("day");
                                         var timeAfterMidnight = (endTime - todayMidnight) < 0 ?
-                                            userSettings.habitCron : (endTime - todayMidnight) % DAY_IN_MS;
+                                            userSettings.habitCron.daily : (endTime - todayMidnight) % DAY_IN_MS;
                                         console.log({ endTime, startTimestamp, todayMidnight, });
                                         console.log({ timeAfterMidnight });
                                         userSettings = await User.findOneAndUpdate({ discordID: authorID },
-                                            { $set: { habitCron: timeAfterMidnight } }, { new: true });
+                                            {
+                                                $set: {
+                                                    habitCron: {
+                                                        daily: timeAfterMidnight,
+                                                        weekly: userSettings.habitCron.daily,
+                                                    }
+                                                }
+                                            }, { new: true });
                                     }
                                 }
                             }
                             break;
                         case 3:
+                            userSettings = await User.findOneAndUpdate({ discordID: authorID },
+                                {
+                                    $set: {
+                                        habitCron: {
+                                            daily: userSettings.habitCron.daily,
+                                            weekly: userEdit,
+                                        }
+                                    }
+                                }, { new: true });
+                            break;
+                        case 4:
+                            {
+                                switch (userEdit) {
+                                    case '🙌': userEdit = true;
+                                        break;
+                                    case '⛔': userEdit = false;
+                                        break;
+                                    default: null;
+                                        break;
+                                }
+                                // setup interval!
+                                if (typeof userEdit === "boolean") {
+                                    var interval;
+                                    let firstQuote = userSettings.nextQuote;
+                                    let error = false;
+                                    if (userEdit) {
+                                        userSettingsPrompt = `How often do you want to receive an inspiration quote?`
+                                            + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
+                                        let intervalInput = await fn.getUserEditString(message, "Quote Interval", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                        if (!intervalInput) return;
+                                        else if (intervalInput === "back") {
+                                            continueEdit = true;
+                                        }
+                                        else {
+                                            intervalInput = intervalInput.toLowerCase().split(/[\s\n]+/);
+                                            const now = Date.now();
+                                            const endTime = fn.timeCommandHandlerToUTC(intervalInput[0] === "in" ? intervalInput
+                                                : [("in")].concat(intervalInput), now, timezoneOffset, daylightSavings)
+                                                - HOUR_IN_MS * timezoneOffset;
+                                            interval = endTime - now;
+                                            if (!interval) {
+                                                fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
+                                                error = true;
+                                                continueEdit = true;
+                                            }
+                                            else if (interval < HOUR_IN_MS) {
+                                                fn.sendReplyThenDelete(message, `**INVALID TIME**... ${settingHelpMessage}`, 60000);
+                                                error = true;
+                                                continueEdit = true;
+                                            }
+                                            else {
+                                                userSettingsPrompt = `__**When do you intend to start the first quote?**__`
+                                                    + "\n\nType `skip` to **start it now**"
+                                                let quoteTrigger = await fn.getUserEditString(message, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                                if (!quoteTrigger) return;
+                                                else {
+                                                    const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
+                                                    currentTimestamp = Date.now();
+                                                    if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
+                                                    else {
+                                                        quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
+                                                        firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
+                                                            : (["in"].concat(quoteTrigger)), currentTimestamp,
+                                                            timezoneOffset, daylightSavings);
+                                                    }
+                                                    if (firstQuote) {
+                                                        firstQuote -= HOUR_IN_MS * timezoneOffset;
+                                                        if (firstQuote - currentTimestamp >= 0) {
+                                                            continueEdit = false;
+                                                        }
+                                                        else {
+                                                            fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
+                                                            continueEdit = true;
+                                                            error = true;
+                                                        }
+                                                    }
+                                                    else {
+                                                        fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
+                                                        continueEdit = true;
+                                                        error = true;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        // Get the first instance!
+                                    }
+                                    if (!error) {
+                                        userSettings = await User.findOneAndUpdate({ discordID: authorID },
+                                            {
+                                                $set:
+                                                {
+                                                    getQuote: userEdit,
+                                                    quoteInterval: interval,
+                                                    nextQuote: firstQuote,
+                                                }
+                                            }, { new: true });
+                                    }
+                                }
+                                else continueEdit = true;
+                            }
+                            break;
+                        case 5:
+                            {
+                                let nextQuote;
+                                const isCurrent = userEdit === "skip" || userEdit === "now";
+                                currentTimestamp = Date.now();
+                                if (isCurrent) nextQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
+                                else {
+                                    userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
+                                    nextQuote = fn.timeCommandHandlerToUTC(userEdit[0] === "in" ? userEdit
+                                        : (["in"].concat(userEdit)), currentTimestamp,
+                                        timezoneOffset, daylightSavings);
+                                }
+                                if (nextQuote) {
+                                    nextQuote -= HOUR_IN_MS * timezoneOffset;
+                                    if (nextQuote - currentTimestamp >= 0) {
+                                        userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
+                                            $set:
+                                            {
+                                                getQuote: true,
+                                                quoteInterval: userSettings.quoteInterval,
+                                                nextQuote,
+                                            }
+                                        }, { new: true });
+                                        continueEdit = false;
+                                    }
+                                    else {
+                                        fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
+                                        continueEdit = true;
+                                    }
+                                }
+                                else {
+                                    fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
+                                    continueEdit = true;
+                                }
+                            }
+                            break;
+                        case 6:
+                            {
+                                userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
+                                console.log({ userEdit });
+                                let currentTimestamp = Date.now();
+                                let endInterval = fn.timeCommandHandlerToUTC(userEdit[0] === "in" ? userEdit
+                                    : (["in"].concat(userEdit)), currentTimestamp, timezoneOffset, daylightSavings);
+                                if (!endInterval) {
+                                    fn.sendReplyThenDelete(message, `**INVALID TIME**... ${settingHelpMessage}`, 60000);
+                                    continueEdit = true;
+                                }
+                                else {
+                                    endInterval -= HOUR_IN_MS * timezoneOffset;
+                                    const updatedInterval = endInterval - currentTimestamp;
+                                    if (updatedInterval < HOUR_IN_MS) {
+                                        fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
+                                        continueEdit = true;
+                                    }
+                                    else {
+                                        userSettingsPrompt = `__**When do you intend to start the first quote?**__`
+                                            + "\n\nType `skip` to **start it now**"
+                                        let quoteTrigger = await fn.getUserEditString(message, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                        if (!quoteTrigger) return;
+                                        else {
+                                            let firstQuote;
+                                            const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
+                                            currentTimestamp = Date.now();
+                                            if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
+                                            else {
+                                                quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
+                                                firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
+                                                    : (["in"].concat(quoteTrigger)), currentTimestamp,
+                                                    timezoneOffset, daylightSavings);
+                                            }
+                                            if (firstQuote) {
+                                                firstQuote -= HOUR_IN_MS * timezoneOffset;
+                                                if (firstQuote - currentTimestamp >= 0) {
+                                                    userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
+                                                        $set:
+                                                        {
+                                                            getQuote: true,
+                                                            quoteInterval: updatedInterval,
+                                                            nextQuote: firstQuote,
+                                                        }
+                                                    }, { new: true });
+                                                    continueEdit = false;
+                                                }
+                                                else {
+                                                    fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
+                                                    continueEdit = true;
+                                                }
+                                            }
+                                            else {
+                                                fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
+                                                continueEdit = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case 7:
                             {
                                 switch (userEdit) {
                                     case '💪': userEdit = true;

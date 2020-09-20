@@ -943,7 +943,7 @@ module.exports = {
                     else fastView = await fn.getEntriesByStartTime(Fast, { userID: authorID }, 0, pastNumberOfEntriesIndex);
                     console.log({ fastView });
                     const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
-                    await fn.sendPaginationEmbed(message, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts (${sortType})`, true, fastEmbedColour));
+                    await fn.sendPaginationEmbed(message, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts (${sortType})`, true, true, fastEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -982,7 +982,7 @@ module.exports = {
                                 else fastView = await fn.getEntriesByStartTime(Fast, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ fastView });
                                 const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
-                                await fn.sendPaginationEmbed(message, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip} (${sortType})`, true, fastEmbedColour));
+                                await fn.sendPaginationEmbed(message, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip} (${sortType})`, true, true, fastEmbedColour));
                                 return;
                             }
                         }
@@ -1074,7 +1074,7 @@ module.exports = {
                     if (indexByRecency) fastCollection = await fn.getEntriesByRecency(Fast, { userID: authorID }, 0, numberArg);
                     else fastCollection = await fn.getEntriesByStartTime(Fast, { userID: authorID }, 0, numberArg);
                     const fastDataToStringArray = multipleFastsToString(message, fastCollection, numberArg, timezoneOffset, 0, true);
-                    const fastArray = fn.getEmbedArray(fastDataToStringArray, ``, false, fastEmbedColour);
+                    const fastArray = fn.getEmbedArray(fastDataToStringArray, ``, true, false, fastEmbedColour);
                     console.log({ fastArray });
                     // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} fast(s)**?`;
@@ -1143,7 +1143,7 @@ module.exports = {
                             fastTargetIDs.push(fastView._id);
                             fastDataToString.push(`__**Fast ${toDelete[i]}:**__\n${fastDataArrayToString(fastData)}`);
                         }
-                        const fastDataToStringArray = fn.getEmbedArray(fastDataToString, ``, false);
+                        const fastDataToStringArray = fn.getEmbedArray(fastDataToString, ``, true, false);
                         const deleteConfirmMessage = `Are you sure you want to **delete fasts ${toDelete}?:**`
                         const sortType = indexByRecency ? "By Recency" : "By Start Time";
                         const confirmDeleteMany = await fn.getPaginatedUserConfirmation(message, fastDataToStringArray, deleteConfirmMessage, forceSkip, `Fast: Delete Fasts ${toDelete} (${sortType})`, 600000);

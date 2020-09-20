@@ -399,7 +399,7 @@ module.exports = {
                     else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, 0, pastNumberOfEntriesIndex);
                     console.log({ reminderView });
                     const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
-                    await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, true, reminderEmbedColour));
+                    await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, true, true, reminderEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -438,7 +438,7 @@ module.exports = {
                                 else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ reminderView });
                                 const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
-                                await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`, true, reminderEmbedColour));
+                                await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`, true, true, reminderEmbedColour));
                                 return;
                             }
                         }
@@ -862,6 +862,7 @@ module.exports = {
                     return;
                 }
             }
+            else return message.reply(reminderActionHelpMessage);
         }
 
 

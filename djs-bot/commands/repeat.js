@@ -406,7 +406,7 @@ module.exports = {
                     else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, 0, pastNumberOfEntriesIndex);
                     console.log({ reminderView });
                     const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
-                    await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, true, reminderEmbedColour));
+                    await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, true, true, reminderEmbedColour));
                     return message.channel.send(reminderEmbed);
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -445,7 +445,7 @@ module.exports = {
                                 else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ reminderView });
                                 const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
-                                await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`, true, reminderEmbedColour));
+                                await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`, true, true, reminderEmbedColour));
                                 message.channel.send(reminderEmbed);
                                 return;
                             }
@@ -871,6 +871,7 @@ module.exports = {
                     return;
                 }
             }
+            else return message.reply(reminderActionHelpMessage);
         }
 
         // Other functions: See, Edit, Remove

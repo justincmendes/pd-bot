@@ -37,8 +37,33 @@ const userSettingsSchema = mongoose.Schema({
             default: true,
         },
     },
-    // The timestamp in ms after 00:00 / 12AM for when to reset the Daily Habits!
-    habitCron: Number,
+    habitCron: {
+        // The timestamp in ms after 00:00 / 12AM for when to reset the Daily Habits!
+        daily: {
+            type: Number,
+            required: true,
+            default: 0,
+        },
+        // Given as the day of the week
+        weekly: {
+            type: Number,
+            required: true,
+            default: 0,
+        },
+    },
+    getQuote: {
+        type: Boolean,
+        required: true,
+        default: false,
+    },
+    quoteInterval: {
+        type: Number,
+        required: false,
+    },
+    nextQuote: {
+        type: Number,
+        required: false,
+    },
     likesPesteringAccountability: {
         type: Boolean,
         required: true,

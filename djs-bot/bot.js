@@ -24,6 +24,7 @@ const mongoose = require("mongoose");
 const GuildSettings = require("./database/schemas/guildsettings");
 const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
+const { reminderTypes } = require("../utilities/functions");
 bot.mongoose = require("../utilities/mongoose");
 
 //This shouldn't happen, this would be on Node.js
@@ -164,6 +165,10 @@ bot.on("message", async message => {
                 },
                 mastermind: {
                     roles: [],
+                    resetDay: 0,
+                },
+                quote: {
+                    roles: [],
                 },
             });
             guildConfig.save()
@@ -190,7 +195,11 @@ bot.on("message", async message => {
                 offset: initialOffset + daylightOffset,
                 daylightSavings: guildSettings.timezone.daylightSavings,
             },
-            habitCron: 0,
+            habitCron: {
+                daily: 0,
+                weekly: 0,
+            },
+            getQuote: false,
             likesPesteringAccountability: false,
         });
         await userInfo.save()
@@ -300,7 +309,7 @@ bot.on("message", async message => {
 // Will help with handling unique prefixes!
 bot.on("guildCreate", async (guild) => {
     try {
-        const guildObject = await GuildSettings.find({ guildID: guild.id });
+        const guildObject = await GuildSettings.findOne({ guildID: guild.id });
         // Check if it already exists to avoid duplicates
         if (guildObject) return console.log(`${bot.user.username} is already in ${guild.name}! Won't create new instance in Database.`);
         else {
@@ -319,6 +328,10 @@ bot.on("guildCreate", async (guild) => {
                 },
                 mastermind: {
                     roles: [],
+                    resetDay: 0,
+                },
+                quote: {
+                    roles: [],
                 },
             });
             guildConfig.save()
@@ -328,24 +341,19 @@ bot.on("guildCreate", async (guild) => {
         }
     }
     catch (err) {
-        console.error(err);
+        return console.error(err);
     }
 });
 
 // Remove the settings and preset data if PD is removed from guild
 bot.on('guildDelete', async (guild) => {
     try {
-        const guildConfig = new GuildSettings();
-        await guildConfig.collection
-            .deleteOne({ guildID: guild.id })
-            .catch(err => {
-                console.log(err);
-                return;
-            });
+        await GuildSettings.deleteOne({ guildID: guild.id })
+        await Reminder.deleteMany({ guildID: guild.id });
         console.log(`Removed from ${guild.name}(${guild.id})\nDeleting Guild Settings...`);
     }
     catch (err) {
-        console.error(err);
+        return console.error(err);
     }
 });
 
