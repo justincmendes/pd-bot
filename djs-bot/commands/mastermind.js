@@ -390,8 +390,7 @@ module.exports = {
         // Variable Declarations and Initializations
         let mastermindUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\``
             + "\n\n\`<ACTION>\`: **template/t; start/create; delete; edit**"
-            + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`
-            + "\n\n**FUTURE FEATURES: settings; create; reflection; goals**";
+            + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         mastermindUsageMessage = fn.getMessageEmbed(mastermindUsageMessage, "Mastermind: Help", mastermindEmbedColour);
         const mastermindHelpMessage = `Try \`${PREFIX}${commandUsed} help\`...`;
         const mastermindCommand = args[0].toLowerCase(); // Args are expected to be defined!
@@ -927,79 +926,66 @@ module.exports = {
                 }
                 // After this filter:
                 // If the first argument after "see" is not past, then it is not a valid call
-                else {
-                    message.channel.send(await getMostRecentMastermind(bot, authorID, mastermindEmbedColour));
-                    return message.reply(mastermindActionHelpMessage);
-                }
+                else return message.reply(mastermindActionHelpMessage);
                 console.log({ pastNumberOfEntriesIndex, pastFunctionality });
                 if (pastFunctionality) {
                     // Loop through all of the given fields, account for aliases and update fields
                     // Find Entries, toArray, store data in meaningful output
-                    if (args[2] !== undefined) {
-                        if (args[2].toLowerCase() === "recent") {
+                    if (args[3] !== undefined) {
+                        if (args[3].toLowerCase() === "recent") {
                             indexByRecency = true;
                         }
                     }
                     const sortType = indexByRecency ? "By Recency" : "By Date Created";
-                    if (args[1] !== undefined) {
+                    if (args[2] !== undefined) {
                         // If the next argument is NotaNumber, invalid "past" command call
-                        if (isNaN(args[1])) {
-                            message.channel.send(await getMostRecentMastermind(bot, authorID, mastermindEmbedColour));
-                            return message.reply(mastermindActionHelpMessage);
-                        }
-                        if (parseInt(args[1]) <= 0) {
-                            message.channel.send(await getMostRecentMastermind(bot, authorID, mastermindEmbedColour));
-                            return message.reply(mastermindActionHelpMessage);
-                        }
+                        if (isNaN(args[2])) return message.reply(mastermindActionHelpMessage);
+                        if (parseInt(args[2]) <= 0) return message.reply(mastermindActionHelpMessage);
                         const confirmSeeMessage = `Are you sure you want to **see ${args[1]} masterminds?**`;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Mastermind: See ${args[1]} Entries! (${sortType})`);
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Mastermind: See ${args[1]} Entries (${sortType})`);
                         if (!confirmSeeAll) return;
                     }
                     else {
                         // If the next argument is undefined, implied "see all" command call unless "all" was not called:
                         // => empty "past" command call
-                        if (seeType !== "all") {
-                            message.channel.send(await getMostRecentMastermind(bot, authorID, mastermindEmbedColour));
-                            return message.reply(mastermindActionHelpMessage);
-                        }
+                        if (seeType !== "all") return message.reply(mastermindActionHelpMessage);
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your mastermind history?";
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Mastermind: See All Entries!");
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Mastermind: See All Entries");
                         if (!confirmSeeAll) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
                     if (pastNumberOfEntriesIndex === undefined) {
-                        pastNumberOfEntriesIndex = parseInt(args[1]);
+                        pastNumberOfEntriesIndex = parseInt(args[2]);
                     }
                     var mastermindView;
                     if (indexByRecency) mastermindView = await fn.getEntriesByRecency(Mastermind, { userID: authorID }, 0, pastNumberOfEntriesIndex);
                     else mastermindView = await getMastermindByCreatedAt(authorID, 0, pastNumberOfEntriesIndex);
-                    console.log({ mastermindView });
+                    console.log({ mastermindView, pastNumberOfEntriesIndex });
                     const mastermindStringArray = multipleMastermindsToString(bot, message, mastermindView, pastNumberOfEntriesIndex, 0, true);
                     await fn.sendPaginationEmbed(message, fn.getEmbedArray(mastermindStringArray, `Mastermind: See ${pastNumberOfEntriesIndex} Entries (${sortType})`, true, true, mastermindEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
-                if (args[1] !== undefined) {
+                if (args[2] !== undefined) {
                     var shiftIndex;
-                    if (args[1].toLowerCase() === "past") {
+                    if (args[2].toLowerCase() === "past") {
                         shiftIndex = 0;
                         indexByRecency = false;
                     }
-                    else if (args[1].toLowerCase() === "recent") {
+                    else if (args[2].toLowerCase() === "recent") {
                         shiftIndex = 1;
                         indexByRecency = true;
                     }
-                    else return message.reply(mastermindActionHelpMessage);
-                    if (args[1 + shiftIndex]) {
-                        if (args[1 + shiftIndex].toLowerCase() === "past") {
-                            if (args[2 + shiftIndex] !== undefined) {
+                    if (args[2 + shiftIndex]) {
+                        if (args[2 + shiftIndex].toLowerCase() === "past") {
+                            if (args[3 + shiftIndex] !== undefined) {
                                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
                                 var entriesToSkip;
                                 // If the argument after past is a number, valid command call!
-                                if (!isNaN(args[2 + shiftIndex])) {
-                                    entriesToSkip = parseInt(args[2 + shiftIndex]);
+                                if (!isNaN(args[3 + shiftIndex])) {
+                                    entriesToSkip = parseInt(args[3 + shiftIndex]);
                                 }
-                                else if (args[2 + shiftIndex].toLowerCase() === "recent") {
+                                else if (args[3 + shiftIndex].toLowerCase() === "recent") {
                                     entriesToSkip = await getRecentMastermindIndex(authorID);
                                 }
                                 else return message.reply(mastermindActionHelpMessage);
@@ -1007,7 +993,7 @@ module.exports = {
                                     return fn.sendErrorMessageAndUsage(message, mastermindActionHelpMessage, "**MASTERMIND(S) DO NOT EXIST**...");
                                 }
                                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} entries past ${entriesToSkip}?**`;
-                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Mastermind: See ${args[1]} Entries Past ${entriesToSkip}! (${sortType})`);
+                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Mastermind: See ${args[1]} Entries Past ${entriesToSkip} (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var mastermindView;
                                 if (indexByRecency) mastermindView = await fn.getEntriesByRecency(Mastermind, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
@@ -1020,8 +1006,8 @@ module.exports = {
                         }
                     }
                 }
-                if (args[1] !== undefined) {
-                    if (args[1].toLowerCase() === "recent") {
+                if (args[2] !== undefined) {
+                    if (args[2].toLowerCase() === "recent") {
                         indexByRecency = true;
                     }
                 }
@@ -1043,7 +1029,412 @@ module.exports = {
 
         else if (mastermindCommand === "edit" || mastermindCommand === "change" || mastermindCommand === "ed" || mastermindCommand === "e"
             || mastermindCommand === "ch" || mastermindCommand === "c") {
+            let reminderEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${reminderCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\``
+                + "\n\n`<#_MOST_RECENT_ENTRY>`: **recent; 3** (3rd most recent entry, \\**any number*)"
+                + "\n\n`<recent?>`(OPT.): type **recent** at the indicated spot to sort the reminders by **time created instead of reminder start time!**"
+                + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**";
+            reminderEditUsageMessage = fn.getMessageEmbed(reminderEditUsageMessage, `Reminder: Edit Help`, reminderEmbedColour);
+            if (reminderIndex) {
+                if (reminderIndex === "help") {
+                    return message.channel.send(reminderDeleteUsageMessage);
+                }
+                if (!totalReminderNumber) {
+                    return message.reply(`**NO REMINDERS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                }
 
+                if (isNaN(reminderIndex) && reminderIndex !== "recent") {
+                    return message.reply(reminderActionHelpMessage);
+                }
+                else {
+                    var reminderFields = ["Type", "Send to (DM or Channel)", "Start Time", "End Time", "Message", "Repeat", "Interval"];
+                    let fieldsList = "";
+                    reminderFields.forEach((field, i) => {
+                        fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
+                    });
+                    if (reminderIndex === "recent") {
+                        pastNumberOfEntriesIndex = await rm.getRecentReminderIndex(authorID, false);
+                    }
+                    else {
+                        pastNumberOfEntriesIndex = parseInt(reminderIndex);
+                        if (pastNumberOfEntriesIndex <= 0) {
+                            return fn.sendErrorMessageAndUsage(message, reminderActionHelpMessage, "**REMINDER DOES NOT EXIST**...");
+                        }
+                    }
+
+                    var indexByRecency = false;
+                    if (args[2] !== undefined) {
+                        if (args[2].toLowerCase() === "recent") {
+                            indexByRecency = true;
+                        }
+                    }
+                    var reminderView;
+                    if (indexByRecency) reminderView = await rm.getOneReminderByRecency(authorID, pastNumberOfEntriesIndex - 1, false);
+                    else reminderView = await rm.getOneReminderByEndTime(authorID, pastNumberOfEntriesIndex - 1, false);
+                    if (!reminderView) {
+                        return fn.sendErrorMessageAndUsage(message, reminderActionHelpMessage, `**REMINDER ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
+                    }
+                    const sortType = indexByRecency ? "By Recency" : "By End Time";
+                    const reminderTargetID = reminderView._id;
+                    var reminderData, showReminder, continueEdit;
+                    do {
+                        const checkFast = await rm.getOneReminderByObjectID(reminderTargetID);
+                        if (!checkFast) return;
+                        continueEdit = false;
+                        reminderData = rm.reminderDocumentToDataArray(reminderView);
+                        showReminder = rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);
+                        // Field the user wants to edit
+                        const fieldToEditInstructions = "**Which field do you want to edit?:**";
+                        const fieldToEditAdditionalMessage = `__**Reminder ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showReminder}`;
+                        const fieldToEditTitle = `Reminder: Edit Field`;
+                        let fieldToEditIndex = await fn.userSelectFromList(message, fieldsList, reminderFields.length, fieldToEditInstructions,
+                            fieldToEditTitle, reminderEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                        if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
+                        var userEdit, reminderEditMessagePrompt = "";
+                        const fieldToEdit = reminderFields[fieldToEditIndex];
+                        const type = "Reminder";
+                        switch (fieldToEditIndex) {
+                            case 0:
+                                reminderEditMessagePrompt = `Please enter one of the following reminder types: **__${validTypes.join(', ')}__**`;
+                                userEdit = await fn.getUserEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                break;
+                            case 1:
+                                reminderEditMessagePrompt = `Please enter the **channel you'd like to send the reminder to OR "DM"** if you want to get it through a Direct Message:`;
+                                userEdit = await fn.getUserEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                break;
+                            case 2:
+                                reminderEditMessagePrompt = dateAndTimeInstructions;
+                                userEdit = await fn.getUserEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                break;
+                            case 3:
+                                reminderEditMessagePrompt = dateAndTimeInstructions;
+                                userEdit = await fn.getUserEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                break;
+                            // Reminder does not need a prompt explanation
+                            case 4:
+                                userEdit = await fn.getUserMultilineEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                break;
+                            case 5:
+                                reminderEditMessagePrompt = `Would you like to make this a **__repeating (⌚)__ OR __one-time (1️⃣)__ reminder?**`;
+                                userEdit = await fn.getUserEditBoolean(message, fieldToEdit, reminderEditMessagePrompt,
+                                    ['⌚', '1️⃣'], type, forceSkip, reminderEmbedColour);
+                                break;
+                            case 6:
+                                if (reminderData[1] === true) {
+                                    reminderEditMessagePrompt = `**Please enter the time you'd like in-between recurring reminders (interval):**`;
+                                    userEdit = await fn.getUserEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                }
+                                else userEdit = 0;
+                                break;
+                        }
+                        console.log({ userEdit });
+                        if (userEdit === false) return;
+                        else if (userEdit === undefined) userEdit = "back";
+                        else if (userEdit !== "back") {
+                            // Parse User Edit
+                            if (fieldToEditIndex === 2 || fieldToEditIndex === 3) {
+                                const timestamp = Date.now();
+                                userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
+                                console.log({ userEdit });
+                                reminderData[fieldToEditIndex + 3] = fn.timeCommandHandlerToUTC(userEdit, timestamp, timezoneOffset, daylightSavingsSetting);
+                                if (!reminderData[fieldToEditIndex + 3]) {
+                                    fn.sendReplyThenDelete(message, `**INVALID TIME**... ${reminderHelpMessage}`, 60000);
+                                    continueEdit = true;
+                                }
+                                if (continueEdit === false) {
+                                    reminderData[fieldToEditIndex + 3] -= HOUR_IN_MS * timezoneOffset;
+                                    const validReminderDuration = fn.endTimeAfterStartTime(message, reminderData[5], reminderData[6], type);
+                                    console.log({ validReminderDuration });
+                                    if (!validReminderDuration) {
+                                        continueEdit = true;
+                                    }
+                                    console.log({ reminderData });
+                                }
+                            }
+                            else {
+                                switch (fieldToEditIndex) {
+                                    case 0:
+                                        {
+                                            let userType = fn.toTitleCase(userEdit)
+                                            if (validTypes.includes(userType)) {
+                                                let removeConnectedDocsConf = await fn.getUserConfirmation(message,
+                                                    `Are you sure you want to change the reminder type to **"${userType}"**`
+                                                    + `\n\n*(This reminder will **lose** it's **connected document**, if any)*`,
+                                                    forceSkip, "Reminder: Change Type Confirmation", 90000);
+                                                if (removeConnectedDocsConf) {
+                                                    reminderData[8] = userType;
+                                                    reminderData[2] = undefined;
+                                                }
+                                            }
+                                            else continueEdit = true;
+                                            break;
+                                        }
+                                    case 1:
+                                        {
+                                            let userArgs = userEdit.split(/[\s\n]+/).join(' ');
+                                            let channel = /((?:[Dd][Mm])|(?:\<\#\d+\>))/.exec(userArgs);
+                                            if (channel) {
+                                                if (/[Dd][Mm]/.test(channel[1])) {
+                                                    reminderData[0] = true;
+                                                    reminderData[4] = authorID;
+                                                    reminderData[10] = undefined;
+                                                }
+                                                else {
+                                                    let channelID = /\<\#(\d+)\>/.exec(channel);
+                                                    channelID = channelID[1];
+                                                    const userPermissions = bot.channels.cache.get(channelID).permissionsFor(authorID);
+                                                    console.log({ userPermissions });
+                                                    if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL")) {
+                                                        reminderData[0] = false;
+                                                        reminderData[4] = channelID;
+                                                        reminderData[10] = bot.channels.cache.get(channelID).guild.id;
+                                                    }
+                                                    else {
+                                                        continueEdit = true;
+                                                        message.reply(`You are **not authorized to send messages** to that channel...`);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    case 4: reminderData[7] = userEdit;
+                                        break;
+                                    case 5:
+                                        {
+                                            switch (userEdit) {
+                                                case '⌚': userEdit = true;
+                                                    break;
+                                                case '1️⃣': userEdit = false;
+                                                    break;
+                                                default: null;
+                                                    break;
+                                            }
+                                            if (typeof userEdit === "boolean") {
+                                                // From One-Time to Repeating
+                                                if (userEdit === true && reminderData[1] === false) {
+                                                    reminderData[1] = userEdit;
+                                                    let userInterval = await fn.getUserEditString(message, reminderFields[6],
+                                                        `**Please enter the time you'd like in-between recurring reminders (interval):**`,
+                                                        type, forceSkip, reminderEmbedColour);
+                                                    if (!userInterval) {
+                                                        continueEdit = true;
+                                                        break;
+                                                    }
+                                                    let currentTimestamp = Date.now();
+                                                    let timeArgs = userInterval.toLowerCase().split(' ');
+                                                    let interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
+                                                        currentTimestamp, timezoneOffset, daylightSavingsSetting);
+                                                    if (!interval) {
+                                                        continueEdit = true;
+                                                        message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
+                                                        break;
+                                                    }
+                                                    interval -= HOUR_IN_MS * timezoneOffset + currentTimestamp;
+                                                    if (interval <= 0) {
+                                                        continueEdit = true;
+                                                        message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
+                                                        break;
+                                                    }
+                                                    else if (interval < 60000) {
+                                                        continueEdit = true;
+                                                        message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
+                                                        break;
+                                                    }
+                                                    reminderData[9] = interval;
+                                                    // GET THE INTENDED END TIME!
+                                                    let duration = await rm.getUserFirstRecurringEndDuration(message, reminderHelpMessage, timezoneOffset, daylightSavingsSetting, true);
+                                                    console.log({ duration })
+                                                    if (!duration && duration !== 0) {
+                                                        continueEdit = true;
+                                                        break;
+                                                    }
+                                                    duration = duration > 0 ? duration : 0;
+                                                    let channel = reminderData[0] ? "DM" : bot.channels.cache.get(reminderData[4]);
+                                                    let confirmCreationMessage = `Are you sure you want to set the following **recurring reminder** to send -\n**in ${channel.name} after ${fn.millisecondsToTimeString(duration)}**`
+                                                        + ` (and repeat every **${fn.millisecondsToTimeString(interval)}**):\n\n${reminderData[7]}`;
+                                                    let confirmCreation = await fn.getUserConfirmation(message, confirmCreationMessage, forceSkip, "Recurring Reminder: Confirm Creation", 180000);
+                                                    if (!confirmCreation) {
+                                                        continueEdit = true;
+                                                        break;
+                                                    }
+                                                    else {
+                                                        currentTimestamp = Date.now();
+                                                        reminderData[6] = currentTimestamp + duration;
+                                                        console.log({ currentTimestamp });
+                                                        let channelID = channel.id;
+                                                        let userPermissions = bot.channels.cache.get(channelID).permissionsFor(authorID);
+                                                        console.log({ userPermissions });
+                                                        if (!userPermissions.has("SEND_MESSAGES") || !userPermissions.has("VIEW_CHANNEL")) {
+                                                            message.reply(`You are **not authorized to send messages** to that channel...`);
+                                                        }
+                                                        message.reply(`Your **recurring reminder** has been set to trigger in **${fn.millisecondsToTimeString(duration)}!**`);
+                                                    }
+                                                }
+                                                // From Repeating to One-Time
+                                                else if (userEdit === false && reminderData[1] === true) {
+                                                    reminderData[1] = userEdit;
+                                                    // GET THE INTENDED END TIME! (For non-recurring)
+                                                    let duration = await rm.getUserFirstRecurringEndDuration(message, reminderHelpMessage, timezoneOffset, daylightSavingsSetting, false);
+                                                    console.log({ duration })
+                                                    if (!duration && duration !== 0) {
+                                                        continueEdit = true;
+                                                        break;
+                                                    }
+                                                    duration = duration > 0 ? duration : 0;
+                                                    let channel = reminderData[0] ? "DM" : bot.channels.cache.get(reminderData[4]).name;
+                                                    let confirmCreationMessage = `Are you sure you want to set the following **one-time reminder** to send -\n**in ${channel} after ${fn.millisecondsToTimeString(duration)}**`
+                                                        + `\n\n${reminderData[7]}`;
+                                                    let confirmCreation = await fn.getUserConfirmation(message, confirmCreationMessage, forceSkip, "Reminder: Confirm Creation", 180000);
+                                                    if (!confirmCreation) {
+                                                        continueEdit = true;
+                                                        break;
+                                                    }
+                                                    else {
+                                                        currentTimestamp = Date.now();
+                                                        console.log({ currentTimestamp });
+                                                        reminderData[6] = currentTimestamp + duration;
+                                                        if (reminderData[0] === false) {
+                                                            let channelID = channel.id;
+                                                            let userPermissions = bot.channels.cache.get(channelID).permissionsFor(authorID);
+                                                            console.log({ userPermissions });
+                                                            if (!userPermissions.has("SEND_MESSAGES") || !userPermissions.has("VIEW_CHANNEL")) {
+                                                                message.reply(`You are **not authorized to send messages** to that channel...`);
+                                                                continueEdit = true;
+                                                                break;
+                                                            }
+                                                            message.reply(`Your **one-time reminder** has been set to trigger in **${fn.millisecondsToTimeString(duration)}!**`);
+                                                        }
+                                                    }
+                                                }
+                                                else {
+                                                    continueEdit = true;
+                                                    break;
+                                                }
+
+                                            }
+                                            else {
+                                                continueEdit = true;
+                                                break;
+                                            }
+                                        }
+                                        break;
+                                    case 6:
+                                        {
+                                            // Ensure that the reminder isRecurring
+                                            if (reminderData[1] === true) {
+                                                let currentTimestamp = Date.now();
+                                                let timeArgs = userEdit.toLowerCase().split(' ');
+                                                let interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
+                                                    currentTimestamp, timezoneOffset, daylightSavingsSetting);
+                                                if (!interval) {
+                                                    continueEdit = true;
+                                                    message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
+                                                    break;
+                                                }
+                                                interval -= HOUR_IN_MS * timezoneOffset + currentTimestamp;
+                                                if (interval <= 0) {
+                                                    continueEdit = true;
+                                                    message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
+                                                    break;
+                                                }
+                                                else if (interval < 60000) {
+                                                    continueEdit = true;
+                                                    message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
+                                                    break;
+                                                }
+                                                reminderData[9] = interval;
+                                            }
+                                            else {
+                                                fn.sendReplyThenDelete(message, `**Interval cannot be set for one-time reminder**, try changing the **repeat** first`, 30000);
+                                                continueEdit = true;
+                                                break;
+                                            }
+                                        }
+                                        break;
+                                }
+                            }
+                            console.log({ reminderData });
+                            if (!continueEdit) {
+                                try {
+                                    console.log(`Editing ${authorID}'s Fast ${pastNumberOfEntriesIndex} (${sortType})`);
+                                    // Setup a new reminder! And leave a new lastEdited Timestamp:
+                                    let currentTimestamp = Date.now();
+                                    var newReminder;
+                                    switch (fieldToEditIndex) {
+                                        case 0:
+                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, { $set: { type: reminderData[8], lastEdited: currentTimestamp } }, { new: true });
+                                            break;
+                                        case 1:
+                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, {
+                                                $set: {
+                                                    isDM: reminderData[0], channel: reminderData[4],
+                                                    guildID: reminderData[10], lastEdited: currentTimestamp
+                                                }
+                                            }, { new: true });
+                                            break;
+                                        case 2:
+                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, { $set: { startTime: reminderData[5], lastEdited: currentTimestamp } }, { new: true });
+                                            break;
+                                        case 3:
+                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, { $set: { endTime: reminderData[6], lastEdited: currentTimestamp } }, { new: true });
+                                            break;
+                                        case 4:
+                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, { $set: { message: reminderData[7], lastEdited: currentTimestamp } }, { new: true });
+                                            break;
+                                        case 5:
+                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, {
+                                                $set: {
+                                                    isRecurring: reminderData[1], endTime: reminderData[6],
+                                                    interval: reminderData[9], lastEdited: currentTimestamp
+                                                }
+                                            }, { new: true });
+                                            break;
+                                        case 6:
+                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, { $set: { interval: reminderData[9], lastEdited: currentTimestamp } }, { new: true });
+                                            break;
+                                    }
+                                    console.log({ continueEdit, userEdit, newReminder });
+                                    currentTimestamp = Date.now();
+                                    reminderView = await Reminder.findById(reminderTargetID);
+                                    if (reminderView) {
+                                        await rm.sendReminderByObject(bot, currentTimestamp, newReminder);
+                                        pastNumberOfEntriesIndex = await rm.getRecentReminderIndex(authorID, false);
+                                        console.log({ reminderView, reminderData, reminderTargetID, fieldToEditIndex });
+                                        reminderData = rm.reminderDocumentToDataArray(reminderView);
+                                        showReminder = rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);
+                                        console.log({ userEdit });
+                                        const continueEditMessage = `Do you want to continue **editing Reminder ${pastNumberOfEntriesIndex}?:**\n\n__**Reminder ${pastNumberOfEntriesIndex}:**__\n${showReminder}`;
+                                        continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Reminder: Continue Editing Reminder ${pastNumberOfEntriesIndex}?`, 300000);
+                                    }
+                                    else {
+                                        message.reply("**Reminder not found...**");
+                                        continueEdit = false;
+                                    }
+                                }
+                                catch (err) {
+                                    return console.log(err);
+                                }
+                            }
+                            else {
+                                console.log({ continueEdit, userEdit });
+                                reminderView = await Reminder.findById(reminderTargetID);
+                                if (reminderView) {
+                                    pastNumberOfEntriesIndex = await rm.getRecentReminderIndex(authorID, false);
+                                    console.log({ reminderView, reminderData, reminderTargetID, fieldToEditIndex });
+                                    reminderData = rm.reminderDocumentToDataArray(reminderView);
+                                    showReminder = rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);
+                                }
+                                else {
+                                    message.reply("**Reminder not found...**");
+                                    continueEdit = false;
+                                }
+                            }
+                        }
+                        else continueEdit = true;
+                    }
+                    while (continueEdit === true);
+                    return;
+                }
+            }
         }
 
 
