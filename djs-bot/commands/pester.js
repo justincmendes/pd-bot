@@ -59,7 +59,7 @@ module.exports = {
         }
         console.log({ guildID });
 
-        const allMembers = guild.members.cache.map((member) => member.user);
+        const allMembers = guild.members.cache.map(member => member.user);
         const allMemberIDs = allMembers.map(user => user.id);
         console.log({ allMembers });
         const pesterHelpMessage = `Try \`${PREFIX}${commandUsed} help\` for help`;
@@ -78,57 +78,8 @@ module.exports = {
             return;
         }
         else {
-            let allMemberNames = new Array();
-            allMembers.forEach(member => {
-                allMemberNames.push({
-                    id: member.id,
-                    username: member.username,
-                    discriminator: member.discriminator,
-                    nickname: guild.member(member.id).displayName,
-                });
-            });
-            if (!allMemberNames.length) return message.reply(`**No users in __${guildName}__ exist on file...**`);
-            console.log({ allMemberNames });
-            let targetIDs = new Array();
-            const searchNickname = allMemberNames.filter(member => args.includes(member.nickname.toLowerCase()));
-            console.log({ searchNickname });
-            if (searchNickname.length) {
-                targetIDs = searchNickname.map(member => member.id);
-            }
-            const searchUsername = allMemberNames.filter(member => args.includes(member.username.toLowerCase()));
-            console.log({ searchUsername });
-            if (searchUsername.length) {
-                searchUsername.map(member => {
-                    if (!targetIDs.includes(member.id)) {
-                        targetIDs.push(member.id);
-                        return member.id;
-                    }
-                    else return null;
-                }).filter(element => element !== null);
-            }
-            const searchWithDiscriminator = allMemberNames.filter(member => args.includes(`${member.username.toLowerCase()}#${member.discriminator}`));
-            console.log({ searchWithDiscriminator });
-            if (searchWithDiscriminator.length) {
-                searchWithDiscriminator.map(member => {
-                    if (!targetIDs.includes(member.id)) {
-                        targetIDs.push(member.id);
-                        return member.id;
-                    }
-                    else return null;
-                }).filter(element => element !== null);
-            }
-            const searchID = allMemberNames.filter(member => args.includes(member.id));
-            console.log({ searchID });
-            if (searchID.length) {
-                searchID.map(member => {
-                    if (!targetIDs.includes(member.id)) {
-                        targetIDs.push(member.id);
-                        return member.id;
-                    }
-                    else return null;
-                }).filter(element => element !== null);
-            }
-            console.log({ targetIDs });
+            let targetIDs = fn.getIDArrayFromNames(args, allMembers);
+            if(!targetIDs) return message.reply(`**No users in __${guildName}__ exist on file...**`);
             if (targetIDs.length > 0) {
                 var usernameArray = new Array();
                 const findUsers = await User.find({ discordID: { $in: targetIDs } }, pesterProjection);
@@ -138,7 +89,7 @@ module.exports = {
                 console.log({ findUsers });
                 const userArray = findUsers.map((user) => {
                     if (allMemberIDs.includes(user.discordID)) {
-                        const userDisplayName = guild.member(user.discordID).displayName
+                        const userDisplayName = guild.member(user.discordID).displayName;
                         usernameArray.push(userDisplayName);
                         return `${inGuild ? `<@!${user.discordID}>` : `__**${userDisplayName}**__`} - `
                             + `${user.likesPesteringAccountability ? "**likes** pestering accountability" : "**does NOT like** pestering accountability"}`;

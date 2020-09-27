@@ -4,6 +4,7 @@ const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
+const { repeatReminderEmbedColour } = require("../../utilities/functions");
 require("dotenv").config();
 
 const validTypes = fn.reminderTypes;
@@ -42,7 +43,7 @@ module.exports = {
             + `\n\n${dateAndTimeInstructions}`
             + `If you want to set a one-time reminder, try \`${PREFIX}reminder <DATE/TIME> <CHANNEL> <MESSAGE> <force?>\``
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
-        repeatUsageMessage = fn.getMessageEmbed(repeatUsageMessage, "Recurring Repeat Reminder: Help", reminderEmbedColour);
+        repeatUsageMessage = fn.getMessageEmbed(repeatUsageMessage, "Repeat Reminder: Help", reminderEmbedColour);
         const repeatHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
         const reminderCommand = args[0] ? args[0].toLowerCase() : false;
         const reminderIndex = args[1] ? args[1].toLowerCase() : false;
@@ -65,7 +66,7 @@ module.exports = {
                 if (reminderIndex === "help") {
                     return message.channel.send(reminderDeleteUsageMessage);
                 }
-                if (totalReminderNumber === 0) {
+                if (!totalReminderNumber) {
                     return message.reply(`**NO REMINDERS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
             }
@@ -93,7 +94,8 @@ module.exports = {
                     var reminderCollection;
                     if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: true }, 0, numberArg);
                     else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, 0, numberArg);
-                    const reminderStringArray = rm.multipleRemindersToString(bot, message, reminderCollection, numberArg, timezoneOffset, 0, true);
+                    const reminderStringArray = fn.getEmbedArray(rm.multipleRemindersToString(bot, message, reminderCollection, numberArg, timezoneOffset, 0, true),
+                        '', true, false, repeatReminderEmbedColour);
                     // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} reminder(s)?**`;
                     const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(message, reminderStringArray, multipleDeleteMessage, forceSkip,
@@ -163,6 +165,7 @@ module.exports = {
                     }
                     const deleteConfirmMessage = `Are you sure you want to **delete reminders ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By End Time";
+                    reminderDataToStringArray = fn.getEmbedArray(reminderDataToStringArray, '', true, false, repeatReminderEmbedColour);
                     const confirmDeleteMany = await fn.getPaginatedUserConfirmation(message, reminderDataToStringArray, deleteConfirmMessage,
                         forceSkip, `Repeat Reminder: Delete Reminders ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
@@ -201,7 +204,8 @@ module.exports = {
                             var reminderCollection;
                             if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: true }, skipEntries, pastNumberOfEntries);
                             else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, skipEntries, pastNumberOfEntries);
-                            const reminderStringArray = rm.multipleRemindersToString(bot, message, reminderCollection, pastNumberOfEntries, timezoneOffset, skipEntries, true);
+                            const reminderStringArray = fn.getEmbedArray(rm.multipleRemindersToString(bot, message, reminderCollection, pastNumberOfEntries, timezoneOffset, skipEntries, true),
+                                '', true, false, repeatReminderEmbedColour);
                             if (skipEntries >= totalReminderNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By End Time";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${reminderCollection.length} reminder(s) past reminder ${skipEntries}?**`;
@@ -228,7 +232,7 @@ module.exports = {
             const noRemindersMessage = `**NO REMINDERS**... try \`${PREFIX}${commandUsed} start help\``;
             if (isNaN(args[1])) {
                 const deleteType = args[1].toLowerCase();
-                if (deleteType == "recent") {
+                if (deleteType === "recent") {
                     const reminderView = await rm.getOneReminderByRecency(authorID, 0, true);
                     if (reminderView.length === 0) {
                         return fn.sendErrorMessage(message, noRemindersMessage);
@@ -245,17 +249,17 @@ module.exports = {
                     }
                 }
                 else if (deleteType === "all") {
-                    const confirmDeleteAllMessage = "Are you sure you want to **delete all** of your recorded reminders?\n\nYou **cannot UNDO** this!" +
+                    const confirmDeleteAllMessage = "Are you sure you want to **delete all** of your recorded recurring reminders?\n\nYou **cannot UNDO** this!" +
                         `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
                     const pastNumberOfEntriesIndex = totalReminderNumber;
                     if (pastNumberOfEntriesIndex === 0) {
                         return fn.sendErrorMessage(message, noRemindersMessage);
                     }
-                    let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, "Repeat Reminder: Delete All Reminders WARNING!");
+                    let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, "Repeat Reminder: Delete All Recurring Reminders WARNING!");
                     if (!confirmDeleteAll) return;
-                    const finalDeleteAllMessage = "Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR REMINDERS ON RECORD**?\n\nYou **cannot UNDO** this!"
+                    const finalDeleteAllMessage = "Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR RECURRING REMINDERS ON RECORD**?\n\nYou **cannot UNDO** this!"
                         + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
-                    let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, false, "Reminders: Delete ALL Reminders FINAL Warning!");
+                    let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, false, "Repeat Reminder: Delete ALL Recurring Reminders FINAL Warning!");
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Reminders`);
                     await Reminder.deleteMany({ userID: authorID, isRecurring: true });
@@ -300,7 +304,7 @@ module.exports = {
                 if (reminderIndex === "help") {
                     return message.channel.send(reminderSeeUsageMessage);
                 }
-                if (totalReminderNumber === 0) {
+                if (!totalReminderNumber) {
                     return message.reply(`**NO REMINDERS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
             }
@@ -312,7 +316,7 @@ module.exports = {
                 if (reminderIndex === "help") {
                     return message.channel.send(reminderSeeUsageMessage);
                 }
-                if (totalReminderNumber === 0) {
+                if (!totalReminderNumber) {
                     return message.reply(`**NO REMINDERS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
                 else if (reminderIndex === "number") {
@@ -485,7 +489,7 @@ module.exports = {
                 if (reminderIndex === "help") {
                     return message.channel.send(reminderDeleteUsageMessage);
                 }
-                if (totalReminderNumber === 0) {
+                if (!totalReminderNumber) {
                     return message.reply(`**NO REMINDERS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
 
@@ -582,18 +586,20 @@ module.exports = {
                                 const timestamp = Date.now();
                                 userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                                 console.log({ userEdit });
-                                reminderData[fieldToEditIndex + 3] = fn.timeCommandHandlerToUTC(userEdit, timestamp, timezoneOffset, daylightSavingsSetting)
-                                    - HOUR_IN_MS * timezoneOffset;
+                                reminderData[fieldToEditIndex + 3] = fn.timeCommandHandlerToUTC(userEdit, timestamp, timezoneOffset, daylightSavingsSetting);
                                 if (!reminderData[fieldToEditIndex + 3]) {
                                     fn.sendReplyThenDelete(message, `**INVALID TIME**... ${repeatHelpMessage}`, 60000);
                                     continueEdit = true;
                                 }
-                                const validReminderDuration = fn.endTimeAfterStartTime(message, reminderData[5], reminderData[6], type);
-                                console.log({ validReminderDuration });
-                                if (!validReminderDuration) {
-                                    continueEdit = true;
+                                if (continueEdit === false) {
+                                    reminderData[fieldToEditIndex + 3] -= HOUR_IN_MS * timezoneOffset;
+                                    const validReminderDuration = fn.endTimeAfterStartTime(message, reminderData[5], reminderData[6], type);
+                                    console.log({ validReminderDuration });
+                                    if (!validReminderDuration) {
+                                        continueEdit = true;
+                                    }
+                                    console.log({ reminderData });
                                 }
-                                console.log({ reminderData });
                             }
                             else {
                                 switch (fieldToEditIndex) {
@@ -667,11 +673,16 @@ module.exports = {
                                                     let currentTimestamp = Date.now();
                                                     let timeArgs = userInterval.toLowerCase().split(' ');
                                                     let interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
-                                                        currentTimestamp, timezoneOffset, daylightSavingsSetting)
-                                                        - HOUR_IN_MS * timezoneOffset - currentTimestamp;
-                                                    if (!interval || interval <= 0) {
+                                                        currentTimestamp, timezoneOffset, daylightSavingsSetting);
+                                                    if (!interval) {
                                                         continueEdit = true;
-                                                        message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
+                                                        message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
+                                                        break;
+                                                    }
+                                                    interval -= HOUR_IN_MS * timezoneOffset + currentTimestamp;
+                                                    if (interval <= 0) {
+                                                        continueEdit = true;
+                                                        message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
                                                         break;
                                                     }
                                                     else if (interval < 60000) {
@@ -765,16 +776,21 @@ module.exports = {
                                                 let currentTimestamp = Date.now();
                                                 let timeArgs = userEdit.toLowerCase().split(' ');
                                                 let interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
-                                                    currentTimestamp, timezoneOffset, daylightSavingsSetting)
-                                                    - HOUR_IN_MS * timezoneOffset - currentTimestamp;
-                                                if (!interval || interval <= 0) {
-                                                    message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
+                                                    currentTimestamp, timezoneOffset, daylightSavingsSetting);
+                                                if (!interval) {
                                                     continueEdit = true;
+                                                    message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
+                                                    break;
+                                                }
+                                                interval -= HOUR_IN_MS * timezoneOffset + currentTimestamp;
+                                                if (interval <= 0) {
+                                                    continueEdit = true;
+                                                    message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
                                                     break;
                                                 }
                                                 else if (interval < 60000) {
-                                                    message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
                                                     continueEdit = true;
+                                                    message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
                                                     break;
                                                 }
                                                 reminderData[9] = interval;
@@ -825,7 +841,13 @@ module.exports = {
                                             }, { new: true });
                                             break;
                                         case 6:
-                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, { $set: { interval: reminderData[9], lastEdited: currentTimestamp } }, { new: true });
+                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, {
+                                                $set:
+                                                {
+                                                    interval: reminderData[9],
+                                                    lastEdited: currentTimestamp,
+                                                }
+                                            }, { new: true });
                                             break;
                                     }
                                     console.log({ continueEdit, userEdit, newReminder });
@@ -886,9 +908,9 @@ module.exports = {
                     currentTimestamp, timezoneOffset, daylightSavingsSetting)
                     - HOUR_IN_MS * timezoneOffset - currentTimestamp;
                 if (!interval || interval <= 0) return message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
-                // else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
+                else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
                 let duration = await rm.getUserFirstRecurringEndDuration(message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
-                console.log({ duration })
+                console.log({ duration });
                 if (!duration && duration !== 0) return;
                 duration = duration > 0 ? duration : 0;
                 const confirmCreationMessage = `Are you sure you want to set the following **recurring reminder** to send -\n**in ${splitArgs[1]} after ${fn.millisecondsToTimeString(duration)} from now**`

@@ -59,7 +59,7 @@ module.exports = {
                 if (reminderIndex === "help") {
                     return message.channel.send(reminderDeleteUsageMessage);
                 }
-                if (totalReminderNumber === 0) {
+                if (!totalReminderNumber) {
                     return message.reply(`**NO REMINDERS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
             }
@@ -87,7 +87,8 @@ module.exports = {
                     var reminderCollection;
                     if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, 0, numberArg);
                     else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, 0, numberArg);
-                    const reminderStringArray = rm.multipleRemindersToString(bot, message, reminderCollection, numberArg, timezoneOffset, 0, true);
+                    const reminderStringArray = fn.getEmbedArray(rm.multipleRemindersToString(bot, message, reminderCollection, numberArg, timezoneOffset, 0, true),
+                        '', true, false, reminderEmbedColour);
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} reminder(s)?**`;
                     const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(message, reminderStringArray, multipleDeleteMessage, forceSkip,
                         `Reminder: Delete Past ${numberArg} Reminders (${sortType})`, 600000);
@@ -156,6 +157,7 @@ module.exports = {
                     }
                     const deleteConfirmMessage = `Are you sure you want to **delete reminders ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By End Time";
+                    reminderDataToStringArray = fn.getEmbedArray(reminderDataToStringArray, '', true, false, reminderEmbedColour);
                     const confirmDeleteMany = await fn.getPaginatedUserConfirmation(message, reminderDataToStringArray, deleteConfirmMessage,
                         forceSkip, `Reminder: Delete Reminders ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
@@ -194,7 +196,8 @@ module.exports = {
                             var reminderCollection;
                             if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, skipEntries, pastNumberOfEntries);
                             else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: false }, skipEntries, pastNumberOfEntries);
-                            const reminderStringArray = rm.multipleRemindersToString(bot, message, reminderCollection, pastNumberOfEntries, timezoneOffset, skipEntries, true);
+                            const reminderStringArray = fn.getEmbedArray(rm.multipleRemindersToString(bot, message, reminderCollection, pastNumberOfEntries, timezoneOffset, skipEntries, true),
+                                '', true, false, reminderEmbedColour);
                             if (skipEntries >= totalReminderNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By End Time";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${reminderCollection.length} reminder(s) past reminder ${skipEntries}?**`;
@@ -221,7 +224,7 @@ module.exports = {
             const noRemindersMessage = `**NO REMINDERS**... try \`${PREFIX}${commandUsed} start help\``;
             if (isNaN(args[1])) {
                 const deleteType = args[1].toLowerCase();
-                if (deleteType == "recent") {
+                if (deleteType === "recent") {
                     const reminderView = await rm.getOneReminderByRecency(authorID, 0, false);
                     if (reminderView.length === 0) {
                         return fn.sendErrorMessage(message, noRemindersMessage);
@@ -293,7 +296,7 @@ module.exports = {
                 if (reminderIndex === "help") {
                     return message.channel.send(reminderSeeUsageMessage);
                 }
-                if (totalReminderNumber === 0) {
+                if (!totalReminderNumber) {
                     return message.reply(`**NO REMINDERS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
             }
@@ -305,7 +308,7 @@ module.exports = {
                 if (reminderIndex === "help") {
                     return message.channel.send(reminderSeeUsageMessage);
                 }
-                if (totalReminderNumber === 0) {
+                if (!totalReminderNumber) {
                     return message.reply(`**NO REMINDERS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
                 else if (reminderIndex === "number") {
@@ -376,7 +379,7 @@ module.exports = {
                             return message.reply(reminderActionHelpMessage);
                         }
                         const confirmSeeMessage = `Are you sure you want to **see ${args[2]} reminders?**`;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Reminder: See ${args[2]} Reminders! (${sortType})`);
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Reminder: See ${args[2]} Reminders (${sortType})`);
                         if (!confirmSeeAll) return;
                     }
                     else {
@@ -387,7 +390,7 @@ module.exports = {
                             return message.reply(reminderActionHelpMessage);
                         }
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your reminder history?";
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Reminder: See All Reminders!");
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Reminder: See All Reminders");
                         if (!confirmSeeAll) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
@@ -431,7 +434,7 @@ module.exports = {
                                     return fn.sendErrorMessageAndUsage(message, reminderActionHelpMessage, "**REMINDER(S) DO NOT EXIST**...");
                                 }
                                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} reminders past ${entriesToSkip}?**`;
-                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Reminder: See ${args[1]} Reminders Past ${entriesToSkip}! (${sortType})`);
+                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Reminder: See ${args[1]} Reminders Past ${entriesToSkip} (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var reminderView;
                                 if (indexByRecency) reminderView = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: false }, entriesToSkip, pastNumberOfEntriesIndex);
@@ -477,7 +480,7 @@ module.exports = {
                 if (reminderIndex === "help") {
                     return message.channel.send(reminderDeleteUsageMessage);
                 }
-                if (totalReminderNumber === 0) {
+                if (!totalReminderNumber) {
                     return message.reply(`**NO REMINDERS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
 
@@ -574,18 +577,20 @@ module.exports = {
                                 const timestamp = Date.now();
                                 userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                                 console.log({ userEdit });
-                                reminderData[fieldToEditIndex + 3] = fn.timeCommandHandlerToUTC(userEdit, timestamp, timezoneOffset, daylightSavingsSetting)
-                                    - HOUR_IN_MS * timezoneOffset;
+                                reminderData[fieldToEditIndex + 3] = fn.timeCommandHandlerToUTC(userEdit, timestamp, timezoneOffset, daylightSavingsSetting);
                                 if (!reminderData[fieldToEditIndex + 3]) {
                                     fn.sendReplyThenDelete(message, `**INVALID TIME**... ${reminderHelpMessage}`, 60000);
                                     continueEdit = true;
                                 }
-                                const validReminderDuration = fn.endTimeAfterStartTime(message, reminderData[5], reminderData[6], type);
-                                console.log({ validReminderDuration });
-                                if (!validReminderDuration) {
-                                    continueEdit = true;
+                                if (continueEdit === false) {
+                                    reminderData[fieldToEditIndex + 3] -= HOUR_IN_MS * timezoneOffset;
+                                    const validReminderDuration = fn.endTimeAfterStartTime(message, reminderData[5], reminderData[6], type);
+                                    console.log({ validReminderDuration });
+                                    if (!validReminderDuration) {
+                                        continueEdit = true;
+                                    }
+                                    console.log({ reminderData });
                                 }
-                                console.log({ reminderData });
                             }
                             else {
                                 switch (fieldToEditIndex) {
@@ -659,9 +664,14 @@ module.exports = {
                                                     let currentTimestamp = Date.now();
                                                     let timeArgs = userInterval.toLowerCase().split(' ');
                                                     let interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
-                                                        currentTimestamp, timezoneOffset, daylightSavingsSetting)
-                                                        - HOUR_IN_MS * timezoneOffset - currentTimestamp;
-                                                    if (!interval || interval <= 0) {
+                                                        currentTimestamp, timezoneOffset, daylightSavingsSetting);
+                                                    if (!interval) {
+                                                        continueEdit = true;
+                                                        message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
+                                                        break;
+                                                    }
+                                                    interval -= HOUR_IN_MS * timezoneOffset + currentTimestamp;
+                                                    if (interval <= 0) {
                                                         continueEdit = true;
                                                         message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
                                                         break;
@@ -756,16 +766,21 @@ module.exports = {
                                                 let currentTimestamp = Date.now();
                                                 let timeArgs = userEdit.toLowerCase().split(' ');
                                                 let interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
-                                                    currentTimestamp, timezoneOffset, daylightSavingsSetting)
-                                                    - HOUR_IN_MS * timezoneOffset - currentTimestamp;
-                                                if (!interval || interval <= 0) {
-                                                    message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
+                                                    currentTimestamp, timezoneOffset, daylightSavingsSetting);
+                                                if (!interval) {
                                                     continueEdit = true;
+                                                    message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
+                                                    break;
+                                                }
+                                                interval -= HOUR_IN_MS * timezoneOffset + currentTimestamp;
+                                                if (interval <= 0) {
+                                                    continueEdit = true;
+                                                    message.reply(`**INVALID Interval**... ${reminderHelpMessage} for **valid time inputs!**`);
                                                     break;
                                                 }
                                                 else if (interval < 60000) {
-                                                    message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
                                                     continueEdit = true;
+                                                    message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
                                                     break;
                                                 }
                                                 reminderData[9] = interval;

@@ -21,7 +21,7 @@ bot.commands = new Discord.Collection();
 const cooldowns = new Discord.Collection();
 
 const mongoose = require("mongoose");
-const GuildSettings = require("./database/schemas/guildsettings");
+const Guild = require("./database/schemas/guildsettings");
 const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
 const { reminderTypes } = require("../utilities/functions");
@@ -100,7 +100,7 @@ bot.on("message", async message => {
     }
     else {
         const guildID = message.guild.id;
-        guildSettings = await GuildSettings.findOne({ guildID });
+        guildSettings = await Guild.findOne({ guildID });
         if (guildSettings) PREFIX = guildSettings.prefix;
         else PREFIX = DEFAULT_PREFIX;
     }
@@ -136,7 +136,7 @@ bot.on("message", async message => {
             const initialOffset = fn.getTimezoneOffset(guildTimezone);
             const daylightOffset = fn.isDaylightSavingTime(Date.now(), guildDaylightSavingSetting) ?
                 fn.getTimezoneDaylightOffset(guildTimezone) : 0;
-            const guildUpdate = await GuildSettings.findOneAndUpdate({ guildID: message.guild.id },
+            const guildUpdate = await Guild.findOneAndUpdate({ guildID: message.guild.id },
                 {
                     timezone: {
                         name: guildTimezone,
@@ -150,61 +150,14 @@ bot.on("message", async message => {
         // Should be initialized upon creation,
         // But in case of an error:
         else if (guildSettings === null) {
-            const defaultTimezone = "EST";
-            const initialOffset = fn.getTimezoneOffset(defaultTimezone);
-            const daylightOffset = fn.isDaylightSavingTime(Date.now(), true) ?
-                fn.getTimezoneDaylightOffset(defaultTimezone) : 0;
-            const guildConfig = new GuildSettings({
-                _id: mongoose.Types.ObjectId(),
-                guildID: message.guild.id,
-                prefix: DEFAULT_PREFIX,
-                timezone: {
-                    name: defaultTimezone,
-                    offset: initialOffset + daylightOffset,
-                    daylightSavings: true,
-                },
-                mastermind: {
-                    roles: [],
-                    resetDay: 0,
-                },
-                quote: {
-                    roles: [],
-                },
-            });
-            guildConfig.save()
-                .then(result => console.log(result))
-                .catch(err => console.log(err));
-            console.log(`${bot.user.username} has joined the server ${message.guild.name}! Saved to Database.`);
-            guildSettings = guildConfig;
+            guildSettings = await fn.createGuildSettings(message.guild.id, "EST", true);
+            console.log(`${bot.user.username} is in the server ${message.guild.name} - saved to database.`);
         }
         // For the user that DMs PD Bot and is not in a guild!
         // This sets up their userSettings to default
         else guildSettings = { timezone: { name: "EST" } };
 
-        const guildTimezone = guildSettings.timezone.name;
-        const initialOffset = fn.getTimezoneOffset(guildTimezone);
-        const daylightOffset = fn.isDaylightSavingTime(Date.now(), guildSettings.timezone.daylightSavings) ?
-            fn.getTimezoneDaylightOffset(guildTimezone) : 0;
-        const userInfo = new User({
-            _id: mongoose.Types.ObjectId(),
-            discordID: user.id,
-            discordTag: `${user.username}#${user.discriminator}`,
-            avatar: user.avatar,
-            timezone: {
-                name: guildTimezone,
-                offset: initialOffset + daylightOffset,
-                daylightSavings: guildSettings.timezone.daylightSavings,
-            },
-            habitCron: {
-                daily: 0,
-                weekly: 0,
-            },
-            getQuote: false,
-            likesPesteringAccountability: false,
-        });
-        await userInfo.save()
-            .then(result => console.log({ result }))
-            .catch(err => console.log(err));
+        const userInfo = await fn.createUserSettings(bot, user.id, message.guild.id);
         userSettings = userInfo;
         daylightSavingsSetting = userInfo.timezone.daylightSavings;
         timezoneOffset = userInfo.timezone.offset;
@@ -309,35 +262,13 @@ bot.on("message", async message => {
 // Will help with handling unique prefixes!
 bot.on("guildCreate", async (guild) => {
     try {
-        const guildObject = await GuildSettings.findOne({ guildID: guild.id });
+        const guildObject = await Guild.findOne({ guildID: guild.id });
         // Check if it already exists to avoid duplicates
         if (guildObject) return console.log(`${bot.user.username} is already in ${guild.name}! Won't create new instance in Database.`);
         else {
-            const defaultTimezone = "EST";
-            const initialOffset = fn.getTimezoneOffset(defaultTimezone);
-            const daylightOffset = fn.isDaylightSavingTime(Date.now(), true) ?
-                fn.getTimezoneDaylightOffset(defaultTimezone) : 0;
-            const guildConfig = new GuildSettings({
-                _id: mongoose.Types.ObjectId(),
-                guildID: guild.id,
-                prefix: DEFAULT_PREFIX,
-                timezone: {
-                    name: defaultTimezone,
-                    offset: initialOffset + daylightOffset,
-                    daylightSavings: true,
-                },
-                mastermind: {
-                    roles: [],
-                    resetDay: 0,
-                },
-                quote: {
-                    roles: [],
-                },
-            });
-            guildConfig.save()
-                .then(result => console.log(result))
-                .catch(err => console.log(err));
-            console.log(`${bot.user.username} has joined the server ${guild.name}! Saved to Database.`);
+            const guild = await fn.createGuildSettings(guild.id, "EST", true);
+            if (guild) console.log(`${bot.user.username} has joined the server ${guild.name}! Saved to Database.`);
+            else console.log(`There was an error adding ${guild.name} to the database.`);
         }
     }
     catch (err) {
@@ -348,9 +279,9 @@ bot.on("guildCreate", async (guild) => {
 // Remove the settings and preset data if PD is removed from guild
 bot.on('guildDelete', async (guild) => {
     try {
-        await GuildSettings.deleteOne({ guildID: guild.id })
+        await Guild.deleteOne({ guildID: guild.id });
         await Reminder.deleteMany({ guildID: guild.id });
-        console.log(`Removed from ${guild.name}(${guild.id})\nDeleting Guild Settings...`);
+        console.log(`Removed from ${guild.name}(${guild.id})\nDeleting Guild Settings and Reminders...`);
     }
     catch (err) {
         return console.error(err);

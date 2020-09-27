@@ -209,10 +209,12 @@ module.exports = {
                     if (reminderExists) {
                         const noEdit = reminderExists.lastEdited === lastUpdateTime;
                         console.log({ noEdit });
-                        if (noEdit) channelObject.send(message);
-                        await this.deleteOneReminderByObjectID(reminderID)
-                            .catch(err => console.error(err));
-                        console.log("Deleted Reminder in Database!");
+                        if (noEdit) {
+                            channelObject.send(message);
+                            await this.deleteOneReminderByObjectID(reminderID)
+                                .catch(err => console.error(err));
+                            console.log("Deleted Reminder in Database!");
+                        }
                     }
                 }, reminderDelay);
             }

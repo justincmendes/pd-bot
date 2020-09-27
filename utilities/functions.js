@@ -4,12 +4,17 @@
 const Discord = require("discord.js");
 const mongoose = require('mongoose');
 const Reminder = require('../djs-bot/database/schemas/reminder');
+const User = require('../djs-bot/database/schemas/user');
+const Guild = require('../djs-bot/database/schemas/guildsettings');
+const user = require("../djs-bot/database/schemas/user");
+const DEFAULT_PREFIX = '?';
+const TIMEOUT_MS = 375
 require("dotenv").config();
 
 // Private Function Declarations
 
 module.exports = {
-    quickReact: async function (message, emoji, timeoutMultiplier = 1, TIMEOUT = 375) {
+    quickReact: async function (message, emoji, timeoutMultiplier = 1, TIMEOUT = TIMEOUT_MS) {
         try {
             if (message) {
                 console.log(!message.deleted);
@@ -80,9 +85,6 @@ module.exports = {
         confirmationInstructions = "✅ to proceed\n❌ to cancel\n⬅ to scroll left\n➡ to scroll right") {
         try {
             if (forceSkip === true) return true;
-            const temp = embedArray[0];
-            embedArray[0] = this.getMessageEmbed(confirmationMessage, embedTitle);
-            embedArray = [embedArray[0], temp].concat(embedArray.slice(1));
             const MS_TO_SECONDS = 1000;
             const footerText = `${confirmationInstructions}\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
             if (embedArray) {
@@ -96,66 +98,19 @@ module.exports = {
                 else return false;
             }
             else return false;
-            let currentPage = 0;
-            const embed = await message.channel.send(embedArray[currentPage]);
-            const agree = "✅";
-            const disagree = "❌";
-            const left = '⬅';
-            const right = '➡';
-            const emojis = [agree, disagree, left, right];
-            emojis.forEach(async (emoji, i) => {
-                await this.quickReact(embed, emoji, i);
-            });
-
-            const filter = (reaction, user) => emojis.includes(reaction.emoji.name) && (message.author.id === user.id);
-            const collector = embed.createReactionCollector(filter, { time: delayTime, dispose: true });
-
-            collector.on('collect', async (reaction, user) => {
-                console.log(`${user.username}'s ${reaction.emoji.name} collected!`);
-                switch (reaction.emoji.name) {
-                    case right:
-                        if (currentPage < embedArray.length - 1) {
-                            currentPage++;
-                        }
-                        else if (currentPage === embedArray.length - 1) {
-                            currentPage = 0;
-                        }
-                        break;
-                    case left:
-                        if (currentPage !== 0) {
-                            --currentPage;
-                        }
-                        else if (currentPage === 0) {
-                            currentPage = embedArray.length - 1;
-                        }
-                        break;
-                    case agree:
-                        embed.delete();
-                        this.sendMessageThenDelete(message, "Confirmed!", deleteDelay);
-                        console.log(`Confirmation Value (in function): true`);
-                        return true;
-                    case disagree:
-                        embed.delete();
-                        console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
-                        this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                        return false;
-                }
-                embed.edit(embedArray[currentPage]);
-                if (message.channel.type !== 'dm') reaction.users.remove(user);
-            });
-
-            collector.on('end', (collected) => {
-                collected = collected.map(reaction => reaction.emoji.name);
-                if (!collected.length) {
-                    if (!(collected.includes(agree) || collected.includes(disagree))) {
-                        console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
-                        console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
-                        this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                        embed.delete();
-                    }
-                }
+            // let currentPage = 0;
+            const embed = await this.sendPaginationEmbed(message, embedArray, false);
+            const confirmation = await this.getUserConfirmation(message, confirmationMessage, forceSkip,
+                embedArray[0].title, delayTime, deleteDelay, confirmationInstructions);
+            const embedDeleted = embed.deleted;
+            if (confirmation) {
+                if (!embedDeleted) await embed.delete();
+                return true;
+            }
+            else {
+                if (!embedDeleted) await embed.delete();
                 return false;
-            });
+            }
         }
         catch (err) {
             console.error(err);
@@ -218,13 +173,14 @@ module.exports = {
     },
 
     messageDataCollectFirst: async function (message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000,
-        deleteUserMessage = true, userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
+        showNewLineInstructions = true, getObject = false, deleteUserMessage = true, userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
         const userOriginal = message.author.id;
         var result;
         const deleteDelay = 3000;
         const MS_TO_SECONDS = 1000;
         const footerText = `*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
-        const textEntryInstructions = `\n\n\*P.S. use \`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**`;
+        let textEntryInstructions = `🛑 - Type \`stop\` to **cancel**`;
+        textEntryInstructions = `${showNewLineInstructions ? `\n\n↩ - Press \`SHIFT+ENTER\` to enter a **newline** before sending!` : "\n"}\n${textEntryInstructions}`;
         prompt = prompt + textEntryInstructions;
         let embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
         if (attachImage == true) {
@@ -244,56 +200,11 @@ module.exports = {
                         console.log(`${reacted.first().author.username}'s message was collected!`);
                         confirm.delete();
                         console.log(`Message Sent (in function): ${reacted.first().content}`);
-                        if (deleteUserMessage === true) {
+                        if (deleteUserMessage) {
                             reacted.first().delete({ timeout: userMessageDeleteDelay });
-                            return reacted.first().content;
                         }
-                    })
-                    // When the user DOESN'T react!
-                    .catch(err => {
-                        console.error(err);
-                        confirm.delete();
-                        console.log(`ERROR: User didn't respond within ${delayTime / MS_TO_SECONDS}s!`);
-                        console.log("Ending (messageDataCollect) promise...");
-                        this.sendMessageThenDelete(message, "Ending...", deleteDelay);
-                        console.log(`Message Sent (in function): false`);
-                        return false;
-                    });
-            }).catch(err => console.error(err));
-        return result;
-    },
-
-    messageDataCollectFirstObject: async function (message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000, deleteUserMessage = true,
-        userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
-        const userOriginal = message.author.id;
-        var result;
-        const deleteDelay = 3000;
-        const MS_TO_SECONDS = 1000;
-        const footerText = `*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
-        const textEntryInstructions = `\n\n\*P.S. use \`SHIFT+ENTER\` to enter a newline before sending!\n\\*\\*P.P.S Type \`stop\` to **cancel**`;
-        prompt = prompt + textEntryInstructions;
-        let embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
-        if (attachImage == true) {
-            embed = embed.setImage(imageURL);
-        }
-        await message.channel.send(embed)
-            .then(async confirm => {
-                const filter = response => {
-                    const filterOut = response.author.id == userOriginal;
-                    console.log(`For ${response.author.username}'s response, the filter value is: ${filterOut}`);
-                    return filterOut;
-                };
-
-                // Create the awaitMessages promise object for the confirmation message just sent
-                result = await message.channel.awaitMessages(filter, { time: delayTime, max: 1 })
-                    .then(async reacted => {
-                        console.log(`${reacted.first().author.username}'s message was collected!`);
-                        confirm.delete();
-                        console.log(`Message Sent (in function): ${reacted.first().content}`);
-                        if (deleteUserMessage === true) {
-                            reacted.first().delete({ timeout: userMessageDeleteDelay });
-                            return reacted.first();
-                        }
+                        if (getObject) return reacted.first();
+                        else return reacted.first().content;
                     })
                     // When the user DOESN'T react!
                     .catch(err => {
@@ -609,7 +520,7 @@ module.exports = {
         try {
             do {
                 targetIndex = await this.messageDataCollectFirst(userOriginalMessageObject, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
-                    messageColour, delayTime, true, userMessageDeleteDelay);
+                    messageColour, delayTime, false, false, true, userMessageDeleteDelay);
                 const errorMessage = "**Please enter a number on the given list!**";
                 const timeout = 15000;
                 if (isNaN(targetIndex)) {
@@ -2800,15 +2711,36 @@ module.exports = {
         return journalOut;
     },
 
-    // Function call allows for name to be a Discord user tag! <@##############>
-    mastermindWeeklyJournalEntry: function (name = "NAME", withMarkdown = false, previousWeekReflectionEntry = "", areaOfLifeEntry = "",
-        stopEntry = "", startEntry = "", continueEntry = "", firstWeeklyGoal = "", secondWeeklyGoal = "", thirdWeeklyGoal = "") {
-        let weeklyJournalEntry = `__**${name}**__`
-            + `\n**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**\n${previousWeekReflectionEntry}`
-            + `\n__**Area of Life That Needs the Most Attention:**__ ${areaOfLifeEntry}\n__**STOP, START, CONTINUE:** __`
+    goalArrayToString: function (goalArray, type = null) {
+        if (Array.isArray(goalArray)) {
+            if (goalArray.length) {
+                if (goalArray.every(goal => typeof goal === 'object')) {
+                    type = this.toTitleCase(type);
+                    if (type) type += " "; // To add a space at the end
+                    let goalString = "";
+                    goalArray.forEach((goal, i) => {
+                        goalString += `**${type}Goal ${i + 1}:** ${!isNaN(goal.type) ? `${this.areasOfLifeEmojis[parseInt(goal.type)]} ${this.areasOfLife[parseInt(goal.type)]}` : ""}`
+                            + `${goal.description ? `\n🎯 - ${goal.description}` : ""}${goal.reason ? `\n💭 - ${goal.reason}` : ""}`;
+                        if (i !== goalArray.length) goalString += '\n';
+                    });
+                    return goalString;
+                }
+            }
+        }
+        return false;
+    },
+
+    // Function call allows for name to be a Discord user tag! <@!##############>
+    mastermindWeeklyJournalEntry: function (name = "NAME", withMarkdown = false, previousWeekReflectionEntry = "", areaOfLifeEntry = { type: null, reason: "" },
+        stopEntry = "", startEntry = "", continueEntry = "", weeklyGoals = [{ type: null, description: "", reason: "" }, { type: null, description: "", reason: "" }, { type: null, description: "", reason: "" }]) {
+        const goalString = this.goalArrayToString(weeklyGoals, "Weekly");
+        let weeklyJournalEntry = `${!name ? "" : `__**${name}**__\n`}`
+            + `**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**\n${previousWeekReflectionEntry}`
+            + `\n__**Area of Life That Needs the Most Attention:**__`
+            + `${!isNaN(areaOfLifeEntry.type) ? `${this.areasOfLifeEmojis[parseInt(areaOfLifeEntry.type)]} ${this.areasOfLife[parseInt(areaOfLifeEntry.type)]}` : ""}`
+            + `${areaOfLifeEntry.reason ? `\n${areaOfLifeEntry.reason}` : ""}\n__**STOP, START, CONTINUE:** __`
             + `\n**STOP**: ${stopEntry}\n**START**: ${startEntry}\n**CONTINUE**: ${continueEntry}`
-            + `\n__**Next Week's 1-3 ABSOLUTE Goals and WHY:**__`
-            + `\n**Weekly Goal 1**: ${firstWeeklyGoal}\n**Weekly Goal 2**: ${secondWeeklyGoal}\n**Weekly Goal 3**: ${thirdWeeklyGoal}`;
+            + `\n__**Next Week's Goals and WHY:**__${goalString ? `\n${goalString}` : ""}`;
         if (withMarkdown === true) {
             weeklyJournalEntry = `\`${weeklyJournalEntry}\``;
         }
@@ -2859,7 +2791,7 @@ module.exports = {
      */
     getUserEditString: async function (message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         var collectedEdit, reset;
-        let editMessagePrompt = `**What will you change your *${field}* to?:**\n${instructionPrompt}\n`;
+        let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n`: "\n"}`;
         editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**`;
         do {
             reset = false;
@@ -2894,11 +2826,10 @@ module.exports = {
      */
     getUserEditBoolean: async function (message, field, instructionPrompt, emojiArray, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         var collectedEdit, reset;
-        let editMessagePrompt = `**What will you change your *${field}* to?:**\n${instructionPrompt}\n`;
-        const backEmoji = '↩';
+        let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n`: "\n"}`;
+        const backEmoji = '⬅';
         const cancelEmoji = '❌';
-        editMessagePrompt = editMessagePrompt + `\nPress ${backEmoji} to go **back to the main edit menu**\n`
-            + `Press ${cancelEmoji} to **cancel**`;
+        editMessagePrompt = editMessagePrompt + `\nPress ${backEmoji} to go **back to the main edit menu**\nPress ${cancelEmoji} to **cancel**`;
         emojiArray.push(backEmoji);
         emojiArray.push(cancelEmoji);
         do {
@@ -2934,29 +2865,30 @@ module.exports = {
     getUserMultilineEditString: async function (message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         let messageIndex = 0;
         let reset = false;
-        var collectedEdit, userEdit = "";
-        let editMessagePrompt = `**What will you change your *${field}* to?:**\n${instructionPrompt}\n`;
+        var collectedEdit, userEdit = new Array();
+        let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n`: "\n"}`;
         editMessagePrompt = editMessagePrompt + `\nType \`0\` to **restart/clear** your current edit!`
-            + `\nType \`1\` when you're **done!**\nType \`back\` to go **back to the main edit menu**`;
+            + `\nType \`1\` when you're **done!**\nType \`2\` to **undo** the previously typed edit\nType \`back\` to go **back to the main edit menu**`;
         const originalEditMessagePrompt = editMessagePrompt;
         do {
             messageIndex++;
-            collectedEdit = await this.messageDataCollectFirst(message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            collectedEdit = await this.messageDataCollectFirst(message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000, false);
             if (!collectedEdit || collectedEdit === "stop") {
-                if (collectedEdit !== "stop")
-                    this.sendReplyThenDelete(message, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${userEdit}`, 600000)
+                if (collectedEdit !== "stop") {
+                    this.sendReplyThenDelete(message, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${userEdit.join('\n')}`, 600000);
+                }
                 return false;
             }
             if (messageIndex === 1 || reset === true) {
                 if (collectedEdit === "1") {
-                    const endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit, type, forceSkip);
+                    const endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit.join('\n'), type, forceSkip);
                     if (endEditConfirmation === true) {
                         break;
                     }
                 }
-                else if (collectedEdit !== "0" && collectedEdit !== "back") {
-                    editMessagePrompt = editMessagePrompt + "\n**Current Edit:**\n" + collectedEdit + "\n";
-                    userEdit = collectedEdit;
+                else if (collectedEdit !== "0" && collectedEdit !== "back" && collectedEdit !== "2") {
+                    editMessagePrompt = `${editMessagePrompt}\n\n**Current Edit:**\n${collectedEdit}\n`;
+                    userEdit.push(collectedEdit);
                     reset = false;
                 }
                 else if (collectedEdit === "back") {
@@ -2966,6 +2898,7 @@ module.exports = {
                         break;
                     }
                 }
+                else messageIndex = 0;
             }
             else if (collectedEdit === "back") {
                 const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
@@ -2975,7 +2908,7 @@ module.exports = {
                 }
             }
             else if (collectedEdit === "1") {
-                let endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit, type, forceSkip);
+                let endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit.join('\n'), type, forceSkip);
                 if (endEditConfirmation === true) {
                     break;
                 }
@@ -2989,17 +2922,44 @@ module.exports = {
                     let resetConfirmation = await getUserConfirmation(message, resetWarningMessage, forceSkip, `${this.toTitleCase(type)}: Edit ${field} Reset`);
                     if (resetConfirmation === true) {
                         editMessagePrompt = originalEditMessagePrompt;
-                        userEdit = "";
+                        userEdit = new Array();
                         reset = true;
                     }
                 }
             }
+            // Undo Mechanism
+            else if (collectedEdit === "2") {
+                if (userEdit.length) {
+                    let error = false;
+                    if (userEdit.length === 1) {
+                        editMessagePrompt = originalEditMessagePrompt;
+                        reset = true;
+                    }
+                    else {
+                        targetStringIndex = editMessagePrompt.lastIndexOf(userEdit[userEdit.length - 1]);
+                        if (targetStringIndex >= 0) {
+                            editMessagePrompt = editMessagePrompt.substring(0, targetStringIndex);
+                        }
+                        else {
+                            console.log("Could not undo the last typed edit!");
+                            fn.sendMessageThenDelete(message, `**Sorry <@!${message.author.id}>, I could not undo the last typed edit!**`, 30000);
+                            error = true;
+                        }
+                    }
+                    if (!error) userEdit.pop();
+                }
+                else {
+                    editMessagePrompt = originalEditMessagePrompt;
+                    reset = true;
+                }
+            }
             else {
                 editMessagePrompt = editMessagePrompt + collectedEdit + "\n";
-                userEdit = `${userEdit}\n${collectedEdit}`;
+                userEdit.push(collectedEdit);
             }
         }
         while (true)
+        if (Array.isArray(userEdit)) userEdit = userEdit.join('\n');
         return userEdit;
     },
 
@@ -3061,15 +3021,18 @@ module.exports = {
 
     /**
      * Generates embeds of suitable size for pagination
-     * @param {[String]} elements 
+     * @param {[String] | String} elements 
      * @param {String} title 
      * @param {String} embedColour 
      */
-    getEmbedArray: function (elements, title, doubleSpace = true, includesFile = false, embedColour = this.defaultEmbedColour, ) {
+    getEmbedArray: function (elements, title, doubleSpace = true, includesFile = false, embedColour = this.defaultEmbedColour,) {
         try {
             let embedString = new Array();
             let maxString = "";
             if (elements) {
+                if (typeof elements === 'string') {
+                    elements = doubleSpace ? element.split(/\n\n+/) : element.split(/\n+/);
+                }
                 if (Array.isArray(elements)) {
                     elements.forEach((element, i) => {
                         const combinedString = maxString + element;
@@ -3126,14 +3089,17 @@ module.exports = {
     },
 
     // With to file capability
-    sendPaginationEmbed: async function (message, embedArray) {
+    sendPaginationEmbed: async function (message, embedArray, withDelete = true) {
         let currentPage = 0;
         const embed = await message.channel.send(embedArray[currentPage]);
         const left = '⬅';
         const right = '➡';
         const cancel = '🗑️';
         const file = '📎';
-        const emojis = embedArray[0].footer ? (embedArray[0].footer.text === this.fileFooterText ? [left, right, cancel, file] : [left, right, cancel]) : [left, right, cancel];
+        let emojis = embedArray[0].footer ? (embedArray[0].footer.text === this.fileFooterText ? [left, right, cancel, file] : [left, right, cancel]) : [left, right, cancel];
+        if (!withDelete) {
+            emojis = emojis.filter(emoji => emoji !== cancel);
+        }
         emojis.forEach(async (emoji, i) => {
             await this.quickReact(embed, emoji, i);
         });
@@ -3171,9 +3137,170 @@ module.exports = {
         return embed;
     },
 
+    createUserSettings: async function (bot, userID, guildID) {
+        try {
+            const user = bot.users.cache.get(userID);
+            const guildSettings = await Guild.findOne({ guildID });
+            const guildTimezone = guildSettings.timezone.name;
+            const initialOffset = this.getTimezoneOffset(guildTimezone);
+            const daylightOffset = this.isDaylightSavingTime(Date.now(), guildSettings.timezone.daylightSavings) ?
+                this.getTimezoneDaylightOffset(guildTimezone) : 0;
+            const userInfo = new User({
+                _id: mongoose.Types.ObjectId(),
+                discordID: user.id,
+                discordTag: `${user.username}#${user.discriminator}`,
+                avatar: user.avatar,
+                timezone: {
+                    name: guildTimezone,
+                    offset: initialOffset + daylightOffset,
+                    daylightSavings: guildSettings.timezone.daylightSavings,
+                },
+                habitCron: {
+                    daily: 0,
+                    weekly: 0,
+                },
+                getQuote: false,
+                likesPesteringAccountability: false,
+            });
+            const result = await userInfo.save();
+            console.log({ result });
+            return result;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
+    createGuildSettings: async function (guildID, timezone = "EST", daylightSavings = true) {
+        try {
+            const initialOffset = this.getTimezoneOffset(timezone);
+            const daylightOffset = this.isDaylightSavingTime(Date.now(), daylightSavings) ?
+                this.getTimezoneDaylightOffset(timezone) : 0;
+            const guildConfig = new Guild({
+                _id: mongoose.Types.ObjectId(),
+                guildID,
+                prefix: DEFAULT_PREFIX,
+                timezone: {
+                    name: timezone,
+                    offset: initialOffset + daylightOffset,
+                    daylightSavings,
+                },
+                mastermind: {
+                    roles: [],
+                    resetDay: 0,
+                },
+                quote: {
+                    roles: [],
+                },
+            });
+            const result = await guildConfig.save();
+            console.log({ result });
+            return result;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
+    getIDArrayFromNames: function (nameString, allMembers, cachedGuild) {
+        let allMemberNames = new Array();
+        allMembers.forEach(member => {
+            allMemberNames.push({
+                id: member.id,
+                username: member.username,
+                discriminator: member.discriminator,
+                nickname: cachedGuild.member(member.id).displayName,
+            });
+        });
+        if (!allMemberNames.length) return false;
+        console.log({ allMemberNames });
+        let targetIDs = new Array();
+        const searchNickname = allMemberNames.filter(member => nameString.includes(member.nickname.toLowerCase()));
+        console.log({ searchNickname });
+        if (searchNickname.length) {
+            targetIDs = searchNickname.map(member => member.id);
+        }
+        const searchUsername = allMemberNames.filter(member => nameString.includes(member.username.toLowerCase()));
+        console.log({ searchUsername });
+        if (searchUsername.length) {
+            searchUsername.map(member => {
+                if (!targetIDs.includes(member.id)) {
+                    targetIDs.push(member.id);
+                    return member.id;
+                }
+                else return null;
+            }).filter(element => element !== null);
+        }
+        const searchWithDiscriminator = allMemberNames.filter(member => nameString.includes(`${member.username.toLowerCase()}#${member.discriminator}`));
+        console.log({ searchWithDiscriminator });
+        if (searchWithDiscriminator.length) {
+            searchWithDiscriminator.map(member => {
+                if (!targetIDs.includes(member.id)) {
+                    targetIDs.push(member.id);
+                    return member.id;
+                }
+                else return null;
+            }).filter(element => element !== null);
+        }
+        const searchID = allMemberNames.filter(member => nameString.includes(member.id));
+        console.log({ searchID });
+        if (searchID.length) {
+            searchID.map(member => {
+                if (!targetIDs.includes(member.id)) {
+                    targetIDs.push(member.id);
+                    return member.id;
+                }
+                else return null;
+            }).filter(element => element !== null);
+        }
+        console.log({ targetIDs });
+        return targetIDs;
+    },
+
+
+    getPostChannel: async function (bot, message, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+        // Check all of the servers the bot is in
+        let botServers = await bot.guilds.cache.map(guild => guild.id);
+        console.log({ botServers });
+    
+        // Find all the mutual servers with the user and bot
+        var botUserMutualServerIDs = await this.userAndBotMutualServerIDs(bot, message, botServers);
+        var targetServerIndex, targetChannelIndex;
+        var channelList, channelListDisplay;
+        var confirmSendToChannel = false;
+        const channelSelectInstructions = "Type the number corresponding to the channel you want to post in:";
+        const serverSelectInstructions = "Type the number corresponding to the server you want to post in:";
+        const postToServerTitle = `${type}: Post to Server`;
+        const postToChannelTitle = `${type}: Post to Channel`;
+        var serverList = await this.listOfServerNames(bot, botUserMutualServerIDs);
+        targetServerIndex = await this.userSelectFromList(message, serverList, botUserMutualServerIDs.length,
+            serverSelectInstructions, postToServerTitle, embedColour);
+        if (targetServerIndex === false) return false;
+        channelList = await this.listOfServerTextChannelsUserCanSendTo(bot, message, botUserMutualServerIDs[targetServerIndex]);
+        if (channelList.length == 0) {
+            this.sendReplyThenDelete(message, "This server has **no channels!** EXITING...");
+            return false;
+        }
+        channelListDisplay = await this.listOfChannelNames(bot, channelList);
+        while (!confirmSendToChannel) {
+            targetChannelIndex = await this.userSelectFromList(message, channelListDisplay, channelList.length,
+                channelSelectInstructions, postToChannelTitle, embedColour, 300000);
+            if (targetChannelIndex === false) return false;
+            console.log({ targetChannelIndex });
+            let targetChannelName = await bot.channels.cache.get(channelList[targetChannelIndex]).name;
+            confirmSendToChannel = await this.getUserConfirmation(message, `Are you sure you want to send it to **#${targetChannelName}**?`, forceSkip);
+        }
+        return channelList[targetChannelIndex];
+    },
+
 
     invalidPrefixes: ['\*', '\_', '\~', '\>', '\\', '\/', '\:', '\`', '\@'],
-    fileFooterText: `Press the 📎 to get all of this in a text file`,
+    fileFooterText: `🗑 to delete this message (not the entries)\n📎 to get all of this in a text file`,
+    areasOfLifeEmojis: ['🥦', '🧠', '📚', '🙏', '🗣', '💼', '🎓', '💸', '🏠'],
+    areasOfLife: ["Physical Health", "Mental/Mindset", "Personal Development", "Spiritual",
+        "Social", "Career", "Education", "Finances", "Physical Environment"],
 
 
     reminderTypes: ["Reminder", "Habit", "Fast", "Quote"],

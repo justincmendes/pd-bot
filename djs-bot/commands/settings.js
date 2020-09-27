@@ -273,7 +273,7 @@ module.exports = {
                                         let intervalInput = await fn.getUserEditString(message, "Quote Interval", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                         if (!intervalInput) return;
                                         else if (intervalInput === "back") {
-                                            continueEdit = true;
+                                            continueEdit = true;zz
                                         }
                                         else {
                                             intervalInput = intervalInput.toLowerCase().split(/[\s\n]+/);
