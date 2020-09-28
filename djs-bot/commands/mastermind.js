@@ -622,16 +622,18 @@ module.exports = {
             }
 
             // 6. Post
-            if (isUserCreating) {
-                const postConfirmation = await fn.getUserConfirmation(message, `**Would you like to __post__ your mastermind entry to a __server's channel?__**`,
-                    false, "Mastermind: Post", 180000);
-                if (!postConfirmation) return;
-                const targetChannel = await fn.getPostChannel(bot, message, "Mastermind", forceSkip, mastermindEmbedColour);
-                if (!targetChannel) return;
-                const member = bot.guilds.cache.get(guildID).member(authorID);
-                const post = fn.getMessageEmbed(mastermindDocumentToString(bot, mastermindDocument), `${member ? `${member.displayName}'s ` : ""}Mastermind Reflection`
-                    + ` - ${fn.timestampToDateString(mastermindDocument.createdAt)} ${targetUserTimezone}`, mastermindEmbedColour);
-                await fn.sendMessageToChannel(bot, post, targetChannel);
+            if (mastermindDocument) {
+                if (isUserCreating) {
+                    const postConfirmation = await fn.getUserConfirmation(message, `**Would you like to __post__ your mastermind entry to a __server's channel?__**`,
+                        false, "Mastermind: Post", 180000);
+                    if (!postConfirmation) return;
+                    const targetChannel = await fn.getPostChannel(bot, message, "Mastermind", forceSkip, mastermindEmbedColour);
+                    if (!targetChannel) return;
+                    const member = bot.guilds.cache.get(guildID).member(authorID);
+                    const post = fn.getMessageEmbed(mastermindDocumentToString(bot, mastermindDocument), `${member ? `${member.displayName}'s ` : ""}Mastermind Reflection`
+                        + ` - ${fn.timestampToDateString(mastermindDocument.createdAt)} ${targetUserTimezone}`, mastermindEmbedColour);
+                    await fn.sendMessageToChannel(bot, post, targetChannel);
+                }
             }
         }
 
