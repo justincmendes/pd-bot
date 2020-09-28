@@ -81,7 +81,7 @@ const habitSchema = mongoose.Schema({
                 required: true,
                 default: [],
             },
-            // Allow for Checked: 1 - ✅; Missed: 0 - ❌; Skip: 2 - ➖ (still counts as a log)
+            // Allow for Checked: 1 - ✅; Missed: 0 - ❌; Skip: 2 - ➖ (still counts as a log); Neutral: 3 🔲
             // Store as a number for making a cheaper habit object
             value: {
                 type: [Number],
