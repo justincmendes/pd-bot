@@ -215,7 +215,9 @@ module.exports = {
                                 .catch(err => console.error(err));
                             console.log("Deleted Reminder in Database!");
                         }
+                        else console.log(`This reminder (${reminderID}) has been edited and will trigger at a later time...`);
                     }
+                    else console.log(`This reminder (${reminderID}) no longer exists - it may have been deleted or edited to trigger at an earlier time!`);
                 }, reminderDelay);
             }
         }
@@ -323,7 +325,7 @@ module.exports = {
             console.log({ reminder })
             return reminder;
         }
-        else return undefined;
+        else return null;
     },
 
     deleteOneReminder: async function (userID, channelToSend, startTimestamp, endTimestamp, type,
@@ -376,8 +378,11 @@ module.exports = {
                     const endTime = reminder.endTime
                     const interval = reminder.interval;
                     if (endTime && interval) {
-                        const newEndTime = endTime + interval;
-                        const newStartTime = endTime;
+                        let newEndTime = endTime + interval;
+                        while (newEndTime <= Date.now()) {
+                            newEndTime += interval;
+                        }
+                        const newStartTime = newEndTime - interval;
                         const updateReminder = await Reminder
                             .findOneAndUpdate({ _id: reminderID },
                                 { $set: { startTime: newStartTime, endTime: newEndTime } });

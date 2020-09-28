@@ -3137,40 +3137,40 @@ module.exports = {
         return embed;
     },
 
-    createUserSettingsByGuild: async function (bot, userID, guildID) {
-        try {
-            const user = bot.users.cache.get(userID);
-            const guildSettings = await Guild.findOne({ guildID });
-            const guildTimezone = guildSettings.timezone.name;
-            const initialOffset = this.getTimezoneOffset(guildTimezone);
-            const daylightOffset = this.isDaylightSavingTime(Date.now(), guildSettings.timezone.daylightSavings) ?
-                this.getTimezoneDaylightOffset(guildTimezone) : 0;
-            const userInfo = new User({
-                _id: mongoose.Types.ObjectId(),
-                discordID: user.id,
-                discordTag: `${user.username}#${user.discriminator}`,
-                avatar: user.avatar,
-                timezone: {
-                    name: guildTimezone,
-                    offset: initialOffset + daylightOffset,
-                    daylightSavings: guildSettings.timezone.daylightSavings,
-                },
-                habitCron: {
-                    daily: 0,
-                    weekly: 0,
-                },
-                getQuote: false,
-                likesPesteringAccountability: false,
-            });
-            const result = await userInfo.save();
-            console.log({ result });
-            return result;
-        }
-        catch (err) {
-            console.error(err);
-            return false;
-        }
-    },
+    // createUserSettingsByGuild: async function (bot, userID, guildID) {
+    //     try {
+    //         const user = bot.users.cache.get(userID);
+    //         const guildSettings = await Guild.findOne({ guildID });
+    //         const guildTimezone = guildSettings.timezone.name;
+    //         const initialOffset = this.getTimezoneOffset(guildTimezone);
+    //         const daylightOffset = this.isDaylightSavingTime(Date.now(), guildSettings.timezone.daylightSavings) ?
+    //             this.getTimezoneDaylightOffset(guildTimezone) : 0;
+    //         const userInfo = new User({
+    //             _id: mongoose.Types.ObjectId(),
+    //             discordID: user.id,
+    //             discordTag: `${user.username}#${user.discriminator}`,
+    //             avatar: user.avatar,
+    //             timezone: {
+    //                 name: guildTimezone,
+    //                 offset: initialOffset + daylightOffset,
+    //                 daylightSavings: guildSettings.timezone.daylightSavings,
+    //             },
+    //             habitCron: {
+    //                 daily: 0,
+    //                 weekly: 0,
+    //             },
+    //             getQuote: false,
+    //             likesPesteringAccountability: false,
+    //         });
+    //         const result = await userInfo.save();
+    //         console.log({ result });
+    //         return result;
+    //     }
+    //     catch (err) {
+    //         console.error(err);
+    //         return false;
+    //     }
+    // },
 
     createUserSettings: async function (bot, userID, timezoneObject) {
         try {

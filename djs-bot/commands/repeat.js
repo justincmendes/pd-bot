@@ -908,7 +908,7 @@ module.exports = {
                     currentTimestamp, timezoneOffset, daylightSavingsSetting)
                     - HOUR_IN_MS * timezoneOffset - currentTimestamp;
                 if (!interval || interval <= 0) return message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
-                else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
+                // else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
                 let duration = await rm.getUserFirstRecurringEndDuration(message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
                 console.log({ duration });
                 if (!duration && duration !== 0) return;
