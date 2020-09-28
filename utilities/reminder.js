@@ -497,6 +497,34 @@ module.exports = {
         }
     },
 
+    getReminderIndexByEndTime: async function (userID, reminderID, isRecurring) {
+        const totalReminders = await this.getTotalReminders(userID, isRecurring);
+        let i = 0;
+        while (true) {
+            let reminder = await this.getOneReminderByEndTime(userID, i, isRecurring);
+            if (reminder === undefined && i === totalReminders) {
+                return false;
+            }
+            else if (reminder._id.toString() == reminderID.toString()) break;
+            i++;
+        }
+        return i + 1;
+    },
+
+    getReminderIndexByRecency: async function (userID, reminderID, isRecurring) {
+        const totalReminders = await this.getTotalReminders(userID, isRecurring);
+        let i = 0;
+        while (true) {
+            let reminder = await this.getOneReminderByRecency(userID, i, isRecurring);
+            if (reminder === undefined && i === totalReminders) {
+                return false;
+            }
+            else if (reminder._id.toString() == reminderID.toString()) break;
+            i++;
+        }
+        return i + 1;
+    },
+
     getOneReminderByEndTime: async function (userID, reminderIndex, isRecurring) {
         const reminder = await Reminder
             .findOne({ userID, isRecurring })

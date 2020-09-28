@@ -93,7 +93,7 @@ module.exports = {
                         break;
                     case 3:
                         userSettingsPrompt = `Enter the number corresponding to the __**day of the week**__ when you would like your **weekly habits counter to reset:**`;
-                        userEdit = await fn.getUserEditNumber(message, fieldToEdit, daysOfWeek.length, type, forceSkip, userEmbedColour, `${userSettingsPrompt}\n\n${daysOfWeekList}`);
+                        userEdit = await fn.getUserEditNumber(message, fieldToEdit, daysOfWeek.length, type, daysOfWeek, forceSkip, userEmbedColour, `${userSettingsPrompt}\n\n${daysOfWeekList}`);
                         if (userEdit !== false && !isNaN(userEdit)) userEdit--;
                         console.log({ userEdit });
                         break;

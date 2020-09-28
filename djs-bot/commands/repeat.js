@@ -528,8 +528,8 @@ module.exports = {
                     const reminderTargetID = reminderView._id;
                     var reminderData, showReminder, continueEdit;
                     do {
-                        const checkFast = await rm.getOneReminderByObjectID(reminderTargetID);
-                        if (!checkFast) return;
+                        const checkReminder = await rm.getOneReminderByObjectID(reminderTargetID);
+                        if (!checkReminder) return;
                         continueEdit = false;
                         reminderData = rm.reminderDocumentToDataArray(reminderView);
                         showReminder = rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);
@@ -855,7 +855,7 @@ module.exports = {
                                     reminderView = await Reminder.findById(reminderTargetID);
                                     if (reminderView) {
                                         await rm.sendReminderByObject(bot, currentTimestamp, newReminder);
-                                        pastNumberOfEntriesIndex = await rm.getRecentReminderIndex(authorID, true);
+                                        pastNumberOfEntriesIndex = indexByRecency ? await rm.getReminderIndexByRecency(authorID, reminderTargetID, true) : await rm.getReminderIndexByEndTime(authorID, reminderTargetID, true);
                                         console.log({ reminderView, reminderData, reminderTargetID, fieldToEditIndex });
                                         reminderData = rm.reminderDocumentToDataArray(reminderView);
                                         showReminder = rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);
@@ -876,7 +876,7 @@ module.exports = {
                                 console.log({ continueEdit, userEdit });
                                 reminderView = await Reminder.findById(reminderTargetID);
                                 if (reminderView) {
-                                    pastNumberOfEntriesIndex = await rm.getRecentReminderIndex(authorID, true);
+                                    pastNumberOfEntriesIndex = indexByRecency ? await rm.getReminderIndexByRecency(authorID, reminderTargetID, true) : await rm.getReminderIndexByEndTime(authorID, reminderTargetID, true);
                                     console.log({ reminderView, reminderData, reminderTargetID, fieldToEditIndex });
                                     reminderData = rm.reminderDocumentToDataArray(reminderView);
                                     showReminder = rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);
@@ -908,7 +908,7 @@ module.exports = {
                     currentTimestamp, timezoneOffset, daylightSavingsSetting)
                     - HOUR_IN_MS * timezoneOffset - currentTimestamp;
                 if (!interval || interval <= 0) return message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
-                // else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
+                else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
                 let duration = await rm.getUserFirstRecurringEndDuration(message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
                 console.log({ duration });
                 if (!duration && duration !== 0) return;

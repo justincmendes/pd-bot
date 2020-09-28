@@ -519,8 +519,8 @@ module.exports = {
                     const reminderTargetID = reminderView._id;
                     var reminderData, showReminder, continueEdit;
                     do {
-                        const checkFast = await rm.getOneReminderByObjectID(reminderTargetID);
-                        if (!checkFast) return;
+                        const checkReminder = await rm.getOneReminderByObjectID(reminderTargetID);
+                        if (!checkReminder) return;
                         continueEdit = false;
                         reminderData = rm.reminderDocumentToDataArray(reminderView);
                         showReminder = rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);
@@ -574,10 +574,10 @@ module.exports = {
                         else if (userEdit !== "back") {
                             // Parse User Edit
                             if (fieldToEditIndex === 2 || fieldToEditIndex === 3) {
-                                const timestamp = Date.now();
+                                const now = Date.now();
                                 userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                                 console.log({ userEdit });
-                                reminderData[fieldToEditIndex + 3] = fn.timeCommandHandlerToUTC(userEdit, timestamp, timezoneOffset, daylightSavingsSetting);
+                                reminderData[fieldToEditIndex + 3] = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavingsSetting);
                                 if (!reminderData[fieldToEditIndex + 3]) {
                                     fn.sendReplyThenDelete(message, `**INVALID TIME**... ${reminderHelpMessage}`, 60000);
                                     continueEdit = true;
@@ -839,7 +839,7 @@ module.exports = {
                                     reminderView = await Reminder.findById(reminderTargetID);
                                     if (reminderView) {
                                         await rm.sendReminderByObject(bot, currentTimestamp, newReminder);
-                                        pastNumberOfEntriesIndex = await rm.getRecentReminderIndex(authorID, false);
+                                        pastNumberOfEntriesIndex = indexByRecency ? await rm.getReminderIndexByRecency(authorID, reminderTargetID, false) : await rm.getReminderIndexByEndTime(authorID, reminderTargetID, false);
                                         console.log({ reminderView, reminderData, reminderTargetID, fieldToEditIndex });
                                         reminderData = rm.reminderDocumentToDataArray(reminderView);
                                         showReminder = rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);
@@ -860,7 +860,7 @@ module.exports = {
                                 console.log({ continueEdit, userEdit });
                                 reminderView = await Reminder.findById(reminderTargetID);
                                 if (reminderView) {
-                                    pastNumberOfEntriesIndex = await rm.getRecentReminderIndex(authorID, false);
+                                    pastNumberOfEntriesIndex = indexByRecency ? await rm.getReminderIndexByRecency(authorID, reminderTargetID, false) : await rm.getReminderIndexByEndTime(authorID, reminderTargetID, false);
                                     console.log({ reminderView, reminderData, reminderTargetID, fieldToEditIndex });
                                     reminderData = rm.reminderDocumentToDataArray(reminderView);
                                     showReminder = rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);

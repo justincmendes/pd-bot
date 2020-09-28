@@ -367,8 +367,10 @@ module.exports = {
         try {
             if (string && typeof string === "string") {
                 if (string.length > 0) {
-                    string = string.toLowerCase();
-                    return `${string[0].toUpperCase()}${string.slice(1)}`;
+                    string = string.replace(/(.+)([\s\n]+)/, (match, word, spacing, offset, string) => {
+                        return `${word[0].toUpperCase()}${word.slice(1)}${spacing}`;
+                    });
+                    return string;
                 }
             }
             return false;
@@ -2711,7 +2713,7 @@ module.exports = {
         return journalOut;
     },
 
-    goalArrayToString: function (goalArray, type = null) {
+    goalArrayToString: function (goalArray, type = null, showNumber = true, emphasizeNumber = false) {
         if (Array.isArray(goalArray)) {
             if (goalArray.length) {
                 if (goalArray.every(goal => typeof goal === 'object')) {
@@ -2719,7 +2721,8 @@ module.exports = {
                     if (type) type += " "; // To add a space at the end
                     let goalString = "";
                     goalArray.forEach((goal, i) => {
-                        goalString += `**${type}Goal ${i + 1}:** ${!isNaN(goal.type) ? `${this.areasOfLifeEmojis[parseInt(goal.type)]} ${this.areasOfLife[parseInt(goal.type)]}` : ""}`
+                        const goalNumber = showNumber ? (emphasizeNumber ? ` \`${i + 1}\`` : ` ${i + 1}`) : "";
+                        goalString += `**${type}Goal${goalNumber}:** ${!isNaN(goal.type) ? `${this.areasOfLifeEmojis[parseInt(goal.type)]} ${this.areasOfLife[parseInt(goal.type)]}` : ""}`
                             + `${goal.description ? `\n🎯 - ${goal.description}` : ""}${goal.reason ? `\n💭 - ${goal.reason}` : ""}`;
                         if (i !== goalArray.length) goalString += '\n';
                     });
@@ -2969,12 +2972,13 @@ module.exports = {
      * @param {String} field 
      * @param {Number} maxNumber 
      * @param {String} type 
+     * @param {[String]} numberMappingArray
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserEditNumber: async function (message, field, maxNumber, type, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = '') {
+    getUserEditNumber: async function (message, field, maxNumber, type, numberMappingArray = false, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = '') {
         var collectedEdit;
-        const numberErrorMessage = `**INVALID INPUT... Please Enter a Number from 1-${maxNumber}**`;
+        const numberErrorMessage = `**Please Enter a Number from 1-${maxNumber}**`;
         let editMessagePrompt = `**What will you change your *${field}* to?:**`
         editMessagePrompt += `\n${additionalInstructions === '' ? `***(Please enter a number from \`1-${maxNumber}\`)***` : additionalInstructions}`
             + `\n\nType \`back\` to go **back to the main edit menu**`;
@@ -2996,7 +3000,11 @@ module.exports = {
                     this.sendReplyThenDelete(message, numberErrorMessage, 15000);
                 }
                 else {
-                    let confirmEdit = await this.getEditEndConfirmation(message, field, collectedEdit, type, forceSkip);
+                    let showEdit = collectedEdit;
+                    if (Array.isArray(numberMappingArray)) {
+                        showEdit = numberMappingArray[collectedEdit - 1] ? numberMappingArray[collectedEdit - 1] : collectedEdit;
+                    }
+                    let confirmEdit = await this.getEditEndConfirmation(message, field, showEdit, type, forceSkip);
                     if (confirmEdit === true) return collectedEdit;
                 }
             }

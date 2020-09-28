@@ -100,20 +100,34 @@ async function getTotalFasts(userID) {
         console.error(err);
     }
 }
-async function getFastRecencyIndex(userID, fastID) {
+async function getFastIndexByRecency(userID, fastID) {
     const totalFasts = await getTotalFasts(userID);
     let i = 0;
     while (true) {
-        let fast = await getOneFastByStartTime(userID, i);
+        let fast = await getOneFastByRecency(userID, i);
         if (fast === undefined && i === totalFasts) {
-            i = false;
-            break;
+            return false;
         }
         else if (fast._id.toString() == fastID.toString()) break;
         i++;
     }
     return i + 1;
 }
+
+async function getFastIndexByStartTime(authorID, fastID) {
+    const totalFasts = await getTotalFasts(userID);
+    let i = 0;
+    while (true) {
+        let fast = await getOneFastByStartTime(userID, i);
+        if (fast === undefined && i === totalFasts) {
+            return false;
+        }
+        else if (fast._id.toString() == fastID.toString()) break;
+        i++;
+    }
+    return i + 1;
+}
+
 async function getCurrentOrRecentFastEmbed(userID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed = 'fast') {
     var fastView, fastType, fastData, fastDataToString, fastEmbed;
     if (fastIsInProgress === true) {
@@ -1325,9 +1339,12 @@ module.exports = {
                             userEdit = await fn.getUserEditString(message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
                             break;
                         case 3:
-                            fastEditMessagePrompt = "**__How did you feel during this past fast?__\n\nEnter a number from 1-5 (1 = worst, 5 = best)**\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖";
-                            userEdit = await fn.getUserEditNumber(message, fieldToEdit, 5, type, forceSkip, fastEmbedColour, fastEditMessagePrompt);
-                            break;
+                            {
+                                let moodEmojis = ["😖", "😔", "😐", "🙂", "😄"];
+                                fastEditMessagePrompt = "**__How did you feel during this past fast?__\n\nEnter a number from 1-5 (1 = worst, 5 = best)**\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖";
+                                userEdit = await fn.getUserEditNumber(message, fieldToEdit, 5, type, moodEmojis, forceSkip, fastEmbedColour, fastEditMessagePrompt);
+                                break;
+                            }
                         case 4:
                             fastEditMessagePrompt = "\n**__Reflection Questions:__\n🤔 - Why did you feel that way?"
                                 + "\n💭 - What did you do that made it great? / What could you have done to make it better?**";
@@ -1477,7 +1494,7 @@ module.exports = {
                                 }
                                 console.log({ continueEdit, userEdit });
                                 if (fastView) {
-                                    pastNumberOfEntriesIndex = await getFastRecencyIndex(authorID, fastTargetID);
+                                    pastNumberOfEntriesIndex = indexByRecency ? await getFastIndexByRecency(authorID, fastTargetID) : await getFastIndexByStartTime(authorID, fastTargetID);
                                     console.log({ fastView, fastData, fastTargetID, fieldToEditIndex });
                                     fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                                     showFast = fastDataArrayToString(fastData);
@@ -1498,7 +1515,7 @@ module.exports = {
                             console.log({ continueEdit, userEdit });
                             fastView = await Fast.findById(fastTargetID);
                             if (fastView) {
-                                pastNumberOfEntriesIndex = await getFastRecencyIndex(authorID, fastTargetID);
+                                pastNumberOfEntriesIndex = indexByRecency ? await getFastIndexByRecency(authorID, fastTargetID) : await getFastIndexByStartTime(authorID, fastTargetID);
                                 console.log({ fastView, fastData, fastTargetID, fieldToEditIndex });
                                 fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                                 showFast = fastDataArrayToString(fastData);

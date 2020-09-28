@@ -70,6 +70,10 @@ const habitSchema = mongoose.Schema({
             type: String,
             required: true,
         },
+        reason: {
+            type: String,
+            required: true,
+        },
         // Ensure there is only one log per cron
         log: {
             timestamp: {
