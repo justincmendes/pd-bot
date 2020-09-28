@@ -137,7 +137,7 @@ module.exports = {
                         userEdit = await fn.getUserEditString(message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
                         break;
                     case 1:
-                        userSettingsPrompt = `Please enter the server's **general timezone** (as an *Abbreviation*):`;
+                        userSettingsPrompt = `Please enter the server's **__general timezone__** as an **abbreviation** or **+/- UTC Offset**:`;
                         userEdit = await fn.getUserEditString(message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
                         break;
                     case 2:
@@ -208,7 +208,7 @@ module.exports = {
                                         break;
                                     case '⛔': userEdit = false;
                                         break;
-                                    default: null;
+                                    default: userEdit = null;
                                         break;
                                 }
                                 if (typeof userEdit === "boolean") {

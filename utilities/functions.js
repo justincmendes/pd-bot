@@ -787,7 +787,7 @@ module.exports = {
      * @param {string} timezoneString Give timezone as an abbreviation or in the numerical forms: +8:45, -900, -12:30, 11.5, 11
      */
     getTimezoneOffset: function (timezoneString) {
-        if (!timezoneString) return undefined;
+        if (!timezoneString) return null;
         // Can be a single number, multiple numbers, time, or string of 2-5 letters
         // In the form: 8:45
         const timezoneFormatRegex = /(?:(\-)|(?:\+))(\d{1}(?:\d{1})?)\:?(\d{2})/;
@@ -796,12 +796,12 @@ module.exports = {
         if (timezoneFormat) {
             const sign = timezoneFormat[1];
             const hours = parseInt(timezoneFormat[2]);
-            if (hours < -12 || hours > 14) return undefined;
+            if (hours < -12 || hours > 14) return null;
             const minutes = parseInt(timezoneFormat[3]);
-            if (minutes >= 60) return undefined;
+            if (minutes >= 60) return null;
             const offset = hours + (minutes / 60);
             console.log({ offset })
-            if (offset < -12 || offset > 14) return undefined;
+            if (offset < -12 || offset > 14) return null;
             if (sign) {
                 return -offset;
             }
@@ -814,11 +814,11 @@ module.exports = {
             const offset = parseFloat(timezoneString);
             // If it is a decimal number, it is properly scaled already
             // https://en.wikipedia.org/wiki/List_of_UTC_time_offsets
-            if (offset < -12 || offset > 14) return undefined;
+            if (offset < -12 || offset > 14) return null;
             else return offset;
         }
 
-        if (timezoneString.length < 1) return undefined;
+        if (timezoneString.length < 1) return null;
         timezoneString = timezoneString.toLowerCase();
         var timezoneOffset;
         const firstLetter = timezoneString[0];
@@ -2791,7 +2791,7 @@ module.exports = {
      */
     getUserEditString: async function (message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         var collectedEdit, reset;
-        let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n`: "\n"}`;
+        let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n` : "\n"}`;
         editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**`;
         do {
             reset = false;
@@ -2826,7 +2826,7 @@ module.exports = {
      */
     getUserEditBoolean: async function (message, field, instructionPrompt, emojiArray, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         var collectedEdit, reset;
-        let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n`: "\n"}`;
+        let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n` : "\n"}`;
         const backEmoji = '⬅';
         const cancelEmoji = '❌';
         editMessagePrompt = editMessagePrompt + `\nPress ${backEmoji} to go **back to the main edit menu**\nPress ${cancelEmoji} to **cancel**`;
@@ -2866,7 +2866,7 @@ module.exports = {
         let messageIndex = 0;
         let reset = false;
         var collectedEdit, userEdit = new Array();
-        let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n`: "\n"}`;
+        let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n` : "\n"}`;
         editMessagePrompt = editMessagePrompt + `\nType \`0\` to **restart/clear** your current edit!`
             + `\nType \`1\` when you're **done!**\nType \`2\` to **undo** the previously typed edit\nType \`back\` to go **back to the main edit menu**`;
         const originalEditMessagePrompt = editMessagePrompt;
@@ -3137,7 +3137,7 @@ module.exports = {
         return embed;
     },
 
-    createUserSettings: async function (bot, userID, guildID) {
+    createUserSettingsByGuild: async function (bot, userID, guildID) {
         try {
             const user = bot.users.cache.get(userID);
             const guildSettings = await Guild.findOne({ guildID });
@@ -3154,6 +3154,44 @@ module.exports = {
                     name: guildTimezone,
                     offset: initialOffset + daylightOffset,
                     daylightSavings: guildSettings.timezone.daylightSavings,
+                },
+                habitCron: {
+                    daily: 0,
+                    weekly: 0,
+                },
+                getQuote: false,
+                likesPesteringAccountability: false,
+            });
+            const result = await userInfo.save();
+            console.log({ result });
+            return result;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
+    createUserSettings: async function (bot, userID, timezoneObject) {
+        try {
+            if (!timezoneObject) return false;
+            if (!timezoneObject.name && !timezoneObject.offset && timezoneObject.offset !== 0 && isNaN(timezoneObject.offset)
+                && !timezoneObject.daylightSavings && timezoneObject.daylightSavings !== false) {
+                return false;
+            }
+            const user = bot.users.cache.get(userID);
+            userDaylightSavingsSettings = timezoneObject.daylightSavings;
+            const daylightOffset = this.isDaylightSavingTime(Date.now(), userDaylightSavingsSettings) ?
+                this.getTimezoneDaylightOffset(timezoneObject.name) : 0;
+            const userInfo = new User({
+                _id: mongoose.Types.ObjectId(),
+                discordID: user.id,
+                discordTag: `${user.username}#${user.discriminator}`,
+                avatar: user.avatar,
+                timezone: {
+                    name: timezoneObject.name,
+                    offset: timezoneObject.offset + daylightOffset,
+                    daylightSavings: userDaylightSavingsSettings,
                 },
                 habitCron: {
                     daily: 0,
@@ -3264,7 +3302,7 @@ module.exports = {
         // Check all of the servers the bot is in
         let botServers = await bot.guilds.cache.map(guild => guild.id);
         console.log({ botServers });
-    
+
         // Find all the mutual servers with the user and bot
         var botUserMutualServerIDs = await this.userAndBotMutualServerIDs(bot, message, botServers);
         var targetServerIndex, targetChannelIndex;

@@ -21,10 +21,11 @@ bot.commands = new Discord.Collection();
 const cooldowns = new Discord.Collection();
 
 const mongoose = require("mongoose");
+const userEmbedColour = fn.userSettingsEmbedColour;
 const Guild = require("./database/schemas/guildsettings");
 const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
-const { reminderTypes } = require("../utilities/functions");
+const prefix = require("./commands/prefix");
 bot.mongoose = require("../utilities/mongoose");
 
 //This shouldn't happen, this would be on Node.js
@@ -94,15 +95,14 @@ bot.on("message", async message => {
     // If the message is from a bot, ignore
     if (message.author.bot) return;
 
-    var PREFIX, guildSettings;
+    var PREFIX;
     if (message.channel.type === 'dm') {
         PREFIX = DEFAULT_PREFIX;
     }
     else {
         const guildID = message.guild.id;
-        guildSettings = await Guild.findOne({ guildID });
-        if (guildSettings) PREFIX = guildSettings.prefix;
-        else PREFIX = DEFAULT_PREFIX;
+        const guildSettings = await Guild.findOne({ guildID });
+        PREFIX = guildSettings ? guildSettings.prefix : DEFAULT_PREFIX;
     }
     // When the message does not start with prefix, do nothing
     if (!message.content.startsWith(PREFIX)) return;
@@ -130,40 +130,44 @@ bot.on("message", async message => {
     // Pull from the guild settings from the initial user settings
     var timezoneOffset, daylightSavingsSetting;
     if (!userSettings) {
-        if (guildSettings) {
-            const guildTimezone = guildSettings.timezone.name;
-            const guildDaylightSavingSetting = guildSettings.timezone.daylightSavings;
-            const initialOffset = fn.getTimezoneOffset(guildTimezone);
-            const daylightOffset = fn.isDaylightSavingTime(Date.now(), guildDaylightSavingSetting) ?
-                fn.getTimezoneDaylightOffset(guildTimezone) : 0;
-            const guildUpdate = await Guild.findOneAndUpdate({ guildID: message.guild.id },
-                {
-                    timezone: {
-                        name: guildTimezone,
-                        offset: initialOffset + daylightOffset,
-                        daylightSavings: guildDaylightSavingSetting,
-                    },
-                }, { new: true });
-            console.log({ guildUpdate });
-            guildSettings = guildUpdate;
+        const userTimezone = await fn.messageDataCollectFirst(message, `Please enter your __**current timezone**__ as an **abbreviation** or **+/- UTC Offset**.\n\n(i.e. EST | +8:45 | -9)`,
+            "User Settings: Setup", userEmbedColour, 300000, false);
+        if (!userTimezone || userTimezone === "stop") return;
+        const userTimezoneOffset = fn.getTimezoneOffset(userTimezone);
+        if (!userTimezoneOffset && userTimezoneOffset !== 0) return message.reply("**This __timezone does not exist__... Try again!**");
+        let userDaylightSavingsSetting = await fn.reactionDataCollect(message, `Does your timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No\n❌ - Exit**`,
+            ['⌚', '⛔', '❌'], "User Settings: Setup", userEmbedColour, 300000);
+        switch (userDaylightSavingsSetting) {
+            case '⌚': userDaylightSavingsSetting = true;
+                break;
+            case '⛔': userDaylightSavingsSetting = false;
+                break;
+            // For the ❌ - return...
+            default: userDaylightSavingsSetting = null;
+                break;
         }
-        // Should be initialized upon creation,
-        // But in case of an error:
-        else if (guildSettings === null) {
-            guildSettings = await fn.createGuildSettings(message.guild.id, "EST", true);
-            console.log(`${bot.user.username} is in the server ${message.guild.name} - saved to database.`);
+        if (typeof userDaylightSavingsSetting === 'boolean') {
+            const confirmSettings = await fn.getUserConfirmation(message, `**__Are you sure you want the following settings?:__**`
+                + `\n⌚ - Timezone: **${userTimezone}**`
+                + `\n🌄 - Daylight Savings Time (DST)?: **${userDaylightSavingsSetting ? "Yes" : "No"}**`
+                + `\n\n(**You can always change your user settings** with \`${PREFIX}user edit\` OR \`${PREFIX}u e\` for short)`,
+                false, "User Settings: Confirmation", 180000);
+            if (!confirmSettings) return;
+            const timezone = {
+                name: userTimezone,
+                offset: userTimezoneOffset,
+                daylightSavings: userDaylightSavingsSetting,
+            };
+            const userInfo = await fn.createUserSettings(bot, user.id, timezone);
+            if (!userInfo) return message.reply("**Sorry, I could not setup your user settings, contact the developer for more information!**");
+            userSettings = userInfo;
+            daylightSavingsSetting = timezone.daylightSavings;
+            timezoneOffset = timezone.offset;
+            const userCount = await User.find({}).countDocuments()
+                .catch(err => console.error(err));
+            bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
         }
-        // For the user that DMs PD Bot and is not in a guild!
-        // This sets up their userSettings to default
-        else guildSettings = { timezone: { name: "EST" } };
-
-        const userInfo = await fn.createUserSettings(bot, user.id, message.guild.id);
-        userSettings = userInfo;
-        daylightSavingsSetting = userInfo.timezone.daylightSavings;
-        timezoneOffset = userInfo.timezone.offset;
-        const userCount = await User.find({}).countDocuments()
-            .catch(err => console.error(err));
-        bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
+        else return;
     }
     else {
         // const guildMap = userSettings.guilds.map(guild => guild.id);

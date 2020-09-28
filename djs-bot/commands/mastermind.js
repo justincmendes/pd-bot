@@ -1205,7 +1205,7 @@ module.exports = {
                                                     break;
                                                 case '1️⃣': userEdit = false;
                                                     break;
-                                                default: null;
+                                                default: userEdit = null;
                                                     break;
                                             }
                                             if (typeof userEdit === "boolean") {

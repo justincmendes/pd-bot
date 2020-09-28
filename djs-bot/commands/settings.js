@@ -79,7 +79,7 @@ module.exports = {
                 var userEdit, userSettingsPrompt = "";
                 switch (fieldToEditIndex) {
                     case 0:
-                        userSettingsPrompt = `Please enter your **timezone** (as an *Abbreviation*):`;
+                        userSettingsPrompt = `Please enter your **__timezone__** as an **abbreviation** or **+/- UTC Offset**:`;
                         userEdit = await fn.getUserEditString(message, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
                         break;
                     case 1:
@@ -172,7 +172,7 @@ module.exports = {
                                         break;
                                     case '⛔': userEdit = false;
                                         break;
-                                    default: null;
+                                    default: userEdit = null;
                                         break;
                                 }
                                 if (typeof userEdit === "boolean") {
@@ -259,7 +259,7 @@ module.exports = {
                                         break;
                                     case '⛔': userEdit = false;
                                         break;
-                                    default: null;
+                                    default: userEdit = null;
                                         break;
                                 }
                                 // setup interval!
@@ -447,7 +447,7 @@ module.exports = {
                                         break;
                                     case '🙅‍♀️': userEdit = false;
                                         break;
-                                    default: null;
+                                    default: userEdit = null;
                                         break;
                                 }
                                 if (typeof userEdit === "boolean") {
