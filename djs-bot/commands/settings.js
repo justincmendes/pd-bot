@@ -4,7 +4,7 @@ require("dotenv").config();
 
 const userEmbedColour = fn.userSettingsEmbedColour;
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
-const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const daysOfWeek = fn.daysOfWeek;
 const daysOfWeekList = daysOfWeek.map((day, i) => {
     return `\`${i + 1}\` - **${day}**`;
 }).join(`\n`);

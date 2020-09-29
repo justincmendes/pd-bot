@@ -7,7 +7,6 @@ const Guild = require("../database/schemas/guildsettings");
 const Mastermind = require("../database/schemas/mastermind");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
-const { goalArrayToString } = require("../../utilities/functions");
 require("dotenv").config();
 
 
@@ -15,6 +14,7 @@ const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 const mastermindEmbedColour = fn.mastermindEmbedColour;
 const areasOfLifeEmojis = fn.areasOfLifeEmojis;
 const areasOfLife = fn.areasOfLife;
+const daysOfWeek = fn.daysOfWeek;
 const areasOfLifeCombinedEmoji = getAreasOfLifeEmojiCombinedArray(areasOfLife, areasOfLifeEmojis);
 const areasOfLifeList = getAreasOfLifeList(areasOfLifeCombinedEmoji).join('\n');
 
@@ -120,11 +120,11 @@ async function getOneMastermindByObjectID(mastermindTargetID) {
 }
 
 function mastermindDocumentToString(bot, mastermindDoc) {
-    const { createdAt, createdBy, guildID, usedTemplate, journal } = mastermindDoc;
+    const { userID, createdAt, createdBy, guildID, usedTemplate, journal } = mastermindDoc;
     const guildString = guildID ? `\n**Server:** ${bot.guilds.cache.get(guildID).name}` : "";
     // const guild = bot.guilds.cache.get(guildID);
     // ${guild.member(createdBy).displayName} 
-    // const username = `<@!${userID}>`;
+    const username = `<@!${userID}>`;
     const creatorUsername = `<@!${createdBy}>`;
     var entryString;
     if (usedTemplate) {
@@ -133,7 +133,8 @@ function mastermindDocumentToString(bot, mastermindDoc) {
             observations, areaOfLife, stopEntry, startEntry, continueEntry, goals);
     }
     else entryString = journal.entry;
-    return `**Created At:** ${fn.timestampToDateString(createdAt)}`
+    return `**User:** ${username}`
+        + `\n**Created At:** ${fn.timestampToDateString(createdAt)}`
         + guildString
         + `\n**Created By:** ${creatorUsername}`
         + `\n\n${entryString}`;
@@ -489,16 +490,21 @@ module.exports = {
             }
 
             // 2. Create a function for the data collection loop function.
-            var mastermindDocument;
+            var mastermindDocument, targetUserTimezoneOffset, targetUserTimezone;
             const targetUserSettings = await User.findOne({ discordID: targetUser });
-            // Create a default one for them! or take them through the process!
 
-            // FIX THE OUTPUT LAYOUT TO HAVE MORE SPACING BETWEEN
-            if(!targetUserSettings) {
-                // await fn.createUserSettings(bot, targetUser, {name: "EST"})
+            // Create new User Settings - can be changed by the user themselves if it's incorrect!
+            if (!targetUserSettings) {
+                const timezone = await fn.getNewUserTimezoneSettings(message, PREFIX, targetUser);
+                await fn.createUserSettings(bot, targetUser, timezone);
+                targetUserTimezoneOffset = timezone.offset;
+                targetUserTimezone = timezone.name;
             }
-            const targetUserTimezoneOffset = targetUserSettings.timezone.offset;
-            const targetUserTimezone = targetUserSettings.timezone.name;
+            else {
+                targetUserTimezoneOffset = targetUserSettings.timezone.offset;
+                targetUserTimezone = targetUserSettings.timezone.name;
+            }
+
             if (userWantsTemplate) {
                 const observations = await getMultilineEntry(message, "**__Look back at the previous week ↩:__**"
                     + "\n**- 📈 How much did you stick to your habits and/or progress on your goals this week?\n- 💭 Make 3 observations.**",
@@ -633,12 +639,13 @@ module.exports = {
                     const postConfirmation = await fn.getUserConfirmation(message, `**Would you like to __post__ your mastermind entry to a __server's channel?__**`,
                         false, "Mastermind: Post", 180000);
                     if (!postConfirmation) return;
-                    const targetChannel = await fn.getPostChannel(bot, message, "Mastermind", forceSkip, mastermindEmbedColour);
-                    if (!targetChannel) return;
-                    const member = bot.guilds.cache.get(guildID).member(authorID);
-                    const post = fn.getMessageEmbed(mastermindDocumentToString(bot, mastermindDocument), `${member ? `${member.displayName}'s ` : ""}Mastermind Reflection`
-                        + ` - ${fn.timestampToDateString(mastermindDocument.createdAt)} ${targetUserTimezone}`, mastermindEmbedColour);
-                    await fn.sendMessageToChannel(bot, post, targetChannel);
+                    // const targetChannel = await fn.getPostChannel(bot, message, "Mastermind", forceSkip, mastermindEmbedColour);
+                    // if (!targetChannel) return;
+                    // const member = bot.guilds.cache.get(guildID).member(authorID);
+                    // const post = fn.getMessageEmbed(mastermindDocumentToString(bot, mastermindDocument), `${member ? `${member.displayName}'s ` : ""}Mastermind Reflection`
+                    //     + ` - ${fn.timestampToDateString(mastermindDocument.createdAt)} ${targetUserTimezone}`, mastermindEmbedColour);
+                    // await fn.sendMessageToChannel(bot, post, targetChannel);
+                    await this.run(bot, message, commandUsed, ["post", "recent"], PREFIX, timezoneOffset, daylightSavings, forceSkip);
                 }
             }
         }
@@ -1166,8 +1173,8 @@ module.exports = {
                                     let goalsArray = mastermindDocument.journal.goals;
                                     // let additionalInstructions = `Type \`add\` to add a new goal`;
                                     // let additionalKeyword = ["add"];
-                                    mastermindEditMessagePrompt = `\n**__Please enter the \`number\` of the goal you'd like to change__**:\n${fn.goalArrayToString(goalsArray, "Weekly", true, true)}`;
-                                    let goalIndex = await fn.userSelectFromList(message, fn.goalArrayToString(goalsArray, "Weekly", true, true), goalsArray.length, `\n**__Please enter the \`number\` of the goal you'd like to change__:**`,
+                                    mastermindEditMessagePrompt = `\n**__Please enter the \`number\` of the goal you'd like to change__**:\n${fn.goalArrayToString(goalsArray, "Weekly", true, true, true)}`;
+                                    let goalIndex = await fn.userSelectFromList(message, fn.goalArrayToString(goalsArray, "Weekly", true, true, true), goalsArray.length, `\n**__Please enter the \`number\` of the goal you'd like to change__:**`,
                                         "Mastermind Entry: Weekly Goal Edit", mastermindEmbedColour);
                                     if (!goalIndex && goalIndex !== 0) return;
 
@@ -1305,10 +1312,9 @@ module.exports = {
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
                 const targetChannel = await fn.getPostChannel(bot, message, `Mastermind ${sortType}`, forceSkip, mastermindEmbedColour);
                 if (!targetChannel) return;
-                const user = await User.findOne({ discordID: authorID });
                 const member = bot.guilds.cache.get(guildID).member(authorID);
                 const post = fn.getMessageEmbed(mastermindDocumentToString(bot, mastermind), `${member ? `${member.displayName}'s ` : ""}Mastermind Reflection`
-                    + ` - ${fn.timestampToDateString(mastermind.createdAt)}${user ? ` ${user.timezone.name}` : ""}`, mastermindEmbedColour);
+                    + ` - ${fn.timestampToDateString(mastermind.createdAt, false, true, true)}`, mastermindEmbedColour);
                 await fn.sendMessageToChannel(bot, post, targetChannel);
             }
             else message.channel.send(mastermindActionHelpMessage);

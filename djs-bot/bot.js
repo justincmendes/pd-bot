@@ -130,44 +130,16 @@ bot.on("message", async message => {
     // Pull from the guild settings from the initial user settings
     var timezoneOffset, daylightSavingsSetting;
     if (!userSettings) {
-        const userTimezone = await fn.messageDataCollectFirst(message, `Please enter your __**current timezone**__ as an **abbreviation** or **+/- UTC Offset**.\n\n(i.e. EST | +8:45 | -9)`,
-            "User Settings: Setup", userEmbedColour, 300000, false);
-        if (!userTimezone || userTimezone === "stop") return;
-        const userTimezoneOffset = fn.getTimezoneOffset(userTimezone);
-        if (!userTimezoneOffset && userTimezoneOffset !== 0) return message.reply("**This __timezone does not exist__... Try again!**");
-        let userDaylightSavingsSetting = await fn.reactionDataCollect(message, `Does your timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No\n❌ - Exit**`,
-            ['⌚', '⛔', '❌'], "User Settings: Setup", userEmbedColour, 300000);
-        switch (userDaylightSavingsSetting) {
-            case '⌚': userDaylightSavingsSetting = true;
-                break;
-            case '⛔': userDaylightSavingsSetting = false;
-                break;
-            // For the ❌ - return...
-            default: userDaylightSavingsSetting = null;
-                break;
-        }
-        if (typeof userDaylightSavingsSetting === 'boolean') {
-            const confirmSettings = await fn.getUserConfirmation(message, `**__Are you sure you want the following settings?:__**`
-                + `\n⌚ - Timezone: **${userTimezone}**`
-                + `\n🌄 - Daylight Savings Time (DST)?: **${userDaylightSavingsSetting ? "Yes" : "No"}**`
-                + `\n\n(**You can always change your user settings** with \`${PREFIX}user edit\` OR \`${PREFIX}u e\` for short)`,
-                false, "User Settings: Confirmation", 180000);
-            if (!confirmSettings) return;
-            const timezone = {
-                name: userTimezone,
-                offset: userTimezoneOffset,
-                daylightSavings: userDaylightSavingsSetting,
-            };
-            const userInfo = await fn.createUserSettings(bot, user.id, timezone);
-            if (!userInfo) return message.reply("**Sorry, I could not setup your user settings, contact the developer for more information!**");
-            userSettings = userInfo;
-            daylightSavingsSetting = timezone.daylightSavings;
-            timezoneOffset = timezone.offset;
-            const userCount = await User.find({}).countDocuments()
-                .catch(err => console.error(err));
-            bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
-        }
-        else return;
+        const timezone = await fn.getNewUserTimezoneSettings(message, PREFIX);
+        if (!timezone) return;
+        const userInfo = await fn.createUserSettings(bot, user.id, timezone);
+        if (!userInfo) return message.reply("**Sorry, I could not setup your user settings, contact the developer for more information!**");
+        userSettings = userInfo;
+        daylightSavingsSetting = timezone.daylightSavings;
+        timezoneOffset = timezone.offset;
+        const userCount = await User.find({}).countDocuments()
+            .catch(err => console.error(err));
+        bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
     }
     else {
         // const guildMap = userSettings.guilds.map(guild => guild.id);

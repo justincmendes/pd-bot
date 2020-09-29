@@ -2198,18 +2198,30 @@ module.exports = {
         return [hours, minutes, seconds, ms];
     },
 
-    timestampToDateString: function (timestamp) {
+    timestampToDateString: function (timestamp, showTime = true, showDayOfWeek = false, monthInText = false) {
         if (timestamp === undefined || timestamp === null || timestamp === false) return null;
         const date = new Date(timestamp);
         const year = date.getUTCFullYear();
         const month = date.getUTCMonth() + 1;
         const day = date.getUTCDate();
-        const standardTime = this.militaryTimeHoursToStandardTimeHoursArray(date.getUTCHours());
-        const hours = standardTime[0];
-        const amPmString = standardTime[1];
-        const minutes = this.getValidMinutesString(date.getUTCMinutes());
-        const seconds = this.getValidMinutesString(date.getUTCSeconds());
-        return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds} ${amPmString}`;
+        var dateString;
+        if (monthInText) dateString = `${this.months[month - 1]} ${day}, ${year}`;
+        else dateString = `${month}/${day}/${year}`;
+        var dayOfWeekString;
+        if (showDayOfWeek) {
+            const dayOfWeek = date.getUTCDay();
+            dayOfWeekString = `${this.daysOfWeek[dayOfWeek]}, `;
+        }
+        var timeString;
+        if (showTime) {
+            const standardTime = this.militaryTimeHoursToStandardTimeHoursArray(date.getUTCHours());
+            const hours = standardTime[0];
+            const amPmString = standardTime[1];
+            const minutes = this.getValidMinutesString(date.getUTCMinutes());
+            const seconds = this.getValidMinutesString(date.getUTCSeconds());
+            timeString = `, ${hours}:${minutes}:${seconds} ${amPmString}`;
+        }
+        return `${dayOfWeekString || ""}${dateString || ""}${timeString || ""}`;
     },
 
     /**
@@ -2713,20 +2725,21 @@ module.exports = {
         return journalOut;
     },
 
-    goalArrayToString: function (goalArray, type = null, showNumber = true, emphasizeNumber = false) {
+    goalArrayToString: function (goalArray, type = null, doubleSpace = true, showNumber = true, emphasizeNumber = false) {
         if (Array.isArray(goalArray)) {
             if (goalArray.length) {
                 if (goalArray.every(goal => typeof goal === 'object')) {
                     type = this.toTitleCase(type);
                     if (type) type += " "; // To add a space at the end
-                    let goalString = "";
+                    let goalStringArray = new Array();
                     goalArray.forEach((goal, i) => {
                         const goalNumber = showNumber ? (emphasizeNumber ? ` \`${i + 1}\`` : ` ${i + 1}`) : "";
-                        goalString += `**${type}Goal${goalNumber}:** ${!isNaN(goal.type) ? `${this.areasOfLifeEmojis[parseInt(goal.type)] || ""} __${this.areasOfLife[parseInt(goal.type)] || ""}__` : ""}`
-                            + `${goal.description ? `\n🎯 - ${goal.description}` : ""}${goal.reason ? `\n💭 - ${goal.reason}` : ""}`;
-                        if (i !== goalArray.length) goalString += '\n';
+                        goalStringArray.push(`**${type}Goal${goalNumber}** ${goal.description ? `\n🎯 - ${goal.description}` : ""}${goal.reason ? `\n💭 - ${goal.reason}` : ""}`
+                            + `${!isNaN(goal.type) ? `${this.areasOfLifeEmojis[parseInt(goal.type)] ? `\n${this.areasOfLifeEmojis[parseInt(goal.type)]}` : ""}`
+                                + `${this.areasOfLife[parseInt(goal.type)] ? ` __${this.areasOfLife[parseInt(goal.type)]}__` : ""}` : ""}`);
                     });
-                    return goalString;
+                    const outputString = doubleSpace ? goalStringArray.join('\n\n') : goalStringArray.join('\n');
+                    return outputString;
                 }
             }
         }
@@ -2736,10 +2749,11 @@ module.exports = {
     // Function call allows for name to be a Discord user tag! <@!##############>
     mastermindWeeklyJournalEntry: function (name = "NAME", withMarkdown = false, previousWeekReflectionEntry = "", areaOfLifeEntry = { type: null, reason: "" },
         stopEntry = "", startEntry = "", continueEntry = "", weeklyGoals = [{ type: null, description: "", reason: "" }, { type: null, description: "", reason: "" }, { type: null, description: "", reason: "" }]) {
-        const goalString = this.goalArrayToString(weeklyGoals, "Weekly");
+        const doubleSpace = weeklyGoals.some(goal => goal.type);
+        const goalString = this.goalArrayToString(weeklyGoals, "Weekly", doubleSpace);
         let weeklyJournalEntry = `${!name ? "" : `__**${name}**__\n`}`
             + `**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**\n${previousWeekReflectionEntry ? `${previousWeekReflectionEntry}\n` : ""}`
-            + `\n__**Area of Life That Needs the Most Attention:**__`
+            + `\n__**Area of Life That Needs the Most Attention:**__ `
             + `${!isNaN(areaOfLifeEntry.type) ? `${this.areasOfLifeEmojis[parseInt(areaOfLifeEntry.type)] || ""} ${this.areasOfLife[parseInt(areaOfLifeEntry.type)] || ""}` : ""}`
             + `${areaOfLifeEntry.reason ? `\n${areaOfLifeEntry.reason}\n` : ""}\n__**STOP, START, CONTINUE:** __`
             + `\n**STOP**: ${stopEntry ? `${stopEntry}\n` : ""}\n**START**: ${startEntry ? `${startEntry}\n` : ""}\n**CONTINUE**: ${continueEntry ? `${continueEntry}\n` : ""}`
@@ -3218,6 +3232,46 @@ module.exports = {
         }
     },
 
+    getNewUserTimezoneSettings: async function (message, PREFIX, targetUserID = false) {
+        const forSelf = targetUserID ? targetUserID === message.author.id : true;
+        const userAddressPossessive = forSelf ? "your" : `<@!${targetUserID}>'s`;
+        const userAddress = forSelf ? "you" : `<@!${targetUserID}>`;
+        const generalAddressPossessive = forSelf ? "your" : "their";
+        const userTimezone = await this.messageDataCollectFirst(message, `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** or **+/- UTC Offset**.\n\n(i.e. EST, +08:45, -9)`,
+            "User Settings: Setup", this.userSettingsEmbedColour, 300000, false);
+        if (!userTimezone || userTimezone === "stop") return false;
+        const userTimezoneOffset = this.getTimezoneOffset(userTimezone);
+        if (!userTimezoneOffset && userTimezoneOffset !== 0) {
+            message.reply("**This __timezone does not exist__... Try again!**");
+            return false;
+        }
+        let userDaylightSavingsSetting = await this.reactionDataCollect(message, `Does ${userAddressPossessive} timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No\n❌ - Exit**`,
+            ['⌚', '⛔', '❌'], "User Settings: Setup", this.userSettingsEmbedColour, 300000);
+        switch (userDaylightSavingsSetting) {
+            case '⌚': userDaylightSavingsSetting = true;
+                break;
+            case '⛔': userDaylightSavingsSetting = false;
+                break;
+            // For the ❌ - return...
+            default: userDaylightSavingsSetting = null;
+                break;
+        }
+        if (typeof userDaylightSavingsSetting === 'boolean') {
+            const confirmSettings = await this.getUserConfirmation(message, `**__Are you sure ${userAddress} want${forSelf ? "" : "s"} the following settings?:__**`
+                + `\n⌚ - Timezone: **${userTimezone}**`
+                + `\n🌄 - Daylight Savings Time (DST)?: **${userDaylightSavingsSetting ? "Yes" : "No"}**`
+                + `\n\n(**${this.toTitleCase(userAddress)} can always change ${generalAddressPossessive} user settings** with \`${PREFIX}user edit\` OR \`${PREFIX}u e\` for short)`,
+                false, "User Settings: Confirmation", 180000);
+            if (!confirmSettings) return;
+            const timezone = {
+                name: userTimezone,
+                offset: userTimezoneOffset,
+                daylightSavings: userDaylightSavingsSetting,
+            };
+            return timezone;
+        }
+    },
+
     createGuildSettings: async function (guildID, timezone = "EST", daylightSavings = true) {
         try {
             const initialOffset = this.getTimezoneOffset(timezone);
@@ -3343,6 +3397,8 @@ module.exports = {
 
 
     invalidPrefixes: ['\*', '\_', '\~', '\>', '\\', '\/', '\:', '\`', '\@'],
+    months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    daysOfWeek: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     fileFooterText: `🗑 to delete this message (not the entries)\n📎 to get all of this in a text file`,
     areasOfLifeEmojis: ['🥦', '🧠', '📚', '🙏', '🗣', '💼', '🎓', '💸', '🏠'],
     areasOfLife: ["Physical Health", "Mental/Mindset", "Personal Development", "Spiritual",

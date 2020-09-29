@@ -114,7 +114,7 @@ async function getFastIndexByRecency(userID, fastID) {
     return i + 1;
 }
 
-async function getFastIndexByStartTime(authorID, fastID) {
+async function getFastIndexByStartTime(userID, fastID) {
     const totalFasts = await getTotalFasts(userID);
     let i = 0;
     while (true) {
@@ -781,16 +781,19 @@ module.exports = {
                             let confirmPostFast = await fn.getUserConfirmation(message, confirmPostFastMessage, forceSkip, "Send Message for Accountability?", 180000, 0);
                             if (!confirmPostFast) return;
                             else {
-                                let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
-                                if (!fastPost) return;
-                                const finalEndTimestamp = endTimestamp ? endTimestamp : Date.now();
-                                const endTimeToDate = fn.timestampToDateString(finalEndTimestamp);
-                                const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
-                                let postChannel = await fn.getPostChannel(bot, message, "Fast", forceSkip, fastEmbedColour);
-                                if (!postChannel) await showFastPost(message, fastPost, mistakeMessage);
-                                // Overwrite fastPost Title with one specific to user's nickname in respective server
-                                fastPost = fastPost.setTitle(`${bot.channels.cache.get(postChannel).guild.member(authorID).displayName}'s ${endTimeToDate} Fast`);
-                                await fn.sendMessageToChannel(bot, fastPost, postChannel);
+                                // let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
+                                // if (!fastPost) return;
+                                // const finalEndTimestamp = endTimestamp ? endTimestamp : Date.now();
+                                // const endTimeToDate = fn.timestampToDateString(finalEndTimestamp);
+                                // const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
+                                // let postChannel = await fn.getPostChannel(bot, message, "Fast", forceSkip, fastEmbedColour);
+                                // if (!postChannel) await showFastPost(message, fastPost, mistakeMessage);
+                                // // Overwrite fastPost Title with one specific to user's nickname in respective server
+                                // fastPost = fastPost.setTitle(`${bot.channels.cache.get(postChannel).guild.member(authorID).displayName}'s ${endTimeToDate} Fast`);
+                                // await fn.sendMessageToChannel(bot, fastPost, postChannel);
+                                const fastIndex = `${getFastIndexByStartTime(authorID, doc._id)}` || "recent";
+                                console.log({ fastIndex });
+                                await this.run(bot, message, commandUsed, ["post", fastIndex], PREFIX, timezoneOffset, daylightSavingSetting, forceSkip);
                             }
                         }
                     });
@@ -1384,17 +1387,19 @@ module.exports = {
                                     // By prompting if they wish to end their fast or update their fast end time!
                                     if (fieldToEditIndex === 1) {
                                         const changeRemindersMessage = "Do you want to **update your fast end reminders (⬆)** OR **just end your fast completely? (⏭)**"
-                                            + "\n(i.e. altering the 1 hour prior and fast end DM reminders vs. just removing all reminders and ending the fast)";
+                                            + "\n\n**❌ - Exit**";
                                         const endReaction = await fn.reactionDataCollect(message, changeRemindersMessage, ['⬆', '⏭', '❌'], "Fast: Update End Reminders or End Fast",
-                                            "#FF0000", 60000);
+                                            fastEmbedColour, 60000);
                                         endTimeIsDefined = true;
                                         switch (endReaction) {
                                             case '⬆': end = false;
                                                 break;
                                             case '⏭': end = true;
                                                 break;
-                                            case '❌': end = false;
+                                            case '❌':
+                                                end = false;
                                                 changeReminders = false;
+                                                endTimeIsDefined = false;
                                                 break;
                                         }
                                         if (end) {
@@ -1450,6 +1455,7 @@ module.exports = {
                                 if (endTimeIsDefined) {
                                     const endTimestamp = fastData[1];
                                     fastData[2] = endTimestamp - startTimestamp;
+                                    end = true;
                                 }
                                 if (!end) {
                                     fastData[1] = null;
@@ -1550,61 +1556,50 @@ module.exports = {
                 if (totalFastNumber === 0) {
                     return message.reply(`**NO FASTS**... try \`${PREFIX}${commandUsed} start help\``);
                 }
+                let pastNumberOfEntriesIndex = parseInt(args[1]);
+                var indexByRecency = false;
+                if (args[2] !== undefined) {
+                    if (args[2].toLowerCase() === "recent") {
+                        indexByRecency = true;
+                    }
+                }
+
+                var fastView;
                 if (isNaN(args[1])) {
                     if (args[1].toLowerCase() === "recent" || args[1].toLowerCase() === "current") {
-                        // If user has no recent fast, case already handed above
-                        const fastView = await getCurrentOrMostRecentFast(authorID);
-                        console.log({ fastView });
-                        const fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
-                        console.log({ fastData });
-                        const endTimestamp = fastData[1];
-                        let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
-                        console.log({ fastPost });
-                        if (!fastPost) return;
-                        const finalEndTimestamp = endTimestamp ? endTimestamp : Date.now();
-                        const endTimeToDate = fn.timestampToDateString(finalEndTimestamp);
-                        const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
-                        let postChannel = await fn.getPostChannel(bot, message, "Fast", forceSkip, fastEmbedColour);
-                        if (!postChannel) await showFastPost(message, fastPost, mistakeMessage);
-                        // Overwrite fastPost Title with one specific to user's nickname in respective server
-                        fastPost = fastPost.setTitle(`${bot.channels.cache.get(postChannel).guild.member(authorID).displayName}'s ${endTimeToDate} Fast`);
-                        await fn.sendMessageToChannel(bot, fastPost, postChannel);
-                        return;
+                        fastView = await getCurrentOrMostRecentFast(authorID);
+                        indexByRecency = true;
+                        pastNumberOfEntriesIndex = 1;
                     }
                     else return message.reply(fastPostHelpMessage);
                 }
-                else {
-                    let pastNumberOfEntriesIndex = parseInt(args[1]);
-                    var indexByRecency = false;
-                    if (args[2] !== undefined) {
-                        if (args[2].toLowerCase() === "recent") {
-                            indexByRecency = true;
-                        }
-                    }
-                    var fastView;
-                    if (indexByRecency) fastView = await getOneFastByRecency(authorID, pastNumberOfEntriesIndex - 1);
-                    else fastView = await getOneFastByStartTime(authorID, pastNumberOfEntriesIndex - 1);
-                    if (fastView.length === 0) {
-                        return fn.sendErrorMessage(message, "**FAST DOES NOT EXIST**...");
-                    }
-                    var fastData;
-                    if (pastNumberOfEntriesIndex === 0 && fastView.endTime === null) {
-                        fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
-                    }
-                    else fastData = fastDocumentToDataArray(fastView);
-                    console.log({ fastData });
-                    const endTimestamp = fastData[1];
-                    let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
-                    if (!fastPost) return;
-                    const finalEndTimestamp = endTimestamp ? endTimestamp : Date.now();
-                    const endTimeToDate = fn.timestampToDateString(finalEndTimestamp);
-                    const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
-                    let postChannel = await fn.getPostChannel(bot, message, "Fast", forceSkip, fastEmbedColour);
-                    if (!postChannel) await showFastPost(message, fastPost, mistakeMessage);
-                    // Overwrite fastPost Title with one specific to user's nickname in respective server
-                    fastPost = fastPost.setTitle(`${bot.channels.cache.get(postChannel).guild.member(authorID).displayName}'s ${endTimeToDate} Fast`);
-                    await fn.sendMessageToChannel(bot, fastPost, postChannel);
+                else if (indexByRecency) fastView = await getOneFastByRecency(authorID, pastNumberOfEntriesIndex - 1);
+                else fastView = await getOneFastByStartTime(authorID, pastNumberOfEntriesIndex - 1);
+                console.log({ fastView });
+                if (fastView.length === 0) {
+                    return fn.sendErrorMessage(message, "**FAST DOES NOT EXIST**...");
                 }
+
+                var fastData;
+                if (pastNumberOfEntriesIndex === 1 && fastView.endTime === null) {
+                    fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
+                }
+                else fastData = fastDocumentToDataArray(fastView);
+                console.log({ fastData });
+
+                const endTimestamp = fastData[1];
+                let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
+                console.log({ fastPost });
+                if (!fastPost) return;
+                const finalEndTimestamp = endTimestamp ? endTimestamp : Date.now();
+                const endTimeToDate = fn.timestampToDateString(finalEndTimestamp, false, true, true);
+                const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
+                let postChannel = await fn.getPostChannel(bot, message, "Fast", forceSkip, fastEmbedColour);
+                if (!postChannel) await showFastPost(message, fastPost, mistakeMessage);
+                // Overwrite fastPost Title with one specific to user's nickname in respective server
+                fastPost = fastPost.setTitle(`${bot.channels.cache.get(postChannel).guild.member(authorID).displayName}'s Fast - ${endTimeToDate}`);
+                await fn.sendMessageToChannel(bot, fastPost, postChannel);
+                return;
             }
             // fast post (only):
             else return message.reply(fastPostHelpMessage);

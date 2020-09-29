@@ -13,17 +13,38 @@ const mongoose = require("mongoose");
 
 const goalSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
-    userID: String,
-    goals: {
-        goalCategory: [Number],
-        goalEntry: [String]
+    userID: {
+        type: String,
+        required: true,
     },
-    categories: {
-        categoryNumber: [Number],
-        categoryName: [String],
-
-        // Set the default to those shown above!**
-    }
+    completed: {
+        type: Boolean,
+        required: true,
+        default: false,
+    },
+    archived: {
+        type: Boolean,
+        required: true,
+        default: false,
+    },
+    goal: {
+        type: {
+            type: Number,
+            required: true,
+        },
+        description: {
+            type: String,
+            required: true,
+        },
+        reason: {
+            type: String,
+            required: false,
+        },
+        steps: {
+            type: String,
+            required: false,
+        },
+    },
 });
 
-module.exports = mongoose.model("Long-Term Goal", goalSchema, "goals");
+module.exports = mongoose.model("Goal", goalSchema, "goals");
