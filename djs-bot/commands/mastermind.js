@@ -491,6 +491,12 @@ module.exports = {
             // 2. Create a function for the data collection loop function.
             var mastermindDocument;
             const targetUserSettings = await User.findOne({ discordID: targetUser });
+            // Create a default one for them! or take them through the process!
+
+            // FIX THE OUTPUT LAYOUT TO HAVE MORE SPACING BETWEEN
+            if(!targetUserSettings) {
+                // await fn.createUserSettings(bot, targetUser, {name: "EST"})
+            }
             const targetUserTimezoneOffset = targetUserSettings.timezone.offset;
             const targetUserTimezone = targetUserSettings.timezone.name;
             if (userWantsTemplate) {

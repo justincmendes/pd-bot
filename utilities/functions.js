@@ -2722,7 +2722,7 @@ module.exports = {
                     let goalString = "";
                     goalArray.forEach((goal, i) => {
                         const goalNumber = showNumber ? (emphasizeNumber ? ` \`${i + 1}\`` : ` ${i + 1}`) : "";
-                        goalString += `**${type}Goal${goalNumber}:** ${!isNaN(goal.type) ? `${this.areasOfLifeEmojis[parseInt(goal.type)]} ${this.areasOfLife[parseInt(goal.type)]}` : ""}`
+                        goalString += `**${type}Goal${goalNumber}:** ${!isNaN(goal.type) ? `${this.areasOfLifeEmojis[parseInt(goal.type)] || ""} __${this.areasOfLife[parseInt(goal.type)] || ""}__` : ""}`
                             + `${goal.description ? `\n🎯 - ${goal.description}` : ""}${goal.reason ? `\n💭 - ${goal.reason}` : ""}`;
                         if (i !== goalArray.length) goalString += '\n';
                     });
@@ -2738,11 +2738,11 @@ module.exports = {
         stopEntry = "", startEntry = "", continueEntry = "", weeklyGoals = [{ type: null, description: "", reason: "" }, { type: null, description: "", reason: "" }, { type: null, description: "", reason: "" }]) {
         const goalString = this.goalArrayToString(weeklyGoals, "Weekly");
         let weeklyJournalEntry = `${!name ? "" : `__**${name}**__\n`}`
-            + `**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**\n${previousWeekReflectionEntry}`
+            + `**__Previous Week's Assessment: Habit Adherence + 3+ Observations:__**\n${previousWeekReflectionEntry ? `${previousWeekReflectionEntry}\n` : ""}`
             + `\n__**Area of Life That Needs the Most Attention:**__`
-            + `${!isNaN(areaOfLifeEntry.type) ? `${this.areasOfLifeEmojis[parseInt(areaOfLifeEntry.type)]} ${this.areasOfLife[parseInt(areaOfLifeEntry.type)]}` : ""}`
-            + `${areaOfLifeEntry.reason ? `\n${areaOfLifeEntry.reason}` : ""}\n__**STOP, START, CONTINUE:** __`
-            + `\n**STOP**: ${stopEntry}\n**START**: ${startEntry}\n**CONTINUE**: ${continueEntry}`
+            + `${!isNaN(areaOfLifeEntry.type) ? `${this.areasOfLifeEmojis[parseInt(areaOfLifeEntry.type)] || ""} ${this.areasOfLife[parseInt(areaOfLifeEntry.type)] || ""}` : ""}`
+            + `${areaOfLifeEntry.reason ? `\n${areaOfLifeEntry.reason}\n` : ""}\n__**STOP, START, CONTINUE:** __`
+            + `\n**STOP**: ${stopEntry ? `${stopEntry}\n` : ""}\n**START**: ${startEntry ? `${startEntry}\n` : ""}\n**CONTINUE**: ${continueEntry ? `${continueEntry}\n` : ""}`
             + `\n__**Next Week's Goals and WHY:**__${goalString ? `\n${goalString}` : ""}`;
         if (withMarkdown === true) {
             weeklyJournalEntry = `\`${weeklyJournalEntry}\``;
