@@ -44,6 +44,18 @@ const goalSchema = mongoose.Schema({
             type: String,
             required: false,
         },
+        checkpoints: {
+            type: String,
+            required: false, 
+        },
+        start: {
+            type: Number,
+            required: false,
+        },
+        end: {
+            type: Number,
+            required: false,
+        },
     },
 });
 

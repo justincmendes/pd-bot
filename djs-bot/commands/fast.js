@@ -100,33 +100,6 @@ async function getTotalFasts(userID) {
         console.error(err);
     }
 }
-async function getFastIndexByRecency(userID, fastID) {
-    const totalFasts = await getTotalFasts(userID);
-    let i = 0;
-    while (true) {
-        let fast = await getOneFastByRecency(userID, i);
-        if (fast === undefined && i === totalFasts) {
-            return false;
-        }
-        else if (fast._id.toString() == fastID.toString()) break;
-        i++;
-    }
-    return i + 1;
-}
-
-async function getFastIndexByStartTime(userID, fastID) {
-    const totalFasts = await getTotalFasts(userID);
-    let i = 0;
-    while (true) {
-        let fast = await getOneFastByStartTime(userID, i);
-        if (fast === undefined && i === totalFasts) {
-            return false;
-        }
-        else if (fast._id.toString() == fastID.toString()) break;
-        i++;
-    }
-    return i + 1;
-}
 
 async function getCurrentOrRecentFastEmbed(userID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed = 'fast') {
     var fastView, fastType, fastData, fastDataToString, fastEmbed;
@@ -134,7 +107,7 @@ async function getCurrentOrRecentFastEmbed(userID, fastIsInProgress, userTimezon
         // Show the user the current fast
         fastView = await Fast.findOne({
             userID,
-            endTime: null
+            endTime: null,
         })
             .catch(err => console.error(err));
         fastType = "Current";
@@ -1500,7 +1473,9 @@ module.exports = {
                                 }
                                 console.log({ continueEdit, userEdit });
                                 if (fastView) {
-                                    pastNumberOfEntriesIndex = indexByRecency ? await getFastIndexByRecency(authorID, fastTargetID) : await getFastIndexByStartTime(authorID, fastTargetID);
+                                    pastNumberOfEntriesIndex = indexByRecency ?
+                                        await fn.getEntryIndexByFunction(authorID, fastTargetID, totalFastNumber, getOneFastByRecency)
+                                        : await fn.getEntryIndexByFunction(authorID, fastTargetID, totalFastNumber, getOneFastByStartTime);
                                     console.log({ fastView, fastData, fastTargetID, fieldToEditIndex });
                                     fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                                     showFast = fastDataArrayToString(fastData);
@@ -1521,7 +1496,9 @@ module.exports = {
                             console.log({ continueEdit, userEdit });
                             fastView = await Fast.findById(fastTargetID);
                             if (fastView) {
-                                pastNumberOfEntriesIndex = indexByRecency ? await getFastIndexByRecency(authorID, fastTargetID) : await getFastIndexByStartTime(authorID, fastTargetID);
+                                pastNumberOfEntriesIndex = indexByRecency ?
+                                    await fn.getEntryIndexByFunction(authorID, fastTargetID, totalFastNumber, getOneFastByRecency)
+                                    : await fn.getEntryIndexByFunction(authorID, fastTargetID, totalFastNumber, getOneFastByStartTime);
                                 console.log({ fastView, fastData, fastTargetID, fieldToEditIndex });
                                 fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                                 showFast = fastDataArrayToString(fastData);

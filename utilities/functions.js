@@ -416,7 +416,7 @@ module.exports = {
             + `\n\n\`<PAST_#_OF_ENTRIES>\`: **recent; 5** (\\*any number); **all** \n(NOTE: ***__any number > 1__* will get more than 1 ${entrySingular}!**)`
             + `\n\n\`<#_OF_ENTRIES>\` and \`<STARTING_INDEX>\`: **2** (\\**any number*)`
             + `\n\n\`<#_MOST_RECENT_ENTRY>\`: **all; recent; 3** (3rd most recent ${entrySingular}, \\**any number*)\n(NOTE: Gets just 1 ${entrySingular} - UNLESS \`all\`)`
-            + `\n\n\`<RECENT_ENTRIES>\`: **3,5,recent,7,1,25**\n(**COMMA SEPARATED, NO SPACES:**\n1 being the most recent ${entrySingular}, 25 the 25th most recent, etc.)`
+            + `\n\n\`<RECENT_ENTRIES>\`: **3,5,recent,7,1,25**\n- **COMMA SEPARATED, NO SPACES:**\n1 being the most recent ${entrySingular}, 25 the 25th most recent, etc.`
             + `${recentInstructions}${fieldInstructions}\n\n\`<force?>\`: (OPT.) type **force** at the end of your command to **skip all of the confirmation windows!**${additionalInformation}`;
     },
 
@@ -707,21 +707,31 @@ module.exports = {
         const day = /(\d{1}(?:\d{1})?)/.exec(adjustedArgs[dayIndex])[1];
         var year;
         if (yearIncluded) {
+            console.log({ dateTimeArray });
             const originalYear = dateTimeArray[this.getNthNumberIndex(dateTimeArray, dayIndex + dayYearTimeOffset, 2)];
             console.log({ originalYear })
             if (!originalYear) return false;
             year = /(\d{1,4})/.exec(adjustedArgs[dayIndex + 1])[1];
             if (!year) return false;
-            if (year != originalYear) {
-                const yearOverflow = originalYear.replace(year, "");
+            if (year !== originalYear) {
+                const yearIndex = year.lastIndexOf(originalYear);
+                const yearOverflow = year.substring(yearIndex, yearIndex + originalYear.length);
+                // const yearOverflow = originalYear.replace(year, "");
                 dateTimeArray[2 + dayYearTimeOffset] = year;
                 const combinedHoursAndMins = dateTimeArray[3 + dayYearTimeOffset] ?
                     `${yearOverflow}${dateTimeArray[3 + dayYearTimeOffset]}${dateTimeArray[3 + dayYearTimeOffset]}`
                     : dateTimeArray[5 + dayYearTimeOffset] ? `${yearOverflow}${dateTimeArray[5 + dayYearTimeOffset]}` : `${yearOverflow}`;
                 console.log({ yearOverflow, year, dateTimeArray, combinedHoursAndMins });
                 if (!combinedHoursAndMins) return false;
+                // If the combination is the same as the year, then there was no specified time
+                // => Set the time to Midnight - 00:00
+                else if (combinedHoursAndMins === year) {
+                    dateTimeArray[3 + dayYearTimeOffset] = "00";
+                    dateTimeArray[4 + dayYearTimeOffset] = "00";
+                    dateTimeArray[5 + dayYearTimeOffset] = undefined;
+                }
                 // If the combinedHoursAndMins is greater than 2, there are minutes.
-                if (combinedHoursAndMins.length > 2) {
+                else if (combinedHoursAndMins.length > 2) {
                     const splitHoursAndMins = /(\d{1}(?:\d{1})?)(\d{2})/.exec(combinedHoursAndMins);
                     console.log({ splitHoursAndMins });
                     dateTimeArray[3 + dayYearTimeOffset] = splitHoursAndMins[1];
@@ -1612,6 +1622,10 @@ module.exports = {
     // Using Regular Expressions
     // Assumes that the userTimezone is already daylight-savings adjusted
     timeCommandHandlerToUTC: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
+        if (!Array.isArray(args) && typeof args === 'string') {
+            args = args.toLowerCase().split(/[\s\n]+/);
+        }
+
         const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         if (args[0].toLowerCase() === "now") {
             return this.getUTCOffsetAdjustedTimestamp(messageCreatedTimestamp, userTimezone, userDaylightSavingSetting);
@@ -2764,11 +2778,6 @@ module.exports = {
         return weeklyJournalEntry;
     },
 
-    longTermGoalsTemplate: function () {
-        const goalsTemplate = "";
-        return goalsTemplate;
-    },
-
     sendReplyThenDelete: async function (userOriginalMessageObject, replyMessage, deleteDelay = 5000) {
         userOriginalMessageObject.reply(replyMessage)
             .then(msg => {
@@ -3028,9 +3037,11 @@ module.exports = {
     endTimeAfterStartTime: function (message, startTimestamp, endTimestamp, type) {
         if (endTimestamp) {
             if (endTimestamp < startTimestamp) {
+                type = type ? `${this.toTitleCase(type)} ` : "";
                 const startTimestampToDate = this.timestampToDateString(startTimestamp);
                 const endTimestampToDate = this.timestampToDateString(endTimestamp);
-                message.reply(`A __${type ? type.toLowerCase() : ""} end time__ **(${endTimestampToDate})** cannot be ***before*** a __${type ? type.toLowerCase() : ""} start time__ **(${startTimestampToDate})**`);
+                this.sendMessageThenDelete(message, (this.getMessageEmbed(`**__${type}Start Time:__** ${startTimestampToDate}\n**__${type}End Time:__** ${endTimestampToDate}`
+                    + `\n\n**The end time cannot be before the start time...**`, `${type ? `${type}: ` : ""}Invalid Start and End Times`, "#FF0000")), 1800000);
                 return false;
             }
         }
@@ -3158,41 +3169,6 @@ module.exports = {
         });
         return embed;
     },
-
-    // createUserSettingsByGuild: async function (bot, userID, guildID) {
-    //     try {
-    //         const user = bot.users.cache.get(userID);
-    //         const guildSettings = await Guild.findOne({ guildID });
-    //         const guildTimezone = guildSettings.timezone.name;
-    //         const initialOffset = this.getTimezoneOffset(guildTimezone);
-    //         const daylightOffset = this.isDaylightSavingTime(Date.now(), guildSettings.timezone.daylightSavings) ?
-    //             this.getTimezoneDaylightOffset(guildTimezone) : 0;
-    //         const userInfo = new User({
-    //             _id: mongoose.Types.ObjectId(),
-    //             discordID: user.id,
-    //             discordTag: `${user.username}#${user.discriminator}`,
-    //             avatar: user.avatar,
-    //             timezone: {
-    //                 name: guildTimezone,
-    //                 offset: initialOffset + daylightOffset,
-    //                 daylightSavings: guildSettings.timezone.daylightSavings,
-    //             },
-    //             habitCron: {
-    //                 daily: 0,
-    //                 weekly: 0,
-    //             },
-    //             getQuote: false,
-    //             likesPesteringAccountability: false,
-    //         });
-    //         const result = await userInfo.save();
-    //         console.log({ result });
-    //         return result;
-    //     }
-    //     catch (err) {
-    //         console.error(err);
-    //         return false;
-    //     }
-    // },
 
     createUserSettings: async function (bot, userID, timezoneObject) {
         try {
@@ -3395,6 +3371,153 @@ module.exports = {
         return channelList[targetChannelIndex];
     },
 
+    getSingleEntry: async function (message, instructionPrompt, title, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
+        let reset = false;
+        var collectedEdit;
+        instructionPrompt += !additionalInstructions ? "" : `\n\n${additionalInstructions}`;
+        var hasInstructions = false;
+        if (instructionKeywords) {
+            if (Array.isArray(instructionKeywords)) {
+                if (instructionKeywords.length) {
+                    hasInstructions = true;
+                }
+            }
+        }
+        do {
+            reset = false;
+            collectedEdit = await this.messageDataCollectFirst(message, instructionPrompt, title, embedColour, 600000);
+            if (!collectedEdit || collectedEdit === "stop") return false;
+            if (hasInstructions) {
+                if (instructionKeywords.includes(collectedEdit)) {
+                    return collectedEdit;
+                }
+            }
+            if (!reset) {
+                const confirmEntry = await this.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${collectedEdit}`, forceSkip, title);
+                if (!confirmEntry) {
+                    reset = true;
+                }
+            }
+        }
+        while (reset);
+        return collectedEdit;
+    },
+
+    getMultilineEntry: async function (message, instructionPrompt, title, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
+        let inputIndex = 0;
+        let reset = false;
+        var collectedEntry, finalEntry = new Array();
+        instructionPrompt += `\n\nType \`0\` to **restart/clear** your **entire** current entry!`
+            + `\nType \`1\` when you're **done!**\nType \`2\` to **undo** the previous entry`;
+        instructionPrompt += !additionalInstructions ? "" : `\n\n${additionalInstructions}`;
+        var hasInstructions = false;
+        if (instructionKeywords) {
+            if (Array.isArray(instructionKeywords)) {
+                if (instructionKeywords.length) {
+                    hasInstructions = true;
+                }
+            }
+        }
+        const originalPrompt = instructionPrompt;
+        do {
+            inputIndex++;
+            collectedEntry = await this.messageDataCollectFirst(message, instructionPrompt, title, embedColour, 600000, false);
+            if (!collectedEntry || collectedEntry === "stop") {
+                if (collectedEntry !== "stop") {
+                    this.sendReplyThenDelete(message, `**Exiting...** This was your **entry**: *(Deleting in 10 minutes)*\n${finalEntry.join('\n')}`, 600000);
+                }
+                return false;
+            }
+            if (hasInstructions) {
+                if (instructionKeywords.includes(collectedEntry)) {
+                    return collectedEntry;
+                }
+            }
+            if (inputIndex === 1 || reset === true) {
+                if (collectedEntry === "1") {
+                    const endConfirmation = await this.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
+                    if (endConfirmation === true) break;
+                }
+                else if (collectedEntry !== "0" && collectedEntry !== "2") {
+                    instructionPrompt += `\n\n**Current Entry:**\n${collectedEntry}\n`;
+                    previousEntry = collectedEntry;
+                    finalEntry.push(collectedEntry);
+                    reset = false;
+                }
+                else inputIndex = 0;
+            }
+            else if (collectedEntry === "1") {
+                const endConfirmation = await this.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
+                if (endConfirmation === true) break;
+            }
+            else if (collectedEntry === "0") {
+                if (finalEntry === "") {
+                    reset = true;
+                }
+                else {
+                    const resetWarningMessage = `__Are you sure you want to **reset** the current entry for this section?:__\n${finalEntry.join('\n')}`;
+                    let resetConfirmation = await this.getUserConfirmation(message, resetWarningMessage, false, `${title} Reset`);
+                    if (resetConfirmation === true) {
+                        instructionPrompt = originalPrompt;
+                        finalEntry = new Array();
+                        reset = true;
+                    }
+                }
+            }
+            // Undo Mechanism
+            else if (collectedEntry === "2") {
+                if (finalEntry.length) {
+                    let error = false;
+                    if (finalEntry.length === 1) {
+                        instructionPrompt = originalPrompt;
+                        reset = true;
+                    }
+                    else {
+                        targetStringIndex = instructionPrompt.lastIndexOf(finalEntry[finalEntry.length - 1]);
+                        if (targetStringIndex >= 0) {
+                            instructionPrompt = instructionPrompt.substring(0, targetStringIndex);
+                        }
+                        else {
+                            console.log("Could not undo the last entry!");
+                            this.sendMessageThenDelete(message, `**Sorry <@!${message.author.id}>, I could not undo the last entry!**`, 30000);
+                            error = true;
+                        }
+                    }
+                    if (!error) finalEntry.pop();
+                }
+                else {
+                    instructionPrompt = originalPrompt;
+                    reset = true;
+                }
+            }
+            else {
+                instructionPrompt = instructionPrompt + collectedEntry + "\n";
+                finalEntry.push(collectedEntry);
+            }
+        }
+        while (true)
+        return finalEntry.join('\n');
+    },
+
+    /**
+     * 
+     * @param {String} userID 
+     * @param {String} targetID 
+     * @param {Number} totalEntries 
+     * @param {Function} getOneEntry 
+     */
+    getEntryIndexByFunction: async function (userID, targetEntryID, totalEntries, getOneEntry) {
+        let i = 0;
+        while (true) {
+            let entry = await getOneEntry(userID, i);
+            if (entry === undefined && i === totalEntries) {
+                return false;
+            }
+            else if (entry._id.toString() === targetEntryID.toString()) break;
+            i++;
+        }
+        return i + 1;
+    },
 
     invalidPrefixes: ['\*', '\_', '\~', '\>', '\\', '\/', '\:', '\`', '\@'],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
@@ -3403,9 +3526,22 @@ module.exports = {
     areasOfLifeEmojis: ['🥦', '🧠', '📚', '🙏', '🗣', '💼', '🎓', '💸', '🏠'],
     areasOfLife: ["Physical Health", "Mental/Mindset", "Personal Development", "Spiritual",
         "Social", "Career", "Education", "Finances", "Physical Environment"],
+    getAreasOfLifeEmojiCombinedArray: function () {
+        var areasOfLifeCombined = new Array();
+        this.areasOfLife.forEach((areaOfLife, i) => {
+            areasOfLifeCombined.push(`${this.areasOfLifeEmojis[i] ? `${this.areasOfLifeEmojis[i]} ` : ""}${areaOfLife}`);
+        });
+        return areasOfLifeCombined;
+    },
+    getAreasOfLifeList: function () {
+        var areasOfLifeList = new Array();
+        this.getAreasOfLifeEmojiCombinedArray().forEach((areaOfLife, i) => {
+            areasOfLifeList.push(`\`${i + 1}\` - **${areaOfLife}**`);
+        });
+        return areasOfLifeList;
+    },
 
-
-    reminderTypes: ["Reminder", "Habit", "Fast", "Quote"],
+    reminderTypes: ["Reminder", "Habit", "Fast", "Quote", "Goal"],
     fastEmbedColour: "#32CD32",
     mastermindEmbedColour: "#FF6A00",
     journalEmbedColour: "#EE82EE",

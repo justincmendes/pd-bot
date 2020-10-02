@@ -24,75 +24,67 @@ const habitSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     userID: String,
     isArchived: Boolean,
-
-    // For Habits that have a daily/general counter!
-    countHabit: {
-        settings: {
-            isCountType: {
-                type: Boolean,
-                required: true,
-            },
-            // To automatically mark complete or incomplete on day!
-            // For streaks - auto-mark completions
-            autoMarkCountGoal: {
-                type: Boolean,
-                required: false,
-            },
-            // Count Goals: To be used in tandem with auto-mark
-            // Or just have stored for the user to have the target set
-            dailyGoal: {
-                type: Number,
-                required: false,
-            },
-            // If it's a cumulative goal instead of a daily number
-            totalGoal: {
-                type: Number,
-                required: false,
-            },
-        },
-        value: {
-            type: [Number],
-            required: false,
-        }
+    // The log timestamps should ALWAYS be
+    name: {
+        type: String,
+        required: true,
     },
-
-    // The log timestamps should ALWAYS be 
-    habit: {
-        name: {
-            type: String,
-            required: true,
-        },
-        type: {
+    type: {
+        type: Number,
+        required: true,
+    },
+    description: {
+        type: String,
+        required: true,
+    },
+    reason: {
+        type: String,
+        required: true,
+    },
+    // Ensure there is only one log per cron
+    log: [{
+        timestamp: {
             type: Number,
             required: true,
         },
-        description: {
+        // Allow for Checked: 1 - ✅; Missed: 0 - ❌; Skip: 2 - ➖ (still counts as a log); Neutral: 3 🔲
+        // Store as a number for making a cheaper habit object
+        value: {
+            type: Number,
+            required: true,
+        },
+        message: {
             type: String,
             required: true,
         },
-        reason: {
-            type: String,
+        count: {
+            type: Number,
+            required: false,
+        },
+    }],
+
+    // For Habits that have a daily/general counter!
+    settings: {
+        isCountType: {
+            type: Boolean,
             required: true,
         },
-        // Ensure there is only one log per cron
-        log: {
-            timestamp: {
-                type: [Number],
-                required: true,
-                default: [],
-            },
-            // Allow for Checked: 1 - ✅; Missed: 0 - ❌; Skip: 2 - ➖ (still counts as a log); Neutral: 3 🔲
-            // Store as a number for making a cheaper habit object
-            value: {
-                type: [Number],
-                required: true,
-                default: [],
-            },
-            message: {
-                type: [String],
-                required: true,
-                default: [],
-            },
+        // To automatically mark complete or incomplete on day!
+        // For streaks - auto-mark completions
+        autoMarkCountGoal: {
+            type: Boolean,
+            required: false,
+        },
+        // Count Goals: To be used in tandem with auto-mark
+        // Or just have stored for the user to have the target set
+        dailyGoal: {
+            type: Number,
+            required: false,
+        },
+        // If it's a cumulative goal instead of a daily number
+        totalGoal: {
+            type: Number,
+            required: false,
         },
     },
 });

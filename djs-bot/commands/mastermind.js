@@ -1,7 +1,5 @@
 // Global Variable Declarations and Initializations
 const Discord = require("discord.js");
-const DailyJournal = require("../database/schemas/dailyjournal");
-const WeeklyJournal = require("../database/schemas/weeklyjournal");
 const User = require("../database/schemas/user");
 const Guild = require("../database/schemas/guildsettings");
 const Mastermind = require("../database/schemas/mastermind");
@@ -15,29 +13,13 @@ const mastermindEmbedColour = fn.mastermindEmbedColour;
 const areasOfLifeEmojis = fn.areasOfLifeEmojis;
 const areasOfLife = fn.areasOfLife;
 const daysOfWeek = fn.daysOfWeek;
-const areasOfLifeCombinedEmoji = getAreasOfLifeEmojiCombinedArray(areasOfLife, areasOfLifeEmojis);
-const areasOfLifeList = getAreasOfLifeList(areasOfLifeCombinedEmoji).join('\n');
+const areasOfLifeCombinedEmoji = fn.getAreasOfLifeEmojiCombinedArray();
+const areasOfLifeList = fn.getAreasOfLifeList().join('\n');
 
 // Function Declarations and Initializations
 // Use WeeklyJournalEntry function to create empty entries and format in backticks for Discord markdown
 
 // FUTURE FEATURE: Create .txt file with FULL entry and react with paperclip for user to download the file
-
-function getAreasOfLifeEmojiCombinedArray(areasOfLife, areasOfLifeEmojis) {
-    var areasOfLifeCombined = new Array();
-    areasOfLife.forEach((areaOfLife, i) => {
-        areasOfLifeCombined.push(`${areasOfLifeEmojis[i] ? `${areasOfLifeEmojis[i]} ` : ""}${areaOfLife}`);
-    });
-    return areasOfLifeCombined;
-}
-
-function getAreasOfLifeList(areasOfLifeEmojiCombinedArray) {
-    var areasOfLifeList = new Array();
-    areasOfLifeEmojiCombinedArray.forEach((areaOfLife, i) => {
-        areasOfLifeList.push(`\`${i + 1}\` - **${areaOfLife}**`);
-    });
-    return areasOfLifeList;
-}
 
 async function sendGeneratedTemplate(message, numberOfUsers, namesForTemplate, withMarkdown = true, templateEmbedColour = mastermindEmbedColour) {
     const date = new Date();
@@ -52,34 +34,6 @@ async function sendGeneratedTemplate(message, numberOfUsers, namesForTemplate, w
         else templateArray.push(fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex], withMarkdown));
     }
     await fn.sendPaginationEmbed(message, fn.getEmbedArray(templateArray, "Mastermind: Weekly Reflection And Goals Template", true, true, templateEmbedColour));
-}
-
-async function getMastermindIndexByRecency(userID, mastermindID) {
-    const totalMasterminds = await Mastermind.find({ userID }).countDocuments();
-    let i = 0;
-    while (true) {
-        let mastermind = await getOneMastermindByRecency(userID, i);
-        if (mastermind === undefined && i === totalMasterminds) {
-            return false;
-        }
-        else if (mastermind._id.toString() == mastermindID.toString()) break;
-        i++;
-    }
-    return i + 1;
-}
-
-async function getMastermindIndexByDateCreated(userID, mastermindID) {
-    const totalMasterminds = await Mastermind.find({ userID }).countDocuments();
-    let i = 0;
-    while (true) {
-        let mastermind = await getOneMastermindByCreatedTime(userID, i);
-        if (mastermind === undefined && i === totalMasterminds) {
-            return false;
-        }
-        else if (mastermind._id.toString() == mastermindID.toString()) break;
-        i++;
-    }
-    return i + 1;
 }
 
 async function getOneMastermindByCreatedTime(userID, mastermindIndex) {
@@ -141,7 +95,7 @@ function mastermindDocumentToString(bot, mastermindDoc) {
 }
 
 function multipleMastermindsToString(bot, message, mastermindArray, numberOfMasterminds, entriesToSkip = 0, toArray = false) {
-    var entriesToString = toArray ? new Array() : "";
+    var entriesToString = new Array();
     console.log({ numberOfMasterminds });
     for (i = 0; i < numberOfMasterminds; i++) {
         if (mastermindArray[i] === undefined) {
@@ -151,14 +105,9 @@ function multipleMastermindsToString(bot, message, mastermindArray, numberOfMast
         }
         const mastermindString = `__**Mastermind ${i + entriesToSkip + 1}:**__`
             + `\n${mastermindDocumentToString(bot, mastermindArray[i])}`;
-        if (toArray) entriesToString.push(mastermindString);
-        else {
-            entriesToString = `${entriesToString}${mastermindString}`;
-            if (i !== numberOfMasterminds - 1) {
-                entriesToString += '\n\n';
-            }
-        }
+        entriesToString.push(mastermindString);
     }
+    if(!toArray) entriesToString = entriesToString.join('\n\n');
     return entriesToString;
 }
 
@@ -209,134 +158,6 @@ async function getMastermindByCreatedAt(userID, entryIndex, numberOfEntries = 1)
         console.log(err);
         return false;
     }
-}
-
-async function getSingleEntry(message, instructionPrompt, title, forceSkip = false, embedColour = mastermindEmbedColour, additionalInstructions = "", instructionKeywords = []) {
-    let reset = false;
-    var collectedEntry;
-    instructionPrompt += !additionalInstructions ? "" : `\n\n${additionalInstructions}`;
-    var hasInstructions = false;
-    if (instructionKeywords) {
-        if (Array.isArray(instructionKeywords)) {
-            if (instructionKeywords.length) {
-                hasInstructions = true;
-            }
-        }
-    }
-    do {
-        reset = false;
-        collectedEdit = await fn.messageDataCollectFirst(message, instructionPrompt, title, embedColour, 600000);
-        if (!collectedEdit) return false;
-        if (hasInstructions) {
-            if (instructionKeywords.includes(collectedEdit)) {
-                return collectedEdit;
-            }
-        }
-        if (!reset) {
-            const confirmEntry = await fn.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${collectedEdit}`, forceSkip, title);
-            if (!confirmEntry) {
-                reset = true;
-            }
-        }
-    }
-    while (reset);
-    return collectedEdit;
-}
-
-async function getMultilineEntry(message, instructionPrompt, title, forceSkip = false, embedColour = mastermindEmbedColour, additionalInstructions = "", instructionKeywords = []) {
-    let inputIndex = 0;
-    let reset = false;
-    var collectedEntry, finalEntry = new Array();
-    instructionPrompt += `\n\nType \`0\` to **restart/clear** your **entire** current entry!`
-        + `\nType \`1\` when you're **done!**\nType \`2\` to **undo** the previous entry`;
-    instructionPrompt += !additionalInstructions ? "" : `\n\n${additionalInstructions}`;
-    var hasInstructions = false;
-    if (instructionKeywords) {
-        if (Array.isArray(instructionKeywords)) {
-            if (instructionKeywords.length) {
-                hasInstructions = true;
-            }
-        }
-    }
-    const originalPrompt = instructionPrompt;
-    do {
-        inputIndex++;
-        collectedEntry = await fn.messageDataCollectFirst(message, instructionPrompt, title, embedColour, 600000, false);
-        if (!collectedEntry || collectedEntry === "stop") {
-            if (collectedEntry !== "stop") {
-                fn.sendReplyThenDelete(message, `**Exiting...** This was your **entry**: *(Deleting in 10 minutes)*\n${finalEntry.join('\n')}`, 600000);
-            }
-            return false;
-        }
-        if (hasInstructions) {
-            if (instructionKeywords.includes(collectedEntry)) {
-                return collectedEntry;
-            }
-        }
-        if (inputIndex === 1 || reset === true) {
-            if (collectedEntry === "1") {
-                const endConfirmation = await fn.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
-                if (endConfirmation === true) break;
-            }
-            else if (collectedEntry !== "0" && collectedEntry !== "2") {
-                instructionPrompt += `\n\n**Current Entry:**\n${collectedEntry}\n`;
-                previousEntry = collectedEntry;
-                finalEntry.push(collectedEntry);
-                reset = false;
-            }
-            else inputIndex = 0;
-        }
-        else if (collectedEntry === "1") {
-            const endConfirmation = await fn.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
-            if (endConfirmation === true) break;
-        }
-        else if (collectedEntry === "0") {
-            if (finalEntry === "") {
-                reset = true;
-            }
-            else {
-                const resetWarningMessage = `__Are you sure you want to **reset** the current entry for this section?:__\n${finalEntry.join('\n')}`;
-                let resetConfirmation = await fn.getUserConfirmation(message, resetWarningMessage, false, `${title} Reset`);
-                if (resetConfirmation === true) {
-                    instructionPrompt = originalPrompt;
-                    finalEntry = new Array();
-                    reset = true;
-                }
-            }
-        }
-        // Undo Mechanism
-        else if (collectedEntry === "2") {
-            if (finalEntry.length) {
-                let error = false;
-                if (finalEntry.length === 1) {
-                    instructionPrompt = originalPrompt;
-                    reset = true;
-                }
-                else {
-                    targetStringIndex = instructionPrompt.lastIndexOf(finalEntry[finalEntry.length - 1]);
-                    if (targetStringIndex >= 0) {
-                        instructionPrompt = instructionPrompt.substring(0, targetStringIndex);
-                    }
-                    else {
-                        console.log("Could not undo the last entry!");
-                        fn.sendMessageThenDelete(message, `**Sorry <@!${message.author.id}>, I could not undo the last entry!**`, 30000);
-                        error = true;
-                    }
-                }
-                if (!error) finalEntry.pop();
-            }
-            else {
-                instructionPrompt = originalPrompt;
-                reset = true;
-            }
-        }
-        else {
-            instructionPrompt = instructionPrompt + collectedEntry + "\n";
-            finalEntry.push(collectedEntry);
-        }
-    }
-    while (true)
-    return finalEntry.join('\n');
 }
 
 module.exports = {
@@ -506,7 +327,7 @@ module.exports = {
             }
 
             if (userWantsTemplate) {
-                const observations = await getMultilineEntry(message, "**__Look back at the previous week ↩:__**"
+                const observations = await fn.getMultilineEntry(message, "**__Look back at the previous week ↩:__**"
                     + "\n**- 📈 How much did you stick to your habits and/or progress on your goals this week?\n- 💭 Make 3 observations.**",
                     "Mastermind Entry: Observations", true, mastermindEmbedColour);
                 console.log({ observations });
@@ -517,22 +338,22 @@ module.exports = {
                 console.log({ areaOfLifeIndex });
                 if (!areaOfLifeIndex && areaOfLifeIndex !== 0) return;
 
-                const areaOfLifeReason = await getSingleEntry(message, `**Why does ${areasOfLifeEmojis[areaOfLifeIndex]} __${areasOfLife[areaOfLifeIndex]}__ need the most attention this week?**`,
+                const areaOfLifeReason = await fn.getSingleEntry(message, `**Why does ${areasOfLifeEmojis[areaOfLifeIndex]} __${areasOfLife[areaOfLifeIndex]}__ need the most attention this week?**`,
                     "Mastermind Entry: Area of Life Assessment", forceSkip, mastermindEmbedColour);
                 console.log({ areaOfLifeReason });
                 if (!areaOfLifeReason && areaOfLifeReason !== '') return;
 
-                const stopEntry = await getSingleEntry(message, "**What do you want to __stop__ doing this week?**",
+                const stopEntry = await fn.getSingleEntry(message, "**What do you want to __stop__ doing this week?**",
                     "Mastermind Entry: Stop", forceSkip, mastermindEmbedColour);
                 console.log({ stopEntry });
                 if (!stopEntry && stopEntry !== '') return;
 
-                const startEntry = await getSingleEntry(message, "**What do you want to __start__ doing this week?**",
+                const startEntry = await fn.getSingleEntry(message, "**What do you want to __start__ doing this week?**",
                     "Mastermind Entry: Start", forceSkip, mastermindEmbedColour);
                 console.log({ startEntry });
                 if (!startEntry && startEntry !== '') return;
 
-                const continueEntry = await getSingleEntry(message, "**What went well this past week that you want to __continue__ doing for this week?**",
+                const continueEntry = await fn.getSingleEntry(message, "**What went well this past week that you want to __continue__ doing for this week?**",
                     "Mastermind Entry: Continue", forceSkip, mastermindEmbedColour);
                 console.log({ continueEntry });
                 if (!continueEntry && continueEntry !== '') return;
@@ -545,7 +366,7 @@ module.exports = {
                         : `Type \`set\` to **submit** all goals entered so far (**Goals 1-${goalCount - 1}**)`
                         : `Type \`set\` to **skip** entering any goals`}\nType \`reset\` to **reset** all of your current **weekly goals**`;
                     const completionKeywords = ["set", "reset"];
-                    const weeklyGoalDescription = await getSingleEntry(message, `**🎯 What is __Goal #${goalCount}__ of this week's goals?**`,
+                    const weeklyGoalDescription = await fn.getSingleEntry(message, `**🎯 What is __Goal #${goalCount}__ of this week's goals?**`,
                         `Mastermind Entry: Weekly Goal ${goalCount}`, forceSkip, mastermindEmbedColour, completionInstructions, completionKeywords);
                     if (!weeklyGoalDescription && weeklyGoalDescription !== "" || weeklyGoalDescription === "set") break;
                     else if (weeklyGoalDescription === "reset") {
@@ -561,7 +382,7 @@ module.exports = {
                     if (!weeklyGoalType && weeklyGoalType !== 0) break;
 
                     const goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[weeklyGoalType]} ${areasOfLife[weeklyGoalType]}`;
-                    const weeklyGoalReason = await getSingleEntry(message, `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
+                    const weeklyGoalReason = await fn.getSingleEntry(message, `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
                         `Mastermind Entry: Weekly Goal ${goalCount}`, forceSkip, mastermindEmbedColour, completionInstructions, completionKeywords);
                     if (!weeklyGoalReason && weeklyGoalReason !== "" || weeklyGoalReason === "set") break;
                     else if (weeklyGoalReason === "reset") {
@@ -601,7 +422,7 @@ module.exports = {
                 });
             }
             else if (userWantsTemplate === false) {
-                const entry = await getMultilineEntry(message, "**Enter your mastermind entry:**",
+                const entry = await fn.getMultilineEntry(message, "**Enter your mastermind entry:**",
                     "Mastermind Entry: No Template", forceSkip, mastermindEmbedColour);
                 if (entry) {
                     mastermindDocument = new Mastermind({
@@ -959,8 +780,8 @@ module.exports = {
                         // If the next argument is NotaNumber, invalid "past" command call
                         if (isNaN(args[2])) return message.reply(mastermindActionHelpMessage);
                         if (parseInt(args[2]) <= 0) return message.reply(mastermindActionHelpMessage);
-                        const confirmSeeMessage = `Are you sure you want to **see ${args[1]} masterminds?**`;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Mastermind: See ${args[1]} Entries (${sortType})`);
+                        const confirmSeeMessage = `Are you sure you want to **see ${args[2]} masterminds?**`;
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Mastermind: See ${args[2]} Entries (${sortType})`);
                         if (!confirmSeeAll) return;
                     }
                     else {
@@ -1250,7 +1071,9 @@ module.exports = {
                                 else mastermindDocument = await Mastermind.findOneAndUpdate({ _id: mastermindTargetID }, { $set: { journal } }, { new: true });
                                 console.log({ continueEdit });
                                 if (mastermindDocument) {
-                                    pastNumberOfEntriesIndex = indexByRecency ? await getMastermindIndexByRecency(authorID, mastermindTargetID) : await getMastermindIndexByDateCreated(authorID, mastermindTargetID);
+                                    pastNumberOfEntriesIndex = indexByRecency ?
+                                        await fn.getEntryIndexByFunction(authorID, mastermindTargetID, totalMastermindNumber, getOneMastermindByRecency)
+                                        : await fn.getEntryIndexByFunction(authorID, mastermindTargetID, totalMastermindNumber, getOneMastermindByCreatedTime);
                                     console.log({ mastermindDocument, mastermindTargetID, fieldToEditIndex });
                                     showMastermind = mastermindDocumentToString(bot, mastermindDocument);
                                     const continueEditMessage = `Do you want to continue **editing Mastermind ${pastNumberOfEntriesIndex}?:**\n\n__**Mastermind ${pastNumberOfEntriesIndex}:**__\n${showMastermind}`;
@@ -1269,7 +1092,9 @@ module.exports = {
                             console.log({ continueEdit, userEdit });
                             mastermindDocument = await Mastermind.findById(mastermindTargetID);
                             if (mastermindDocument) {
-                                pastNumberOfEntriesIndex = indexByRecency ? await getMastermindIndexByRecency(authorID, mastermindTargetID) : await getMastermindIndexByDateCreated(authorID, mastermindTargetID);
+                                pastNumberOfEntriesIndex = indexByRecency ?
+                                    await fn.getEntryIndexByFunction(authorID, mastermindTargetID, totalMastermindNumber, getOneMastermindByRecency)
+                                    : await fn.getEntryIndexByFunction(authorID, mastermindTargetID, totalMastermindNumber, getOneMastermindByCreatedTime);
                                 console.log({ mastermindDocument, mastermindTargetID, fieldToEditIndex });
                                 showMastermind = mastermindDocumentToString(bot, mastermindDocument);
                             }
