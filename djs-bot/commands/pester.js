@@ -74,7 +74,7 @@ module.exports = {
                 }
                 else return null;
             }).filter((userProfile) => userProfile !== null);
-            await fn.sendPaginationEmbed(message, fn.getEmbedArray(userArray, `Pestering Accountability: ${guildName}`, false, false, pesterEmbedColour));
+            await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(userArray, `Pestering Accountability: ${guildName}`, false, false, pesterEmbedColour));
             return;
         }
         else {
@@ -107,7 +107,7 @@ module.exports = {
                 }
                 else {
                     let userProfiles = fn.getEmbedArray(userArray, title, false, false, pesterEmbedColour);
-                    await fn.sendPaginationEmbed(message, userProfiles);
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, userProfiles);
                 }
                 return;
             }

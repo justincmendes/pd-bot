@@ -98,7 +98,7 @@ module.exports = {
                         '', true, false, repeatReminderEmbedColour);
                     // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} reminder(s)?**`;
-                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(message, reminderStringArray, multipleDeleteMessage, forceSkip,
+                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, reminderStringArray, multipleDeleteMessage, forceSkip,
                         `Repeat Reminder: Delete Past ${numberArg} Reminders (${sortType})`, 600000);
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await reminderCollection.map(reminder => reminder._id);
@@ -166,7 +166,7 @@ module.exports = {
                     const deleteConfirmMessage = `Are you sure you want to **delete reminders ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By End Time";
                     reminderDataToStringArray = fn.getEmbedArray(reminderDataToStringArray, '', true, false, repeatReminderEmbedColour);
-                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(message, reminderDataToStringArray, deleteConfirmMessage,
+                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, reminderDataToStringArray, deleteConfirmMessage,
                         forceSkip, `Repeat Reminder: Delete Reminders ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Reminders ${toDelete} (${sortType})`);
@@ -209,7 +209,7 @@ module.exports = {
                             if (skipEntries >= totalReminderNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By End Time";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${reminderCollection.length} reminder(s) past reminder ${skipEntries}?**`;
-                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(message, reminderStringArray, multipleDeleteMessage,
+                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, reminderStringArray, multipleDeleteMessage,
                                 forceSkip, `Repeat Reminder: Multiple Delete Warning! (${sortType})`);
                             if (!multipleDeleteConfirmation) return;
                             const targetIDs = await reminderCollection.map(reminder => reminder._id);
@@ -241,8 +241,11 @@ module.exports = {
                     const reminderTargetID = reminderView._id;
                     console.log({ reminderTargetID });
                     const reminderIndex = await rm.getRecentReminderIndex(authorID, true);
-                    const deleteConfirmMessage = `Are you sure you want to **delete your most recent reminder?:**\n\n__**Reminder ${reminderIndex}:**__\n${rm.reminderDataArrayToString(bot, reminderData, timezoneOffset)}`;
-                    const deleteIsConfirmed = await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Repeat Reminder: Delete Recent Reminder`, 300000)
+                    const reminderEmbed = fn.getEmbedArray(`__**Reminder ${reminderIndex}:**__\n${rm.reminderDataArrayToString(bot, reminderData, timezoneOffset)}`,
+                    `Repeat Reminder: Delete Recent Reminder`, true, true, reminderEmbedColour);
+                    const deleteConfirmMessage = `Are you sure you want to **delete your most recent reminder?**`;
+                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, reminderEmbed, deleteConfirmMessage, forceSkip,
+                        `Repeat Reminder: Delete Recent Reminder`, 600000);
                     if (deleteIsConfirmed) {
                         await Reminder.deleteOne({ _id: reminderTargetID });
                         return;
@@ -284,9 +287,11 @@ module.exports = {
                 const reminderData = rm.reminderDocumentToDataArray(reminderView);
                 const reminderTargetID = reminderView._id;
                 const sortType = indexByRecency ? "By Recency" : "By End Time";
-                const deleteConfirmMessage = `Are you sure you want to **delete Reminder ${pastNumberOfEntriesIndex}?:**\n\n__**Reminder ${pastNumberOfEntriesIndex}:**__\n` +
-                    rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);
-                const deleteConfirmation = await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Repeat Reminder: Delete Reminder ${pastNumberOfEntriesIndex} (${sortType})`, 300000);
+                const reminderEmbed = fn.getEmbedArray(`__**Reminder ${pastNumberOfEntriesIndex}:**__\n${rm.reminderDataArrayToString(bot, reminderData, timezoneOffset)}`,
+                    `Repeat Reminder: Delete Reminder ${pastNumberOfEntriesIndex} (${sortType})`, true, true, reminderEmbedColour);
+                const deleteConfirmMessage = `Are you sure you want to **delete Reminder ${pastNumberOfEntriesIndex}?**`;
+                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, reminderEmbed, deleteConfirmMessage, forceSkip,
+                    `Repeat Reminder: Delete Reminder ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Reminder ${sortType}`);
                     await Reminder.deleteOne({ _id: reminderTargetID });
@@ -410,7 +415,7 @@ module.exports = {
                     else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, 0, pastNumberOfEntriesIndex);
                     console.log({ reminderView });
                     const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
-                    await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, true, true, reminderEmbedColour));
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(reminderDataToStringArray, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, true, true, reminderEmbedColour));
                     return message.channel.send(reminderEmbed);
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -449,7 +454,7 @@ module.exports = {
                                 else reminderView = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ reminderView });
                                 const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
-                                await fn.sendPaginationEmbed(message, fn.getEmbedArray(reminderDataToStringArray, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`, true, true, reminderEmbedColour));
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(reminderDataToStringArray, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`, true, true, reminderEmbedColour));
                                 message.channel.send(reminderEmbed);
                                 return;
                             }
@@ -472,8 +477,8 @@ module.exports = {
                 const sortType = indexByRecency ? "By Recency" : "By End Time";
                 const reminderData = rm.reminderDocumentToDataArray(reminderView);
                 const reminderDataToString = `__**Reminder ${pastNumberOfEntriesIndex}:**__\n` + rm.reminderDataArrayToString(bot, reminderData, timezoneOffset);
-                const reminderEmbed = fn.getMessageEmbed(reminderDataToString, `Repeat Reminder: See Reminder ${pastNumberOfEntriesIndex} (${sortType})`, reminderEmbedColour);
-                message.channel.send(reminderEmbed);
+                const reminderEmbed = fn.getEmbedArray(reminderDataToString, `Repeat Reminder: See Reminder ${pastNumberOfEntriesIndex} (${sortType})`, true, true, reminderEmbedColour);
+                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, reminderEmbed);
             }
         }
 

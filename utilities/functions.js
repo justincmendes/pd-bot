@@ -80,16 +80,17 @@ module.exports = {
         return confirmation;
     },
 
-    getPaginatedUserConfirmation: async function (message, embedArray, confirmationMessage, forceSkip = false,
+    getPaginatedUserConfirmation: async function (bot, message, embedArray, confirmationMessage, forceSkip = false,
         embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,
-        confirmationInstructions = "✅ to proceed\n❌ to cancel\n⬅ to scroll left\n➡ to scroll right") {
+        confirmationInstructions = "✅ to proceed\n❌ to cancel") {
         try {
             if (forceSkip === true) return true;
             const MS_TO_SECONDS = 1000;
-            const footerText = `${confirmationInstructions}\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
             if (embedArray) {
                 if (embedArray.length) {
-                    embedArray.forEach((embed) => {
+                    confirmationInstructions += embedArray.length > 1 ? `\n⬅ to scroll left\n➡ to scroll right` : "";
+                    const footerText = `${confirmationInstructions}\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+                    embedArray.forEach(embed => {
                         embed.setTitle(embedTitle)
                             .setFooter(footerText)
                             .setColor("#FF0000");
@@ -99,7 +100,7 @@ module.exports = {
             }
             else return false;
             // let currentPage = 0;
-            const embed = await this.sendPaginationEmbed(message, embedArray, false);
+            const embed = await this.sendPaginationEmbed(bot, message.channel.id, message.author.id, embedArray, false);
             const confirmation = await this.getUserConfirmation(message, confirmationMessage, forceSkip,
                 embedArray[0].title, delayTime, deleteDelay, confirmationInstructions);
             const embedDeleted = embed.deleted;
@@ -3105,6 +3106,7 @@ module.exports = {
                     if (elements.length > 2048) {
                         elements = this.getSplitStringByDiscordMaxString(elements);
                     }
+                    else elements = [elements];
                 }
                 if (Array.isArray(elements)) {
                     elements.forEach((element, i) => {
@@ -3160,11 +3162,12 @@ module.exports = {
     },
 
     // With to file capability
-    sendPaginationEmbed: async function (message, embedArray, withDelete = true) {
+    sendPaginationEmbed: async function (bot, channelID, authorID, embedArray, withDelete = true) {
         var embed;
         if (Array.isArray(embedArray)) {
             let currentPage = 0;
-            embed = await message.channel.send(embedArray[currentPage]);
+            const channel = bot.channels.cache.get(channelID);
+            embed = await channel.send(embedArray[currentPage]);
             if (embedArray.length > 1) {
                 const left = '⬅';
                 const right = '➡';
@@ -3176,8 +3179,8 @@ module.exports = {
                 emojis.forEach(async (emoji, i) => {
                     await this.quickReact(embed, emoji, i);
                 });
-
-                const filter = (reaction, user) => emojis.includes(reaction.emoji.name) && (message.author.id === user.id);
+                
+                const filter = (reaction, user) => emojis.includes(reaction.emoji.name) && (authorID === user.id);
                 const collector = embed.createReactionCollector(filter);
 
                 collector.on('collect', async (reaction, user) => {
@@ -3205,7 +3208,7 @@ module.exports = {
                             return;
                     }
                     embed.edit(embedArray[currentPage]);
-                    if (message.channel.type !== 'dm') reaction.users.remove(user);
+                    if (channel.type !== 'dm') reaction.users.remove(user);
                 });
             }
         }

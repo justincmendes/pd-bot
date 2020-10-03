@@ -21,7 +21,7 @@ const areasOfLifeList = fn.getAreasOfLifeList().join('\n');
 
 // FUTURE FEATURE: Create .txt file with FULL entry and react with paperclip for user to download the file
 
-async function sendGeneratedTemplate(message, numberOfUsers, namesForTemplate, withMarkdown = true, templateEmbedColour = mastermindEmbedColour) {
+async function sendGeneratedTemplate(bot, message, numberOfUsers, namesForTemplate, withMarkdown = true, templateEmbedColour = mastermindEmbedColour) {
     const date = new Date();
     let templateArray = new Array();
     for (templateIndex = 0; templateIndex < numberOfUsers; templateIndex++) {
@@ -33,7 +33,7 @@ async function sendGeneratedTemplate(message, numberOfUsers, namesForTemplate, w
         }
         else templateArray.push(fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex], withMarkdown));
     }
-    await fn.sendPaginationEmbed(message, fn.getEmbedArray(templateArray, "Mastermind: Weekly Reflection And Goals Template", true, true, templateEmbedColour));
+    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(templateArray, "Mastermind: Weekly Reflection And Goals Template", true, true, templateEmbedColour));
 }
 
 async function getOneMastermindByCreatedTime(userID, mastermindIndex) {
@@ -107,7 +107,7 @@ function multipleMastermindsToString(bot, message, mastermindArray, numberOfMast
             + `\n${mastermindDocumentToString(bot, mastermindArray[i])}`;
         entriesToString.push(mastermindString);
     }
-    if(!toArray) entriesToString = entriesToString.join('\n\n');
+    if (!toArray) entriesToString = entriesToString.join('\n\n');
     return entriesToString;
 }
 
@@ -517,7 +517,7 @@ module.exports = {
                     const mastermindStringArray = fn.getEmbedArray(multipleMastermindsToString(bot, message, mastermindCollection, numberArg, 0, true),
                         '', true, false, mastermindEmbedColour);
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} entries?**`;
-                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(message, mastermindStringArray, multipleDeleteMessage, forceSkip,
+                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, mastermindStringArray, multipleDeleteMessage, forceSkip,
                         `Mastermind: Delete Past ${numberArg} Entries (${sortType})`, 600000);
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await mastermindCollection.map(entry => entry._id);
@@ -578,7 +578,7 @@ module.exports = {
                     const deleteConfirmMessage = `Are you sure you want to **delete entries ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By Date Created";
                     mastermindStringArray = fn.getEmbedArray(mastermindStringArray, '', true, false, mastermindEmbedColour);
-                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(message, mastermindStringArray, deleteConfirmMessage,
+                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, mastermindStringArray, deleteConfirmMessage,
                         forceSkip, `Mastermind: Delete Entries ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Entries ${toDelete} (${sortType})`);
@@ -621,7 +621,7 @@ module.exports = {
                             if (skipEntries >= totalMastermindNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By Date Created";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${mastermindCollection.length} entries past entry ${skipEntries}?**`;
-                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(message, mastermindStringArray, multipleDeleteMessage,
+                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, mastermindStringArray, multipleDeleteMessage,
                                 forceSkip, `Mastermind: Multiple Delete Warning! (${sortType})`);
                             console.log({ multipleDeleteConfirmation });
                             if (!multipleDeleteConfirmation) return;
@@ -654,8 +654,11 @@ module.exports = {
                     const mastermindTargetID = mastermindView._id;
                     console.log({ mastermindTargetID });
                     const mastermindIndex = await getRecentMastermindIndex(authorID);
-                    const deleteConfirmMessage = `Are you sure you want to **delete your most recent entry?:**\n\n__**Mastermind ${mastermindIndex}:**__\n${mastermindDocumentToString(bot, mastermindView)}`;
-                    const deleteIsConfirmed = await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Mastermind: Delete Recent Entry`, 300000)
+                    const mastermindEmbed = fn.getEmbedArray(`__**Mastermind ${mastermindIndex}:**__\n${mastermindDocumentToString(bot, mastermindView)}`,
+                        `Mastermind: Delete Recent Entry`, true, true, mastermindEmbedColour);
+                    const deleteConfirmMessage = `Are you sure you want to **delete your most recent entry?:**`;
+                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, mastermindEmbed, deleteConfirmMessage, forceSkip,
+                        `Mastermind: Delete Recent Entry`, 600000);
                     if (deleteIsConfirmed) {
                         await Mastermind.deleteOne({ _id: mastermindTargetID });
                         return;
@@ -696,9 +699,11 @@ module.exports = {
                 }
                 const mastermindTargetID = mastermindView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
-                const deleteConfirmMessage = `Are you sure you want to **delete Entry ${pastNumberOfEntriesIndex}?:**\n\n__**Mastermind ${pastNumberOfEntriesIndex}:**__\n` +
-                    mastermindDocumentToString(bot, mastermindView);
-                const deleteConfirmation = await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Mastermind: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, 300000);
+                const deleteConfirmMessage = `Are you sure you want to **delete Entry ${pastNumberOfEntriesIndex}?**`;
+                const mastermindEmbed = fn.getEmbedArray(`__**Mastermind ${pastNumberOfEntriesIndex}:**__\n${mastermindDocumentToString(bot, mastermindView)}`,
+                    `Mastermind: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, true, true, mastermindEmbedColour);
+                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, mastermindEmbed, deleteConfirmMessage, forceSkip,
+                    `Mastermind: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Entry ${sortType}`);
                     await Mastermind.deleteOne({ _id: mastermindTargetID });
@@ -801,7 +806,7 @@ module.exports = {
                     else mastermindView = await getMastermindByCreatedAt(authorID, 0, pastNumberOfEntriesIndex);
                     console.log({ mastermindView, pastNumberOfEntriesIndex });
                     const mastermindStringArray = multipleMastermindsToString(bot, message, mastermindView, pastNumberOfEntriesIndex, 0, true);
-                    await fn.sendPaginationEmbed(message, fn.getEmbedArray(mastermindStringArray, `Mastermind: See ${pastNumberOfEntriesIndex} Entries (${sortType})`, true, true, mastermindEmbedColour));
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(mastermindStringArray, `Mastermind: See ${pastNumberOfEntriesIndex} Entries (${sortType})`, true, true, mastermindEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -839,7 +844,7 @@ module.exports = {
                                 else mastermindView = await getMastermindByCreatedAt(authorID, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ mastermindView });
                                 const mastermindStringArray = multipleMastermindsToString(bot, message, mastermindView, pastNumberOfEntriesIndex, entriesToSkip, true);
-                                await fn.sendPaginationEmbed(message, fn.getEmbedArray(mastermindStringArray, `Mastermind: See ${pastNumberOfEntriesIndex} Entries Past ${entriesToSkip} (${sortType})`, true, true, mastermindEmbedColour));
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(mastermindStringArray, `Mastermind: See ${pastNumberOfEntriesIndex} Entries Past ${entriesToSkip} (${sortType})`, true, true, mastermindEmbedColour));
                                 return;
                             }
                         }
@@ -860,8 +865,8 @@ module.exports = {
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
                 const mastermindString = `__**Mastermind ${pastNumberOfEntriesIndex}:**__\n${mastermindDocumentToString(bot, mastermindView)}`;
-                const mastermindEmbed = fn.getMessageEmbed(mastermindString, `Mastermind: See Entry ${pastNumberOfEntriesIndex} (${sortType})`, mastermindEmbedColour);
-                message.channel.send(mastermindEmbed);
+                const mastermindEmbed = fn.getEmbedArray(mastermindString, `Mastermind: See Entry ${pastNumberOfEntriesIndex} (${sortType})`, true, true, mastermindEmbedColour);
+                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, mastermindEmbed);
             }
         }
 
@@ -1138,9 +1143,11 @@ module.exports = {
                 const targetChannel = await fn.getPostChannel(bot, message, `Mastermind ${sortType}`, forceSkip, mastermindEmbedColour);
                 if (!targetChannel) return;
                 const member = bot.guilds.cache.get(guildID).member(authorID);
-                const post = fn.getMessageEmbed(mastermindDocumentToString(bot, mastermind), `${member ? `${member.displayName}'s ` : ""}Mastermind Reflection`
-                    + ` - ${fn.timestampToDateString(mastermind.createdAt, false, true, true)}`, mastermindEmbedColour);
-                await fn.sendMessageToChannel(bot, post, targetChannel);
+                const posts = fn.getEmbedArray(mastermindDocumentToString(bot, mastermind), `${member ? `${member.displayName}'s ` : ""}Mastermind Reflection`
+                    + ` - ${fn.timestampToDateString(mastermind.createdAt, false, true, true)}`, true, false, mastermindEmbedColour);
+                posts.forEach(async post => {
+                    await fn.sendMessageToChannel(bot, post, targetChannel);
+                });
             }
             else message.channel.send(mastermindActionHelpMessage);
         }
@@ -1189,7 +1196,7 @@ module.exports = {
                 console.log({ namesForTemplate });
             }
             // Use WeeklyJournalEntry function to create empty entries and format in backticks for Discord markdown
-            await sendGeneratedTemplate(message, numberOfUsers, namesForTemplate, true, mastermindEmbedColour);
+            await sendGeneratedTemplate(bot, message, numberOfUsers, namesForTemplate, true, mastermindEmbedColour);
             return;
         }
 

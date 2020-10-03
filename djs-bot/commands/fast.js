@@ -160,7 +160,7 @@ function addUserTag(userOriginalMessageObject, post) {
     return `<@${userOriginalMessageObject.author.id}>\n${post}`;
 }
 // Designed not to break when userConfirmation = ❌ (FALSE), but only stop when `stop`
-async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip = false) {
+async function getFastPostEmbedArray(userOriginalMessageObject, fastData, forceSkip = false) {
     const [startTimestamp, endTimestamp, fastDurationTimestamp, fastBreaker, moodValue, reflectionText] = fastData;
     let postIndex = 0;
     let fastPost = "";
@@ -328,25 +328,19 @@ async function getFastPostEmbed(userOriginalMessageObject, fastData, forceSkip =
         }
     }
     while (true)
-    if (attachment === null) {
-        fastPost = await fn.getMessageEmbed(fastPost, "Fast Post", fastEmbedColour);
-    }
-    else {
-        fastPost = await fn.getMessageImageEmbed(attachment, fastPost, "Fast Post", fastEmbedColour);
+    fastPost = fn.getEmbedArray(fastPost, "Fast Post", true, false, fastEmbedColour);
+    if (attachment !== null) {
+        fastPost.forEach((post, i) => {
+            fastPost[i] = post.setImage(attachment);
+        });
     }
     return fastPost;
 }
 
-async function showFastPost(userOriginalMessageObject, fastPost, mistakeMessage, deleteFastPost = false) {
-    if (deleteFastPost == false) {
-        userOriginalMessageObject.reply("**Here was your post:**");
-        userOriginalMessageObject.channel.send(fastPost);
-    }
-    else {
-        fn.sendReplyThenDelete(userOriginalMessageObject, "**Here was your post:** (deleting in 10 minutes)", 600000);
-        fn.sendMessageThenDelete(userOriginalMessageObject, fastPost, 600000);
-    }
-    userOriginalMessageObject.reply(mistakeMessage);
+async function showFastPost(bot, message, fastPost, mistakeMessage) {
+    fn.sendReplyThenDelete(message, "**Here was your post:**", 600000);
+    fn.sendPaginationEmbed(bot, message.channel.id, message.author.id, fastPost, true);
+    message.reply(mistakeMessage);
     return;
 }
 
@@ -879,7 +873,7 @@ module.exports = {
                     else fastView = await fn.getEntriesByStartTime(Fast, { userID: authorID }, 0, pastNumberOfEntriesIndex);
                     console.log({ fastView });
                     const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
-                    await fn.sendPaginationEmbed(message, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts (${sortType})`, true, true, fastEmbedColour));
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts (${sortType})`, true, true, fastEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -918,7 +912,7 @@ module.exports = {
                                 else fastView = await fn.getEntriesByStartTime(Fast, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ fastView });
                                 const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
-                                await fn.sendPaginationEmbed(message, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip} (${sortType})`, true, true, fastEmbedColour));
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip} (${sortType})`, true, true, fastEmbedColour));
                                 return;
                             }
                         }
@@ -952,8 +946,8 @@ module.exports = {
                     showFastEndMessage = true;
                 }
                 const fastDataToString = `__**Fast ${pastNumberOfEntriesIndex}:**__\n` + fastDataArrayToString(fastData, showFastEndMessage, PREFIX, commandUsed);
-                const fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See Fast ${pastNumberOfEntriesIndex} (${sortType})`, fastEmbedColour);
-                message.channel.send(fastEmbed);
+                const fastEmbed = fn.getEmbedArray(fastDataToString, `Fast: See Fast ${pastNumberOfEntriesIndex} (${sortType})`, true, true, fastEmbedColour);
+                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fastEmbed);
             }
         }
 
@@ -1014,7 +1008,7 @@ module.exports = {
                     console.log({ fastArray });
                     // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} fast(s)**?`;
-                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(message, fastArray, multipleDeleteMessage, forceSkip, `Fast: Delete Past ${numberArg} Fasts (${sortType})`, 600000);
+                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, fastArray, multipleDeleteMessage, forceSkip, `Fast: Delete Past ${numberArg} Fasts (${sortType})`, 600000);
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await fastCollection.map(fast => fast._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Fasts (${sortType})`);
@@ -1082,7 +1076,7 @@ module.exports = {
                         const fastDataToStringArray = fn.getEmbedArray(fastDataToString, ``, true, false);
                         const deleteConfirmMessage = `Are you sure you want to **delete fasts ${toDelete}?:**`
                         const sortType = indexByRecency ? "By Recency" : "By Start Time";
-                        const confirmDeleteMany = await fn.getPaginatedUserConfirmation(message, fastDataToStringArray, deleteConfirmMessage, forceSkip, `Fast: Delete Fasts ${toDelete} (${sortType})`, 600000);
+                        const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, fastDataToStringArray, deleteConfirmMessage, forceSkip, `Fast: Delete Fasts ${toDelete} (${sortType})`, 600000);
                         if (confirmDeleteMany) {
                             console.log(`Deleting ${authorID}'s Fasts ${toDelete} (${sortType})`);
                             await fn.deleteManyByIDAndConnectedReminders(Fast, fastTargetIDs);
@@ -1124,7 +1118,7 @@ module.exports = {
                             // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                             const sortType = indexByRecency ? "By Recency" : "By Start Time";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${fastCollection.length} fast(s) past fast ${skipEntries}**?`;
-                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(message, showFasts, multipleDeleteMessage, forceSkip,
+                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, showFasts, multipleDeleteMessage, forceSkip,
                                 `Fast: Multiple Delete Warning! (${sortType})`, 600000);
                             // const multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, forceSkip, `Fast: Multiple Delete Warning! (${sortType})`);
                             if (!multipleDeleteConfirmation) return;
@@ -1157,8 +1151,11 @@ module.exports = {
                     const fastTargetID = fastView._id;
                     console.log({ fastTargetID });
                     const fastIndex = await getCurrentOrRecentFastIndex(authorID);
-                    const deleteConfirmMessage = `Are you sure you want to **delete your most recent fast?:**\n\n__**Fast ${fastIndex}:**__\n${fastDataArrayToString(fastData)}`;
-                    const deleteIsConfirmed = await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Fast: Delete Recent Fast`, 300000)
+                    const fastEmbed = fn.getEmbedArray(`__**Fast ${fastIndex}:**__\n${fastDataArrayToString(fastData)}`,
+                        `Fast: Delete Recent Fast`, true, true, fastEmbedColour);
+                    const deleteConfirmMessage = `Are you sure you want to **delete your most recent fast?**`;
+                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, fastEmbed, deleteConfirmMessage, forceSkip,
+                        `Fast: Delete Recent Fast`, 600000);
                     if (deleteIsConfirmed) {
                         await fn.deleteOneByIDAndConnectedReminders(Fast, fastTargetID);
                         return;
@@ -1200,8 +1197,11 @@ module.exports = {
                 const fastData = fastDocumentToDataArray(fastView);
                 const fastTargetID = fastView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
-                const deleteConfirmMessage = `Are you sure you want to **delete Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n${fastDataArrayToString(fastData)}`;
-                const deleteConfirmation = await fn.getUserConfirmation(message, deleteConfirmMessage, forceSkip, `Fast: Delete Fast ${pastNumberOfEntriesIndex} (${sortType})`, 300000);
+                const fastEmbed = fn.getEmbedArray(`__**Fast ${pastNumberOfEntriesIndex}:**__\n${fastDataArrayToString(fastData)}`,
+                    `Fast: Delete Fast ${pastNumberOfEntriesIndex} (${sortType})`, true, true, fastEmbedColour);
+                const deleteConfirmMessage = `Are you sure you want to **delete Fast ${pastNumberOfEntriesIndex}?**`;
+                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, fastEmbed, deleteConfirmMessage, forceSkip,
+                    `Fast: Delete Fast ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Fast ${sortType}`);
                     await fn.deleteOneByIDAndConnectedReminders(Fast, fastTargetID);
@@ -1555,17 +1555,19 @@ module.exports = {
                 console.log({ fastData });
 
                 const endTimestamp = fastData[1];
-                let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
+                let fastPost = await getFastPostEmbedArray(message, fastData, forceSkip);
                 console.log({ fastPost });
                 if (!fastPost) return;
                 const finalEndTimestamp = endTimestamp || Date.now();
                 const endTimeToDate = fn.timestampToDateString(finalEndTimestamp, false, true, true);
                 const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
                 let postChannel = await fn.getPostChannel(bot, message, "Fast", forceSkip, fastEmbedColour);
-                if (!postChannel) await showFastPost(message, fastPost, mistakeMessage);
+                if (!postChannel) await showFastPost(bot, message, fastPost, mistakeMessage);
                 // Overwrite fastPost Title with one specific to user's nickname in respective server
-                fastPost = fastPost.setTitle(`${bot.channels.cache.get(postChannel).guild.member(authorID).displayName}'s Fast - ${endTimeToDate}`);
-                await fn.sendMessageToChannel(bot, fastPost, postChannel);
+                fastPost.forEach(async (post, i) => {
+                    fastPost[i] = post.setTitle(`${bot.channels.cache.get(postChannel).guild.member(authorID).displayName}'s Fast - ${endTimeToDate}`);
+                    await fn.sendMessageToChannel(bot, post, targetChannel);
+                });
                 return;
             }
             // fast post (only):
