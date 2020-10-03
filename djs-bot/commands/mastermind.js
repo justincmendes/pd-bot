@@ -1150,7 +1150,7 @@ module.exports = {
             let templateUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${mastermindCommand} <NUMBER_OF_USERS> <NAMES>\``
                 + "\n\n\`<NUMBER_OF_USERS>\`: **10** (\**any number*\*)"
                 + "\n\n\`<NAMES>\`: Enter names of people in mastermind meeting\n***(COMMA SEPARATED, spaces in between is optional)***"
-                + "\n(i.e. \`Paul, Radeesh, David, Kurt, Angel, Luke, Josh, Ragel, Sharran, Justin\`)";
+                + "\n(i.e. \`Paul, Radeesh, David, Kenneth, Kurt, Angel, Luke, Josh, Ragel, Sharran, Justin\`)";
             templateUsageMessage = fn.getMessageEmbed(templateUsageMessage, "Mastermind: Help", mastermindEmbedColour);
             const templateHelpMessage = `Try \`${PREFIX}${commandUsed} ${mastermindCommand} help\``;
             const invalidTemplateNumber = "**INVALID INPUT**... Enter a **positive number > 1!**";

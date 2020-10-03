@@ -16,11 +16,10 @@ const areasOfLifeList = fn.getAreasOfLifeList().join('\n');
 // Function Declarations and Definitions
 
 function goalDocumentToString(goalDocument, showType = true) {
-    console.log({ goalDocument });
     const { archived, goal } = goalDocument;
     const areaOfLife = showType ? `${areasOfLifeEmojis[goal.type] ? `${areasOfLifeEmojis[goal.type]} ` : ""}${areasOfLife[goal.type] ? `__${areasOfLife[goal.type]}__` : ""}` : false;
-    return (`${archived ? "\*\***ARCHIVED**\*\*\n" : ""}${areaOfLife ? areaOfLife : ""}${goal.description ? `\n🎯 - ${goal.description}` : ""}`
-        + `${goal.reason ? `\n💭 - ${goal.reason}` : ""}${goal.checkpoints ? `\n🏁 ${goal.checkpoints}` : ""}${goal.steps ? `\n👣 ${goal.steps}` : ""}`
+    return (`${archived ? "\*\***ARCHIVED**\*\*\n" : ""}${areaOfLife ? areaOfLife : ""}${goal.description ? `\n🎯 ${goal.description}` : ""}`
+        + `${goal.reason ? `\n💭 ${goal.reason}` : ""}${goal.checkpoints ? `\n🏁 ${goal.checkpoints}` : ""}${goal.steps ? `\n👣 ${goal.steps}` : ""}`
         + `${goal.start && !isNaN(goal.start) ? `\n**Start:** ${fn.timestampToDateString(goal.start, false, true, true)}` : ""}`
         + `${goal.end && !isNaN(goal.end) ? `\n**Target Completion:** ${fn.timestampToDateString(goal.end, false, true, true)}` : ""}`);
 }
@@ -53,7 +52,7 @@ async function getOneGoalByRecency(userID, goalIndex, archived = undefined) {
 async function getOneGoalByStartTime(userID, goalIndex, archived = undefined) {
     const goal = await Goal
         .findOne({ userID, archived })
-        .sort({ "goal.start": +1, })
+        .sort({ 'goal.start': +1, })
         .skip(goalIndex)
         .catch(err => {
             console.log(err);
@@ -66,7 +65,7 @@ async function getGoalsByStartTime(userID, entryIndex, numberOfEntries = 1, arch
     try {
         const goals = await Goal
             .find({ userID, archived })
-            .sort({ "goal.start": +1, })
+            .sort({ 'goal.start': +1, })
             .limit(numberOfEntries)
             .skip(entryIndex);
         return goals;
@@ -82,7 +81,7 @@ async function getRecentGoalIndex(userID, archived) {
         var index;
         const entries = await Goal
             .find({ userID, archived })
-            .sort({ "goal.start": +1, });
+            .sort({ 'goal.start': +1, });
         if (entries.length) {
             let targetID = await Goal
                 .findOne({ userID, archived })
@@ -228,7 +227,7 @@ module.exports = {
                 for (i = 0; i < 2; i++) {
                     do {
                         const index = i;
-                        let goalsTimePrompt = `**Please enter the date and time when you __${time[i]}__ this goal:**\n(i.e. now, OR March 22, 2021)`;
+                        let goalsTimePrompt = `**Please enter the date and time when you __${time[i]}__ this goal:**\n(e.g. now, OR March 22, 2027)`;
                         time[i] = await fn.getSingleEntry(message, goalsTimePrompt, "Long-Term Goal: Creation - Set Time", forceSkip, goalEmbedColour,
                             additionalInstructions, additionalKeywords);
                         if (!time[i]) return;
@@ -270,7 +269,7 @@ module.exports = {
                     await goalDocument.save()
                         .then(result => {
                             console.log({ result });
-                            message.reply(`Long-Term Goal Saved!`);
+                            message.reply(`**Long-Term Goal Saved!**`);
                         })
                         .catch(err => console.error(err));
                 }
@@ -688,20 +687,22 @@ module.exports = {
 
 
         else if (goalCommand === "post" || goalCommand === "p") {
-            let goals = await Goal.find({}).sort({ "goal.start": +1 });
+            let goals = await Goal.find({}).sort({ 'goal.start': +1 });
             if (!goals) return message.reply(`**You don't have any goals**, try \`${PREFIX}${commandUsed} start\``);
             const targetChannel = await fn.getPostChannel(bot, message, `Long-Term Goal`, forceSkip, goalEmbedColour);
             if (!targetChannel) return;
-            const member = bot.guilds.cache.get(guildID).member(authorID);
-            // FIGURE OUT how to post the goals for longer goal lists!
-            const post = fn.getMessageEmbed(goalDocumentToString(goals),
-            `${member ? `${member.displayName}'s ` : ""}Long-Term Goals (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, goalEmbedColour);
-            await fn.sendMessageToChannel(bot, post, targetChannel);
+            const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
+            const posts = fn.getEmbedArray([`<@!${authorID}>`].concat(multipleGoalsToStringArray(message, goals, totalGoalNumber, 0)),
+            `${member ? `${member.displayName}'s ` : ""}Long-Term Goals (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`,
+            true, false, goalEmbedColour);
+            posts.forEach(async post => {
+                await fn.sendMessageToChannel(bot, post, targetChannel);
+            });
         }
 
 
         else if (goalCommand === "end" || goalCommand === "e" || goalCommand === "complete" || goalCommand === "log") {
-            
+
         }
 
 

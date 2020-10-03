@@ -754,16 +754,6 @@ module.exports = {
                             let confirmPostFast = await fn.getUserConfirmation(message, confirmPostFastMessage, forceSkip, "Send Message for Accountability?", 180000, 0);
                             if (!confirmPostFast) return;
                             else {
-                                // let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
-                                // if (!fastPost) return;
-                                // const finalEndTimestamp = endTimestamp ? endTimestamp : Date.now();
-                                // const endTimeToDate = fn.timestampToDateString(finalEndTimestamp);
-                                // const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
-                                // let postChannel = await fn.getPostChannel(bot, message, "Fast", forceSkip, fastEmbedColour);
-                                // if (!postChannel) await showFastPost(message, fastPost, mistakeMessage);
-                                // // Overwrite fastPost Title with one specific to user's nickname in respective server
-                                // fastPost = fastPost.setTitle(`${bot.channels.cache.get(postChannel).guild.member(authorID).displayName}'s ${endTimeToDate} Fast`);
-                                // await fn.sendMessageToChannel(bot, fastPost, postChannel);
                                 const fastIndex = `${getFastIndexByStartTime(authorID, doc._id)}` || "recent";
                                 console.log({ fastIndex });
                                 await this.run(bot, message, commandUsed, ["post", fastIndex], PREFIX, timezoneOffset, daylightSavingSetting, forceSkip);
@@ -1568,7 +1558,7 @@ module.exports = {
                 let fastPost = await getFastPostEmbed(message, fastData, forceSkip);
                 console.log({ fastPost });
                 if (!fastPost) return;
-                const finalEndTimestamp = endTimestamp ? endTimestamp : Date.now();
+                const finalEndTimestamp = endTimestamp || Date.now();
                 const endTimeToDate = fn.timestampToDateString(finalEndTimestamp, false, true, true);
                 const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
                 let postChannel = await fn.getPostChannel(bot, message, "Fast", forceSkip, fastEmbedColour);

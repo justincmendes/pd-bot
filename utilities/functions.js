@@ -3048,8 +3048,43 @@ module.exports = {
         return true;
     },
 
-    stringToDiscordStringMaxArray: function (string) {
-        return string.match(/.{1,2048}/g);
+    getSplitStringByDiscordMaxString: function (string) {
+        let splitElements = [string];
+        // Split of the string by new lines or end of line punctuation
+        if (string.indexOf('\n') !== -1) {
+            splitElements = string.split(/(\n\n+)/);
+            if (splitElements[0] === string) {
+                splitElements = string.split(/(\n)/);
+            }
+        }
+        if (splitElements[0] === string) {
+            splitElements = string.split(/([\.\!\?]+)/);
+            if (splitElements[0] === string) {
+                splitElements = string.split(/([\,\;\:]+)/);
+                if (splitElements[0] === string) {
+                    splitElements = string.match(/[\s\S]{1,2045}[\s\n]/);
+                    if (splitElements[0] === string) {
+                        splitElements = string.match(/[\s\S]{1,2046}/);
+                    }
+                }
+            }
+        }
+
+        // Check for elements with a length greater than 2046 (2 extra for new-line escaping)
+        // The elements would have already been split by new lines and end of line punctuation
+        let largeStringElements = splitElements.filter(string => string.length > 2046);
+        if (largeStringElements.length) {
+            largeStringElements.forEach(element => {
+                const splitIndex = splitElements.indexOf(element);
+                if (splitIndex !== -1) {
+                    const start = splitElements.slice(0, splitIndex);
+                    const end = splitIndex !== splitElements.length - 1 ? splitElements.slice(splitIndex + 1, splitElements.length) : [];
+                    const splitString = this.getSplitStringByDiscordMaxString(element);
+                    splitElements = start.concat(splitString).concat(end);
+                }
+            });
+        }
+        return splitElements;
     },
 
     /**
@@ -3063,29 +3098,33 @@ module.exports = {
             let embedString = new Array();
             let maxString = "";
             if (elements) {
+                let isString = false;
                 if (typeof elements === 'string') {
-                    elements = doubleSpace ? element.split(/\n\n+/) : element.split(/\n+/);
+                    isString = true;
+                    console.log(elements.length);
+                    if (elements.length > 2048) {
+                        elements = this.getSplitStringByDiscordMaxString(elements);
+                    }
                 }
                 if (Array.isArray(elements)) {
                     elements.forEach((element, i) => {
                         const combinedString = maxString + element;
                         if (element.length >= 2046) {
                             if (maxString === "") {
-                                maxString += element;
-                                embedString.push(maxString);
+                                embedString.push(element);
                             }
                             else {
                                 embedString.push(maxString);
                                 embedString.push(element);
+                                maxString = "";
                             }
-                            maxString = "";
                         }
                         else if (combinedString.length <= 2048 && i !== elements.length - 1) {
                             if (combinedString.length >= 2046) {
                                 maxString += element;
                                 embedString.push(maxString);
                             }
-                            else maxString += doubleSpace ? `${element}\n\n` : `${element}\n`;
+                            else maxString += isString ? element : (doubleSpace ? `${element}\n\n` : `${element}\n`);
                         }
                         else {
                             if (i === elements.length - 1) {
@@ -3097,19 +3136,18 @@ module.exports = {
                                     maxString = element;
                                 }
                                 embedString.push(maxString);
-                            } else {
+                            }
+                            else {
                                 embedString.push(maxString);
-                                maxString = doubleSpace ? `${element}\n\n` : `${element}\n`;
+                                maxString = isString ? element : (doubleSpace ? `${element}\n\n` : `${element}\n`);
                             }
                         }
                     });
                     // console.log({ embedString });
                     let embedArray = new Array();
-                    embedString.forEach((string) => {
+                    embedString.forEach(string => {
                         const embed = this.getMessageEmbed(string, title, embedColour);
-                        embedArray.push(includesFile ? embed
-                            .setFooter(this.fileFooterText)
-                            : embed);
+                        embedArray.push(includesFile ? embed.setFooter(this.fileFooterText) : embed);
                     });
                     return embedArray;
                 }
@@ -3123,50 +3161,54 @@ module.exports = {
 
     // With to file capability
     sendPaginationEmbed: async function (message, embedArray, withDelete = true) {
-        let currentPage = 0;
-        const embed = await message.channel.send(embedArray[currentPage]);
-        const left = '⬅';
-        const right = '➡';
-        const cancel = '🗑️';
-        const file = '📎';
-        let emojis = embedArray[0].footer ? (embedArray[0].footer.text === this.fileFooterText ? [left, right, cancel, file] : [left, right, cancel]) : [left, right, cancel];
-        if (!withDelete) {
-            emojis = emojis.filter(emoji => emoji !== cancel);
-        }
-        emojis.forEach(async (emoji, i) => {
-            await this.quickReact(embed, emoji, i);
-        });
+        var embed;
+        if (Array.isArray(embedArray)) {
+            let currentPage = 0;
+            embed = await message.channel.send(embedArray[currentPage]);
+            if (embedArray.length > 1) {
+                const left = '⬅';
+                const right = '➡';
+                const cancel = '🗑️';
+                const file = '📎';
+                let emojis = [left, right];
+                emojis = withDelete ? emojis.concat([cancel]) : emojis;
+                emojis = embedArray[0].footer ? (embedArray[0].footer.text === this.fileFooterText ? emojis.concat([file]) : emojis) : emojis;
+                emojis.forEach(async (emoji, i) => {
+                    await this.quickReact(embed, emoji, i);
+                });
 
-        const filter = (reaction, user) => emojis.includes(reaction.emoji.name) && (message.author.id === user.id);
-        const collector = embed.createReactionCollector(filter);
+                const filter = (reaction, user) => emojis.includes(reaction.emoji.name) && (message.author.id === user.id);
+                const collector = embed.createReactionCollector(filter);
 
-        collector.on('collect', async (reaction, user) => {
-            switch (reaction.emoji.name) {
-                case right:
-                    if (currentPage < embedArray.length - 1) {
-                        currentPage++;
+                collector.on('collect', async (reaction, user) => {
+                    switch (reaction.emoji.name) {
+                        case right:
+                            if (currentPage < embedArray.length - 1) {
+                                currentPage++;
+                            }
+                            else if (currentPage === embedArray.length - 1) {
+                                currentPage = 0;
+                            }
+                            break;
+                        case left:
+                            if (currentPage !== 0) {
+                                --currentPage;
+                            }
+                            else if (currentPage === 0) {
+                                currentPage = embedArray.length - 1;
+                            }
+                            break;
+                        case cancel:
+                            collector.stop();
+                            console.log("Stopped pagination");
+                            await embed.delete();
+                            return;
                     }
-                    else if (currentPage === embedArray.length - 1) {
-                        currentPage = 0;
-                    }
-                    break;
-                case left:
-                    if (currentPage !== 0) {
-                        --currentPage;
-                    }
-                    else if (currentPage === 0) {
-                        currentPage = embedArray.length - 1;
-                    }
-                    break;
-                case cancel:
-                    collector.stop();
-                    console.log("Stopped pagination");
-                    await embed.delete();
-                    return;
+                    embed.edit(embedArray[currentPage]);
+                    if (message.channel.type !== 'dm') reaction.users.remove(user);
+                });
             }
-            embed.edit(embedArray[currentPage]);
-            if (message.channel.type !== 'dm') reaction.users.remove(user);
-        });
+        }
         return embed;
     },
 
