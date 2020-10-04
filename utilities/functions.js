@@ -1724,10 +1724,6 @@ module.exports = {
                                     second = splitTimeAdjustment[2];
                                     millisecond = splitTimeAdjustment[3];
                                 }
-                                // else {
-                                //     hour += timezoneOffset;
-                                //     // The day auto-adjust to negative values of hours
-                                // }
                                 console.log({ year, month, day, hour, minute, second, millisecond });
                                 timestampOut = new Date(year, month, day, hour, minute, second, millisecond).getTime();
                                 if (timestampOut < 0 && !argsHaveDefinedTime) {

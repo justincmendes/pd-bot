@@ -4,6 +4,7 @@ const Goal = require("../database/schemas/longtermgoals");
 const User = require("../database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
+const rm = require("../../utilities/reminder");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
@@ -140,6 +141,60 @@ async function getRecentGoal(userID, isArchived, embedColour) {
     return goalEmbed;
 }
 
+function getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTimeUTC, timeScaleString, goalIndex, goalDescription) {
+    return `The goal you've started on __${fn.timestampToDateString(startTimeUTC + HOUR_IN_MS * timezoneOffset, false, true, true)}__`
+        + ` is set for completion ${timeScaleString ? timeScaleString.toLowerCase() : "soon"}!:`
+        + `\n🎯 - ${goalDescription}\n\nType \`${PREFIX}${commandUsed} see ${goalIndex}\` to **see** the full details of this goal`
+        + `\nType \`${PREFIX}${commandUsed} edit ${goalIndex}\` to **edit** this goal and/or change the goal's set completion date`
+        + `\nType \`${PREFIX}${commandUsed} end ${goalIndex}\` to mark this goal as **completed**`;
+}
+
+async function setGoalReminders(bot, userID, timezoneOffset, PREFIX, commandUsed, goalDocumentID,
+    goalDescription, totalGoalNumber, startTime, initialMessageTimestamp, endTime,) {
+    const endDate = new Date(endTime);
+    const yearBefore = new Date(endDate.getUTCFullYear() - 1, endDate.getUTCMonth(),
+        endDate.getUTCDate(), endDate.getUTCHours(), endDate.getUTCMinutes()).getTime();
+    const semiAnnumBefore = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth() - 6,
+        endDate.getUTCDate(), endDate.getUTCHours(), endDate.getUTCMinutes()).getTime();
+    const monthBefore = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth() - 1,
+        endDate.getUTCDate(), endDate.getUTCHours(), endDate.getUTCMinutes()).getTime();
+    const weekBefore = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(),
+        endDate.getUTCDate() - 7, endDate.getUTCHours(), endDate.getUTCMinutes()).getTime();
+    const dayBefore = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(),
+        endDate.getUTCDate() - 1, endDate.getUTCHours(), endDate.getUTCMinutes()).getTime();
+    const currentTimestamp = Date.now();
+    const goalIndex = await getGoalIndexByFunction(userID, goalDocumentID, totalGoalNumber, false, getOneGoalByStartTime);
+    const type = "Goal";
+    if (dayBefore >= initialMessageTimestamp) {
+        await rm.setNewDMReminder(bot, userID, currentTimestamp, startTime, dayBefore,
+            getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "by tomorrow",
+                goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+        if (weekBefore >= initialMessageTimestamp) {
+            await rm.setNewDMReminder(bot, userID, currentTimestamp, startTime, weekBefore,
+                getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "by next week",
+                    goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+            if (monthBefore >= initialMessageTimestamp) {
+                await rm.setNewDMReminder(bot, userID, currentTimestamp, startTime, monthBefore,
+                    getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "by next month",
+                        goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+                if (semiAnnumBefore >= initialMessageTimestamp) {
+                    await rm.setNewDMReminder(bot, userID, currentTimestamp, startTime, semiAnnumBefore,
+                        getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "6 months from now",
+                            goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+                    if (yearBefore >= initialMessageTimestamp) {
+                        await rm.setNewDMReminder(bot, userID, currentTimestamp, startTime, yearBefore,
+                            getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "by next year",
+                                goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+                    }
+                }
+            }
+        }
+    }
+    await rm.setNewDMReminder(bot, userID, currentTimestamp, startTime, yearBefore,
+        getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "right now",
+            goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+}
+
 module.exports = {
     name: "goals",
     description: "Long-term goal setting handler",
@@ -161,7 +216,8 @@ module.exports = {
         const goalCommand = args[0].toLowerCase();
         const goalActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${goalCommand} help\``;
         const goalType = args[1] ? args[1].toLowerCase() : false;
-        const totalGoalNumber = await Goal.find({}).countDocuments();
+        let totalGoalNumber = await Goal.find({ archived: false }).countDocuments();
+        let totalArchiveNumber = await Goal.find({ archived: true }).countDocuments();
         const archiveRegex = /^(archive[ds]?|arch|ar?)$/i;
         const isArchived = archiveRegex.test(goalType);
         const archiveShift = isArchived ? 1 : 0;
@@ -195,9 +251,9 @@ module.exports = {
                 }
 
                 const goalDescriptionString = `__**Goal:**__${goalDescription === "" ? "" : `\n${goalDescription}`}`;
-                const goalCheckpoints = await fn.getSingleEntry(message, `${goalTypeString}\n${goalDescriptionString}`
+                const goalCheckpoints = await fn.getMultilineEntry(message, `${goalTypeString}\n${goalDescriptionString}`
                     + `\n\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**`,
-                    `Long-Term Goal: Creation - Reason`, forceSkip, goalEmbedColour, additionalInstructions, additionalKeywords);
+                    `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalCheckpoints && goalCheckpoints !== "") return;
                 else if (goalCheckpoints === "reset") {
                     reset = true;
@@ -205,8 +261,8 @@ module.exports = {
                 }
 
                 const goalCheckpointsString = `__**Checkpoints:**__${goalCheckpoints === "" ? "" : `\n${goalCheckpoints}`}`;
-                const goalSteps = await fn.getSingleEntry(message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**`,
-                    `Long-Term Goal: Creation - Actionable Steps`, forceSkip, goalEmbedColour, additionalInstructions, additionalKeywords);
+                const goalSteps = await fn.getMultilineEntry(message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**`,
+                    `Long-Term Goal: Creation - Actionable Steps`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalSteps && goalSteps !== "") return;
                 else if (goalSteps === "reset") {
                     reset = true;
@@ -214,9 +270,9 @@ module.exports = {
                 }
 
                 const goalStepsString = `__**Steps:**__${goalSteps === "" ? "" : `\n${goalSteps}`}`;
-                const goalReason = await fn.getSingleEntry(message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}`
+                const goalReason = await fn.getMultilineEntry(message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}`
                     + `\n\n💭 **__Why__ do you want to accomplish this goal?**`,
-                    `Long-Term Goal: Creation - Reason`, forceSkip, goalEmbedColour, additionalInstructions, additionalKeywords);
+                    `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalReason && goalReason !== "") return;
                 else if (goalReason === "reset") {
                     reset = true;
@@ -257,8 +313,8 @@ module.exports = {
                         completed: false,
                         archived: false,
                         goal: {
-                            start: time[0] - HOUR_IN_MS * timezoneOffset,
-                            end: time[1] - HOUR_IN_MS * timezoneOffset,
+                            start: time[0],
+                            end: time[1],
                             type: goalType,
                             description: goalDescription,
                             checkpoints: goalCheckpoints,
@@ -267,11 +323,20 @@ module.exports = {
                         },
                     });
                     await goalDocument.save()
-                        .then(result => {
+                        .then(async result => {
                             console.log({ result });
-                            message.reply(`**Long-Term Goal Saved!**`);
+                            totalGoalNumber++;
+                            message.reply(`**Long-Term Goal ${await getGoalIndexByFunction(authorID, goalDocument._id, totalGoalNumber, false, getOneGoalByStartTime)} Saved!**`);
                         })
                         .catch(err => console.error(err));
+
+                    // Setup reminder!
+                    const confirmReminders = await fn.getUserConfirmation(message, "__Would you like to get **reminders before this goal ends?:**__"
+                        + "\n\n**1 year, 6 months, 1 month, 1 week, and 1 day before**", false, "Long-Term Goal: Reminders", 180000);
+                    if (confirmReminders) {
+                        await setGoalReminders(bot, authorID, timezoneOffset, PREFIX, commandUsed, goalDocument._id,
+                            goalDescription, totalGoalNumber, time[0], message.createdAt, time[1]);
+                    }
                 }
                 else {
                     reset = true;
@@ -691,7 +756,7 @@ module.exports = {
 
 
         else if (goalCommand === "post" || goalCommand === "p") {
-            let goals = await Goal.find({ isArchived: false }).sort({ 'goal.start': +1 });
+            let goals = await Goal.find({ archived: false }).sort({ 'goal.start': +1 });
             if (!goals) return message.reply(`**You don't have any goals**, try \`${PREFIX}${commandUsed} start\``);
             const targetChannel = await fn.getPostChannel(bot, message, `Long-Term Goal`, forceSkip, goalEmbedColour);
             if (!targetChannel) return;

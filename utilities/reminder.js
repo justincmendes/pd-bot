@@ -3,11 +3,12 @@ const Discord = require("discord.js");
 const Reminder = require("../djs-bot/database/schemas/reminder");
 const mongoose = require("mongoose");
 const fn = require("./functions");
-const { repeatReminderEmbedColour } = require("./functions");
 require("dotenv").config();
 
 const validTypes = fn.reminderTypes;
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const repeatEmbedColour = fn.repeatReminderEmbedColour;
+const goalEmbedColour = fn.goalsEmbedColour;
 const reminderEmbedColour = fn.reminderEmbedColour;
 const fastEmbedColour = fn.fastEmbedColour;
 const habitEmbedColour = fn.habitEmbedColour;
@@ -59,20 +60,9 @@ module.exports = {
         if (isNaN(interval)) isRecurring = false;
         embedColour = isRecurring ? fn.repeatReminderEmbedColour : reminderEmbedColour;
         console.log({ connectedDocumentID, isRecurring, embedColour });
-        // await this.putNewReminderInDatabase(userID, userID, startTimestamp, endTimestamp, reminderMessage,
-        //     type, connectedDocumentID, true, isRecurring, interval)
-        //     .then(async (reminderID) => {
-        //         if (reminderID) {
-        //             console.log({ reminderID });
-        //             await this.sendReminderByID(bot, currentTimestamp, reminderID, embedColour);
-        //         }
-        //     })
-        //     .catch(err => console.error(err));
         const reminder = await this.putNewReminderInDatabase(userID, userID, startTimestamp, endTimestamp, reminderMessage,
             type, connectedDocumentID, true, isRecurring, interval)
             .catch(err => console.error(err));
-        // await this.sendReminder(bot, userID, userID, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-        //     type, connectedDocumentID, true, isRecurring, interval, embedColour);
         console.log({ reminder });
         await this.sendReminderByObject(bot, currentTimestamp, reminder, embedColour);
     },
@@ -106,8 +96,6 @@ module.exports = {
         const reminder = await this.putNewReminderInDatabase(userID, channelToSend, startTimestamp, endTimestamp, reminderMessage,
             type, connectedDocumentID, false, isRecurring, interval, guildID)
             .catch(err => console.error(err));
-        // await this.sendReminder(bot, userID, channelToSend, currentTimestamp, startTimestamp, endTimestamp, reminderMessage,
-        //     type, connectedDocumentID, false, isRecurring, interval);
         await this.sendReminderByObject(bot, currentTimestamp, reminder);
     },
 
@@ -134,8 +122,10 @@ module.exports = {
                         break;
                     case "Habit": embedColour = habitEmbedColour;
                         break;
+                    case "Goal": embedColour = goalEmbedColour;
+                        break;
                     default:
-                        if (isRecurring) embedColour = repeatReminderEmbedColour;
+                        if (isRecurring) embedColour = repeatEmbedColour;
                         else embedColour = reminderEmbedColour;
                         break;
                 }

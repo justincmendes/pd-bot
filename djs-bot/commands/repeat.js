@@ -416,7 +416,7 @@ module.exports = {
                     console.log({ reminderView });
                     const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderView, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
                     await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(reminderDataToStringArray, `Repeat Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, true, true, reminderEmbedColour));
-                    return message.channel.send(reminderEmbed);
+                    return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
                 if (args[2] !== undefined) {
