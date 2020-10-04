@@ -686,12 +686,12 @@ module.exports = {
 
         else if (goalCommand === "edit" || goalCommand === "change" || goalCommand === "ed"
             || goalCommand === "ch" || goalCommand === "c") {
-
+            //(similar indexing to edit, recent or #) + archive
         }
 
 
         else if (goalCommand === "post" || goalCommand === "p") {
-            let goals = await Goal.find({}).sort({ 'goal.start': +1 });
+            let goals = await Goal.find({ isArchived: false }).sort({ 'goal.start': +1 });
             if (!goals) return message.reply(`**You don't have any goals**, try \`${PREFIX}${commandUsed} start\``);
             const targetChannel = await fn.getPostChannel(bot, message, `Long-Term Goal`, forceSkip, goalEmbedColour);
             if (!targetChannel) return;
@@ -707,17 +707,17 @@ module.exports = {
 
 
         else if (goalCommand === "end" || goalCommand === "e" || goalCommand === "complete" || goalCommand === "log") {
-
+            // (similar indexing to edit, recent or #) + archive
         }
 
 
         else if (goalCommand === "status" || goalCommand === "check") {
-
+            // Show the goal description and checkpoints and the status of it! (similar indexing to edit, recent or #) + archive
         }
 
 
         else if (archiveRegex.test(goalCommand) || goalCommand === "stash" || goalCommand === "store") {
-
+            // Allows for archive - indexing by unarchived entries only!
         }
 
 

@@ -894,10 +894,10 @@ module.exports = {
             if (!splitArgs) return message.reply(reminderHelpMessage);
             else {
                 const currentTimestamp = message.createdTimestamp;
-                const reminderEndTime = fn.timeCommandHandlerToUTC((["in"]).concat(splitArgs[0].split(' ')), currentTimestamp, timezoneOffset, daylightSavingsSetting)
-                    - HOUR_IN_MS * timezoneOffset;
+                let reminderEndTime = fn.timeCommandHandlerToUTC((["in"]).concat(splitArgs[0].split(' ')), currentTimestamp, timezoneOffset, daylightSavingsSetting);
                 console.log({ reminderEndTime });
                 if (!reminderEndTime) return message.reply(`**INVALID Time**... ${reminderHelpMessage}`);
+                else reminderEndTime -= HOUR_IN_MS * timezoneOffset;
                 let duration = reminderEndTime - currentTimestamp;
                 duration = fn.millisecondsToTimeString(duration > 0 ? duration : 0);
                 const confirmCreationMessage = `Are you sure you want to set the following **one-time reminder** to send -\n**in ${splitArgs[1]} after ${duration} from now**:\n\n${splitArgs[2]}`;

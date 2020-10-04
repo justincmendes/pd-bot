@@ -242,7 +242,7 @@ module.exports = {
                     console.log({ reminderTargetID });
                     const reminderIndex = await rm.getRecentReminderIndex(authorID, true);
                     const reminderEmbed = fn.getEmbedArray(`__**Reminder ${reminderIndex}:**__\n${rm.reminderDataArrayToString(bot, reminderData, timezoneOffset)}`,
-                    `Repeat Reminder: Delete Recent Reminder`, true, true, reminderEmbedColour);
+                        `Repeat Reminder: Delete Recent Reminder`, true, true, reminderEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent reminder?**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, reminderEmbed, deleteConfirmMessage, forceSkip,
                         `Repeat Reminder: Delete Recent Reminder`, 600000);
@@ -909,10 +909,11 @@ module.exports = {
             else {
                 let currentTimestamp = message.createdTimestamp;
                 const timeArgs = splitArgs[0].toLowerCase().split(' ');
-                const interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
-                    currentTimestamp, timezoneOffset, daylightSavingsSetting)
-                    - HOUR_IN_MS * timezoneOffset - currentTimestamp;
-                if (!interval || interval <= 0) return message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
+                let interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
+                    currentTimestamp, timezoneOffset, daylightSavingsSetting);
+                if (!interval) return message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
+                interval -= HOUR_IN_MS * timezoneOffset + currentTimestamp;
+                if (interval <= 0) return message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
                 else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
                 let duration = await rm.getUserFirstRecurringEndDuration(message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
                 console.log({ duration });

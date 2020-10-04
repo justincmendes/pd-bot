@@ -1724,10 +1724,10 @@ module.exports = {
                                     second = splitTimeAdjustment[2];
                                     millisecond = splitTimeAdjustment[3];
                                 }
-                                else {
-                                    hour += timezoneOffset;
-                                    // The day auto-adjust to negative values of hours
-                                }
+                                // else {
+                                //     hour += timezoneOffset;
+                                //     // The day auto-adjust to negative values of hours
+                                // }
                                 console.log({ year, month, day, hour, minute, second, millisecond });
                                 timestampOut = new Date(year, month, day, hour, minute, second, millisecond).getTime();
                                 if (timestampOut < 0 && !argsHaveDefinedTime) {
@@ -1946,12 +1946,16 @@ module.exports = {
             if (dayOfWeekElements >= 2) {
                 if (relativeTimeElements) {
                     if (dayOfWeekElements >= relativeTimeElements) {
-                        choice = 2;
+                        if (dayOfWeekTest[3] && relativeTimeTest[3]) {
+                            // When comparing the Monday and Month
+                            if (dayOfWeekTest[3].length > relativeTimeTest[3]) {
+                                choice = 2;
+                            }
+                        }
+                        else choice = 2;
                     }
                 }
-                else {
-                    choice = 2;
-                }
+                else choice = 2;
             }
         }
         if (absoluteTimeTest) {
@@ -3179,7 +3183,7 @@ module.exports = {
                 emojis.forEach(async (emoji, i) => {
                     await this.quickReact(embed, emoji, i);
                 });
-                
+
                 const filter = (reaction, user) => emojis.includes(reaction.emoji.name) && (authorID === user.id);
                 const collector = embed.createReactionCollector(filter);
 
@@ -3562,6 +3566,27 @@ module.exports = {
             i++;
         }
         return i + 1;
+    },
+
+    setLongTimeout(callback, delay) {
+        var timeout;
+        const MAX_32_BIT_SIGNED_INT = 2147483647;
+        if (delay > MAX_32_BIT_SIGNED_INT) {
+            timeout = setTimeout(() => this.setLongTimeout(callback, (delay - MAX_32_BIT_SIGNED_INT)), MAX_32_BIT_SIGNED_INT);
+        }
+        else timeout = setTimeout(callback, delay);
+        return timeout;
+    },
+
+    setLongInterval(callback, delay) {
+        var interval;
+        const MAX_32_BIT_SIGNED_INT = 2147483647;
+        if (delay > MAX_32_BIT_SIGNED_INT) {
+            interval = this.setLongTimeout(callback, delay);
+            const next = this.setLongTimeout(() => this.setLongInterval(callback, delay), delay);
+        }
+        else interval = setInterval(callback, delay);
+        return interval;
     },
 
     invalidPrefixes: ['\*', '\_', '\~', '\>', '\\', '\/', '\:', '\`', '\@'],

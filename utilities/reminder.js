@@ -170,7 +170,7 @@ module.exports = {
                 // If it's recurring and should have been triggered when the bot was down
                 // Trigger it once right away then follow the intervals.
                 try {
-                    setTimeout(async () => {
+                    fn.setLongTimeout(async () => {
                         await this.updateRecurringReminderStartAndEndTimeByObjectID(reminderID, lastUpdateTime)
                             .then(async (complete) => {
                                 console.log({ complete });
@@ -179,7 +179,7 @@ module.exports = {
                                     channelObject.send(message);
                                     startTime = endTime;
                                     endTime += interval;
-                                    const recurringReminder = setInterval(async () => {
+                                    const recurringReminder = fn.setLongInterval(async () => {
                                         await this.updateRecurringReminderStartAndEndTimeByObjectID(reminderID, lastUpdateTime)
                                             .then((update) => {
                                                 console.log({ update });
@@ -203,7 +203,7 @@ module.exports = {
                 }
             }
             else {
-                setTimeout(async () => {
+                fn.setLongTimeout(async () => {
                     const reminderExists = await this.getOneReminderByObjectID(reminderID);
                     console.log({ reminderExists })
                     if (reminderExists) {
