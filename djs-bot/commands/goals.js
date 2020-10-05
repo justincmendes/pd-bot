@@ -2,6 +2,7 @@
 const Discord = require("discord.js");
 const Goal = require("../database/schemas/longtermgoals");
 const User = require("../database/schemas/user");
+const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
@@ -85,6 +86,22 @@ async function getGoalsByStartTime(userID, entryIndex, numberOfEntries = 1, arch
         console.log(err);
         return false;
     }
+}
+
+async function deleteManyByIdAndReminders(targetIDs) {
+    await Goal.deleteMany({ _id: { $in: targetIDs } });
+    await Reminder.deleteMany({ connectedDocument: { $in: targetIDs } });
+}
+
+async function deleteUserGoalsAndReminders(userID) {
+    const allUserGoalIDs = await Goal.find({ userID }, { _id: 1 });
+    await Goal.deleteMany({ userID });
+    if (allUserGoalIDs.length) await Reminder.deleteMany({ connectedDocument: { $in: allUserGoalIDs } });
+}
+
+async function deleteOneByIdAndReminders(targetID) {
+    await Goal.findByIdAndDelete(targetID);
+    await Reminder.deleteMany({ connectedDocument: targetID });
 }
 
 async function getRecentGoalIndex(userID, archived) {
@@ -411,7 +428,7 @@ module.exports = {
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await goalCollection.map(entry => entry._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Goals (${sortType})`);
-                    await Goal.deleteMany({ _id: { $in: targetIDs } });
+                    await deleteManyByIdAndReminders(targetIDs);
                     return;
                 }
                 if (deleteType === "many") {
@@ -471,7 +488,7 @@ module.exports = {
                         forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goals ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Goals ${toDelete} (${sortType})`);
-                        await Goal.deleteMany({ _id: { $in: goalTargetIDs } });
+                        await deleteManyByIdAndReminders(goalTargetIDs);
                         return;
                     }
                     else return;
@@ -515,7 +532,7 @@ module.exports = {
                             if (!multipleDeleteConfirmation) return;
                             const targetIDs = await goalCollection.map(entry => entry._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} goals past ${skipEntries} (${sortType})`);
-                            await Goal.deleteMany({ _id: { $in: targetIDs } });
+                            await deleteManyByIdAndReminders(targetIDs);
                             return;
                         }
 
@@ -547,7 +564,7 @@ module.exports = {
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, goalEmbed, deleteConfirmMessage, forceSkip,
                         `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`, 600000);
                     if (deleteIsConfirmed) {
-                        await Goal.deleteOne({ _id: goalTargetID });
+                        await deleteOneByIdAndReminders(goalTargetID);
                         return;
                     }
                 }
@@ -565,7 +582,7 @@ module.exports = {
                     let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete ALL Goals FINAL Warning!`);
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Goals`);
-                    await Goal.deleteMany({ userID: authorID });
+                    await deleteUserGoalsAndReminders(authorID);
                     return;
                 }
                 else return message.reply(goalActionHelpMessage);
@@ -593,7 +610,7 @@ module.exports = {
                     `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goal ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Goal ${sortType}`);
-                    await Goal.deleteOne({ _id: goalTargetID });
+                    await deleteOneByIdAndReminders(goalTargetID);
                     return;
                 }
             }
@@ -876,6 +893,9 @@ module.exports = {
                     if (userEdit === false) return;
                     else if (userEdit === undefined) userEdit = "back";
                     else if (userEdit !== "back") {
+                        if (fieldToEditIndex === 0 || fieldToEditIndex === 1 || fieldToEditIndex === 7 || fieldToEditIndex === 8) {
+                            await Reminder.deleteMany({ connectedDocument: goalTargetID });
+                        }
                         // Parse User Edit
                         if (fieldToEditIndex === 0 || fieldToEditIndex === 1) {
                             const now = Date.now();
@@ -894,6 +914,8 @@ module.exports = {
                                 default: continueEdit = true;
                                     break;
                             }
+                            await setGoalReminders(bot, authorID, timezoneOffset, PREFIX, commandUsed,
+                                goalTargetID, goal.description, totalGoalNumber, goal.start, now, goal.end);
                         }
                         else if (fieldToEditIndex === 7) {
                             switch (userEdit) {
@@ -1014,10 +1036,12 @@ module.exports = {
                 const targetGoal = goalArray[targetGoalIndex];
                 const confirmEnd = await fn.getUserConfirmation(message, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
                     forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: End Confirmation`);
-                if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { completed: true } }, (err, result) => {
-                    if (err) return console.error(err);
-                    console.log({ result });
-                });
+                if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { completed: true, "goal.end": Date.now() + HOUR_IN_MS * timezoneOffset } },
+                    (err, result) => {
+                        if (err) return console.error(err);
+                        console.log({ result });
+                        Reminder.deleteMany({ connectedDocument: targetGoal._id });
+                    });
                 else continue;
             }
             while (true)
@@ -1055,12 +1079,13 @@ module.exports = {
                 if (!targetGoalIndex) return;
                 const targetGoal = goalArray[targetGoalIndex];
                 const confirmEnd = await fn.getUserConfirmation(message, `**Are you sure you want to archive this goal?**`
-                + `\n(it will not be deleted, but won't show up in your \`${PREFIX}${commandUsed} post\`)`
-                + `\n\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
+                    + `\n(it will not be deleted, but won't show up in your \`${PREFIX}${commandUsed} post\`\nand you won't get reminders for it anymore)`
+                    + `\n\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
                     forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Confirmation`);
                 if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { archived: true } }, (err, result) => {
                     if (err) return console.error(err);
                     console.log({ result });
+                    Reminder.deleteMany({ connectedDocument: targetGoal._id });
                 });
                 else continue;
             }
