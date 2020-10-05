@@ -170,7 +170,7 @@ async function getRecentGoal(userID, isArchived, embedColour) {
 
 function getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTimeUTC, timeScaleString, goalIndex, goalDescription) {
     return `The goal you've started on __${fn.timestampToDateString(startTimeUTC + HOUR_IN_MS * timezoneOffset, false, true, true)}__`
-        + ` is set for completion ${timeScaleString ? timeScaleString.toLowerCase() : "soon"}!:`
+        + ` is set for completion **${timeScaleString ? timeScaleString.toLowerCase() : "soon"}!**:`
         + `\n🎯 - ${goalDescription}\n\nType \`${PREFIX}${commandUsed} see ${goalIndex}\` to **see** the full details of this goal`
         + `\nType \`${PREFIX}${commandUsed} edit ${goalIndex}\` to **edit** this goal and/or change the goal's set completion date`
         + `\nType \`${PREFIX}${commandUsed} end ${goalIndex}\` to mark this goal as **completed**`;
