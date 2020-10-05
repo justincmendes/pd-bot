@@ -474,7 +474,7 @@ async function getUserReminderEndTime(bot, message, startTimestamp, fastTimeHelp
     do {
         const reminderPrompt = "__**How long do you intend to fast?**__\nI will DM you **when your fast is done and an hour before it's done**"
             + "\n\nType `skip` to **start your fast without setting up an end of fast reminder**";
-        const userTimeInput = await fn.messageDataCollectFirst(bot, message, reminderPrompt, "Fast Duration", fastEmbedColour);
+        const userTimeInput = await fn.messageDataCollectFirst(bot, message, reminderPrompt, "Fast: Duration", fastEmbedColour);
         if (userTimeInput === "skip") return undefined;
         if (userTimeInput === "stop" || userTimeInput === false) return false;
         // Undo the timezoneOffset to get the end time in UTC
@@ -492,7 +492,7 @@ async function getUserReminderEndTime(bot, message, startTimestamp, fastTimeHelp
             const fastDurationString = fn.millisecondsToTimeString(intendedFastDuration);
             const confirmReminder = await fn.getUserConfirmation(message,
                 `Are you sure you want to be reminded after **${fastDurationString}** of fasting?`,
-                forceSkip, "Fast Reminder Confirmation");
+                forceSkip, "Fast: Reminder Confirmation");
             if (confirmReminder) return reminderEndTime;
         }
     }
@@ -548,14 +548,15 @@ module.exports = {
             const fastIsRunningMessage = `You already have a **fast running!**\nIf you want to **end** your fast, try \`${PREFIX}${commandUsed} end <DATE/TIME>\``
                 + `\nIf you want to **restart** it, try \`${PREFIX}${commandUsed} edit current\``
                 + `\nIf you want to **delete** your fast entry altogether, try \`${PREFIX}${commandUsed} delete current\``;
-            if (args[1] != undefined) {
+            if (args[1] !== undefined) {
                 if (args[1].toLowerCase() === "help") return message.channel.send(fastStartUsageMessage);
             }
             if (fastIsInProgress >= 1) return message.reply(fastIsRunningMessage);
-            else if (args[1] == undefined || args.length == 1) return message.reply(fastStartHelpMessage);
             else {
-                // Remove the "start" from the args using slice
-                const startTimeArgs = args.slice(1);
+                let startTimeArgs = await fn.messageDataCollectFirst(bot, message, `__**When did you start your fast?**__: Enter a Date/Time`
+                    + `\n\ne.g. **now **|** 5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a**`, `Fast: Start Time`, fastEmbedColour, 300000, false);
+                if (!startTimeArgs) return;
+                startTimeArgs = startTimeArgs.toLowerCase().split(/[\s\n]+/);
                 startTimestamp = fn.timeCommandHandlerToUTC(startTimeArgs, message.createdTimestamp, timezoneOffset, daylightSavingSetting);
                 if (startTimestamp === false) return message.reply(fastStartHelpMessage);
                 // Setup Reminder:
@@ -605,21 +606,19 @@ module.exports = {
             const fastEndHelpMessage = `Try \`${PREFIX}${commandUsed} ${fastCommand} help\``;
             const noFastRunningMessage = `You don't have a **fast running!**\nIf you want to **start** one \`${PREFIX}${commandUsed} start <DATE/TIME>\``;
 
-            if (args[1] != undefined) {
+            if (args[1] !== undefined) {
                 if (args[1].toLowerCase() == "help") {
                     return message.channel.send(fastEndUsageMessage);
                 }
             }
-            if (fastIsInProgress == 0) {
+            if (fastIsInProgress === 0) {
                 return message.reply(noFastRunningMessage);
             }
-            else if (args[1] == undefined || args.length == 1) {
-                return message.reply(fastEndHelpMessage);
-            }
             else {
-                // FOR Handling when the user's fast ending time is not now!
-                // Remove the "end" from the args using slice
-                const endTimeArgs = args.slice(1);
+                let endTimeArgs = await fn.messageDataCollectFirst(bot, message, `__**When did you end your fast?**__: Enter a Date/Time`
+                    + `\n\ne.g. **now **|** 5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a**`, `Fast: End Time`, fastEmbedColour, 300000, false);
+                if (!endTimeArgs) return;
+                endTimeArgs = endTimeArgs.toLowerCase().split(/[\s\n]+/);
                 const endTimestamp = fn.timeCommandHandlerToUTC(endTimeArgs, message.createdTimestamp, timezoneOffset, daylightSavingSetting);
                 if (endTimestamp === false) {
                     return message.reply(fastEndHelpMessage);
