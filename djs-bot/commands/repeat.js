@@ -555,29 +555,29 @@ module.exports = {
                                 break;
                             case 1:
                                 reminderEditMessagePrompt = `Please enter the **channel you'd like to send the reminder to OR "DM"** if you want to get it through a Direct Message:`;
-                                userEdit = await fn.getUserEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                userEdit = await fn.getUserEditString(bot, message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
                                 break;
                             case 2:
                                 reminderEditMessagePrompt = dateAndTimeInstructions;
-                                userEdit = await fn.getUserEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                userEdit = await fn.getUserEditString(bot, message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
                                 break;
                             case 3:
                                 reminderEditMessagePrompt = dateAndTimeInstructions;
-                                userEdit = await fn.getUserEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                userEdit = await fn.getUserEditString(bot, message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
                                 break;
                             // Reminder does not need a prompt explanation
                             case 4:
-                                userEdit = await fn.getUserMultilineEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
                                 break;
                             case 5:
                                 reminderEditMessagePrompt = `Would you like to make this a **__repeating (⌚)__ OR __one-time (1️⃣)__ reminder?**`;
-                                userEdit = await fn.getUserEditBoolean(message, fieldToEdit, reminderEditMessagePrompt,
+                                userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, reminderEditMessagePrompt,
                                     ['⌚', '1️⃣'], type, forceSkip, reminderEmbedColour);
                                 break;
                             case 6:
                                 if (reminderData[1] === true) {
                                     reminderEditMessagePrompt = `**Please enter the time you'd like in-between recurring reminders (interval):**`;
-                                    userEdit = await fn.getUserEditString(message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                    userEdit = await fn.getUserEditString(bot, message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
                                 }
                                 else userEdit = 0;
                                 break;
@@ -668,7 +668,7 @@ module.exports = {
                                                 // From One-Time to Repeating
                                                 if (userEdit === true && reminderData[1] === false) {
                                                     reminderData[1] = userEdit;
-                                                    let userInterval = await fn.getUserEditString(message, reminderFields[6],
+                                                    let userInterval = await fn.getUserEditString(bot, message, reminderFields[6],
                                                         `**Please enter the time you'd like in-between recurring reminders (interval):**`,
                                                         type, forceSkip, reminderEmbedColour);
                                                     if (!userInterval) {
@@ -697,7 +697,7 @@ module.exports = {
                                                     }
                                                     reminderData[9] = interval;
                                                     // GET THE INTENDED END TIME!
-                                                    let duration = await rm.getUserFirstRecurringEndDuration(message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
+                                                    let duration = await rm.getUserFirstRecurringEndDuration(bot, message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
                                                     console.log({ duration })
                                                     if (!duration && duration !== 0) {
                                                         continueEdit = true;
@@ -729,7 +729,7 @@ module.exports = {
                                                 else if (userEdit === false && reminderData[1] === true) {
                                                     reminderData[1] = userEdit;
                                                     // GET THE INTENDED END TIME! (For non-recurring)
-                                                    let duration = await rm.getUserFirstRecurringEndDuration(message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
+                                                    let duration = await rm.getUserFirstRecurringEndDuration(bot, message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
                                                     console.log({ duration })
                                                     if (!duration && duration !== 0) {
                                                         continueEdit = true;
@@ -915,7 +915,7 @@ module.exports = {
                 interval -= HOUR_IN_MS * timezoneOffset + currentTimestamp;
                 if (interval <= 0) return message.reply(`**INVALID Interval**... ${repeatHelpMessage} for **valid time inputs!**`);
                 else if (interval < 60000) return message.reply(`**INVALID Interval**... Interval MUST be **__> 1m__**`);
-                let duration = await rm.getUserFirstRecurringEndDuration(message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
+                let duration = await rm.getUserFirstRecurringEndDuration(bot, message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
                 console.log({ duration });
                 if (!duration && duration !== 0) return;
                 duration = duration > 0 ? duration : 0;

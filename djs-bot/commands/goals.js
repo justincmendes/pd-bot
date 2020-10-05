@@ -17,12 +17,13 @@ const areasOfLifeList = fn.getAreasOfLifeList().join('\n');
 // Function Declarations and Definitions
 
 function goalDocumentToString(goalDocument, showType = true) {
-    const { archived, goal } = goalDocument;
+    const { archived, completed, goal } = goalDocument;
     const areaOfLife = showType ? `${areasOfLifeEmojis[goal.type] ? `${areasOfLifeEmojis[goal.type]} ` : ""}${areasOfLife[goal.type] ? `__${areasOfLife[goal.type]}__` : ""}` : false;
-    return (`${archived ? "\*\***ARCHIVED**\*\*\n" : ""}${areaOfLife ? areaOfLife : ""}${goal.description ? `\n🎯 ${goal.description}` : ""}`
-        + `${goal.reason ? `\n💭 ${goal.reason}` : ""}${goal.checkpoints ? `\n🏁 ${goal.checkpoints}` : ""}${goal.steps ? `\n👣 ${goal.steps}` : ""}`
+    return (`${archived ? "\*\***ARCHIVED**\*\*\n" : ""}${areaOfLife ? areaOfLife : ""}${goal.description ? `\n🎯 - **Description:**\n${goal.description}` : ""}`
+        + `${goal.reason ? `\n💭 - **Reason:**\n${goal.reason}` : ""}${goal.checkpoints ? `\n🏁 - **Checkpoints:**\n${goal.checkpoints}` : ""}${goal.steps ? `\n👣 - **Steps:**\n${goal.steps}` : ""}`
         + `${goal.start && !isNaN(goal.start) ? `\n**Start:** ${fn.timestampToDateString(goal.start, false, true, true)}` : ""}`
-        + `${goal.end && !isNaN(goal.end) ? `\n**Target Completion:** ${fn.timestampToDateString(goal.end, false, true, true)}` : ""}`);
+        + `${goal.end && !isNaN(goal.end) ? `\n**Target Completion:** ${fn.timestampToDateString(goal.end, false, true, true)}` : ""}`
+        + `\n**Status:** ${completed ? "Completed" : "In Progess"}`);
 }
 
 async function getGoalIndexByFunction(userID, goalID, totalGoals, archived, getOneGoal) {
@@ -55,6 +56,15 @@ async function getOneGoalByStartTime(userID, goalIndex, archived = undefined) {
         .findOne({ userID, archived })
         .sort({ 'goal.start': +1, })
         .skip(goalIndex)
+        .catch(err => {
+            console.log(err);
+            return false;
+        });
+    return goal;
+}
+
+async function getOneGoalByObjectID(goalID) {
+    const goal = await Goal.findById(goalID)
         .catch(err => {
             console.log(err);
             return false;
@@ -209,13 +219,13 @@ module.exports = {
         const authorID = message.author.id;
         const authorUsername = message.author.username;
         let goalUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
-            + "\n\n\`<ACTION>\`: **start/create; see; edit; delete/remove; post; complete/log/status**"
+            + "\n\n\`<ACTION>\`: **add; see; edit; end; archive; delete; post**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         goalUsageMessage = fn.getMessageEmbed(goalUsageMessage, "Goals: Help", goalEmbedColour);
         const goalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
         const goalCommand = args[0].toLowerCase();
         const goalActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${goalCommand} help\``;
-        const goalType = args[1] ? args[1].toLowerCase() : false;
+        let goalType = args[1] ? args[1].toLowerCase() : false;
         let totalGoalNumber = await Goal.find({ archived: false }).countDocuments();
         let totalArchiveNumber = await Goal.find({ archived: true }).countDocuments();
         const archiveRegex = /^(archive[ds]?|arch|ar?)$/i;
@@ -237,12 +247,12 @@ module.exports = {
             const additionalKeywords = ["reset"];
             do {
                 reset = false;
-                const goalType = await fn.userSelectFromList(message, areasOfLifeList, areasOfLife.length,
-                    `**__Which area of life does your long-term goal fall under?__**`, `Long-Term Goal: Creation - Area of Life`, goalEmbedColour);
+                const goalType = await fn.userSelectFromList(bot, message, areasOfLifeList, areasOfLife.length,
+                    `**__Which area of life does your long-term goal fall under?__ 🌱**`, `Long-Term Goal: Creation - Area of Life`, goalEmbedColour);
                 if (!goalType && goalType !== 0) return;
 
                 const goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[goalType]} **${areasOfLife[goalType]}**`;
-                const goalDescription = await fn.getSingleEntry(message, `${goalTypeString}\n\n🎯 **What is your __long-term goal__?**`,
+                const goalDescription = await fn.getSingleEntry(bot, message, `${goalTypeString}\n\n🎯 **What is your __long-term goal__?**`,
                     `Long-Term Goal: Creation - Set Goal`, forceSkip, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalDescription && goalDescription !== "") return;
                 else if (goalDescription === "reset") {
@@ -251,7 +261,7 @@ module.exports = {
                 }
 
                 const goalDescriptionString = `__**Goal:**__${goalDescription === "" ? "" : `\n${goalDescription}`}`;
-                const goalCheckpoints = await fn.getMultilineEntry(message, `${goalTypeString}\n${goalDescriptionString}`
+                const goalCheckpoints = await fn.getMultilineEntry(bot, message, `${goalTypeString}\n${goalDescriptionString}`
                     + `\n\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**`,
                     `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalCheckpoints && goalCheckpoints !== "") return;
@@ -261,7 +271,7 @@ module.exports = {
                 }
 
                 const goalCheckpointsString = `__**Checkpoints:**__${goalCheckpoints === "" ? "" : `\n${goalCheckpoints}`}`;
-                const goalSteps = await fn.getMultilineEntry(message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**`,
+                const goalSteps = await fn.getMultilineEntry(bot, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**`,
                     `Long-Term Goal: Creation - Actionable Steps`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalSteps && goalSteps !== "") return;
                 else if (goalSteps === "reset") {
@@ -270,7 +280,7 @@ module.exports = {
                 }
 
                 const goalStepsString = `__**Steps:**__${goalSteps === "" ? "" : `\n${goalSteps}`}`;
-                const goalReason = await fn.getMultilineEntry(message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}`
+                const goalReason = await fn.getMultilineEntry(bot, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}`
                     + `\n\n💭 **__Why__ do you want to accomplish this goal?**`,
                     `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalReason && goalReason !== "") return;
@@ -284,14 +294,13 @@ module.exports = {
                     do {
                         const index = i;
                         let goalsTimePrompt = `**Please enter the date and time when you __${time[i]}__ this goal:**\n(e.g. now, OR March 22, 2027)`;
-                        time[i] = await fn.getSingleEntry(message, goalsTimePrompt, "Long-Term Goal: Creation - Set Time", forceSkip, goalEmbedColour,
+                        time[i] = await fn.getSingleEntry(bot, message, goalsTimePrompt, "Long-Term Goal: Creation - Set Time", forceSkip, goalEmbedColour,
                             additionalInstructions, additionalKeywords);
                         if (!time[i]) return;
                         else if (time[i] === "reset") {
                             reset = true;
                             break;
                         }
-
                         time[i] = time[i].toLowerCase().split(/[\s\n]+/);
                         const now = Date.now();
                         time[i] = fn.timeCommandHandlerToUTC(time[i], now, timezoneOffset, daylightSavings);
@@ -368,7 +377,7 @@ module.exports = {
                     return message.channel.send(goalDeleteUsageMessage);
                 }
                 if (!totalGoalNumber) {
-                    return message.reply(`**NO GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                    return message.reply(`**NO ${isArchived ? "ARCHIVED " : ""}GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
             }
             else return message.reply(goalActionHelpMessage);
@@ -434,7 +443,7 @@ module.exports = {
                     console.log({ toDelete });
                     // Send error message if none of the given reminders exist
                     if (!toDelete.length) {
-                        return fn.sendErrorMessage(message, "All of these **goals DO NOT exist**...");
+                        return fn.sendErrorMessage(message, `All of these **${isArchived ? "archived " : ""}goals DO NOT exist**...`);
                     }
                     var indexByRecency = false;
                     if (args[3 + archiveShift] !== undefined) {
@@ -573,7 +582,7 @@ module.exports = {
                 if (indexByRecency) goalView = await getOneGoalByRecency(authorID, pastNumberOfEntriesIndex - 1, isArchived);
                 else goalView = await getOneGoalByStartTime(authorID, pastNumberOfEntriesIndex - 1, isArchived);
                 if (!goalView) {
-                    return fn.sendErrorMessageAndUsage(message, trySeeCommandMessage, "**GOAL DOES NOT EXIST**...");
+                    return fn.sendErrorMessageAndUsage(message, trySeeCommandMessage, `**${isArchived ? "ARCHIVED " : ""}GOAL DOES NOT EXIST**...`);
                 }
                 const goalTargetID = goalView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
@@ -596,7 +605,7 @@ module.exports = {
             let goalSeeUsageMessage = getGoalReadOrDeleteHelp(PREFIX, commandUsed, goalCommand);
             goalSeeUsageMessage = fn.getMessageEmbed(goalSeeUsageMessage, `Long-Term Goal${isArchived ? ` Archive` : ""}: See Help`, goalEmbedColour);
 
-            const seeCommands = ["past", "recent", "all", "archive"];
+            const seeCommands = ["past", "recent", "all"];
 
             if (goalType) {
                 if (goalType === "help") {
@@ -614,7 +623,7 @@ module.exports = {
             // Show the user the last goal with the most recent end time (by sorting from largest to smallest end time and taking the first):
             // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
             // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
-            if (!seeCommands.includes(goalType) && isNaN(goalType)) {
+            if (!seeCommands.includes(goalType) && !archiveRegex.test(goalType) && isNaN(goalType)) {
                 return message.reply(goalActionHelpMessage);
             }
             // Do not show the most recent goal embed, when a valid command is called
@@ -622,7 +631,7 @@ module.exports = {
             else {
                 const seeType = goalType;
                 var pastFunctionality,
-                    pastNumberOfEntriesIndex;
+                    goalIndex;
                 let indexByRecency = false;
                 // To check if the given argument is a number!
                 // If it's not a number and has passed the initial 
@@ -633,13 +642,13 @@ module.exports = {
                     return message.channel.send(await getRecentGoal(authorID, isArchived, goalEmbedColour));
                 }
                 else if (seeType === "all") {
-                    pastNumberOfEntriesIndex = totalGoalNumber;
+                    goalIndex = totalGoalNumber;
                     pastFunctionality = true;
                 }
                 else if (isNumberArg) {
-                    pastNumberOfEntriesIndex = parseInt(args[1 + archiveShift]);
-                    if (pastNumberOfEntriesIndex <= 0) {
-                        return fn.sendErrorMessageAndUsage(message, goalActionHelpMessage, "**GOAL DOES NOT EXIST**...");
+                    goalIndex = parseInt(args[1 + archiveShift]);
+                    if (goalIndex <= 0) {
+                        return fn.sendErrorMessageAndUsage(message, goalActionHelpMessage, `**${isArchived ? "ARCHIVED " : ""}GOAL DOES NOT EXIST**...`);
                     }
                     else pastFunctionality = false;
                 }
@@ -649,7 +658,7 @@ module.exports = {
                 // After this filter:
                 // If the first argument after "see" is not past, then it is not a valid call
                 else return message.reply(goalActionHelpMessage);
-                console.log({ pastNumberOfEntriesIndex, pastFunctionality });
+                console.log({ pastNumberOfEntriesIndex: goalIndex, pastFunctionality });
                 if (pastFunctionality) {
                     // Loop through all of the given fields, account for aliases and update fields
                     // Find Goals, toArray, store data in meaningful output
@@ -676,15 +685,15 @@ module.exports = {
                         if (!confirmSeeAll) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
-                    if (pastNumberOfEntriesIndex === undefined) {
-                        pastNumberOfEntriesIndex = parseInt(args[2 + archiveShift]);
+                    if (goalIndex === undefined) {
+                        goalIndex = parseInt(args[2 + archiveShift]);
                     }
                     var goalView;
-                    if (indexByRecency) goalView = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived }, 0, pastNumberOfEntriesIndex);
-                    else goalView = await getGoalsByStartTime(authorID, 0, pastNumberOfEntriesIndex, isArchived);
-                    console.log({ goalView, pastNumberOfEntriesIndex });
-                    const goalArray = multipleGoalsToStringArray(message, goalView, pastNumberOfEntriesIndex, 0);
-                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalArray, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${pastNumberOfEntriesIndex} Goals (${sortType})`, true, true, goalEmbedColour));
+                    if (indexByRecency) goalView = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived }, 0, goalIndex);
+                    else goalView = await getGoalsByStartTime(authorID, 0, goalIndex, isArchived);
+                    console.log({ goalView, pastNumberOfEntriesIndex: goalIndex });
+                    const goalArray = multipleGoalsToStringArray(message, goalView, goalIndex, 0);
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalArray, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${goalIndex} Goals (${sortType})`, true, true, goalEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -712,17 +721,17 @@ module.exports = {
                                 }
                                 else return message.reply(goalActionHelpMessage);
                                 if (entriesToSkip < 0 || entriesToSkip > totalGoalNumber) {
-                                    return fn.sendErrorMessageAndUsage(message, goalActionHelpMessage, "**GOAL(S) DO NOT EXIST**...");
+                                    return fn.sendErrorMessageAndUsage(message, goalActionHelpMessage, `**${isArchived ? "ARCHIVED " : ""}GOAL(S) DO NOT EXIST**...`);
                                 }
                                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1 + archiveShift]} entries past ${entriesToSkip}?**`;
                                 const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${args[1 + archiveShift]} Goals Past ${entriesToSkip} (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var goalView;
-                                if (indexByRecency) goalView = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived }, entriesToSkip, pastNumberOfEntriesIndex);
-                                else goalView = await getGoalsByStartTime(authorID, entriesToSkip, pastNumberOfEntriesIndex, isArchived);
+                                if (indexByRecency) goalView = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived }, entriesToSkip, goalIndex);
+                                else goalView = await getGoalsByStartTime(authorID, entriesToSkip, goalIndex, isArchived);
                                 console.log({ goalView });
-                                const goalStringArray = multipleGoalsToStringArray(message, goalView, pastNumberOfEntriesIndex, entriesToSkip);
-                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalStringArray, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${pastNumberOfEntriesIndex} Goals Past ${entriesToSkip} (${sortType})`, true, true, goalEmbedColour));
+                                const goalStringArray = multipleGoalsToStringArray(message, goalView, goalIndex, entriesToSkip);
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalStringArray, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${goalIndex} Goals Past ${entriesToSkip} (${sortType})`, true, true, goalEmbedColour));
                                 return;
                             }
                         }
@@ -734,16 +743,16 @@ module.exports = {
                     }
                 }
                 var goalView;
-                if (indexByRecency) goalView = await getOneGoalByRecency(authorID, pastNumberOfEntriesIndex - 1, isArchived);
-                else goalView = await getOneGoalByStartTime(authorID, pastNumberOfEntriesIndex - 1, isArchived);
+                if (indexByRecency) goalView = await getOneGoalByRecency(authorID, goalIndex - 1, isArchived);
+                else goalView = await getOneGoalByStartTime(authorID, goalIndex - 1, isArchived);
                 console.log({ goalView });
                 if (!goalView) {
-                    return fn.sendErrorMessage(message, `**GOAL ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
+                    return fn.sendErrorMessage(message, `**${isArchived ? "ARCHIVED " : ""}GOAL ${goalIndex} DOES NOT EXIST**...`);
                 }
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
-                const goalString = `__**Goal ${pastNumberOfEntriesIndex}:**__ ${goalDocumentToString(goalView)}`;
-                const goalEmbed = fn.getEmbedArray(goalString, `Long-Term Goal${isArchived ? ` Archive` : ""}: See Goal ${pastNumberOfEntriesIndex} (${sortType})`, true, true, goalEmbedColour);
+                const goalString = `__**Goal ${goalIndex}:**__ ${goalDocumentToString(goalView)}`;
+                const goalEmbed = fn.getEmbedArray(goalString, `Long-Term Goal${isArchived ? ` Archive` : ""}: See Goal ${goalIndex} (${sortType})`, true, true, goalEmbedColour);
                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, goalEmbed);
             }
         }
@@ -751,7 +760,207 @@ module.exports = {
 
         else if (goalCommand === "edit" || goalCommand === "change" || goalCommand === "ed"
             || goalCommand === "ch" || goalCommand === "c") {
-            //(similar indexing to edit, recent or #) + archive
+            let goalEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${goalCommand} <archive?> <GOAL #> <recent?> <force?>\``
+                + "\n\n`<GOAL #>`: **recent; 3** (3rd most recent entry, \\**any number*)"
+                + `\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived goals!**`
+                + "\n\n`<recent?>`(OPT.): type **recent** at the indicated spot to sort the goals by **actual time created instead of goal start time!**"
+                + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**";
+            goalEditUsageMessage = fn.getMessageEmbed(goalEditUsageMessage, `Long-Term Goal: Edit Help`, goalEmbedColour);
+            if (goalType) {
+                if (goalType === "help") {
+                    return message.channel.send(goalEditUsageMessage);
+                }
+                if (!totalGoalNumber) {
+                    return message.reply(`**NO ${isArchived ? "ARCHIVED " : ""}GOALS**... try \`${PREFIX}${commandUsed} start\` to set one up!`);
+                }
+                if (isNaN(goalType) && goalType !== "recent" && !archiveRegex.test(goalType)) {
+                    return message.reply(goalActionHelpMessage);
+                }
+            }
+            goalType = isArchived ? args[2] ? args[2].toLowerCase() : false : goalType;
+            if (goalType) {
+                var goalIndex;
+                if (goalType === "recent") {
+                    goalIndex = await getRecentGoalIndex(authorID, isArchived);
+                }
+                else {
+                    goalIndex = parseInt(goalType);
+                    if (goalIndex <= 0) {
+                        return fn.sendErrorMessageAndUsage(message, goalActionHelpMessage, `**${isArchived ? "ARCHIVED " : ""}GOAL DOES NOT EXIST**...`);
+                    }
+                }
+
+                var indexByRecency = false;
+                if (args[2 + archiveShift] !== undefined) {
+                    if (args[2 + archiveShift].toLowerCase() === "recent") {
+                        indexByRecency = true;
+                    }
+                }
+                var goalDocument;
+                if (indexByRecency) goalDocument = await getOneGoalByRecency(authorID, goalIndex - 1, isArchived);
+                else goalDocument = await getOneGoalByStartTime(authorID, goalIndex - 1, isArchived);
+                if (!goalDocument) {
+                    return fn.sendErrorMessageAndUsage(message, goalActionHelpMessage, `**${isArchived ? "ARCHIVED " : ""}GOAL ${goalIndex} DOES NOT EXIST**...`);
+                }
+                const sortType = indexByRecency ? "By Recency" : "By Start Time";
+                var goalFields = ["Start Time", "End Time", "Area of Life", "Description", "Reason", "Checkpoints", "Actionable Steps", "Completed", "Archived"];
+                let fieldsList = "";
+                goalFields.forEach((field, i) => {
+                    fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
+                });
+                const goalTargetID = goalDocument._id;
+                var showGoal, continueEdit;
+                do {
+                    const checkGoal = await getOneGoalByObjectID(goalTargetID);
+                    if (!checkGoal) return;
+                    continueEdit = false;
+                    showGoal = goalDocumentToString(goalDocument);
+                    // Field the user wants to edit
+                    const fieldToEditInstructions = "**Which field do you want to edit?:**";
+                    const fieldToEditAdditionalMessage = `__**Goal ${goalIndex} (${sortType}):**__ ${showGoal}`;
+                    const fieldToEditTitle = `Long-Term Goal${isArchived ? " Archive" : ""}: Edit Field`;
+                    let fieldToEditIndex = await fn.userSelectFromList(bot, message, fieldsList, goalFields.length, fieldToEditInstructions,
+                        fieldToEditTitle, goalEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                    if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
+                    var userEdit, goalEditMessagePrompt = "";
+                    const fieldToEdit = goalFields[fieldToEditIndex];
+                    const type = `Long-Term Goal${isArchived ? " Archive" : ""}`;
+                    let { goal, completed, archived } = goalDocument;
+                    switch (fieldToEditIndex) {
+                        case 0:
+                            goalEditMessagePrompt = "\n__**Please enter the date/time ⌚ of when you started this goal:**__";
+                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
+                            break;
+                        case 1:
+                            goalEditMessagePrompt = "\n__**Please enter the date/time ⌚ of when you ended or intend to end this goal:**__";
+                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
+                            break;
+                        case 2:
+                            goalEditMessagePrompt = `\n**__Which area of life does your long-term goal fall under?__ 🌱**\n${areasOfLifeList}`;
+                            userEdit = await fn.getUserEditNumber(bot, message, fieldToEdit, areasOfLife.length, type, areasOfLifeCombinedEmoji, forceSkip, goalEmbedColour, goalEditMessagePrompt);
+                            if (!userEdit) return;
+                            else if (userEdit === "back") break;
+                            userEdit--;
+                            goal.type = userEdit;
+                            break;
+                        case 3:
+                            goalEditMessagePrompt = "\n🎯 **What is your __long-term goal__?**";
+                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
+                            goal.description = userEdit;
+                            break;
+                        case 4:
+                            goalEditMessagePrompt = "\n💭 **__Why__ do you want to accomplish this goal?**";
+                            userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
+                            goal.reason = userEdit;
+                            break;
+                        case 5:
+                            goalEditMessagePrompt = "\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**";
+                            userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
+                            goal.checkpoints = userEdit;
+                            break;
+                        case 6:
+                            goalEditMessagePrompt = "\n👣 **What are some __actionable steps__ for this goal?**";
+                            userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
+                            goal.steps = userEdit;
+                            break;
+                        case 7:
+                            goalEditMessagePrompt = `\n**__Currently:__ ${completed ? "Completed" : "In Progress"}\n\n✅ - Completed\n\n🏃‍♂️ - In Progress**`;
+                            userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, goalEditMessagePrompt, ['✅', '🏃‍♂️'], type, forceSkip, goalEmbedColour);
+                            break;
+                        case 8:
+                            goalEditMessagePrompt = `\n**__Currently:__ ${archived ? "Archived" : "NOT Archived"}\n\n📁 - Archive\n\n📜 - No Archive**`;
+                            userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, goalEditMessagePrompt, ['📁', '📜'], type, forceSkip, goalEmbedColour);
+                            break;
+                    }
+                    console.log({ userEdit });
+                    if (userEdit === false) return;
+                    else if (userEdit === undefined) userEdit = "back";
+                    else if (userEdit !== "back") {
+                        // Parse User Edit
+                        if (fieldToEditIndex === 0 || fieldToEditIndex === 1) {
+                            const now = Date.now();
+                            userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
+                            console.log({ userEdit });
+                            userEdit = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavings);
+                            if (!userEdit) {
+                                fn.sendReplyThenDelete(message, `**INVALID TIME**... ${goalHelpMessage}`, 60000);
+                                continueEdit = true;
+                            }
+                            switch (fieldToEditIndex) {
+                                case 0: goal.start = userEdit;
+                                    break;
+                                case 1: goal.end = userEdit;
+                                    break
+                                default: continueEdit = true;
+                                    break;
+                            }
+                        }
+                        else if (fieldToEditIndex === 7) {
+                            switch (userEdit) {
+                                case '✅': userEdit = true;
+                                    break;
+                                case '🏃‍♂️': userEdit = false;
+                                    break;
+                                default: continueEdit = true;
+                            }
+                        }
+                        else if (fieldToEditIndex === 8) {
+                            switch (userEdit) {
+                                case '📁': userEdit = true;
+                                    break;
+                                case '📜': userEdit = false;
+                                    break;
+                                default: continueEdit = true;
+                            }
+                        }
+                    }
+                    else continueEdit = true;
+                    console.log({ userEdit });
+                    if (!continueEdit) {
+                        try {
+                            console.log(`Editing ${authorID}'s Goal ${goalIndex} (${sortType})`);
+                            if (fieldToEditIndex === 7) goalDocument = await Goal.findOneAndUpdate({ _id: goalTargetID }, { $set: { completed: userEdit } }, { new: true });
+                            else if (fieldToEditIndex === 8) goalDocument = await Goal.findOneAndUpdate({ _id: goalTargetID }, { $set: { archived: userEdit } }, { new: true });
+                            else goalDocument = await Goal.findOneAndUpdate({ _id: goalTargetID }, { $set: { goal } }, { new: true });
+                            console.log({ continueEdit });
+                            if (goalDocument) {
+                                goalIndex = indexByRecency ?
+                                    await getGoalIndexByFunction(authorID, goalTargetID, isArchived ? totalArchiveNumber : totalGoalNumber, isArchived, getOneGoalByRecency)
+                                    : await getGoalIndexByFunction(authorID, goalTargetID, isArchived ? totalArchiveNumber : totalGoalNumber, isArchived, getOneGoalByStartTime);
+                                console.log({ goalDocument, goalTargetID, fieldToEditIndex });
+                                showGoal = goalDocumentToString(goalDocument);
+                                const continueEditMessage = `Do you want to continue **editing Goal ${goalIndex}?:**\n\n__**Goal ${goalIndex}:**__ ${showGoal}`;
+                                continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: Continue Editing Goal ${goalIndex}?`, 300000);
+                            }
+                            else {
+                                message.reply("**Goal not found...**");
+                                continueEdit = false;
+                            }
+                        }
+                        catch (err) {
+                            return console.log(err);
+                        }
+                    }
+                    else {
+                        console.log({ continueEdit, userEdit });
+                        goalDocument = await Goal.findById(goalTargetID);
+                        if (goalDocument) {
+                            goalIndex = indexByRecency ?
+                                await getGoalIndexByFunction(authorID, goalTargetID, isArchived ? totalArchiveNumber : totalGoalNumber, isArchived, getOneGoalByStartTime)
+                                : await getGoalIndexByFunction(authorID, goalTargetID, isArchived ? totalArchiveNumber : totalGoalNumber, isArchived, getOneGoalByRecency);
+                            console.log({ goalDocument, goalTargetID, fieldToEditIndex });
+                            showGoal = goalDocumentToString(goalDocument);
+                        }
+                        else {
+                            message.reply(`**${isArchived ? "Archived " : ""}Goal not found...**`);
+                            continueEdit = false;
+                        }
+                    }
+                }
+                while (continueEdit === true);
+                return;
+            }
+            else return message.reply(goalActionHelpMessage);
         }
 
 
@@ -773,16 +982,89 @@ module.exports = {
 
         else if (goalCommand === "end" || goalCommand === "e" || goalCommand === "complete" || goalCommand === "log") {
             // (similar indexing to edit, recent or #) + archive
-        }
+            // Make a list - similar to archive
+            let goalEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${goalCommand} <archive?> <recent?> <force?>\``
+                + `\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived goals!**`
+                + "\n\n`<recent?>`(OPT.): type **recent** to order the goals by **actual time created instead of goal start time!**"
+                + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**";
+            goalEditUsageMessage = fn.getMessageEmbed(goalEditUsageMessage, `Long-Term Goal: End Help`, goalEmbedColour);
+            if (goalType === "help") return message.channel.send(goalEditUsageMessage);
 
+            var indexByRecency = false;
+            if (args[1 + archiveShift] !== undefined) {
+                if (args[1 + archiveShift].toLowerCase() === "recent") {
+                    indexByRecency = true;
+                }
+            }
 
-        else if (goalCommand === "status" || goalCommand === "check") {
-            // Show the goal description and checkpoints and the status of it! (similar indexing to edit, recent or #) + archive
+            do {
+                var goalArray;
+                if (indexByRecency) goalArray = await Goal.find({ archived: isArchived, completed: false }, { _id: 1, "goal.description": 1 }).sort({ _id: -1 });
+                else goalArray = await Goal.find({ archived: isArchived, completed: false }, { _id: 1, "goal.description": 1 }).sort({ "goal.start": +1 });
+                if (!goalArray.length) return message.reply(`**No ${isArchived ? "archived " : ""}goals** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
+
+                let goalList = "";
+                goalArray.forEach((element, i) => {
+                    goalList += `\`${i + 1}\` - ${element.goal.description}\n`;
+                });
+
+                let targetGoalIndex = await fn.userSelectFromList(bot, message, goalList, goalArray.length, "__**Which goal would you like to end?:**__",
+                    `Long-Term Goal${isArchived ? " Archive" : ""}: End Selection`, goalEmbedColour, 600000, 0);
+                if (!targetGoalIndex) return;
+                const targetGoal = goalArray[targetGoalIndex];
+                const confirmEnd = await fn.getUserConfirmation(message, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
+                    forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: End Confirmation`);
+                if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { completed: true } }, (err, result) => {
+                    if (err) return console.error(err);
+                    console.log({ result });
+                });
+                else continue;
+            }
+            while (true)
         }
 
 
         else if (archiveRegex.test(goalCommand) || goalCommand === "stash" || goalCommand === "store") {
             // Allows for archive - indexing by unarchived entries only!
+            let goalEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${goalCommand} <recent?> <force?>\``
+                + "\n\n`<recent?>`(OPT.): type **recent** to order the goals by **actual time created instead of goal start time!**"
+                + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**";
+            goalEditUsageMessage = fn.getMessageEmbed(goalEditUsageMessage, `Long-Term Goal: Archive Help`, goalEmbedColour);
+            if (goalType === "help") return message.channel.send(goalEditUsageMessage);
+
+            var indexByRecency = false;
+            if (args[1] !== undefined) {
+                if (args[1].toLowerCase() === "recent") {
+                    indexByRecency = true;
+                }
+            }
+
+            do {
+                var goalArray;
+                if (indexByRecency) goalArray = await Goal.find({ archived: false }, { _id: 1, "goal.description": 1 }).sort({ _id: -1 });
+                else goalArray = await Goal.find({ archived: false }, { _id: 1, "goal.description": 1 }).sort({ "goal.start": +1 });
+                if (!goalArray.length) return message.reply(`**No ${isArchived ? "archived " : ""}goals** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
+
+                let goalList = "";
+                goalArray.forEach((element, i) => {
+                    goalList += `\`${i + 1}\` - ${element.goal.description}\n`;
+                });
+
+                let targetGoalIndex = await fn.userSelectFromList(bot, message, goalList, goalArray.length, "__**Which goal would you like to archive?:**__",
+                    `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Selection`, goalEmbedColour, 600000, 0);
+                if (!targetGoalIndex) return;
+                const targetGoal = goalArray[targetGoalIndex];
+                const confirmEnd = await fn.getUserConfirmation(message, `**Are you sure you want to archive this goal?**`
+                + `\n(it will not be deleted, but won't show up in your \`${PREFIX}${commandUsed} post\`)`
+                + `\n\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
+                    forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Confirmation`);
+                if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { archived: true } }, (err, result) => {
+                    if (err) return console.error(err);
+                    console.log({ result });
+                });
+                else continue;
+            }
+            while (true)
         }
 
 

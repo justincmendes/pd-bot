@@ -156,11 +156,11 @@ async function findFirstAttachment(attachmentArray) {
     })
     return attachment;
 }
-function addUserTag(userOriginalMessageObject, post) {
-    return `<@${userOriginalMessageObject.author.id}>\n${post}`;
+function addUserTag(message, post) {
+    return `<@${message.author.id}>\n${post}`;
 }
 // Designed not to break when userConfirmation = ❌ (FALSE), but only stop when `stop`
-async function getFastPostEmbedArray(userOriginalMessageObject, fastData, forceSkip = false) {
+async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) {
     const [startTimestamp, endTimestamp, fastDurationTimestamp, fastBreaker, moodValue, reflectionText] = fastData;
     let postIndex = 0;
     let fastPost = "";
@@ -180,11 +180,11 @@ async function getFastPostEmbedArray(userOriginalMessageObject, fastData, forceS
         postIndex++;
         console.log({ attachment });
         if (attachment === null) {
-            collectedObject = await fn.messageDataCollectFirst(userOriginalMessageObject, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
+            collectedObject = await fn.messageDataCollectFirst(bot, message, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
                 true, true, true, 3000);
         }
         else {
-            collectedObject = await fn.messageDataCollectFirst(userOriginalMessageObject, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
+            collectedObject = await fn.messageDataCollectFirst(bot, message, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
                 true, true, true, 3000, true, attachment);
         }
         // If user types stop, messageDataCollectFirstObject returns false:
@@ -192,7 +192,7 @@ async function getFastPostEmbedArray(userOriginalMessageObject, fastData, forceS
         collectedMessage = collectedObject.content;
         if (postIndex === 1) {
             if (collectedMessage === "1") {
-                fastPost = addUserTag(userOriginalMessageObject, fastPost);
+                fastPost = addUserTag(message, fastPost);
                 break;
             }
             let attachmentArray = collectedObject.attachments;
@@ -252,14 +252,14 @@ async function getFastPostEmbedArray(userOriginalMessageObject, fastData, forceS
 
         if (collectedMessage === "remove" && attachment !== null) {
             const removeFastWarning = "Are you sure you want to remove your **attached image/gif?**";
-            let confirmClearMessage = await fn.getUserConfirmation(userOriginalMessageObject, removeFastWarning, forceSkip, "Fast Post: Remove Attachment");
+            let confirmClearMessage = await fn.getUserConfirmation(message, removeFastWarning, forceSkip, "Fast Post: Remove Attachment");
             if (confirmClearMessage === true) {
                 attachment = null;
             }
         }
         else if (collectedMessage === "clear") {
             const clearMessageWarning = "Are you sure you want to reset your **current message?** (your attached image remains the same if you had one)";
-            let confirmClearMessage = await fn.getUserConfirmation(userOriginalMessageObject, clearMessageWarning, forceSkip, "Fast Post: Clear Current Message");
+            let confirmClearMessage = await fn.getUserConfirmation(message, clearMessageWarning, forceSkip, "Fast Post: Clear Current Message");
             if (confirmClearMessage === true) {
                 fastPostMessagePrompt = originalFastPostMessagePrompt;
                 fastPost = "";
@@ -268,7 +268,7 @@ async function getFastPostEmbedArray(userOriginalMessageObject, fastData, forceS
         }
         else if (collectedMessage == "clear all") {
             const clearAllWarning = "Are you sure you want to reset both your **current message and attached image?**";
-            let confirmClearAll = await fn.getUserConfirmation(userOriginalMessageObject, clearAllWarning, forceSkip, "Fast Post: Clear All");
+            let confirmClearAll = await fn.getUserConfirmation(message, clearAllWarning, forceSkip, "Fast Post: Clear All");
             if (confirmClearAll === true) {
                 fastPostMessagePrompt = originalFastPostMessagePrompt;
                 fastPost = "";
@@ -280,12 +280,12 @@ async function getFastPostEmbedArray(userOriginalMessageObject, fastData, forceS
             return false;
         }
         else if (collectedMessage === "1") {
-            fastPost = addUserTag(userOriginalMessageObject, fastPost);
+            fastPost = addUserTag(message, fastPost);
             break;
         }
         else if (collectedMessage === "0") {
             const addDefaultMessagePrompt = "Are you sure you want to add the default message including the **time and your fast breaker** (if you entered one)";
-            let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, addDefaultMessagePrompt, forceSkip, "Add Default Fast Message");
+            let confirmOverwrite = await fn.getUserConfirmation(message, addDefaultMessagePrompt, forceSkip, "Add Default Fast Message");
             if (confirmOverwrite === true) {
                 if (fastBreaker === null) {
                     collectedMessage = `=============\nBroke my **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!\n=============`;
@@ -313,7 +313,7 @@ async function getFastPostEmbedArray(userOriginalMessageObject, fastData, forceS
         }
         else if (collectedMessage === "post") {
             const addFullFastPrompt = "Are you sure you want to add your **full fast (including mood and reflection)**";
-            let confirmOverwrite = await fn.getUserConfirmation(userOriginalMessageObject, addFullFastPrompt, forceSkip, "Add Full Fast");
+            let confirmOverwrite = await fn.getUserConfirmation(message, addFullFastPrompt, forceSkip, "Add Full Fast");
             if (confirmOverwrite === true) {
                 collectedMessage = `=============\n${fastDataArrayToString(fastData)}\n=============`;
                 if (onFirstMessageCollection) {
@@ -467,14 +467,14 @@ function setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fast
  * @param {*} forceSkip 
  * In relative terms (NOT UTC)
  */
-async function getUserReminderEndTime(message, startTimestamp, fastTimeHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
+async function getUserReminderEndTime(bot, message, startTimestamp, fastTimeHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
     // Setup Reminder:
     let setReminder = true;
     var reminderEndTime;
     do {
         const reminderPrompt = "__**How long do you intend to fast?**__\nI will DM you **when your fast is done and an hour before it's done**"
             + "\n\nType `skip` to **start your fast without setting up an end of fast reminder**";
-        const userTimeInput = await fn.messageDataCollectFirst(message, reminderPrompt, "Fast Duration", fastEmbedColour);
+        const userTimeInput = await fn.messageDataCollectFirst(bot, message, reminderPrompt, "Fast Duration", fastEmbedColour);
         if (userTimeInput === "skip") return undefined;
         if (userTimeInput === "stop" || userTimeInput === false) return false;
         // Undo the timezoneOffset to get the end time in UTC
@@ -559,7 +559,7 @@ module.exports = {
                 startTimestamp = fn.timeCommandHandlerToUTC(startTimeArgs, message.createdTimestamp, timezoneOffset, daylightSavingSetting);
                 if (startTimestamp === false) return message.reply(fastStartHelpMessage);
                 // Setup Reminder:
-                const reminderEndTime = await getUserReminderEndTime(message, startTimestamp, fastStartHelpMessage, timezoneOffset, daylightSavingSetting, forceSkip);
+                const reminderEndTime = await getUserReminderEndTime(bot, message, startTimestamp, fastStartHelpMessage, timezoneOffset, daylightSavingSetting, forceSkip);
                 if (reminderEndTime === false) return;
 
                 let newFast = new Fast({
@@ -651,27 +651,27 @@ module.exports = {
                 var reflectionTextPrompt = "**Elaborate? For Example:\n🤔 - Why did you feel that way?\n💭 - What did you do that made it great? / What could you have done to make it better?**" +
                     "\n\nType `1` when **done**\nType `skip` to **skip** (will **continue**, but log it as blank)\nType `reset` to **reset** your current reflection message\n\n";
                 const reflectionTextPromptOriginal = reflectionTextPrompt;
-                let quickEnd = await fn.reactionDataCollect(message, quickEndMessage, quickEndEmojis, "Fast: Quick End?", fastEmbedColour, 180000)
+                let quickEnd = await fn.reactionDataCollect(bot, message, quickEndMessage, quickEndEmojis, "Fast: Quick End?", fastEmbedColour, 180000)
                     .catch(err => console.error(err));
                 var fastBreaker, moodValue, reflectionText;
                 if (quickEnd === "❌") return;
                 else if (quickEnd === "✅") {
                     // Send message and as for fastBreaker and upload a picture too
                     // which can be referenced later or sent to a server when DMs are handled!
-                    fastBreaker = await fn.messageDataCollectFirst(message, fastBreakerPrompt, "Fast: Fast Breaker", fastEmbedColour, 300000);
+                    fastBreaker = await fn.messageDataCollectFirst(bot, message, fastBreakerPrompt, "Fast: Fast Breaker", fastEmbedColour, 300000);
                     console.log({ fastBreaker });
                     if (!fastBreaker || fastBreaker == "stop") return;
                     else if (fastBreaker == "skip") fastBreaker = null;
 
                     // +1 to convert the returned index back to natural numbers
-                    moodValue = await fn.userSelectFromList(message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour);
+                    moodValue = await fn.userSelectFromList(bot, message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour);
                     if (moodValue === false) return;
                     else moodValue++;
                     var reflectionText = "";
                     let messageIndex = 0;
                     let reset = false;
                     do {
-                        let userReflection = await fn.messageDataCollectFirst(message, reflectionTextPrompt, "Fast: Reflection", fastEmbedColour, 900000);
+                        let userReflection = await fn.messageDataCollectFirst(bot, message, reflectionTextPrompt, "Fast: Reflection", fastEmbedColour, 900000);
                         if (!userReflection) return;
                         if (userReflection === "1") break;
                         else if (userReflection === "reset") {
@@ -1285,7 +1285,7 @@ module.exports = {
                     const fieldToEditInstructions = "**Which field do you want to edit?:**";
                     const fieldToEditAdditionalMessage = `__**Fast ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showFast}`;
                     const fieldToEditTitle = `Fast: Edit Field`;
-                    let fieldToEditIndex = await fn.userSelectFromList(message, fieldsList, fastFields.length, fieldToEditInstructions,
+                    let fieldToEditIndex = await fn.userSelectFromList(bot, message, fieldsList, fastFields.length, fieldToEditInstructions,
                         fieldToEditTitle, fastEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
                     if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
                     var userEdit, fastEditMessagePrompt = "";
@@ -1294,27 +1294,27 @@ module.exports = {
                     switch (fieldToEditIndex) {
                         case 0:
                             fastEditMessagePrompt = dateAndTimeInstructions;
-                            userEdit = await fn.getUserEditString(message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
                             break;
                         case 1:
                             fastEditMessagePrompt = dateAndTimeInstructions;
-                            userEdit = await fn.getUserEditString(message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
                             break;
                         // No prompt for the fast breaker
                         case 2:
-                            userEdit = await fn.getUserEditString(message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
                             break;
                         case 3:
                             {
                                 let moodEmojis = ["😖", "😔", "😐", "🙂", "😄"];
                                 fastEditMessagePrompt = "**__How did you feel during this past fast?__\n\nEnter a number from 1-5 (1 = worst, 5 = best)**\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖";
-                                userEdit = await fn.getUserEditNumber(message, fieldToEdit, 5, type, moodEmojis, forceSkip, fastEmbedColour, fastEditMessagePrompt);
+                                userEdit = await fn.getUserEditNumber(bot, message, fieldToEdit, 5, type, moodEmojis, forceSkip, fastEmbedColour, fastEditMessagePrompt);
                                 break;
                             }
                         case 4:
                             fastEditMessagePrompt = "\n**__Reflection Questions:__\n🤔 - Why did you feel that way?"
                                 + "\n💭 - What did you do that made it great? / What could you have done to make it better?**";
-                            userEdit = await fn.getUserMultilineEditString(message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
+                            userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
                             break;
                     }
                     if (userEdit === false) return;
@@ -1351,7 +1351,7 @@ module.exports = {
                                     if (fieldToEditIndex === 1) {
                                         const changeRemindersMessage = "Do you want to **update your fast end reminders (⬆)** OR **just end your fast completely? (⏭)**"
                                             + "\n\n**❌ - Exit**";
-                                        const endReaction = await fn.reactionDataCollect(message, changeRemindersMessage, ['⬆', '⏭', '❌'], "Fast: Update End Reminders or End Fast",
+                                        const endReaction = await fn.reactionDataCollect(bot, message, changeRemindersMessage, ['⬆', '⏭', '❌'], "Fast: Update End Reminders or End Fast",
                                             fastEmbedColour, 60000);
                                         endTimeIsDefined = true;
                                         switch (endReaction) {
@@ -1393,7 +1393,7 @@ module.exports = {
                                             await Reminder.deleteMany(connectedReminderQuery);
                                         }
                                         else {
-                                            reminderEndTime = await getUserReminderEndTime(message, startTimestamp,
+                                            reminderEndTime = await getUserReminderEndTime(bot, message, startTimestamp,
                                                 `Try \`${fieldToEditIndex === 0 ? `${PREFIX}${commandUsed} start help` : `${PREFIX}${commandUsed} end help`}\``,
                                                 timezoneOffset, daylightSavingSetting, forceSkip);
                                             if (!reminderEndTime && reminderEndTime !== 0) changeReminders = false;
@@ -1555,7 +1555,7 @@ module.exports = {
                 console.log({ fastData });
 
                 const endTimestamp = fastData[1];
-                let fastPost = await getFastPostEmbedArray(message, fastData, forceSkip);
+                let fastPost = await getFastPostEmbedArray(bot, message, fastData, forceSkip);
                 console.log({ fastPost });
                 if (!fastPost) return;
                 const finalEndTimestamp = endTimestamp || Date.now();

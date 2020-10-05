@@ -547,13 +547,13 @@ module.exports = {
         return (reminderEmbed);
     },
 
-    getUserFirstRecurringEndDuration: async function (message, helpMessage, userTimezoneOffset, userDaylightSavingSetting, isRecurring) {
+    getUserFirstRecurringEndDuration: async function (bot, message, helpMessage, userTimezoneOffset, userDaylightSavingSetting, isRecurring) {
         var firstEndTime, error, startTimestamp;
         do {
             error = false;
             const reminderPrompt = `__**When do you intend to start the first ${isRecurring ? "recurring " : ""}reminder?**__`
                 + "\n\nType `skip` to **start it now**";
-            const userTimeInput = await fn.messageDataCollectFirst(message, reminderPrompt, `${isRecurring ? "Repeat " : ""}Reminder: First Reminder`, reminderEmbedColour);
+            const userTimeInput = await fn.messageDataCollectFirst(bot, message, reminderPrompt, `${isRecurring ? "Repeat " : ""}Reminder: First Reminder`, reminderEmbedColour);
             startTimestamp = new Date().getTime();
             if (userTimeInput === "skip" || userTimeInput.toLowerCase() === "now") firstEndTime = startTimestamp;
             else {

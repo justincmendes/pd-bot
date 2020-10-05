@@ -299,7 +299,7 @@ module.exports = {
             // 1.5. Check if the user wants to use the template or not
             const thumbsUp = '👍';
             const thumbsDown = '👎';
-            let userWantsTemplate = await fn.reactionDataCollect(message, `**Would you like to use a mastermind reflection __template__  ${thumbsUp} or __not__ ${thumbsDown}?**`,
+            let userWantsTemplate = await fn.reactionDataCollect(bot, message, `**Would you like to use a mastermind reflection __template__  ${thumbsUp} or __not__ ${thumbsDown}?**`,
                 [thumbsUp, thumbsDown], "Mastermind Entry: Template?", mastermindEmbedColour);
             switch (userWantsTemplate) {
                 case thumbsUp: userWantsTemplate = true;
@@ -316,7 +316,7 @@ module.exports = {
 
             // Create new User Settings - can be changed by the user themselves if it's incorrect!
             if (!targetUserSettings) {
-                const timezone = await fn.getNewUserTimezoneSettings(message, PREFIX, targetUser);
+                const timezone = await fn.getNewUserTimezoneSettings(bot, message, PREFIX, targetUser);
                 await fn.createUserSettings(bot, targetUser, timezone);
                 targetUserTimezoneOffset = timezone.offset;
                 targetUserTimezone = timezone.name;
@@ -327,33 +327,33 @@ module.exports = {
             }
 
             if (userWantsTemplate) {
-                const observations = await fn.getMultilineEntry(message, "**__Look back at the previous week ↩:__**"
+                const observations = await fn.getMultilineEntry(bot, message, "**__Look back at the previous week ↩:__**"
                     + "\n**- 📈 How much did you stick to your habits and/or progress on your goals this week?\n- 💭 Make 3 observations.**",
                     "Mastermind Entry: Observations", true, mastermindEmbedColour);
                 console.log({ observations });
                 if (!observations && observations !== '') return;
 
-                const areaOfLifeIndex = await fn.userSelectFromList(message, areasOfLifeList, areasOfLife.length, "**__Which Area of Life Needs the Most Attention This Week? 🌱__**",
+                const areaOfLifeIndex = await fn.userSelectFromList(bot, message, areasOfLifeList, areasOfLife.length, "**__Which Area of Life Needs the Most Attention This Week? 🌱__**",
                     "Mastermind Entry: Area of Life Assessment", mastermindEmbedColour);
                 console.log({ areaOfLifeIndex });
                 if (!areaOfLifeIndex && areaOfLifeIndex !== 0) return;
 
-                const areaOfLifeReason = await fn.getSingleEntry(message, `**Why does ${areasOfLifeEmojis[areaOfLifeIndex]} __${areasOfLife[areaOfLifeIndex]}__ need the most attention this week?**`,
+                const areaOfLifeReason = await fn.getSingleEntry(bot, message, `**Why does ${areasOfLifeEmojis[areaOfLifeIndex]} __${areasOfLife[areaOfLifeIndex]}__ need the most attention this week?**`,
                     "Mastermind Entry: Area of Life Assessment", forceSkip, mastermindEmbedColour);
                 console.log({ areaOfLifeReason });
                 if (!areaOfLifeReason && areaOfLifeReason !== '') return;
 
-                const stopEntry = await fn.getSingleEntry(message, "**What do you want to __stop__ doing this week?**",
+                const stopEntry = await fn.getSingleEntry(bot, message, "**What do you want to __stop__ doing this week?**",
                     "Mastermind Entry: Stop", forceSkip, mastermindEmbedColour);
                 console.log({ stopEntry });
                 if (!stopEntry && stopEntry !== '') return;
 
-                const startEntry = await fn.getSingleEntry(message, "**What do you want to __start__ doing this week?**",
+                const startEntry = await fn.getSingleEntry(bot, message, "**What do you want to __start__ doing this week?**",
                     "Mastermind Entry: Start", forceSkip, mastermindEmbedColour);
                 console.log({ startEntry });
                 if (!startEntry && startEntry !== '') return;
 
-                const continueEntry = await fn.getSingleEntry(message, "**What went well this past week that you want to __continue__ doing for this week?**",
+                const continueEntry = await fn.getSingleEntry(bot, message, "**What went well this past week that you want to __continue__ doing for this week?**",
                     "Mastermind Entry: Continue", forceSkip, mastermindEmbedColour);
                 console.log({ continueEntry });
                 if (!continueEntry && continueEntry !== '') return;
@@ -366,7 +366,7 @@ module.exports = {
                         : `Type \`set\` to **submit** all goals entered so far (**Goals 1-${goalCount - 1}**)`
                         : `Type \`set\` to **skip** entering any goals`}\nType \`reset\` to **reset** all of your current **weekly goals**`;
                     const completionKeywords = ["set", "reset"];
-                    const weeklyGoalDescription = await fn.getSingleEntry(message, `**🎯 What is __Goal #${goalCount}__ of this week's goals?**`,
+                    const weeklyGoalDescription = await fn.getSingleEntry(bot, message, `**🎯 What is __Goal #${goalCount}__ of this week's goals?**`,
                         `Mastermind Entry: Weekly Goal ${goalCount}`, forceSkip, mastermindEmbedColour, completionInstructions, completionKeywords);
                     if (!weeklyGoalDescription && weeklyGoalDescription !== "" || weeklyGoalDescription === "set") break;
                     else if (weeklyGoalDescription === "reset") {
@@ -376,13 +376,13 @@ module.exports = {
                     }
 
                     const goalDescriptionString = `__**Goal #${goalCount}:**__${weeklyGoalDescription === "" ? "" : `\n${weeklyGoalDescription}`}`;
-                    const weeklyGoalType = await fn.userSelectFromList(message, `${areasOfLifeList}\n\n${goalDescriptionString}`, areasOfLife.length,
+                    const weeklyGoalType = await fn.userSelectFromList(bot, message, `${areasOfLifeList}\n\n${goalDescriptionString}`, areasOfLife.length,
                         `**__Which Area of Life does Goal #${goalCount} fall under?__**`,
                         `Mastermind Entry: Weekly Goal ${goalCount}`, mastermindEmbedColour);
                     if (!weeklyGoalType && weeklyGoalType !== 0) break;
 
                     const goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[weeklyGoalType]} ${areasOfLife[weeklyGoalType]}`;
-                    const weeklyGoalReason = await fn.getSingleEntry(message, `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
+                    const weeklyGoalReason = await fn.getSingleEntry(bot, message, `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
                         `Mastermind Entry: Weekly Goal ${goalCount}`, forceSkip, mastermindEmbedColour, completionInstructions, completionKeywords);
                     if (!weeklyGoalReason && weeklyGoalReason !== "" || weeklyGoalReason === "set") break;
                     else if (weeklyGoalReason === "reset") {
@@ -422,7 +422,7 @@ module.exports = {
                 });
             }
             else if (userWantsTemplate === false) {
-                const entry = await fn.getMultilineEntry(message, "**Enter your mastermind entry:**",
+                const entry = await fn.getMultilineEntry(bot, message, "**Enter your mastermind entry:**",
                     "Mastermind Entry: No Template", forceSkip, mastermindEmbedColour);
                 if (entry) {
                     mastermindDocument = new Mastermind({
@@ -460,12 +460,6 @@ module.exports = {
                     const postConfirmation = await fn.getUserConfirmation(message, `**Would you like to __post__ your mastermind entry to a __server's channel?__**`,
                         false, "Mastermind: Post", 180000);
                     if (!postConfirmation) return;
-                    // const targetChannel = await fn.getPostChannel(bot, message, "Mastermind", forceSkip, mastermindEmbedColour);
-                    // if (!targetChannel) return;
-                    // const member = bot.guilds.cache.get(guildID).member(authorID);
-                    // const post = fn.getMessageEmbed(mastermindDocumentToString(bot, mastermindDocument), `${member ? `${member.displayName}'s ` : ""}Mastermind Reflection`
-                    //     + ` - ${fn.timestampToDateString(mastermindDocument.createdAt)} ${targetUserTimezone}`, mastermindEmbedColour);
-                    // await fn.sendMessageToChannel(bot, post, targetChannel);
                     await this.run(bot, message, commandUsed, ["post", "recent"], PREFIX, timezoneOffset, daylightSavings, forceSkip);
                 }
             }
@@ -933,7 +927,7 @@ module.exports = {
                         const fieldToEditInstructions = "**Which field do you want to edit?:**";
                         const fieldToEditAdditionalMessage = `__**Mastermind ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showMastermind}`;
                         const fieldToEditTitle = `Mastermind: Edit Field`;
-                        let fieldToEditIndex = await fn.userSelectFromList(message, fieldsList, mastermindFields.length, fieldToEditInstructions,
+                        let fieldToEditIndex = await fn.userSelectFromList(bot, message, fieldsList, mastermindFields.length, fieldToEditInstructions,
                             fieldToEditTitle, mastermindEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
                         if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
                         var userEdit, mastermindEditMessagePrompt = "";
@@ -942,12 +936,12 @@ module.exports = {
                         let { journal, createdAt } = mastermindDocument;
                         if (fieldToEditIndex === 0) {
                             mastermindEditMessagePrompt = `**__Please enter the date and time when this mastermind entry was created:__**`;
-                            userEdit = await fn.getUserEditString(message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                         }
                         else if (!usedTemplate) {
                             if (fieldToEditIndex === 1) {
                                 mastermindEditMessagePrompt = `**__Please enter your new mastermind entry:__**`;
-                                userEdit = await fn.getUserMultilineEditString(message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                                userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                                 journal.entry = userEdit;
                             }
                         }
@@ -955,13 +949,13 @@ module.exports = {
                             case 1:
                                 mastermindEditMessagePrompt = "\n**__Look back at the previous week ↩:__**"
                                     + "\n**- 📈 How much did you stick to your habits and/or progress on your goals?\n- 💭 Make 3 observations.**";
-                                userEdit = await fn.getUserMultilineEditString(message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                                userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                                 journal.observations = userEdit;
                                 break;
                             case 2:
                                 {
                                     mastermindEditMessagePrompt = `\n**__Which Area of Life Needs the Most Attention? 🌱__**\n${areasOfLifeList}`;
-                                    let areaOfLifeType = await fn.getUserEditNumber(message, fieldToEdit, areasOfLife.length, type, areasOfLifeCombinedEmoji, forceSkip, mastermindEmbedColour, mastermindEditMessagePrompt);
+                                    let areaOfLifeType = await fn.getUserEditNumber(bot, message, fieldToEdit, areasOfLife.length, type, areasOfLifeCombinedEmoji, forceSkip, mastermindEmbedColour, mastermindEditMessagePrompt);
                                     if (!areaOfLifeType) return;
                                     else if (areaOfLifeType === "back") break;
                                     areaOfLifeType--;
@@ -969,7 +963,7 @@ module.exports = {
                                     mastermindEditMessagePrompt = `\n**Why does ${areasOfLifeEmojis[areaOfLifeType]} __${areasOfLife[areaOfLifeType]}__ need the most attention this week?`;
                                     // let additionalInstructions = `Type \`same\` to keep the previous entry you've had`;
                                     // let additionalKeywords = ["same"];
-                                    let areaOfLifeReason = await fn.getUserEditString(message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                                    let areaOfLifeReason = await fn.getUserEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                                     console.log({ areaOfLifeReason });
                                     if (!areaOfLifeReason) return;
                                     else if (areaOfLifeReason === "back") break;
@@ -981,17 +975,17 @@ module.exports = {
                                 }
                             case 3:
                                 mastermindEditMessagePrompt = "What do you want to __stop__ doing?";
-                                userEdit = await fn.getUserEditString(message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                                userEdit = await fn.getUserEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                                 journal.stopEntry = userEdit;
                                 break;
                             case 4:
                                 mastermindEditMessagePrompt = "What do you want to __start__ doing?";
-                                userEdit = await fn.getUserEditString(message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                                userEdit = await fn.getUserEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                                 journal.startEntry = userEdit;
                                 break;
                             case 5:
                                 mastermindEditMessagePrompt = "What went well in the previous week that you want to __continue__ doing for?";
-                                userEdit = await fn.getUserEditString(message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                                userEdit = await fn.getUserEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                                 journal.continueEntry = userEdit;
                                 break;
                             case 6:
@@ -1000,14 +994,14 @@ module.exports = {
                                     // let additionalInstructions = `Type \`add\` to add a new goal`;
                                     // let additionalKeyword = ["add"];
                                     mastermindEditMessagePrompt = `\n**__Please enter the \`number\` of the goal you'd like to change__**:\n${fn.goalArrayToString(goalsArray, "Weekly", true, true, true)}`;
-                                    let goalIndex = await fn.userSelectFromList(message, fn.goalArrayToString(goalsArray, "Weekly", true, true, true), goalsArray.length, `\n**__Please enter the \`number\` of the goal you'd like to change__:**`,
+                                    let goalIndex = await fn.userSelectFromList(bot, message, fn.goalArrayToString(goalsArray, "Weekly", true, true, true), goalsArray.length, `\n**__Please enter the \`number\` of the goal you'd like to change__:**`,
                                         "Mastermind Entry: Weekly Goal Edit", mastermindEmbedColour);
                                     if (!goalIndex && goalIndex !== 0) return;
 
                                     // let extraInstructions = `Type \`delete\` to **delete** this particular goal (**Goal ${goalIndex + 1}**)`
                                     // + `Type \`same\` to **keep this category the same** as it was before`;
                                     // let extraKeywords = ["delete", "same"];
-                                    let weeklyGoalDescription = await fn.getUserEditString(message, "Goal Description", `\n**🎯 What is __Goal #${goalIndex + 1}__?:**`, type, forceSkip, mastermindEmbedColour);
+                                    let weeklyGoalDescription = await fn.getUserEditString(bot, message, "Goal Description", `\n**🎯 What is __Goal #${goalIndex + 1}__?:**`, type, forceSkip, mastermindEmbedColour);
                                     if (!weeklyGoalDescription && weeklyGoalDescription !== "") return;
                                     else if (weeklyGoalDescription === "back") break;
                                     // else if (weeklyGoalDescription === "delete") {
@@ -1021,7 +1015,7 @@ module.exports = {
                                     // }
 
                                     let goalDescriptionString = `__**Goal #${goalIndex + 1}:**__${weeklyGoalDescription === "" ? "" : `\n${weeklyGoalDescription}`}`;
-                                    let weeklyGoalType = await fn.getUserEditNumber(message, "Goal Category", areasOfLife.length, type, areasOfLifeCombinedEmoji,
+                                    let weeklyGoalType = await fn.getUserEditNumber(bot, message, "Goal Category", areasOfLife.length, type, areasOfLifeCombinedEmoji,
                                         forceSkip, mastermindEmbedColour, `\n**__Which Area of Life does Goal #${goalIndex + 1} fall under?__**\n${areasOfLifeList}\n\n${goalDescriptionString}`);
                                     console.log({ weeklyGoalType });
                                     if (!weeklyGoalType && weeklyGoalType !== 0) break;
@@ -1029,7 +1023,7 @@ module.exports = {
                                     weeklyGoalType--;
 
                                     let goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[weeklyGoalType]} ${areasOfLife[weeklyGoalType]}`;
-                                    let weeklyGoalReason = await fn.getUserEditString(message, "Goal Reason", `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
+                                    let weeklyGoalReason = await fn.getUserEditString(bot, message, "Goal Reason", `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
                                         type, forceSkip, mastermindEmbedColour);
                                     if (!weeklyGoalReason && weeklyGoalReason !== "") return;
                                     else if (weeklyGoalReason === "back") break;
@@ -1066,6 +1060,7 @@ module.exports = {
                                 createdAt = userEdit;
                             }
                         }
+                        else continueEdit = true;
                         console.log({ userEdit });
                         if (!continueEdit) {
                             try {

@@ -134,32 +134,32 @@ module.exports = {
                 switch (fieldToEditIndex) {
                     case 0:
                         userSettingsPrompt = `Please enter the server's **new prefix** (currently **${guildConfig.prefix}**):`;
-                        userEdit = await fn.getUserEditString(message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
+                        userEdit = await fn.getUserEditString(bot, message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
                         break;
                     case 1:
                         userSettingsPrompt = `Please enter the server's **__general timezone__** as an **abbreviation** or **+/- UTC Offset**:`;
-                        userEdit = await fn.getUserEditString(message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
+                        userEdit = await fn.getUserEditString(bot, message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
                         break;
                     case 2:
                         userSettingsPrompt = `Does your timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No**`;
-                        userEdit = await fn.getUserEditBoolean(message, fieldToEdit, userSettingsPrompt,
+                        userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, userSettingsPrompt,
                             ['⌚', '⛔'], type, forceSkip, guildEmbedColour);
                         break;
                     case 3:
                         userSettingsPrompt = `Please enter one or more **mastermind facilitator roles:**`
                             + `\n(**Current roles:** ${guildConfig.mastermind.roles.map((roleID) => `<@&${roleID}>`).join(', ')})`;
-                        userEdit = await fn.getUserEditString(message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
+                        userEdit = await fn.getUserEditString(bot, message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
                         break;
                     case 4:
                         userSettingsPrompt = `Enter the number corresponding to the __**day of the week**__ when you would like the server's **weekly mastermind reset to happen:**`;
-                        userEdit = await fn.getUserEditNumber(message, fieldToEdit, daysOfWeek.length, type, daysOfWeek, forceSkip, userEmbedColour, `${userSettingsPrompt}\n\n${daysOfWeekList}`);
+                        userEdit = await fn.getUserEditNumber(bot, message, fieldToEdit, daysOfWeek.length, type, daysOfWeek, forceSkip, userEmbedColour, `${userSettingsPrompt}\n\n${daysOfWeekList}`);
                         if (userEdit !== false && !isNaN(userEdit)) userEdit--;
                         console.log({ userEdit });
                         break;
                     case 5:
                         userSettingsPrompt = `Please enter one or more **quote roles (to get recurring inspiration):**`
                             + `\n(**Current roles:** ${guildConfig.quote.roles.map((roleID) => `<@&${roleID}>`).join(', ')})`;
-                        userEdit = await fn.getUserEditString(message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
+                        userEdit = await fn.getUserEditString(bot, message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
                         break;
                 }
                 if (userEdit === false) return;

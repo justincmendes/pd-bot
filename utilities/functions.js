@@ -124,7 +124,7 @@ module.exports = {
     },
 
     // BUG: When user reacts too soon, the code breaks, figure out how to let it keep running!
-    reactionDataCollect: async function (message, prompt, emojiArray, title = "Reaction",
+    reactionDataCollect: async function (bot, message, prompt, emojiArray, title = "Reaction",
         colour = this.defaultEmbedColour, delayTime = 60000, promptMessageDelete = true) {
         try {
             const userOriginal = message.author.id;
@@ -132,8 +132,12 @@ module.exports = {
             const deleteDelay = 3000;
             const MS_TO_SECONDS = 1000;
             const footerText = `*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
-            const embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
-            await message.channel.send(embed)
+            let embeds = this.getEmbedArray(prompt, title, true, false, colour);
+            embeds.forEach((embed, i) => {
+                embed[i] = embed.setFooter(footerText);
+            });
+            
+            await this.sendPaginationEmbed(bot, message.channel.id, userOriginal, embeds, false)
                 .then(async confirm => {
                     emojiArray.forEach(async (emoji, i) => {
                         await this.quickReact(confirm, emoji, i);
@@ -173,7 +177,7 @@ module.exports = {
         }
     },
 
-    messageDataCollectFirst: async function (message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000,
+    messageDataCollectFirst: async function (bot, message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000,
         showNewLineInstructions = true, getObject = false, deleteUserMessage = true, userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
         const userOriginal = message.author.id;
         var result;
@@ -183,11 +187,14 @@ module.exports = {
         let textEntryInstructions = `🛑 - Type \`stop\` to **cancel**`;
         textEntryInstructions = `${showNewLineInstructions ? `\n\n↩ - Press \`SHIFT+ENTER\` to enter a **newline** before sending!` : "\n"}\n${textEntryInstructions}`;
         prompt = prompt + textEntryInstructions;
-        let embed = this.getMessageEmbed(prompt, title, colour).setFooter(footerText);
-        if (attachImage == true) {
-            embed = embed.setImage(imageURL);
-        }
-        await message.channel.send(embed)
+        let embeds = this.getEmbedArray(prompt, title, true, false, colour);
+        embeds.forEach((embed, i) => {
+            embeds[i] = embed.setFooter(footerText);
+            if (attachImage === true) {
+                embeds[i] = embeds[i].setImage(imageURL);
+            }
+        });
+        await this.sendPaginationEmbed(bot, message.channel.id, userOriginal, embeds, false)
             .then(async confirm => {
                 const filter = response => {
                     const filterOut = response.author.id == userOriginal;
@@ -518,11 +525,11 @@ module.exports = {
     },
 
     // Note: This function displays values from 1 onwards but returns a properly indexed value (for arrays)
-    userSelectFromList: async function (userOriginalMessageObject, list, numberOfEntries, instructions, selectTitle,
+    userSelectFromList: async function (bot, message, list, numberOfEntries, instructions, selectTitle,
         messageColour = this.defaultEmbedColour, delayTime = 120000, userMessageDeleteDelay = 0, messageAfterList = "") {
         try {
             do {
-                targetIndex = await this.messageDataCollectFirst(userOriginalMessageObject, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
+                targetIndex = await this.messageDataCollectFirst(bot, message, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
                     messageColour, delayTime, false, false, true, userMessageDeleteDelay);
                 const errorMessage = "**Please enter a number on the given list!**";
                 const timeout = 15000;
@@ -530,10 +537,10 @@ module.exports = {
                     if (targetIndex.toLowerCase() === "stop") {
                         return false;
                     }
-                    else this.sendReplyThenDelete(userOriginalMessageObject, errorMessage, timeout);
+                    else this.sendReplyThenDelete(message, errorMessage, timeout);
                 }
                 else if (parseInt(targetIndex) > numberOfEntries || parseInt(targetIndex) <= 0) {
-                    this.sendReplyThenDelete(userOriginalMessageObject, errorMessage, timeout);
+                    this.sendReplyThenDelete(message, errorMessage, timeout);
                 }
                 else {
                     // Minus 1 to convert to back array index (was +1 for user understanding)
@@ -2816,13 +2823,13 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserEditString: async function (message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+    getUserEditString: async function (bot, message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         var collectedEdit, reset;
         let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n` : "\n"}`;
         editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**`;
         do {
             reset = false;
-            collectedEdit = await this.messageDataCollectFirst(message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            collectedEdit = await this.messageDataCollectFirst(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
             if (collectedEdit === "stop") return false;
             else if (!collectedEdit) return "back";
             else if (collectedEdit === "back") {
@@ -2851,7 +2858,7 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserEditBoolean: async function (message, field, instructionPrompt, emojiArray, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+    getUserEditBoolean: async function (bot, message, field, instructionPrompt, emojiArray, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         var collectedEdit, reset;
         let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n` : "\n"}`;
         const backEmoji = '⬅';
@@ -2861,7 +2868,7 @@ module.exports = {
         emojiArray.push(cancelEmoji);
         do {
             reset = false;
-            collectedEdit = await this.reactionDataCollect(message, editMessagePrompt, emojiArray, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            collectedEdit = await this.reactionDataCollect(bot, message, editMessagePrompt, emojiArray, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
             if (collectedEdit === "❌") return false;
             else if (!collectedEdit) return "back";
             else if (collectedEdit === backEmoji) {
@@ -2889,7 +2896,7 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserMultilineEditString: async function (message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+    getUserMultilineEditString: async function (bot, message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         let messageIndex = 0;
         let reset = false;
         var collectedEdit, userEdit = new Array();
@@ -2899,7 +2906,7 @@ module.exports = {
         const originalEditMessagePrompt = editMessagePrompt;
         do {
             messageIndex++;
-            collectedEdit = await this.messageDataCollectFirst(message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000, false);
+            collectedEdit = await this.messageDataCollectFirst(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000, false);
             if (!collectedEdit || collectedEdit === "stop") {
                 if (collectedEdit !== "stop") {
                     this.sendReplyThenDelete(message, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${userEdit.join('\n')}`, 600000);
@@ -3000,14 +3007,14 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserEditNumber: async function (message, field, maxNumber, type, numberMappingArray = false, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = '') {
+    getUserEditNumber: async function (bot, message, field, maxNumber, type, numberMappingArray = false, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = '') {
         var collectedEdit;
         const numberErrorMessage = `**Please Enter a Number from 1-${maxNumber}**`;
         let editMessagePrompt = `**What will you change your *${field}* to?:**`
         editMessagePrompt += `\n${additionalInstructions === '' ? `***(Please enter a number from \`1-${maxNumber}\`)***` : additionalInstructions}`
             + `\n\nType \`back\` to go **back to the main edit menu**`;
         while (true) {
-            collectedEdit = await this.messageDataCollectFirst(message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            collectedEdit = await this.messageDataCollectFirst(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
             if (collectedEdit === "stop") return false;
             else if (!collectedEdit) return "back";
             // Check if the given message is a number
@@ -3168,12 +3175,12 @@ module.exports = {
             let currentPage = 0;
             const channel = bot.channels.cache.get(channelID);
             embed = await channel.send(embedArray[currentPage]);
-            if (embedArray.length > 1) {
+            if (embedArray.length) {
                 const left = '⬅';
                 const right = '➡';
                 const cancel = '🗑️';
                 const file = '📎';
-                let emojis = [left, right];
+                let emojis = embedArray.length > 1 ? [left, right] : [];
                 emojis = withDelete ? emojis.concat([cancel]) : emojis;
                 emojis = embedArray[0].footer ? (embedArray[0].footer.text === this.fileFooterText ? emojis.concat([file]) : emojis) : emojis;
                 emojis.forEach(async (emoji, i) => {
@@ -3253,12 +3260,12 @@ module.exports = {
         }
     },
 
-    getNewUserTimezoneSettings: async function (message, PREFIX, targetUserID = false) {
+    getNewUserTimezoneSettings: async function (bot, message, PREFIX, targetUserID = false) {
         const forSelf = targetUserID ? targetUserID === message.author.id : true;
         const userAddressPossessive = forSelf ? "your" : `<@!${targetUserID}>'s`;
         const userAddress = forSelf ? "you" : `<@!${targetUserID}>`;
         const generalAddressPossessive = forSelf ? "your" : "their";
-        const userTimezone = await this.messageDataCollectFirst(message, `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** or **+/- UTC Offset**.\n\n(i.e. EST, +08:45, -9)`,
+        const userTimezone = await this.messageDataCollectFirst(bot, message, `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** or **+/- UTC Offset**.\n\n(i.e. EST, +08:45, -9)`,
             "User Settings: Setup", this.userSettingsEmbedColour, 300000, false);
         if (!userTimezone || userTimezone === "stop") return false;
         const userTimezoneOffset = this.getTimezoneOffset(userTimezone);
@@ -3266,7 +3273,7 @@ module.exports = {
             message.reply("**This __timezone does not exist__... Try again!**");
             return false;
         }
-        let userDaylightSavingsSetting = await this.reactionDataCollect(message, `Does ${userAddressPossessive} timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No\n❌ - Exit**`,
+        let userDaylightSavingsSetting = await this.reactionDataCollect(bot, message, `Does ${userAddressPossessive} timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No\n❌ - Exit**`,
             ['⌚', '⛔', '❌'], "User Settings: Setup", this.userSettingsEmbedColour, 300000);
         switch (userDaylightSavingsSetting) {
             case '⌚': userDaylightSavingsSetting = true;
@@ -3396,7 +3403,7 @@ module.exports = {
         const postToServerTitle = `${type}: Post to Server`;
         const postToChannelTitle = `${type}: Post to Channel`;
         var serverList = await this.listOfServerNames(bot, botUserMutualServerIDs);
-        targetServerIndex = await this.userSelectFromList(message, serverList, botUserMutualServerIDs.length,
+        targetServerIndex = await this.userSelectFromList(bot, message, serverList, botUserMutualServerIDs.length,
             serverSelectInstructions, postToServerTitle, embedColour);
         if (targetServerIndex === false) return false;
         channelList = await this.listOfServerTextChannelsUserCanSendTo(bot, message, botUserMutualServerIDs[targetServerIndex]);
@@ -3406,7 +3413,7 @@ module.exports = {
         }
         channelListDisplay = await this.listOfChannelNames(bot, channelList);
         while (!confirmSendToChannel) {
-            targetChannelIndex = await this.userSelectFromList(message, channelListDisplay, channelList.length,
+            targetChannelIndex = await this.userSelectFromList(bot, message, channelListDisplay, channelList.length,
                 channelSelectInstructions, postToChannelTitle, embedColour, 300000);
             if (targetChannelIndex === false) return false;
             console.log({ targetChannelIndex });
@@ -3416,7 +3423,7 @@ module.exports = {
         return channelList[targetChannelIndex];
     },
 
-    getSingleEntry: async function (message, instructionPrompt, title, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
+    getSingleEntry: async function (bot, message, instructionPrompt, title, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
         let reset = false;
         var collectedEdit;
         instructionPrompt += !additionalInstructions ? "" : `\n\n${additionalInstructions}`;
@@ -3430,7 +3437,7 @@ module.exports = {
         }
         do {
             reset = false;
-            collectedEdit = await this.messageDataCollectFirst(message, instructionPrompt, title, embedColour, 600000);
+            collectedEdit = await this.messageDataCollectFirst(bot, message, instructionPrompt, title, embedColour, 600000);
             if (!collectedEdit || collectedEdit === "stop") return false;
             if (hasInstructions) {
                 if (instructionKeywords.includes(collectedEdit)) {
@@ -3448,7 +3455,7 @@ module.exports = {
         return collectedEdit;
     },
 
-    getMultilineEntry: async function (message, instructionPrompt, title, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
+    getMultilineEntry: async function (bot, message, instructionPrompt, title, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
         let inputIndex = 0;
         let reset = false;
         var collectedEntry, finalEntry = new Array();
@@ -3466,7 +3473,7 @@ module.exports = {
         const originalPrompt = instructionPrompt;
         do {
             inputIndex++;
-            collectedEntry = await this.messageDataCollectFirst(message, instructionPrompt, title, embedColour, 600000, false);
+            collectedEntry = await this.messageDataCollectFirst(bot, message, instructionPrompt, title, embedColour, 600000, false);
             if (!collectedEntry || collectedEntry === "stop") {
                 if (collectedEntry !== "stop") {
                     this.sendReplyThenDelete(message, `**Exiting...** This was your **entry**: *(Deleting in 10 minutes)*\n${finalEntry.join('\n')}`, 600000);
