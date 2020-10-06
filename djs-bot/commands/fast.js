@@ -514,7 +514,7 @@ module.exports = {
         timezoneOffset, daylightSavingSetting, forceSkip) {
         // Variable Declarations and Initializations
         var fastUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\`\n\n`
-            + "`<ACTION>`: **help; start; end; see; edit; delete; post**"
+            + "`<ACTION>`: **help; start/s; end/e; see; edit; delete/d; post/p**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         fastUsageMessage = fn.getMessageEmbed(fastUsageMessage, "Fast: Help", fastEmbedColour);
         const fastHelpMessage = `Try \`${PREFIX}fast help\``;

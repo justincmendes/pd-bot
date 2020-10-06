@@ -33,7 +33,7 @@ async function sendGeneratedTemplate(bot, message, numberOfUsers, namesForTempla
         }
         else templateArray.push(fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex], withMarkdown));
     }
-    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(templateArray, "Mastermind: Weekly Reflection And Goals Template", true, true, templateEmbedColour));
+    await fn.sendPaginationEmbed(bot, message.channel.id, message.author.id, fn.getEmbedArray(templateArray, "Mastermind: Weekly Reflection And Goals Template", true, true, templateEmbedColour));
 }
 
 async function getOneMastermindByCreatedTime(userID, mastermindIndex) {
@@ -219,7 +219,7 @@ module.exports = {
 
         // Variable Declarations and Initializations
         let mastermindUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\``
-            + "\n\n\`<ACTION>\`: **template/t; start/create; delete; edit; post**"
+            + "\n\n\`<ACTION>\`: **start/s; delete/d; edit; post/p; template/t**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         mastermindUsageMessage = fn.getMessageEmbed(mastermindUsageMessage, "Mastermind: Help", mastermindEmbedColour);
         const mastermindHelpMessage = `Try \`${PREFIX}${commandUsed} help\`...`;
@@ -234,7 +234,7 @@ module.exports = {
         const totalMastermindNumber = await Mastermind.find({ userID: authorID }).countDocuments();
         const mastermindActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${mastermindCommand} help\``;
         if (mastermindCommand === "start" || mastermindCommand === "create" || mastermindCommand === "s" || mastermindCommand === "set"
-            || mastermindCommand === "c" || mastermindCommand === "make" || mastermindCommand === "m") {
+            || mastermindCommand === "c" || mastermindCommand === "make" || mastermindCommand === "m" || mastermindCommand === "add" || mastermindCommand === "a") {
             /**
              * 1. Check if the user has the mastermind facilitator role: prompt them to enter the name of ther person
              * they are making the entry for - if it's themselves they can type me/myself
@@ -1151,7 +1151,7 @@ module.exports = {
         else if (mastermindCommand === "template" || mastermindCommand === "templates" || mastermindCommand === "temp" || mastermindCommand === "t") {
             let templateUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${mastermindCommand} <NUMBER_OF_USERS> <NAMES>\``
                 + "\n\n\`<NUMBER_OF_USERS>\`: **10** (\**any number*\*)"
-                + "\n\n\`<NAMES>\`: Enter names of people in mastermind meeting\n***(COMMA SEPARATED, spaces in between is optional)***"
+                + "\n\n\`<NAMES>\`: Enter names of people in mastermind meeting\n***(COMMA SEPARATED, spaces in between are optional)***"
                 + "\n(i.e. \`Paul, Radeesh, David, Kenneth, Kurt, Angel, Luke, Josh, Ragel, Sharran, Justin\`)";
             templateUsageMessage = fn.getMessageEmbed(templateUsageMessage, "Mastermind: Help", mastermindEmbedColour);
             const templateHelpMessage = `Try \`${PREFIX}${commandUsed} ${mastermindCommand} help\``;

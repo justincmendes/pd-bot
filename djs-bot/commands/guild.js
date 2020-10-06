@@ -80,7 +80,7 @@ module.exports = {
                 const serverSelectInstructions = "Type the **number** corresponding to the **server** you want **settings** for:\n";
                 const postToServerTitle = "Guild Settings: Select Server";
                 const serverList = await fn.listOfServerNames(bot, mutualServers);
-                const targetServerIndex = await fn.userSelectFromList(message, serverList, mutualServers.length,
+                const targetServerIndex = await fn.userSelectFromList(bot, message, serverList, mutualServers.length,
                     serverSelectInstructions, postToServerTitle, guildEmbedColour, 180000);
                 if (targetServerIndex === false) return;
                 else {
@@ -124,7 +124,7 @@ module.exports = {
                 const fieldToEditInstructions = "**Which field do you want to edit?:**";
                 const fieldToEditAdditionalMessage = guildDocumentToString(bot, guildConfig, inGuild);
                 const fieldToEditTitle = `${showGuildSettings.title}: Edit Field`;
-                let fieldToEditIndex = await fn.userSelectFromList(message, fieldsList, userFields.length, fieldToEditInstructions,
+                let fieldToEditIndex = await fn.userSelectFromList(bot, message, fieldsList, userFields.length, fieldToEditInstructions,
                     fieldToEditTitle, guildEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
                 if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
                 const type = "Guild";

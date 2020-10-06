@@ -50,20 +50,19 @@ function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = fn.j
 
 module.exports = {
     name: "journal",
-    description: "Daily and Weekly Journaling",
-    aliases: ["j", "jour", "journ"],
+    description: "Daily Journaling (with Weekly journal template)",
+    aliases: ["j", "jour", "journ", "scribe", "scribing", "write", "w"],
     cooldown: 5,
     args: true,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavings, forceSkip) {
-        //At the end of every week, or when they submit their weekly journal reflection, send them a textfile of their weeks entries (press the paperclip)
-        //create, see, edit, end, templates <= return both the weekly reflection/weekly goals and daily journal template!
+        // At the end of every week/Weekly habit cron time, or when they submit their weekly journal reflection, send them a textfile of their weeks entries (press the paperclip)
+        // create, see, edit, end, templates <= return both the weekly reflection/weekly goals and daily journal template!
 
         // Variable Declarations and Initializations
         let journalUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
-            + "\n\n\`<ACTION>\`: **template/templates/temp/t; help**"
+            + "\n\n\`<ACTION>\`: **start/s; end/e; see; edit; delete/d; post; template/t**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`
-            + "\n\n**FUTURE FEATURES: create; see; edit; end**";
         journalUsageMessage = fn.getMessageEmbed(journalUsageMessage, "Journal: Help", journalEmbedColour);
         const journalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
         let journalCommand = args[0].toLowerCase();
@@ -73,9 +72,9 @@ module.exports = {
 
         // SHOWS WEEKLY JOURNAL TEMPLATES!
         else if (journalCommand === "template" || journalCommand === "templates" || journalCommand === "temp" || journalCommand === "t") {
-            let templateUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${journalCommand} <DAILY/WEEKLY> <TYPE>\``
-                + "\n\n`<DAILY/WEEKLY>`: **daily/day/d; weekly/week/w**"
-                + "\n\n`<TYPE>`:\nIf `daily`: **morning/m; night/n**\nIf `weekly`: **reflection/r; goals/g**";
+            let templateUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${journalCommand} <DAILY/WEEKLY> <TYPE?>\``
+                + "\n\n`<DAILY/WEEKLY>`: **daily/d; weekly/w**"
+                + "\n\n`<TYPE?>`: (OPT.)\nIf `daily`: **morning/m; night/n**\nIf `weekly`: **reflection/r; goals/g**";
             templateUsageMessage = fn.getMessageEmbed(templateUsageMessage, "Journal: Template Help", journalEmbedColour);
             const templateHelpMessage = `Try \`${PREFIX}${commandUsed} ${journalCommand} help\``;
             var journalType;

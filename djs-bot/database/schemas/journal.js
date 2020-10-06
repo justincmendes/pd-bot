@@ -13,6 +13,10 @@ const journalSchema = mongoose.Schema({
             type: String,
             required: false,
         },
+        prompt: {
+            type: String,
+            required: false,
+        },
         gratitudes: {
             type: String,
             required: false,
