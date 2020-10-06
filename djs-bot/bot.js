@@ -171,7 +171,7 @@ bot.on("message", async message => {
 
     // Help: If command requires args send help message
     if (!args.length && command.args) {
-        return message.reply(`Try \`${PREFIX}${commandName} help\`...`);
+        return message.reply(`Try** \`${PREFIX}${commandName} help\` **`);
     }
 
     // Cooldowns:

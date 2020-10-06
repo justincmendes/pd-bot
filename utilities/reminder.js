@@ -143,7 +143,7 @@ module.exports = {
                 if (!userPermissions.has("MENTION_EVERYONE")) {
                     message = message.replace(/\@(everyone|here)/g, `\@\u200b$1`);
                 }
-                message += `\n\n(__*A **${fn.millisecondsToTimeString(duration)} ${typeOut}** set by **${username}***__)`;
+                message += `\n\n\\\*\\\*__A **${fn.millisecondsToTimeString(duration)} ${typeOut}** set by **${username}**__\\\*\\\*`;
             }
             // var mentions;
             // if (!isDM) {
@@ -396,6 +396,7 @@ module.exports = {
         else return false;
         return splitArgs.slice(1, 4);
     },
+
     getTotalReminders: async function (userID, isRecurring) {
         try {
             const totalReminders = await Reminder.find({ userID, isRecurring }).countDocuments();
@@ -406,6 +407,7 @@ module.exports = {
             return false;
         }
     },
+
     multipleRemindersToString: function (bot, message, reminderArray, numberOfReminders, userTimezoneOffset, entriesToSkip = 0, toArray = false) {
         var remindersToString = toArray ? new Array() : "";
         console.log({ numberOfReminders });
@@ -553,12 +555,13 @@ module.exports = {
             error = false;
             const reminderPrompt = `__**When do you intend to start the first ${isRecurring ? "recurring " : ""}reminder?**__`
                 + "\n\nType `skip` to **start it now**";
-            const userTimeInput = await fn.messageDataCollectFirst(bot, message, reminderPrompt, `${isRecurring ? "Repeat " : ""}Reminder: First Reminder`, reminderEmbedColour);
-            startTimestamp = new Date().getTime();
+            const userTimeInput = await fn.messageDataCollectFirst(bot, message, reminderPrompt,
+                `${isRecurring ? "Repeat " : ""}Reminder: First Reminder`, isRecurring ? repeatEmbedColour : reminderEmbedColour);
+            if (!userTimeInput || userTimeInput === "stop") return false;
+            startTimestamp = Date.now();
             if (userTimeInput === "skip" || userTimeInput.toLowerCase() === "now") firstEndTime = startTimestamp;
             else {
                 console.log({ error });
-                if (userTimeInput === "stop" || userTimeInput === false) return false;
                 // Undo the timezoneOffset to get the end time in UTC
                 const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
                 firstEndTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
@@ -584,5 +587,101 @@ module.exports = {
         while (true)
     },
 
+    getChannelOrDM: async function (bot, message, instructions = "Please enter a **target channel (using #)** or \"**DM**\":", title = "Enter Channel or DM",
+        embedColour = fn.defaultEmbedColour, dataCollectDelay = 300000, errorReplyDelay = 60000,) {
+        var channel;
+        do {
+            const now = Date.now()
+            channel = await fn.messageDataCollectFirst(bot, message, instructions, title, embedColour, dataCollectDelay, false);
+            if (!channel || channel === "stop") return false;
+            else if (channel.toLowerCase() === "dm") return channel.toUpperCase();
+            else {
+                channel = /(\<\#\d+\>)/.exec(channel);
+                if (channel) return channel[1];
+                else fn.sendReplyThenDelete(message, `Please enter a **valid channel** or \"**DM**\"`, errorReplyDelay);
+            }
+        }
+        while (true)
+    },
+
+    getEditInterval: async function (bot, message, PREFIX, timezoneOffset, daylightSetting, field,
+        instructionPrompt, type, embedColour = fn.defaultEmbedColour, errorReplyDelay = 60000,
+        intervalExamples = fn.intervalExamples) {
+        do {
+            let interval = await fn.getUserEditString(bot, message, field, `${instructionPrompt}\n\n${intervalExamples}`,
+                type, true, embedColour);
+            if (!interval || interval === "stop") return false;
+            else if (interval === "back") return interval;
+            const timeArgs = interval.toLowerCase().split(/[\s\n]+/);
+            interval = this.getProcessedInterval(message, timeArgs, PREFIX, timezoneOffset,
+                daylightSetting, errorReplyDelay);
+            if (!interval) continue;
+            else return interval;
+        }
+        while (true);
+    },
+
+    getEditEndTime: async function (bot, message, reminderHelpMessage, timezoneOffset,
+        daylightSavingsSetting, forceSkip, isRecurring, reminderMessage, isDM, channelID = false, interval = false) {
+        let duration = await this.getUserFirstRecurringEndDuration(bot, message, reminderHelpMessage,
+            timezoneOffset, daylightSavingsSetting, isRecurring);
+        console.log({ duration })
+        if (!duration && duration !== 0) return false;
+        duration = duration > 0 ? duration : 0;
+        const channel = isDM ? "DM" : bot.channels.cache.get(channelID);
+        const confirmCreationMessage = `Are you sure you want to set the following **${isRecurring ? "recurring" : "one-time"} reminder** to send`
+            + ` - **in ${channel.name ? channel.name : "DM"} after ${fn.millisecondsToTimeString(duration)}**${isRecurring ? ` (and repeat every **${fn.millisecondsToTimeString(interval)}**)` : ""}:\n\n${reminderMessage}`;
+        const confirmCreation = await fn.getUserConfirmation(message, confirmCreationMessage, forceSkip, `${isRecurring ? "Recurring " : ""}Reminder: Confirm Creation`, 180000);
+        if (!confirmCreation) return false;
+        else {
+            const currentTimestamp = Date.now();
+            console.log({ currentTimestamp });
+            let userPermissions = channel !== "DM" ? channel.permissionsFor(authorID) : false;
+            console.log({ userPermissions });
+            if (userPermissions) {
+                if (!userPermissions.has("SEND_MESSAGES") || !userPermissions.has("VIEW_CHANNEL")) {
+                    message.reply(`You are **not authorized to send messages** to that channel...`);
+                    return false;
+                }
+            }
+            message.reply(`Your **${isRecurring ? "recurring" : "one-time"} reminder** has been set to trigger in **${fn.millisecondsToTimeString(duration)}** from now!`);
+            return currentTimestamp + duration;
+        }
+    },
+
+    getInterval: async function (bot, message, PREFIX, timezoneOffset, daylightSetting,
+        instructions = `__**Please enter the time you'd like in-between recurring reminders (interval):**__`,
+        title = `Interval`, embedColour = fn.defaultEmbedColour, dataCollectDelay = 300000, errorReplyDelay = 60000,
+        intervalExamples = fn.intervalExamples,) {
+        do {
+            let interval = await fn.messageDataCollectFirst(bot, message, `${instructions}\n\n${intervalExamples}`,
+                title, embedColour, dataCollectDelay, false, false);
+            if (!interval || interval === "stop") return false;
+            const timeArgs = interval.toLowerCase().split(' ');
+            interval = this.getProcessedInterval(message, timeArgs, PREFIX, timezoneOffset, daylightSetting, errorReplyDelay);
+            if (!interval) continue;
+            else return interval;
+        }
+        while (true)
+    },
+
+    getProcessedInterval: function (message, timeArgs, PREFIX, timezoneOffset, daylightSetting, errorReplyDelay,) {
+        const now = Date.now();
+        interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now, timezoneOffset, daylightSetting);
+        if (!interval) {
+            fn.sendReplyThenDelete(message, `**INVALID Interval**...** \`${PREFIX}date\` **for **valid time inputs!**`, errorReplyDelay);
+            return false;
+        }
+        interval -= now + HOUR_IN_MS * timezoneOffset;
+        if (interval <= 0) {
+            fn.sendReplyThenDelete(message, `**INVALID Interval**... ${PREFIX}date for **valid time inputs!**`, errorReplyDelay);
+            return false;
+        }
+        else if (interval < 60000) {
+            fn.sendReplyThenDelete(message, `Intervals must be **__> 1 minute__**`, errorReplyDelay);
+            return false;
+        }
+        else return interval;
+    },
 
 };

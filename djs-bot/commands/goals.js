@@ -992,9 +992,10 @@ module.exports = {
             const targetChannel = await fn.getPostChannel(bot, message, `Long-Term Goal`, forceSkip, goalEmbedColour);
             if (!targetChannel) return;
             const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
-            const posts = fn.getEmbedArray([`<@!${authorID}>`].concat(multipleGoalsToStringArray(message, goals, totalGoalNumber, 0)),
-                `${member ? `${member.displayName}'s ` : ""}Long-Term Goals (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`,
-                true, false, goalEmbedColour);
+            const goalStringArray = multipleGoalsToStringArray(message, goals, totalGoalNumber, 0);
+            if(goalStringArray.length) goalStringArray[0] = `<@!${authorID}>\n${goalStringArray[0]}`;
+            const posts = fn.getEmbedArray(goalStringArray, `${member ? `${member.displayName}'s ` : ""}Long-Term Goals`
+            + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, false, goalEmbedColour);
             posts.forEach(async post => {
                 await fn.sendMessageToChannel(bot, post, targetChannel);
             });

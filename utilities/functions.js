@@ -17,7 +17,6 @@ module.exports = {
     quickReact: async function (message, emoji, timeoutMultiplier = 1, TIMEOUT = TIMEOUT_MS) {
         try {
             if (message) {
-                console.log(!message.deleted);
                 if (!message.deleted) {
                     setTimeout(async () => {
                         await message.react(emoji);
@@ -136,7 +135,7 @@ module.exports = {
             embeds.forEach((embed, i) => {
                 embed[i] = embed.setFooter(footerText);
             });
-            
+
             await this.sendPaginationEmbed(bot, message.channel.id, userOriginal, embeds, false)
                 .then(async confirm => {
                     emojiArray.forEach(async (emoji, i) => {
@@ -479,8 +478,8 @@ module.exports = {
     // END CRUD Operations Help
 
 
-    getDateAndTimeInstructions: "`<DATE/TIME>`:"
-        // + " **NOT Case-Sensitive!**\nEnter **timezone (optional)** at the **end**.\nThe **\"at\"** before the time is **optional.**\n"
+    dateAndTimeInstructions: "`<DATE/TIME>`:"
+        + "\n**NOT Case-Sensitive!**\nEnter **timezone (optional)** at the **end**.\nThe **\"at\"** before the time is **optional.**\n"
         // + "\n**? = optional, # = number**\n`<in?>`: (OPT.) **future date/time**\n`<RELATIVE TIME>`: **(PAST) ago/prior/before**\nOR **(FUTURE) from now/later/in the future**"
         // + "\n`<DAY OF WEEK>`: **Mon/Monday, Tues/Tuesday,..., Sun/Sunday**\n`<RELATIVE TO NOW>`: **yesterday/yest/the day before**\nOR **today/tod**\nOR **tomorrow/tom/tmrw**"
         // + "\n`<TIME SCALES>`: **minutes/min, hours/hr, days, weeks, months, years/yrs**"
@@ -2413,13 +2412,13 @@ module.exports = {
     },
 
     getTimeScaleToMultiplyInMs: function (relativeTimeScale) {
-        const YEAR_IN_MS = 3.154e+10;
-        const MONTH_IN_MS = 2.628e+9;
-        const WEEK_IN_MS = 6.048e+8;
-        const DAY_IN_MS = 8.64e+7;
-        const HOUR_IN_MS = 3.6e+6;
-        const MINUTE_IN_MS = 60000;
         const SECOND_IN_MS = 1000;
+        const MINUTE_IN_MS = 60000;
+        const HOUR_IN_MS = 3.6e+6;
+        const DAY_IN_MS = 8.64e+7;
+        const WEEK_IN_MS = 6.048e+8;
+        const MONTH_IN_MS = 2.628e+9;   
+        const YEAR_IN_MS = DAY_IN_MS * 365;
         var timeScaleToMultiply;
         relativeTimeScale = relativeTimeScale.toLowerCase();
         // First Letter Switch
@@ -3592,10 +3591,42 @@ module.exports = {
         return interval;
     },
 
+    getDateAndTimeEntry: async function (bot, message, PREFIX, timezoneOffset, daylightSetting,
+        instructions = `**__Enter a Date/Time__**:`, title = "Date and Time Entry", forceFutureTime = false, embedColour = this.defaultEmbedColour,
+        dataCollectDelay = 300000, errorReplyDelay = 60000, timeExamples = this.timeExamples,) {
+        var time;
+        do {
+            const now = Date.now()
+            time = await this.messageDataCollectFirst(bot, message, `${instructions}${timeExamples ? `\n\n${timeExamples}` : ""}`, title, embedColour, dataCollectDelay, false);
+            if (!time || time === "stop") return false;
+            timeArgs = time.toLowerCase().split(/[\s\n]+/);
+            time = this.timeCommandHandlerToUTC(forceFutureTime && timeArgs[0] !== "in" && timeArgs[0] !== "now" ?
+                (["in"]).concat(timeArgs) : timeArgs, now, timezoneOffset, daylightSetting);
+            if (time === false) this.sendReplyThenDelete(message, `Try** \`${PREFIX}date\` **for **help with entering dates and times**`, errorReplyDelay);
+            else if (forceFutureTime) {
+                if (now + this.getTimeScaleToMultiplyInMs("hour") * timezoneOffset > time) {
+                    this.sendReplyThenDelete(message, `Please enter a date/time in the **future**! Try** \`${PREFIX}date\` **for help`, errorReplyDelay);
+                }
+                else break;
+            }
+            else break;
+        }
+        while (true)
+        return time;
+    },
+
+
     invalidPrefixes: ['\*', '\_', '\~', '\>', '\\', '\/', '\:', '\`', '\@'],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
     daysOfWeek: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     fileFooterText: `🗑 to delete this message (not the entries)\n📎 to get all of this in a text file`,
+    timeExamples: `e.g. **now **|** 5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a**`,
+    futureTimeExamples: `e.g. **in 15 mins **|** next tuesday at 930p **|** 1 month from now 8pm\ntoday at 1:55P **|** July 5 at 9A **|** April 30, 2021 at 8:45am**`,
+    intervalExamples: `⏳ Any period longer than **1 minute** ⏳`
+        + `\n\n**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
+        + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)** **`
+        + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years`
+        + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12.75m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50.5h 20m 95s**`,
     areasOfLifeEmojis: ['🥦', '🧠', '📚', '🙏', '🗣', '💼', '🎓', '💸', '🏠'],
     areasOfLife: ["Physical Health", "Mental/Mindset", "Personal Development", "Spiritual",
         "Social", "Career", "Education", "Finances", "Physical Environment"],
