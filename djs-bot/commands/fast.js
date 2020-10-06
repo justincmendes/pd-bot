@@ -18,17 +18,13 @@ const timeExamples = fn.timeExamples;
 
 // Function Declarations and Definitions
 function fastDataArrayToString(fastData, showFastEndMessage = false, PREFIX = '?', commandUsed = 'fast') {
-    fastData = fastData.map(element => element === null ? "" : element);
     let [startTimestamp, endTimestamp, fastDuration, fastBreaker, moodRating, reflectionText] = fastData;
-    startTimestamp = startTimestamp === "" ? startTimestamp : fn.timestampToDateString(startTimestamp);
-    endTimestamp = endTimestamp === "" ? endTimestamp : fn.timestampToDateString(endTimestamp);
-    fastDuration = fastDuration === "" ? fastDuration : fn.millisecondsToTimeString(fastDuration);
-    let fastDataString = `**Start Time:** ${startTimestamp}\n` +
-        `**End Time:** ${endTimestamp}\n` +
-        `**Fast Duration:** ${fastDuration}\n` +
-        `**Fast Breaker:** ${fastBreaker}\n` +
-        `**Mood Rating (1 😖 - 5 😄):** ${moodRating}\n` +
-        `**Reflection:** ${reflectionText}`;
+    let fastDataString = `**Start Time:** ${startTimestamp ? fn.timestampToDateString(startTimestamp) : ""}\n` +
+        `**End Time:** ${endTimestamp ? fn.timestampToDateString(endTimestamp) : ""}\n` +
+        `**Fast Duration:** ${fastDuration ? fn.millisecondsToTimeString(fastDuration) : ""}\n` +
+        `**Fast Breaker:** ${fastBreaker || ""}\n` +
+        `**Mood Rating (1 😖 - 5 😄):** ${moodRating || ""}\n` +
+        `**Reflection:**${reflectionText ? `\n${reflectionText}` : ""}`;
     if (showFastEndMessage) {
         fastDataString += `\n\n(Want to end your fast? \`${PREFIX}${commandUsed} end\`)`;
     }
@@ -1427,7 +1423,7 @@ module.exports = {
                                         }
                                     }
                                     break;
-                                case 4: fastData[fieldToEditIndex] = userEdit;
+                                case 4: fastData[fieldToEditIndex + 1] = userEdit;
                                     break;
                             }
                         }
