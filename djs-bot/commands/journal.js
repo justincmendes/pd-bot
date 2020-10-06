@@ -88,7 +88,7 @@ module.exports = {
 
 
         else if (journalCommand === "post" || journalCommand === "p") {
-
+            
         }
 
 

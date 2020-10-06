@@ -588,7 +588,7 @@ module.exports = {
                     .then(result => console.log(result))
                     .catch(err => console.log(err));
 
-                message.reply(`Your fast starting **${startTimeArgs.join(' ')}${reminderEndTimeExists ? `, for ${fn.millisecondsToTimeString(reminderEndTime - startTimestamp)}, ` : ", "}**`
+                message.reply(`Your fast starting **${fn.timestampToDateString(startTimestamp, true, true, true)}${reminderEndTimeExists ? ` for ${fn.millisecondsToTimeString(reminderEndTime - startTimestamp)}, ` : " "}**`
                     + `is being recorded!`);
 
             }
@@ -738,7 +738,7 @@ module.exports = {
                             let confirmPostFast = await fn.getUserConfirmation(message, confirmPostFastMessage, forceSkip, "Send Message for Accountability?", 180000, 0);
                             if (!confirmPostFast) return;
                             else {
-                                const fastIndex = `${getFastIndexByStartTime(authorID, doc._id)}` || "recent";
+                                const fastIndex = `${await fn.getEntryIndexByFunction(authorID, doc._id, totalFastNumber, getOneFastByStartTime)}` || "recent";
                                 console.log({ fastIndex });
                                 await this.run(bot, message, commandUsed, ["post", fastIndex], PREFIX, timezoneOffset, daylightSavingSetting, forceSkip);
                             }
