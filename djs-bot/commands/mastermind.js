@@ -442,11 +442,11 @@ module.exports = {
             const isUserCreating = mastermindDocument.userID === mastermindDocument.createdBy;
             if (mastermindDocument) {
                 if (isUserCreating) {
-                    message.channel.send(fn.getMessageEmbed(`Your mastermind entry was **successfully logged!** (${fn.timestampToDateString(mastermindDocument.createdAt)} ${targetUserTimezone})`,
+                    message.channel.send(fn.getMessageEmbed(`Your mastermind entry was **successfully logged!**\n(${fn.timestampToDateString(mastermindDocument.createdAt, true, true, true)} ${targetUserTimezone})`,
                         "Mastermind Entry", mastermindEmbedColour));
                 }
                 else {
-                    message.channel.send(fn.getMessageEmbed(`<@!${targetUser}>'s mastermind entry was **successfully logged!** (${fn.timestampToDateString(mastermindDocument.createdAt)} ${targetUserTimezone})`
+                    message.channel.send(fn.getMessageEmbed(`<@!${targetUser}>'s mastermind entry was **successfully logged!**\n(${fn.timestampToDateString(mastermindDocument.createdAt, true, true, true)} ${targetUserTimezone})`
                         + `\n\n__**Creator:**__ <@!${authorID}>`, "Mastermind Entry", mastermindEmbedColour));
                 }
                 await mastermindDocument.save()
