@@ -520,7 +520,7 @@ module.exports = {
         const fastHelpMessage = `Try \`${PREFIX}fast help\``;
         const authorID = message.author.id;
         const authorUsername = message.author.username;
-        let fastCommand = args[0].toLowerCase();
+        const fastCommand = args[0].toLowerCase();
         const fastInProgress = Fast.find({
             userID: authorID,
             endTime: null
@@ -535,7 +535,8 @@ module.exports = {
         if (fastCommand === "help") return message.channel.send(fastUsageMessage);
 
 
-        else if (fastCommand === "start" || fastCommand === "st" || fastCommand === "s") {
+        else if (fastCommand === "start" || fastCommand === "st" || fastCommand === "s" || fastCommand === "set" || fastCommand === "create"
+            || fastCommand === "c" || fastCommand === "make" || fastCommand === "m" || fastCommand === "add" || fastCommand === "a") {
             // Check if the user does not already have a fast in progress, otherwise start.
             // Using greater than equal to ensure error message sent even though 
             // Any given user should not be able to have more than 1 fast running at a time
@@ -1201,7 +1202,7 @@ module.exports = {
 
 
         else if (fastCommand === "edit" || fastCommand === "ed" || fastCommand === "change"
-            || fastCommand === "c" || fastCommand === "ch" || fastCommand === "alter"
+            || fastCommand === "ch" || fastCommand === "alter"
             || fastCommand === "update" || fastCommand === "up" || fastCommand === "upd") {
             var fastEditUsage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\``
                 + "\n\n`<#_MOST_RECENT_ENTRY>`: **recent/current; 3** (3rd most recent entry, \\**any number*)"

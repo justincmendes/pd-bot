@@ -65,9 +65,31 @@ module.exports = {
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`
         journalUsageMessage = fn.getMessageEmbed(journalUsageMessage, "Journal: Help", journalEmbedColour);
         const journalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
-        let journalCommand = args[0].toLowerCase();
+        const journalCommand = args[0].toLowerCase();
         // Journal Commands
         if (journalCommand === "help") return message.channel.send(journalUsageMessage);
+
+
+        else if (journalCommand === "start" || journalCommand === "st" || journalCommand === "s" || journalCommand === "set" || journalCommand === "create"
+            || journalCommand === "c" || journalCommand === "make" || journalCommand === "m" || journalCommand === "add" || journalCommand === "a") {
+
+        }
+
+
+        else if (journalCommand === "delete" || journalCommand === "remove" || journalCommand === "del" || journalCommand === "d"
+            || journalCommand === "rem" || journalCommand === "r") {
+
+        }
+
+
+        else if (journalCommand === "see" || journalCommand === "show") {
+
+        }
+
+
+        else if (journalCommand === "post" || journalCommand === "p") {
+
+        }
 
 
         // SHOWS WEEKLY JOURNAL TEMPLATES!
@@ -86,5 +108,8 @@ module.exports = {
             else if (!journalTemplate) return message.reply(templateHelpMessage);
             else return message.channel.send(journalTemplate);
         }
+
+
+        else return message.reply(journalHelpMessage);
     }
 };

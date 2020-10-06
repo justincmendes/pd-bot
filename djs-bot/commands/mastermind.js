@@ -233,7 +233,7 @@ module.exports = {
         const isInGuild = !!guildID;
         const totalMastermindNumber = await Mastermind.find({ userID: authorID }).countDocuments();
         const mastermindActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${mastermindCommand} help\``;
-        if (mastermindCommand === "start" || mastermindCommand === "create" || mastermindCommand === "s" || mastermindCommand === "set"
+        if (mastermindCommand === "start" || mastermindCommand === "st" || mastermindCommand === "s" || mastermindCommand === "set" || mastermindCommand === "create"
             || mastermindCommand === "c" || mastermindCommand === "make" || mastermindCommand === "m" || mastermindCommand === "add" || mastermindCommand === "a") {
             /**
              * 1. Check if the user has the mastermind facilitator role: prompt them to enter the name of ther person
@@ -866,7 +866,7 @@ module.exports = {
 
 
         else if (mastermindCommand === "edit" || mastermindCommand === "change" || mastermindCommand === "ed" || mastermindCommand === "e"
-            || mastermindCommand === "ch" || mastermindCommand === "c") {
+            || mastermindCommand === "ch") {
             let mastermindEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${mastermindCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\``
                 + "\n\n`<#_MOST_RECENT_ENTRY>`: **recent; 3** (3rd most recent entry, \\**any number*)"
                 + "\n\n`<recent?>`(OPT.): type **recent** at the indicated spot to sort the masterminds by **actual time created instead of mastermind created time!**"

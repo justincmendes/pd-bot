@@ -810,8 +810,8 @@ module.exports = {
 
         // Other functions: See, Edit, Remove
         // CREATE:
-        else if(reminderCommand === "set" || reminderCommand === "s" || reminderCommand === "start" || reminderCommand === "make"
-        || reminderCommand === "m" || reminderCommand === "create" || reminderCommand === "st") {
+        else if (reminderCommand === "set" || reminderCommand === "s" || reminderCommand === "start" || reminderCommand === "make"
+            || reminderCommand === "m" || reminderCommand === "create" || reminderCommand === "c" || reminderCommand === "st") {
             let channel = await rm.getChannelOrDM(bot, message,
                 "Please enter the **target channel (using #)** or **\"DM\"** to send your reminder to.",
                 `Reminder: Channel or DM`, reminderEmbedColour);
@@ -856,7 +856,7 @@ module.exports = {
                 return message.reply(`Your **one-time reminder** has been set to trigger in **${duration}** from now!`);
             }
         }
-        
+
 
         else return message.reply(reminderHelpMessage);
     },
