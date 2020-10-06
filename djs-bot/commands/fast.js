@@ -771,7 +771,7 @@ module.exports = {
                 }
             }
             // fast see (only):
-            else return message.reply(`Try \`${PREFIX}${commandUsed} see help\``);
+            else return message.reply(fastSeeHelpMessage);
             // Show the user the last fast with the most recent end time (by sorting from largest to smallest end time and taking the first):
             // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
             // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
@@ -956,7 +956,7 @@ module.exports = {
                 }
             }
             // fast delete (only):
-            else return message.reply(`Try \`${PREFIX}${commandUsed} delete help\``);
+            else return message.reply(fastDeleteHelpMessage);
 
             // Show the user the most recent fast
             if (args[1] === undefined || args.length === 1) {
