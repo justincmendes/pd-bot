@@ -920,7 +920,7 @@ module.exports = {
                 var fastData;
                 const fastEndTime = fastView.endTime;
                 if (fastEndTime === null) {
-                    fastData = fastDocumentToDataArray(fastView, timezoneOffset, true, false, currentTimestamp);
+                    fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
                 }
                 else {
                     fastData = fastDocumentToDataArray(fastView);
@@ -1180,7 +1180,7 @@ module.exports = {
                 if (!fastView) {
                     return fn.sendErrorMessageAndUsage(message, trySeeCommandMessage, "**FAST DOES NOT EXIST**...");
                 }
-                const fastData = fastDocumentToDataArray(fastView);
+                const fastData = fastView.fastDuration ? fastDocumentToDataArray(fastView) : fastDocumentToDataArray(fastView, timezoneOffset, true);
                 const fastTargetID = fastView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
                 const fastEmbed = fn.getEmbedArray(`__**Fast ${pastNumberOfEntriesIndex}:**__\n${fastDataArrayToString(fastData)}`,
