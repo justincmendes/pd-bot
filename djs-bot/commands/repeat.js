@@ -819,7 +819,8 @@ module.exports = {
             else return message.reply(reminderActionHelpMessage);
         }
 
-        else {
+        else if (reminderCommand === "set" || reminderCommand === "s" || reminderCommand === "start" || reminderCommand === "make"
+            || reminderCommand === "m" || reminderCommand === "create" || reminderCommand === "st") {
             let interval = await rm.getInterval(bot, message, PREFIX, timezoneOffset, daylightSavingsSetting,
                 `__**Please enter the time you'd like in-between recurring reminders (interval):**__`,
                 `Recurring Reminder: Interval`, repeatEmbedColour);
@@ -861,5 +862,9 @@ module.exports = {
                 return message.reply(`Your **recurring reminder** has been set to trigger in **${fn.millisecondsToTimeString(duration)}** from now!`);
             }
         }
-    }
+
+
+        else return message.reply(repeatHelpMessage);
+    },
+
 };

@@ -26,7 +26,7 @@ module.exports = {
         const authorID = message.author.id;
         const authorUsername = message.author.username;
         let reminderUsageMessage = `**USAGE** (One-time Reminder)\n\`${PREFIX}${commandUsed} <ACTION> <force?>\``
-            + "\n\n\`<ACTION>\`: **see; edit; delete** (NO ACTION is you want to set a reminder up)"
+            + "\n\n\`<ACTION>\`: **set/start; see; edit; delete**"
             + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**"
             + `\n\nIf you want to set a recurring reminder, try \`${PREFIX}repeat <force?>\``
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
@@ -810,8 +810,11 @@ module.exports = {
 
         // Other functions: See, Edit, Remove
         // CREATE:
-        else {
-            let channel = await rm.getChannelOrDM(bot, message, "Please enter the **target channel (using #)** or **\"DM\"** to send your reminder to.", `Reminder: Channel or DM`, reminderEmbedColour);
+        else if(reminderCommand === "set" || reminderCommand === "s" || reminderCommand === "start" || reminderCommand === "make"
+        || reminderCommand === "m" || reminderCommand === "create" || reminderCommand === "st") {
+            let channel = await rm.getChannelOrDM(bot, message,
+                "Please enter the **target channel (using #)** or **\"DM\"** to send your reminder to.",
+                `Reminder: Channel or DM`, reminderEmbedColour);
             if (!channel) return;
             const isDM = channel === "DM";
 
@@ -853,6 +856,9 @@ module.exports = {
                 return message.reply(`Your **one-time reminder** has been set to trigger in **${duration}** from now!`);
             }
         }
+        
+
+        else return message.reply(reminderHelpMessage);
     },
 
 };
