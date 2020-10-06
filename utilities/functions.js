@@ -1709,7 +1709,7 @@ module.exports = {
                             const timeAdjustment = this.getTimePastMidnightInMs(militaryTimeString);
                             console.log({ timeAdjustment });
                             // For the case of Days, timeDifference is simply numberOfTimeScales * timeScaleToMultiply
-                            // But for the case of Months and Years, proper adjustments much be made.
+                            // But for the case of Months and Years, proper adjustments must be made.
                             const isYearTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("year");
                             const isMonthTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("month");
                             const timezoneOffset = timezoneString ? this.getTimezoneOffset(timezoneString) : userTimezone;
@@ -1736,6 +1736,7 @@ module.exports = {
                                     timestampOut -= HOUR_IN_MS;
                                 }
                                 timeWasCalculated = true;
+                                console.log({ timestampOut });
                             }
                             // Days and Weeks:
                             else {
@@ -1843,32 +1844,37 @@ module.exports = {
                             if (yearDayHourMinuteTest[1]) futureTruePastFalse = true;
                             else return false;
                         }
-                        var timeDifference = 0;
+                        const futurePastMultiple = futureTruePastFalse ? 1 : -1;
+                        const date = new Date(messageCreatedTimestamp);
+                        let year = date.getUTCFullYear();
+                        const month = date.getUTCMonth();
+                        let day = date.getUTCDate();
+                        let hour = date.getUTCHours() + userTimezone;
+                        let minute = date.getUTCMinutes();
+                        let second = date.getUTCSeconds();
                         for (i = 2; i <= 6; i++) {
                             if (yearDayHourMinuteTest[i]) {
                                 // Extract y-h-d-m-s
                                 const timeScale = /(\d+\.?\d*|\d*\.?\d+)(\w)/.exec(yearDayHourMinuteTest[i]);
                                 if (timeScale) {
                                     switch (timeScale[2]) {
-                                        case 'y': timeDifference += timeScale[1] * this.getTimeScaleToMultiplyInMs("year");
+                                        case 'y': year += timeScale[1] * futurePastMultiple;
                                             break;
-                                        case 'd': timeDifference += timeScale[1] * this.getTimeScaleToMultiplyInMs("day");
+                                        case 'd': day += timeScale[1] * futurePastMultiple;
                                             break;
-                                        case 'h': timeDifference += timeScale[1] * this.getTimeScaleToMultiplyInMs("hour");
+                                        case 'h': hour += timeScale[1] * futurePastMultiple;
                                             break;
-                                        case 'm': timeDifference += timeScale[1] * this.getTimeScaleToMultiplyInMs("minute");
+                                        case 'm': minute += timeScale[1] * futurePastMultiple;
                                             break;
-                                        case 's': timeDifference += timeScale[1] * this.getTimeScaleToMultiplyInMs("second");
+                                        case 's': second += timeScale[1] * futurePastMultiple;
                                             break;
                                     }
                                 }
                             }
                         }
-                        if (timeDifference === 0) return false;
-                        timeDifference = futureTruePastFalse ? timeDifference : -timeDifference;
-                        timestampOut = messageCreatedTimestamp + timeDifference;
+                        timestampOut = new Date(year, month, day, hour, minute, second).getTime();
                         timezoneString = yearDayHourMinuteTest[8];
-                        timeWasCalculated = false;
+                        timeWasCalculated = true;
                     }
                     break;
             }
@@ -2417,8 +2423,9 @@ module.exports = {
         const HOUR_IN_MS = 3.6e+6;
         const DAY_IN_MS = 8.64e+7;
         const WEEK_IN_MS = 6.048e+8;
-        const MONTH_IN_MS = 2.628e+9;   
-        const YEAR_IN_MS = DAY_IN_MS * 365;
+        const MONTH_IN_MS = 2.628e+9;
+        // const YEAR_IN_MS = DAY_IN_MS * 365;
+        const YEAR_IN_MS = 3.154e+10;
         var timeScaleToMultiply;
         relativeTimeScale = relativeTimeScale.toLowerCase();
         // First Letter Switch
