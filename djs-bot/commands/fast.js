@@ -590,7 +590,6 @@ module.exports = {
 
                 message.reply(`Your fast starting **${fn.timestampToDateString(startTimestamp, true, true, true)}${reminderEndTimeExists ? ` for ${fn.millisecondsToTimeString(reminderEndTime - startTimestamp)}, ` : " "}**`
                     + `is being recorded!`);
-
             }
         }
 
@@ -1104,11 +1103,12 @@ module.exports = {
                             if (indexByRecency) fastCollection = await fn.getEntriesByRecency(Fast, { userID: authorID }, skipEntries, pastNumberOfEntries);
                             else fastCollection = await fn.getEntriesByStartTime(Fast, { userID: authorID }, skipEntries, pastNumberOfEntries);
                             const showFasts = multipleFastsToString(message, fastCollection, pastNumberOfEntries, timezoneOffset, skipEntries, true);
+                            const fastArray = fn.getEmbedArray(showFasts, ``, true, false, fastEmbedColour);
                             if (skipEntries >= totalFastNumber) return;
                             // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                             const sortType = indexByRecency ? "By Recency" : "By Start Time";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${fastCollection.length} fast(s) past fast ${skipEntries}**?`;
-                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, showFasts, multipleDeleteMessage, forceSkip,
+                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, fastArray, multipleDeleteMessage, forceSkip,
                                 `Fast: Multiple Delete Warning! (${sortType})`, 600000);
                             // const multipleDeleteConfirmation = await fn.getUserConfirmation(message, multipleDeleteMessage, forceSkip, `Fast: Multiple Delete Warning! (${sortType})`);
                             if (!multipleDeleteConfirmation) return;
