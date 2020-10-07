@@ -301,7 +301,7 @@ async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) 
                 let error = false;
                 if (fastPost.length === 1) {
                     fastPostMessagePrompt = originalFastPostMessagePrompt;
-                    reset = true;
+                    postIndex = 0;
                 }
                 else {
                     targetStringIndex = fastPostMessagePrompt.lastIndexOf(fastPost[fastPost.length - 1]);
