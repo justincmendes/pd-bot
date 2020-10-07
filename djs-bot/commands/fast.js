@@ -300,7 +300,7 @@ async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) 
             if (fastPost.length) {
                 let error = false;
                 if (fastPost.length === 1) {
-                    fastPostMessagePrompt = originalEditMessagePrompt;
+                    fastPostMessagePrompt = originalFastPostMessagePrompt;
                     reset = true;
                 }
                 else {
@@ -597,7 +597,7 @@ module.exports = {
             const noFastRunningMessage = `You don't have a **fast running!**\nIf you want to **start** one \`${PREFIX}${commandUsed} start\``;
 
             if (args[1] !== undefined) {
-                if (args[1].toLowerCase() == "help") {
+                if (args[1].toLowerCase() === "help") {
                     return message.channel.send(fastEndUsageMessage);
                 }
             }
@@ -605,16 +605,16 @@ module.exports = {
                 return message.reply(noFastRunningMessage);
             }
             else {
-                let endTimestamp = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavingSetting,
-                    `__**When did you end your fast?**__: Enter a Date/Time`, `Fast: End Time`, false, fastEmbedColour, 300000, 60000, timeExamples);
-                if (!endTimestamp && endTimestamp !== 0) return;
-
                 const currentFast = await getCurrentOrMostRecentFast(authorID);
                 if (currentFast.endTime !== null) {
                     return message.reply(noFastRunningMessage);
                 }
                 // Can use authorID in this case as well, but will stick to pulling the
                 // value from the database - to ensure the user is correct!
+
+                let endTimestamp = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavingSetting,
+                    `__**When did you end your fast?**__: Enter a Date/Time`, `Fast: End Time`, false, fastEmbedColour, 300000, 60000, timeExamples);
+                if (!endTimestamp && endTimestamp !== 0) return;
                 const startTimestamp = currentFast.startTime;
                 console.log({ currentFast, startTimestamp, endTimestamp });
                 const validEndTime = fn.endTimeAfterStartTime(message, startTimestamp, endTimestamp, "Fast");
@@ -640,7 +640,7 @@ module.exports = {
                     .catch(err => console.error(err));
                 var fastBreaker, moodValue, reflectionText;
                 if (quickEnd === `❌`) return;
-                else if (quickEnd === `✅`) {
+                else if (quickEnd === `✍`) {
                     // Send message and as for fastBreaker and upload a picture too
                     // which can be referenced later or sent to a server when DMs are handled!
                     fastBreaker = await fn.messageDataCollectFirst(bot, message, fastBreakerPrompt, "Fast: Fast Breaker", fastEmbedColour, 300000);
