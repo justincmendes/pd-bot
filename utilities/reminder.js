@@ -10,6 +10,7 @@ const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 const repeatEmbedColour = fn.repeatReminderEmbedColour;
 const goalEmbedColour = fn.goalsEmbedColour;
 const reminderEmbedColour = fn.reminderEmbedColour;
+const journalEmbedColour = fn.journalEmbedColour;
 const fastEmbedColour = fn.fastEmbedColour;
 const habitEmbedColour = fn.habitEmbedColour;
 // When Storing Reminders: Use UTC time for proper restarts relative to system (UNIX) time
@@ -123,6 +124,8 @@ module.exports = {
                     case "Habit": embedColour = habitEmbedColour;
                         break;
                     case "Goal": embedColour = goalEmbedColour;
+                        break;
+                    case "Journal": embedColour = journalEmbedColour;
                         break;
                     default:
                         if (isRecurring) embedColour = repeatEmbedColour;

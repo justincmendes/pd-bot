@@ -1,12 +1,12 @@
 // Global Variable Declarations and Initializations
 const Discord = require("discord.js");
 const Journal = require("../database/schemas/journal");
+const Prompt = require("../database/schemas/prompt");
 const User = require("../database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 require("dotenv").config();
-
 
 const journalEmbedColour = fn.journalEmbedColour;
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
@@ -78,19 +78,13 @@ module.exports = {
 
         else if (journalCommand === "start" || journalCommand === "st" || journalCommand === "s" || journalCommand === "set" || journalCommand === "create"
             || journalCommand === "c" || journalCommand === "make" || journalCommand === "m" || journalCommand === "add" || journalCommand === "a") {
-            var journalDocument, targetUserTimezoneOffset, targetUserTimezone;
+            var journalDocument;
             const targetUserSettings = await User.findOne({ discordID: authorID });
 
             // Create new User Settings - can be changed by the user themselves if it's incorrect!
             if (!targetUserSettings) {
                 const timezone = await fn.getNewUserTimezoneSettings(bot, message, PREFIX, authorID);
                 await fn.createUserSettings(bot, authorID, timezone);
-                targetUserTimezoneOffset = timezone.offset;
-                targetUserTimezone = timezone.name;
-            }
-            else {
-                targetUserTimezoneOffset = targetUserSettings.timezone.offset;
-                targetUserTimezone = targetUserSettings.timezone.name;
             }
 
             let templateType = await fn.reactionDataCollect(bot, message, `📜 - **Daily (2-part) Journal Template**`
