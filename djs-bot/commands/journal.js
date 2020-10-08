@@ -4,8 +4,12 @@ const Journal = require("../database/schemas/journal");
 const User = require("../database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
+const rm = require("../../utilities/reminder");
 require("dotenv").config();
+
+
 const journalEmbedColour = fn.journalEmbedColour;
+const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 
 // Function Declarations and Definitions
 function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = fn.journalEmbedColour) {
@@ -66,13 +70,101 @@ module.exports = {
         journalUsageMessage = fn.getMessageEmbed(journalUsageMessage, "Journal: Help", journalEmbedColour);
         const journalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
         const journalCommand = args[0].toLowerCase();
+        const authorID = message.author.id;
+        const authorUsername = message.author.username;
         // Journal Commands
         if (journalCommand === "help") return message.channel.send(journalUsageMessage);
 
 
         else if (journalCommand === "start" || journalCommand === "st" || journalCommand === "s" || journalCommand === "set" || journalCommand === "create"
             || journalCommand === "c" || journalCommand === "make" || journalCommand === "m" || journalCommand === "add" || journalCommand === "a") {
+            var journalDocument, targetUserTimezoneOffset, targetUserTimezone;
+            const targetUserSettings = await User.findOne({ discordID: authorID });
 
+            // Create new User Settings - can be changed by the user themselves if it's incorrect!
+            if (!targetUserSettings) {
+                const timezone = await fn.getNewUserTimezoneSettings(bot, message, PREFIX, authorID);
+                await fn.createUserSettings(bot, authorID, timezone);
+                targetUserTimezoneOffset = timezone.offset;
+                targetUserTimezone = timezone.name;
+            }
+            else {
+                targetUserTimezoneOffset = targetUserSettings.timezone.offset;
+                targetUserTimezone = targetUserSettings.timezone.name;
+            }
+
+            let templateType = await fn.reactionDataCollect(bot, message, `📜 - **Daily (2-part) Journal Template**`
+                + `\n🗣 - **Prompt/Question & Answer**\n✍ - \"**Freehand**\" (No template or prompt)`, ['📜', '🗣', '✍'],
+                "Journal: Template", journalEmbedColour);
+            switch (templateType) {
+                case '📜': templateType = 1;
+                    break;
+                case '🗣': templateType = 2;
+                    break;
+                case '✍': templateType = 3;
+                    break;
+                default: templateType = false;
+                    break;
+            }
+            if (!templateType) return;
+
+            if (templateType === 1) {
+                const gratitudes = await fn.getMultilineEntry(bot, message, "What are **3** things you are **truly grateful** for? 🙏",
+                    "Journal: Gratitudes", true, journalEmbedColour);
+                console.log({ gratitudes });
+                if (!gratitudes && gratitudes !== '') return;
+
+                const improvements = await fn.getMultilineEntry(bot, message, "What are **3** things you feel you should **improve** on? 📈",
+                    "Journal: Improvements", true, journalEmbedColour);
+                console.log({ improvements });
+                if (!improvements && improvements !== '') return;
+
+                const actions = await fn.getMultilineEntry(bot, message, "What are **3 actions or mindset shifts** that would make **today great**? 🧠‍",
+                    "Journal: Actions", true, journalEmbedColour);
+                console.log({ actions });
+                if (!actions && actions !== '') return;
+
+                const affirmations = await fn.getSingleEntry(bot, message, "**I am...**",
+                    "Journal: Affirmation", true, journalEmbedColour);
+                console.log({ affirmations });
+                if (!affirmations && affirmations !== '') return;
+
+                journalDocument = new Journal({
+                    _id: mongoose.Types.ObjectId(),
+                    userID: authorID,
+                    template: templateType,
+                    entry: {
+                        gratitudes,
+                        improvements,
+                        actions,
+                        affirmations,
+                    },
+                });
+
+                journalDocument.save()
+                    .then(result => {
+                        message.reply("**Your journal entry was successfully created!**");
+                        console.log({ result });
+                    })
+                    .catch(err => console.error(err));
+
+                const confirmEnd = await fn.getUserConfirmation(message, "**Do you want to set a reminder for when you finish your journal entry?**"
+                    + "\n(Ideally for the end of the day, before bed)", forceSkip, "Journal: End of Day - Completion Reminder", 180000);
+                if (!confirmEnd) return;
+
+                let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavings,
+                    "**When** would you like to **finish your journal entry?**",
+                    "Journal: End of Day - Reflection Time", true, journalEmbedColour);
+                if (!endTime) return;
+                endTime -= HOUR_IN_MS * timezoneOffset;
+
+                const now = Date.now();
+                const reminderMessage = `**__Time to complete your journal entry for today!__**`
+                    + `\n\nType** \`?${commandUsed} end\` **- to write your **end of day reflection journal**`;
+                await rm.setNewDMReminder(bot, authorID, now, now, endTime, reminderMessage,
+                    "Journal", journalDocument._id, false, false, journalEmbedColour);
+                return;
+            }
         }
 
 
@@ -88,7 +180,7 @@ module.exports = {
 
 
         else if (journalCommand === "post" || journalCommand === "p") {
-            
+
         }
 
 

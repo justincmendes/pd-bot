@@ -1672,6 +1672,7 @@ module.exports = {
         // 0 - All choices we're null or insufficient/not chosen.
         if (!decision) return false;
         else {
+            if (decision === 1 || decision === 5) messageCreatedTimestamp = Date.now() + 1000;
             var timestampOut, timezoneString, timeWasCalculated;
             switch (decision) {
                 case 1:
@@ -3652,7 +3653,7 @@ module.exports = {
         return areasOfLifeList;
     },
 
-    reminderTypes: ["Reminder", "Habit", "Fast", "Quote", "Goal"],
+    reminderTypes: ["Reminder", "Habit", "Fast", "Quote", "Goal", "Journal"],
     fastEmbedColour: "#32CD32",
     mastermindEmbedColour: "#FF6A00",
     journalEmbedColour: "#EE82EE",
