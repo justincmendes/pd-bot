@@ -327,9 +327,10 @@ module.exports = {
             }
 
             if (userWantsTemplate) {
-                const observations = await fn.getMultilineEntry(bot, message, "**__Look back at the previous week ↩:__**"
+                let observations = await fn.getMultilineEntry(bot, message, "**__Look back at the previous week ↩:__**"
                     + "\n**- 📈 How much did you stick to your habits and/or progress on your goals this week?\n- 💭 Make 3 observations.**",
                     "Mastermind Entry: Observations", true, mastermindEmbedColour);
+                observations = observations.message;
                 console.log({ observations });
                 if (!observations && observations !== '') return;
 
@@ -422,9 +423,10 @@ module.exports = {
                 });
             }
             else if (userWantsTemplate === false) {
-                const entry = await fn.getMultilineEntry(bot, message, "**Enter your mastermind entry:**",
+                let entry = await fn.getMultilineEntry(bot, message, "**Enter your mastermind entry:**",
                     "Mastermind Entry: No Template", forceSkip, mastermindEmbedColour);
-                if (entry) {
+                if (entry.message) {
+                    entry = entry.message
                     mastermindDocument = new Mastermind({
                         _id: mongoose.Types.ObjectId(),
                         userID: targetUser,

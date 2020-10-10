@@ -833,6 +833,7 @@ module.exports = {
 
             let repeatMessage = await fn.getMultilineEntry(bot, message, "__**Enter the message of this reminder**__:\n(Remember to @mention the roles/users you want to ping in the message!)",
                 "Recurring Reminder: Message", forceSkip, repeatEmbedColour);
+            repeatMessage = repeatMessage.message;
             if (!repeatMessage) return;
 
             let duration = await rm.getUserFirstRecurringEndDuration(bot, message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);

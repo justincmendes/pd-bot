@@ -6,6 +6,7 @@ const User = require("../database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
+const prompts = require("../../utilities/prompts.json").prompts;
 require("dotenv").config();
 
 const journalEmbedColour = fn.journalEmbedColour;
@@ -52,6 +53,38 @@ function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = fn.j
     return journalView;
 }
 
+async function getGeneratedPromptAndAnswer(bot, message, prompts) {
+    const newPromptInstructions = `Type \`n\` to generate a **new prompt**`;
+    const newPromptKeywords = ['n'];
+    let newPrompt = true;
+    var randomIndex, currentPrompt;
+    do {
+        if (newPrompt) {
+            console.log(prompts.length);
+            while (!currentPrompt) {
+                randomIndex = Math.round(Math.random() * prompts.length);
+                console.log({ randomIndex });
+                currentPrompt = prompts[randomIndex].message;
+                console.log({ currentPrompt });
+            }
+        }
+        const user = bot.users.cache.get(currentPrompt.userID).username;
+        let entry = await fn.getMultilineEntry(bot, message, `**${currentPrompt}**${user ? `\n\nBy: __**${user}**__` : ""}`,
+            "Journal: Prompt and Answer", true, journalEmbedColour, newPromptInstructions, newPromptKeywords, newPrompt ? "" : entry.array);
+        if (!entry) return false;
+        else if (entry.returnVal === 'n') {
+            if (entry.message) {
+                const confirmNewPrompt = await fn.getUserConfirmation(message,
+                    "**__Are you sure you want to generate a new prompt?__**\n\n**Your current journal entry will be lost!**",
+                    false, "Journal: New Prompt Confirmation");
+                if (confirmNewPrompt) newPrompt = false;
+            }
+        }
+        else return { message: entry, prompt: currentPrompt };
+    }
+    while (true)
+}
+
 module.exports = {
     name: "journal",
     description: "Daily Journaling (with Weekly journal template)",
@@ -87,78 +120,149 @@ module.exports = {
                 await fn.createUserSettings(bot, authorID, timezone);
             }
 
-            let templateType = await fn.reactionDataCollect(bot, message, `📜 - **Daily (2-part) Journal Template**`
-                + `\n🗣 - **Prompt/Question & Answer**\n✍ - \"**Freehand**\" (No template or prompt)`, ['📜', '🗣', '✍'],
-                "Journal: Template", journalEmbedColour);
+            const templateType = await fn.reactionDataCollect(bot, message, `📜 - **Daily (2-part) Journal Template**`
+                + `\n🗣 - **Prompt/Question & Answer** (Enter a prompt or get a generated prompt)`
+                + `\n✍ - \"**Freehand**\" (No template or prompt)`, ['📜', '🗣', '✍'], "Journal: Template", journalEmbedColour);
             switch (templateType) {
-                case '📜': templateType = 1;
+                case '📜': {
+                    let gratitudes = await fn.getMultilineEntry(bot, message, "What are **3** things you are **truly grateful** for? 🙏",
+                        "Journal: Gratitudes", true, journalEmbedColour);
+                    gratitudes = gratitudes.message;
+                    console.log({ gratitudes });
+                    if (!gratitudes && gratitudes !== '') return;
+
+                    let improvements = await fn.getMultilineEntry(bot, message, "What are **3** things you feel you should **improve** on? 📈",
+                        "Journal: Improvements", true, journalEmbedColour);
+                    improvements = improvements.message;
+                    console.log({ improvements });
+                    if (!improvements && improvements !== '') return;
+
+                    let actions = await fn.getMultilineEntry(bot, message, "What are **3 actions or mindset shifts** that would make **today great**? 🧠‍",
+                        "Journal: Actions", true, journalEmbedColour);
+                    actions = actions.message;
+                    console.log({ actions });
+                    if (!actions && actions !== '') return;
+
+                    const affirmations = await fn.getSingleEntry(bot, message, "**I am...**",
+                        "Journal: Affirmation", true, journalEmbedColour);
+                    console.log({ affirmations });
+                    if (!affirmations && affirmations !== '') return;
+
+                    journalDocument = new Journal({
+                        _id: mongoose.Types.ObjectId(),
+                        userID: authorID,
+                        template: 1,
+                        entry: {
+                            gratitudes,
+                            improvements,
+                            actions,
+                            affirmations,
+                        },
+                    });
+
+                    journalDocument.save()
+                        .then(result => {
+                            message.reply("**Your journal entry was successfully created!**");
+                            console.log({ result });
+                        })
+                        .catch(err => console.error(err));
+
+                    const confirmEnd = await fn.getUserConfirmation(message, "**Do you want to set a reminder for when you finish your journal entry?**"
+                        + "\n(Ideally for the end of the day, before bed)", forceSkip, "Journal: End of Day - Completion Reminder", 180000);
+                    if (!confirmEnd) return;
+
+                    let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavings,
+                        "**When** would you like to **finish your journal entry?**",
+                        "Journal: End of Day - Reflection Time", true, journalEmbedColour);
+                    if (!endTime) return;
+                    endTime -= HOUR_IN_MS * timezoneOffset;
+
+                    const now = Date.now();
+                    const reminderMessage = `**__Time to complete your journal entry for today!__**`
+                        + `\n\nType** \`?${commandUsed} end\` **- to write your **end of day reflection journal**`;
+                    await rm.setNewDMReminder(bot, authorID, now, now, endTime, reminderMessage,
+                        "Journal", journalDocument._id, false, false, journalEmbedColour);
+                    return;
+                }
+                // If allowing community prompts (with verification system) - adjust code below
+                case '🗣': {
+                    const promptType = await fn.reactionDataCollect(bot, message, "**Would you like to answer a randomly generated question/prompt or create your own to answer?**"
+                        + "\n\n⚙ - **Generate Prompts**\n✒ - **Create Prompt**\n❌ - **Exit**", ['⚙', '🖋', '❌'], "Journal: Prompt", journalEmbedColour);
+                    // 🗣 - **Get Prompts** from the **Community**\n
+                    if (promptType === '✒') {
+                        const userPrompt = await fn.getSingleEntry(bot, message, `**Enter a __question or prompt__ you'd like to explore and answer:**`,
+                            "Journal: Create Prompt", forceSkip, journalEmbedColour);
+                        if (!userPrompt) return;
+                        let journalEntry = await fn.getMultilineEntry(bot, message, userPrompt, "Journal: Prompt and Answer", forceSkip, journalEmbedColour);
+                        if (!journalEntry) return;
+                        journalEntry = journalEntry.message;
+                        journalDocument = new Journal({
+                            _id: mongoose.Types.ObjectId(),
+                            userID: authorID,
+                            template: 2,
+                            entry: {
+                                message: journalEntry,
+                                userPrompt,
+                            },
+                        });
+                        journalDocument.save()
+                            .then(result => {
+                                message.reply("**Your journal entry was successfully created!**");
+                                console.log({ result });
+                            })
+                            .catch(err => console.error(err));
+                    }
+                    else if (promptType === '⚙' || promptType === '🗣') {
+                        // const getCommunityPrompt = promptType === '🗣';
+                        var promptArray;
+                        // if (getCommunityPrompt) {
+                        //     promptArray = await Prompt.find({}).sort({ _id: +1 });
+                        //     if (!promptArray.length) promptArray = prompts;
+                        // }
+                        // else promptArray = prompts;
+                        promptArray = prompts;
+                        const journalEntry = await getGeneratedPromptAndAnswer(bot, message, promptArray);
+                        if (!journalEntry) return;
+                        const { message, prompt } = journalEntry;
+                        journalDocument = new Journal({
+                            _id: mongoose.Types.ObjectId(),
+                            userID: authorID,
+                            template: 2,
+                            entry: {
+                                message,
+                                prompt,
+                            },
+                        });
+                        journalDocument.save()
+                            .then(result => {
+                                message.reply("**Your journal entry was successfully created!**");
+                                console.log({ result });
+                            })
+                            .catch(err => console.error(err));
+                    }
+                    else return;
+                }
                     break;
-                case '🗣': templateType = 2;
-                    break;
-                case '✍': templateType = 3;
-                    break;
-                default: templateType = false;
+                case '✍': {
+                    let journalEntry = await fn.getMultilineEntry(bot, message, userPrompt, "Journal: Freehand (No Template)", forceSkip, journalEmbedColour);
+                    if (!journalEntry) return;
+                    journalEntry = journalEntry.message;
+                    journalDocument = new Journal({
+                        _id: mongoose.Types.ObjectId(),
+                        userID: authorID,
+                        template: 3,
+                        entry: { message: journalEntry, },
+                    });
+                    journalDocument.save()
+                        .then(result => {
+                            message.reply("**Your journal entry was successfully created!**");
+                            console.log({ result });
+                        })
+                        .catch(err => console.error(err));
+                }
                     break;
             }
-            if (!templateType) return;
-
-            if (templateType === 1) {
-                const gratitudes = await fn.getMultilineEntry(bot, message, "What are **3** things you are **truly grateful** for? 🙏",
-                    "Journal: Gratitudes", true, journalEmbedColour);
-                console.log({ gratitudes });
-                if (!gratitudes && gratitudes !== '') return;
-
-                const improvements = await fn.getMultilineEntry(bot, message, "What are **3** things you feel you should **improve** on? 📈",
-                    "Journal: Improvements", true, journalEmbedColour);
-                console.log({ improvements });
-                if (!improvements && improvements !== '') return;
-
-                const actions = await fn.getMultilineEntry(bot, message, "What are **3 actions or mindset shifts** that would make **today great**? 🧠‍",
-                    "Journal: Actions", true, journalEmbedColour);
-                console.log({ actions });
-                if (!actions && actions !== '') return;
-
-                const affirmations = await fn.getSingleEntry(bot, message, "**I am...**",
-                    "Journal: Affirmation", true, journalEmbedColour);
-                console.log({ affirmations });
-                if (!affirmations && affirmations !== '') return;
-
-                journalDocument = new Journal({
-                    _id: mongoose.Types.ObjectId(),
-                    userID: authorID,
-                    template: templateType,
-                    entry: {
-                        gratitudes,
-                        improvements,
-                        actions,
-                        affirmations,
-                    },
-                });
-
-                journalDocument.save()
-                    .then(result => {
-                        message.reply("**Your journal entry was successfully created!**");
-                        console.log({ result });
-                    })
-                    .catch(err => console.error(err));
-
-                const confirmEnd = await fn.getUserConfirmation(message, "**Do you want to set a reminder for when you finish your journal entry?**"
-                    + "\n(Ideally for the end of the day, before bed)", forceSkip, "Journal: End of Day - Completion Reminder", 180000);
-                if (!confirmEnd) return;
-
-                let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavings,
-                    "**When** would you like to **finish your journal entry?**",
-                    "Journal: End of Day - Reflection Time", true, journalEmbedColour);
-                if (!endTime) return;
-                endTime -= HOUR_IN_MS * timezoneOffset;
-
-                const now = Date.now();
-                const reminderMessage = `**__Time to complete your journal entry for today!__**`
-                    + `\n\nType** \`?${commandUsed} end\` **- to write your **end of day reflection journal**`;
-                await rm.setNewDMReminder(bot, authorID, now, now, endTime, reminderMessage,
-                    "Journal", journalDocument._id, false, false, journalEmbedColour);
-                return;
-            }
+            return;
         }
 
 

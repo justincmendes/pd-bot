@@ -1,0 +1,151 @@
+{
+    "prompts": [
+        {
+            "message": "What would you do if you knew you couldn’t fail?"
+        },
+        {
+            "message": "What is your dream life?"
+        },
+        {
+            "message": "What advice would you give to someone in your situation?"
+        },
+        {
+            "message": "What has been your biggest lesson in the last year?"
+        },
+        {
+            "message": "How can you achieve your 5 year plan in 5 months?"
+        },
+        {
+            "message": "If you had all the time and money in the world, what would you do?"
+        },
+        {
+            "message": "What’s your biggest problem? How can you solve it?"
+        },
+        {
+            "message": "What change do you want to make?"
+        },
+        {
+            "message": "What are you afraid of?"
+        },
+        {
+            "message": "What three things are you most proud of?"
+        },
+        {
+            "message": "What has been the biggest lesson you’ve learned in the past week?"
+        },
+        {
+            "message": "What has been the biggest lesson you’ve learned in the past month?"
+        },
+        {
+            "message": "What has been the biggest lesson you’ve learned in the past year?"
+        },
+        {
+            "message": "What do you believe that no one else does?"
+        },
+        {
+            "message": "What makes you most excited?"
+        },
+        {
+            "message": "What does your dream day look like?"
+        },
+        {
+            "message": "What one thing could you stop doing that would completely change your life?"
+        },
+        {
+            "message": "What one thing could you start doing that would completely change your life?"
+        },
+        {
+            "message": "How do your close friends view you?"
+        },
+        {
+            "message": "How do you want them to view you?"
+        },
+        {
+            "message": "Who are you comparing yourself to?"
+        },
+        {
+            "message": "If nothing changed, what would your life look like in 10 years?"
+        },
+        {
+            "message": "Are you happy with how that life looks?"
+        },
+        {
+            "message": "What characteristics do you wish you had?"
+        },
+        {
+            "message": "How can you get those characteristics?"
+        },
+        {
+            "message": "In under 100 words, what is your purpose?"
+        },
+        {
+            "message": "What was your best investment last month?"
+        },
+        {
+            "message": "When do you feel most yourself?"
+        },
+        {
+            "message": "When do you feel least yourself?"
+        },
+        {
+            "message": "What makes you happy?"
+        },
+        {
+            "message": "What are the 20% of tasks that give you 80% benefits?"
+        },
+        {
+            "message": "Are you happy with your diet?"
+        },
+        {
+            "message": "Are you happy with your fitness?"
+        },
+        {
+            "message": "Are you happy with your relationship?"
+        },
+        {
+            "message": "Are you happy with your job?"
+        },
+        {
+            "message": "Are you happy with your finances?"
+        },
+        {
+            "message": "Are you happy with your mental health?"
+        },
+        {
+            "message": "How could you get paid to do what you love?"
+        },
+        {
+            "message": "If you could only share one message with the world, what would it be?"
+        },
+        {
+            "message": "What is something you’d love to learn?"
+        },
+        {
+            "message": "If you achieved all of your life goals, how would you feel?"
+        },
+        {
+            "message": "Where could I add more fun to my life?"
+        },
+        {
+            "message": "How can I surprise my partner/friend/family?"
+        },
+        {
+            "message": "Where do I need some help?"
+        },
+        {
+            "message": "Where is fear holding me back?"
+        },
+        {
+            "message": "Who are my role models?"
+        },
+        {
+            "message": "What are the five or less things that I must do before I die?"
+        },
+        {
+            "message": "What is stopping me from being completely satisfied with what I already have?"
+        },
+        {
+            "message": "What is the purpose of my life?"
+        }
+    ]
+}

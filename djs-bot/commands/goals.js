@@ -281,8 +281,8 @@ module.exports = {
                 const goalCheckpoints = await fn.getMultilineEntry(bot, message, `${goalTypeString}\n${goalDescriptionString}`
                     + `\n\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**`,
                     `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
-                if (!goalCheckpoints && goalCheckpoints !== "") return;
-                else if (goalCheckpoints === "reset") {
+                if (!goalCheckpoints.message && goalCheckpoints.message !== "") return;
+                else if (goalCheckpoints.returnVal === "reset") {
                     reset = true;
                     continue;
                 }
@@ -290,8 +290,8 @@ module.exports = {
                 const goalCheckpointsString = `__**Checkpoints:**__${goalCheckpoints === "" ? "" : `\n${goalCheckpoints}`}`;
                 const goalSteps = await fn.getMultilineEntry(bot, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**`,
                     `Long-Term Goal: Creation - Actionable Steps`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
-                if (!goalSteps && goalSteps !== "") return;
-                else if (goalSteps === "reset") {
+                if (!goalSteps.message && goalSteps.message !== "") return;
+                else if (goalSteps.returnVal === "reset") {
                     reset = true;
                     continue;
                 }
@@ -300,8 +300,8 @@ module.exports = {
                 const goalReason = await fn.getMultilineEntry(bot, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}`
                     + `\n\n💭 **__Why__ do you want to accomplish this goal?**`,
                     `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
-                if (!goalReason && goalReason !== "") return;
-                else if (goalReason === "reset") {
+                if (!goalReason.message && goalReason.message !== "") return;
+                else if (goalReason.returnVal === "reset") {
                     reset = true;
                     continue;
                 }
@@ -343,9 +343,9 @@ module.exports = {
                             end: time[1],
                             type: goalType,
                             description: goalDescription,
-                            checkpoints: goalCheckpoints,
-                            steps: goalSteps,
-                            reason: goalReason,
+                            checkpoints: goalCheckpoints.message,
+                            steps: goalSteps.message,
+                            reason: goalReason.message,
                         },
                     });
                     await goalDocument.save()
@@ -993,9 +993,9 @@ module.exports = {
             if (!targetChannel) return;
             const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
             const goalStringArray = multipleGoalsToStringArray(message, goals, totalGoalNumber, 0);
-            if(goalStringArray.length) goalStringArray[0] = `<@!${authorID}>\n${goalStringArray[0]}`;
+            if (goalStringArray.length) goalStringArray[0] = `<@!${authorID}>\n${goalStringArray[0]}`;
             const posts = fn.getEmbedArray(goalStringArray, `${member ? `${member.displayName}'s ` : ""}Long-Term Goals`
-            + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, false, goalEmbedColour);
+                + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, false, goalEmbedColour);
             posts.forEach(async post => {
                 await fn.sendMessageToChannel(bot, post, targetChannel);
             });

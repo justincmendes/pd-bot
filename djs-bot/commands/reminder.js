@@ -821,6 +821,7 @@ module.exports = {
             let reminderMessage = await fn.getMultilineEntry(bot, message, `__**Enter the message of this reminder**__:`
                 + `${isDM ? "" : "\n(Remember to **@mention** the roles/users you want to ping in the message!)"}`,
                 "Reminder: Message", forceSkip, reminderEmbedColour);
+            reminderMessage = reminderMessage.message;
             if (!reminderMessage) return;
 
             let reminderEndTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavingsSetting,

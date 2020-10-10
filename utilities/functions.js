@@ -196,7 +196,7 @@ module.exports = {
         await this.sendPaginationEmbed(bot, message.channel.id, userOriginal, embeds, false)
             .then(async confirm => {
                 const filter = response => {
-                    const filterOut = response.author.id == userOriginal;
+                    const filterOut = response.author.id === userOriginal;
                     console.log(`For ${response.author.username}'s response, the filter value is: ${filterOut}`);
                     return filterOut;
                 };
@@ -3462,13 +3462,16 @@ module.exports = {
         return collectedEdit;
     },
 
-    getMultilineEntry: async function (bot, message, instructionPrompt, title, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
+    getMultilineEntry: async function (bot, message, instructionPrompt, title, forceSkip = false,
+        embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = [],
+        startingArray = false) {
         let inputIndex = 0;
         let reset = false;
-        var collectedEntry, finalEntry = new Array();
+        var collectedEntry, finalEntry = startingArray || new Array();
         instructionPrompt += `\n\nType \`0\` to **restart/clear** your **entire** current entry!`
             + `\nType \`1\` when you're **done!**\nType \`2\` to **undo** the previous entry`;
-        instructionPrompt += !additionalInstructions ? "" : `\n\n${additionalInstructions}`;
+        instructionPrompt += !additionalInstructions ? "" : `\n${additionalInstructions}`;
+        instructionPrompt += startingArray ? `\n\n**Current Entry:**\n${startingArray.join('\n')}\n` : "";
         var hasInstructions = false;
         if (instructionKeywords) {
             if (Array.isArray(instructionKeywords)) {
@@ -3489,7 +3492,7 @@ module.exports = {
             }
             if (hasInstructions) {
                 if (instructionKeywords.includes(collectedEntry)) {
-                    return collectedEntry;
+                    return { message: finalEntry.join('\n'), returnVal: collectedEntry, array: finalEntry };
                 }
             }
             if (inputIndex === 1 || reset === true) {
@@ -3499,7 +3502,6 @@ module.exports = {
                 }
                 else if (collectedEntry !== "0" && collectedEntry !== "2") {
                     instructionPrompt += `\n\n**Current Entry:**\n${collectedEntry}\n`;
-                    previousEntry = collectedEntry;
                     finalEntry.push(collectedEntry);
                     reset = false;
                 }
@@ -3555,7 +3557,7 @@ module.exports = {
             }
         }
         while (true)
-        return finalEntry.join('\n');
+        return { message: finalEntry.join('\n'), returnVal: 1, array: finalEntry };
     },
 
     /**

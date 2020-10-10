@@ -9,7 +9,7 @@ const journalSchema = mongoose.Schema({
         default: false,
     },
     entry: {
-        text: {
+        message: {
             type: String,
             required: false,
         },
