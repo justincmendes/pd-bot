@@ -155,22 +155,17 @@ function journalDocumentToString(journalDoc) {
     switch (template) {
         case 1:
             entryString += "Daily (5-Minute) Journal"
-                + `${entry.gratitudes || entry.actions || entry.affirmations ? `\n\n☀ **__Start__**` : ""}`
+                + `${entry.gratitudes || entry.actions || entry.affirmations ? `\n**🟡 -- Start -- 🟡**` : ""}`
                 + `${entry.gratitudes ? `\n**Gratitudes:**\n${entry.gratitudes}` : ""}`
-                + `${entry.gratitudes && entry.actions ? '\n' : ""}`
                 + `${entry.actions ? `\n**Actions/Mindsets for a Great Day:**\n${entry.actions}` : ""}`
-                + `${entry.actions && entry.affirmations ? '\n' : ""}`
                 + `${entry.affirmations ? `\n**Affirmations:** ***I am...***\n${entry.affirmations}` : ""}`
-                + `${entry.amazing || entry.betterDay ? `\n\n🌙 **__End__**` : ""}`
+                + `${entry.amazing || entry.betterDay ? `\n**🔵 -- End -- 🔵**` : ""}`
                 + `${entry.amazing ? `\n**Amazing Things That Happened:**\n${entry.amazing}` : ""}`
-                + `${entry.amazing && entry.betterDay ? '\n' : ""}`
                 + `${entry.betterDay ? `\n**Could Have Done These Better:**\n${entry.betterDay}` : ""}`
             break;
         case 2:
             entryString += "Prompt & Answer"
-                + `${entry.prompt || entry.message ? '\n' : ""}`
                 + `${entry.prompt ? `\n🗣 **Prompt:**\n${entry.prompt}` : ""}`
-                + `${entry.prompt && entry.message ? '\n' : ""}`
                 + `${entry.message ? `\n💬 **Entry:**\n${entry.message}` : ""}`;
             break;
         case 3:
