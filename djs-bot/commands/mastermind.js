@@ -1129,6 +1129,7 @@ module.exports = {
                         }
                     }
                 }
+                else if (isNaN(args[1])) return message.reply(`**Please enter a number or \"recent\" after \`${PREFIX}${commandUsed} ${mastermindCommand} <# | recent>\`**`);
                 mastermindIndex--;
                 if (mastermindIndex < 0 || mastermindIndex >= totalMastermindNumber) {
                     return message.reply(`**Mastermind ${mastermindIndex + 1} does not exist**`);

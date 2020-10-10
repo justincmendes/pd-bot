@@ -310,7 +310,7 @@ module.exports = {
                         })
                         .catch(err => console.error(err));
 
-                    const confirmEnd = await fn.getUserConfirmation(message, "**Do you want to set a reminder for when you finish your journal entry?**"
+                    const confirmEnd = await fn.getUserConfirmation(message, "**Do you want to set a reminder for when you want to finish your journal entry?**"
                         + "\n(Ideally for the end of the day, before bed)", false, "Journal: End of Day - Completion Reminder", 180000);
                     if (!confirmEnd) return;
 
@@ -1076,6 +1076,7 @@ module.exports = {
                         }
                     }
                 }
+                else if (isNaN(args[1])) return message.reply(`**Please enter a number or \"recent\" after \`${PREFIX}${commandUsed} ${journalCommand} <# | recent>\`**`);
                 journalIndex--;
                 if (journalIndex < 0 || journalIndex >= totalJournalNumber) {
                     return message.reply(`**Journal ${journalIndex + 1} does not exist**`);
