@@ -3,10 +3,11 @@ const mongoose = require("mongoose");
 const journalSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     userID: String,
+    createdAt: Number,
     template: {
         type: Number,
         required: true,
-        default: false,
+        default: 0,
     },
     entry: {
         message: {

@@ -69,8 +69,8 @@ async function getGeneratedPromptAndAnswer(bot, message, prompts) {
                 console.log({ currentPrompt });
             }
         }
-        const user = bot.users.cache.get(currentPrompt.userID).username;
-        let entry = await fn.getMultilineEntry(bot, message, `**${currentPrompt}**${user ? `\n\nBy: __**${user}**__` : ""}`,
+        const user = bot.users.cache.get(currentPrompt.userID);
+        let entry = await fn.getMultilineEntry(bot, message, `**__${currentPrompt || ""}__**${user ? `\n\nBy: __**${user.username}**__` : ""}`,
             "Journal: Prompt and Answer", true, journalEmbedColour, newPromptInstructions, newPromptKeywords, newPrompt ? "" : entry.array);
         if (!entry) return false;
         else if (entry.returnVal === 'n') {
@@ -80,17 +80,156 @@ async function getGeneratedPromptAndAnswer(bot, message, prompts) {
                     false, "Journal: New Prompt Confirmation");
                 if (confirmNewPrompt) newPrompt = false;
             }
+            else {
+                newPrompt = true;
+                currentPrompt = false;
+            }
         }
         else return { message: entry, prompt: currentPrompt };
     }
     while (true)
 }
 
+async function getJournalByCreatedAt(userID, entryIndex, numberOfEntries = 1) {
+    try {
+        const entries = await Journal
+            .find({ userID })
+            .sort({ createdAt: -1 })
+            .limit(numberOfEntries)
+            .skip(entryIndex);
+        return entries;
+    }
+    catch (err) {
+        console.log(err);
+        return false;
+    }
+}
+
+async function getOneJournalByCreatedTime(userID, journalIndex) {
+    const journal = await Journal
+        .findOne({ userID })
+        .sort({ createdAt: -1 })
+        .skip(journalIndex)
+        .catch(err => {
+            console.log(err);
+            return false;
+        });
+    return journal;
+}
+
+async function getOneJournalByRecency(userID, journalIndex) {
+    const journal = await Journal
+        .findOne({ userID })
+        .sort({ _id: -1 })
+        .skip(journalIndex)
+        .catch(err => {
+            console.log(err);
+            return false;
+        });
+    return journal;
+}
+
+async function getOneJournalByObjectID(journalTargetID) {
+    try {
+        const entries = await Journal
+            .findById(journalTargetID);
+        console.log(entries);
+        return entries;
+    }
+    catch (err) {
+        console.log(err);
+        return false;
+    }
+}
+
+async function getMostRecentJournal(userID, embedColour = journalEmbedColour) {
+    const recentJournalToString = `__**Journal ${await getRecentJournalIndex(userID)}:**__`
+        + `\n${journalDocumentToString(await getOneJournalByRecency(userID, 0))}`;
+    const journalEmbed = fn.getMessageEmbed(recentJournalToString, `Journal See Recent Entry`, embedColour);
+    return journalEmbed;
+}
+
+function journalDocumentToString(journalDoc) {
+    const { createdAt, template, entry, } = journalDoc;
+    let entryString = `**Created At:** ${createdAt ? fn.timestampToDateString(createdAt) : ""}\n**Type: **`;
+    switch (template) {
+        case 1:
+            entryString += "Daily (5-Minute) Journal"
+                + `${entry.gratitudes || entry.actions || entry.affirmations ? `\n\n☀ **__Start__**` : ""}`
+                + `${entry.gratitudes ? `\n**Gratitudes:**\n${entry.gratitudes}` : ""}`
+                + `${entry.gratitudes && entry.actions ? '\n' : ""}`
+                + `${entry.actions ? `\n**Actions/Mindsets for a Great Day:**\n${entry.actions}` : ""}`
+                + `${entry.actions && entry.affirmations ? '\n' : ""}`
+                + `${entry.affirmations ? `\n**Affirmations:** ***I am...***\n${entry.affirmations}` : ""}`
+                + `${entry.amazing || entry.betterDay ? `\n\n🌙 **__End__**` : ""}`
+                + `${entry.amazing ? `\n**Amazing Things That Happened:**\n${entry.amazing}` : ""}`
+                + `${entry.amazing && entry.betterDay ? '\n' : ""}`
+                + `${entry.betterDay ? `\n**Could Have Done These Better:**\n${entry.betterDay}` : ""}`
+            break;
+        case 2:
+            entryString += "Prompt & Answer"
+                + `${entry.prompt || entry.message ? '\n' : ""}`
+                + `${entry.prompt ? `\n🗣 **Prompt:**\n${entry.prompt}` : ""}`
+                + `${entry.prompt && entry.message ? '\n' : ""}`
+                + `${entry.message ? `\n💬 **Entry:**\n${entry.message}` : ""}`;
+            break;
+        case 3:
+            entryString += "Freehand" + `${entry.message ? `\n💬 **Entry:**\n${entry.message}` : ""}`;
+            break;
+    }
+    return entryString;
+}
+
+function multipleJournalsToString(message, journalArray, numberOfJournals, entriesToSkip = 0, toArray = false) {
+    var entriesToString = new Array();
+    console.log({ numberOfJournals });
+    for (i = 0; i < numberOfJournals; i++) {
+        if (journalArray[i] === undefined) {
+            numberOfJournals = i;
+            fn.sendErrorMessage(message, `**JOURNALS ${i + entriesToSkip + 1}**+ ONWARDS DO NOT EXIST...`);
+            break;
+        }
+        const journalString = `__**Journal ${i + entriesToSkip + 1}:**__`
+            + `\n${journalDocumentToString(journalArray[i])}`;
+        entriesToString.push(journalString);
+    }
+    if (!toArray) entriesToString = entriesToString.join('\n\n');
+    return entriesToString;
+}
+
+async function getRecentJournalIndex(userID) {
+    try {
+        var index;
+        const entries = await Journal
+            .find({ userID })
+            .sort({ createdAt: -1 });
+        if (entries.length) {
+            let targetID = await Journal
+                .findOne({ userID })
+                .sort({ _id: -1 });
+            targetID = targetID._id.toString();
+            console.log({ targetID });
+            for (i = 0; i < entries.length; i++) {
+                if (entries[i]._id.toString() === targetID) {
+                    index = i + 1;
+                    return index;
+                }
+            }
+        }
+        else return -1;
+    }
+    catch (err) {
+        console.log(err);
+        return false;
+    }
+}
+
+
 module.exports = {
     name: "journal",
     description: "Daily Journaling (with Weekly journal template)",
     aliases: ["j", "jour", "journ", "scribe", "scribing", "write", "w"],
-    cooldown: 5,
+    cooldown: 3.5,
     args: true,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavings, forceSkip) {
@@ -102,8 +241,11 @@ module.exports = {
             + "\n\n\`<ACTION>\`: **start/s; end/e; see; edit; delete/d; post; template/t**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`
         journalUsageMessage = fn.getMessageEmbed(journalUsageMessage, "Journal: Help", journalEmbedColour);
-        const journalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
         const journalCommand = args[0].toLowerCase();
+        const journalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
+        const journalActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${journalCommand} help\``;
+        const journalType = args[1] ? args[1].toLowerCase() : false;
+        const guildID = message.guild.id || false;
         const authorID = message.author.id;
         const authorUsername = message.author.username;
         const journalInProgress = await Journal.findOne({ template: 1, userID: authorID, "entry.amazing": undefined, "entry.betterDay": undefined });
@@ -114,7 +256,7 @@ module.exports = {
 
 
         else if (journalCommand === "start" || journalCommand === "st" || journalCommand === "s" || journalCommand === "set" || journalCommand === "create"
-            || journalCommand === "c" || journalCommand === "make" || journalCommand === "m" || journalCommand === "add" || journalCommand === "a") {
+            || journalCommand === "make" || journalCommand === "m" || journalCommand === "add" || journalCommand === "a") {
             var journalDocument;
             const targetUserSettings = await User.findOne({ discordID: authorID });
 
@@ -157,6 +299,7 @@ module.exports = {
                     journalDocument = new Journal({
                         _id: mongoose.Types.ObjectId(),
                         userID: authorID,
+                        createdAt: Date.now() + HOUR_IN_MS * timezoneOffset,
                         template: 1,
                         entry: {
                             gratitudes,
@@ -187,14 +330,16 @@ module.exports = {
                         + `\n\nType** \`?${commandUsed} end\` **- to write your **end of day reflection journal**`;
                     await rm.setNewDMReminder(bot, authorID, now, now, endTime, reminderMessage,
                         "Journal", journalDocument._id, false, false, journalEmbedColour);
+                    console.log("Journal end reminder set.");
+                    message.reply(`Journal end reminder set for **${fn.timestampToDateString(endTime - Date.now())}** from now!`);
                     return;
                 }
                 // If allowing community prompts (with verification system) - adjust code below
                 case '🗣': {
                     const promptType = await fn.reactionDataCollect(bot, message, "**Would you like to answer a randomly generated question/prompt or create your own to answer?**"
-                        + "\n\n⚙ - **Generate Prompts**\n✒ - **Create Prompt**\n❌ - **Exit**", ['⚙', '🖋', '❌'], "Journal: Prompt", journalEmbedColour);
+                        + "\n\n⚙ - **Generate Prompts**\n🖋 - **Create Prompt**\n❌ - **Exit**", ['⚙', '🖋', '❌'], "Journal: Prompt", journalEmbedColour);
                     // 🗣 - **Get Prompts** from the **Community**\n
-                    if (promptType === '✒') {
+                    if (promptType === '🖋') {
                         const userPrompt = await fn.getSingleEntry(bot, message, `**Enter a __question or prompt__ you'd like to explore and answer:**`,
                             "Journal: Create Prompt", forceSkip, journalEmbedColour);
                         if (!userPrompt) return;
@@ -204,10 +349,11 @@ module.exports = {
                         journalDocument = new Journal({
                             _id: mongoose.Types.ObjectId(),
                             userID: authorID,
+                            createdAt: Date.now() + HOUR_IN_MS * timezoneOffset,
                             template: 2,
                             entry: {
                                 message: journalEntry,
-                                userPrompt,
+                                prompt: userPrompt,
                             },
                         });
                         journalDocument.save()
@@ -228,13 +374,14 @@ module.exports = {
                         promptArray = prompts;
                         const journalEntry = await getGeneratedPromptAndAnswer(bot, message, promptArray);
                         if (!journalEntry) return;
-                        const { message, prompt } = journalEntry;
+                        const { entry, prompt } = journalEntry;
                         journalDocument = new Journal({
                             _id: mongoose.Types.ObjectId(),
                             userID: authorID,
+                            createdAt: Date.now() + HOUR_IN_MS * timezoneOffset,
                             template: 2,
                             entry: {
-                                message,
+                                message: entry,
                                 prompt,
                             },
                         });
@@ -249,12 +396,13 @@ module.exports = {
                 }
                     break;
                 case '✍': {
-                    let journalEntry = await fn.getMultilineEntry(bot, message, userPrompt, "Journal: Freehand (No Template)", forceSkip, journalEmbedColour);
+                    let journalEntry = await fn.getMultilineEntry(bot, message, "\n**__Type in your journal entry:__**", "Journal: Freehand (No Template)", forceSkip, journalEmbedColour);
                     if (!journalEntry) return;
                     journalEntry = journalEntry.message;
                     journalDocument = new Journal({
                         _id: mongoose.Types.ObjectId(),
                         userID: authorID,
+                        createdAt: Date.now() + HOUR_IN_MS * timezoneOffset,
                         template: 3,
                         entry: { message: journalEntry, },
                     });
@@ -270,7 +418,6 @@ module.exports = {
             }
             return;
         }
-
 
 
         else if (journalCommand === "end" || journalCommand === "e") {
@@ -295,10 +442,10 @@ module.exports = {
             const finishedJournal = await Journal.findByIdAndUpdate(journal._id, { $set: { entry: journal.entry } }, { new: true });
             console.log({ finishedJournal });
             if (finishedJournal) {
-                console.log(`Completing ${authorUsername}'s (${authorID}) journal entry (Removing Associated Reminders...)`);
+                console.log(`Completing ${authorUsername}'s (${authorID}) journal entry!`);
                 message.reply("**Your journal entry was successfully completed!**");
-                const endReminder = await Reminder.deleteMany({ connectedDocument: journal._id });
-                console.log({ endReminder });
+                await Reminder.deleteMany({ connectedDocument: journal._id });
+                console.log(`Removing Associated Reminders....`);
             }
             else return console.log(`There was an error completing ${authorUsername}'s (${authorID}) journal entry`);
             return;
@@ -307,18 +454,651 @@ module.exports = {
 
         else if (journalCommand === "delete" || journalCommand === "remove" || journalCommand === "del" || journalCommand === "d"
             || journalCommand === "rem" || journalCommand === "r") {
-            if (!totalJournalNumber) return message.reply(`**No journal entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
+            let journalDeleteUsageMessage = fn.getReadOrDeleteUsageMessage(PREFIX, commandUsed, journalCommand, true, ["Entry", "Entries"]);
+            journalDeleteUsageMessage = fn.getMessageEmbed(journalDeleteUsageMessage, "Journal: Delete Help", journalEmbedColour);
+            const trySeeCommandMessage = `Try \`${PREFIX}${commandUsed} see help\``;
 
+            if (journalType) {
+                if (journalType === "help") {
+                    return message.channel.send(journalDeleteUsageMessage);
+                }
+                if (!totalJournalNumber) {
+                    return message.reply(`**NO JOURNALS...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
+                }
+            }
+            else return message.reply(journalActionHelpMessage);
+
+            // delete past #:
+            if (args[2] !== undefined) {
+                const deleteType = journalType;
+                if (deleteType === "past") {
+                    // If the following argument is not a number, exit!
+                    if (isNaN(args[2])) {
+                        return fn.sendErrorMessageAndUsage(message, journalActionHelpMessage);
+                    }
+                    var numberArg = parseInt(args[2]);
+                    if (numberArg <= 0) {
+                        return fn.sendErrorMessageAndUsage(message, journalActionHelpMessage);
+                    }
+                    let indexByRecency = false;
+                    if (args[3] !== undefined) {
+                        if (args[3].toLowerCase() === "recent") {
+                            indexByRecency = true;
+                        }
+                    }
+                    const sortType = indexByRecency ? "By Recency" : "By Date Created";
+                    var journalCollection;
+                    if (indexByRecency) journalCollection = await fn.getEntriesByRecency(Journal, { userID: authorID }, 0, numberArg);
+                    else journalCollection = await getJournalByCreatedAt(authorID, 0, numberArg);
+                    const journalStringArray = fn.getEmbedArray(multipleJournalsToString(message, journalCollection, numberArg, 0, true),
+                        '', true, false, journalEmbedColour);
+                    console.log({ journalStringArray });
+                    const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} entries?** `;
+                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, journalStringArray, multipleDeleteMessage, forceSkip,
+                        `Journal: Delete Past ${numberArg} Entries (${sortType})`, 600000);
+                    if (!multipleDeleteConfirmation) return;
+                    const targetIDs = await journalCollection.map(entry => entry._id);
+                    console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Entries (${sortType})`);
+                    await Journal.deleteMany({ _id: { $in: targetIDs } });
+                    return;
+                }
+                if (deleteType === "many") {
+                    if (args[2] === undefined) {
+                        return message.reply(journalActionHelpMessage);
+                    }
+                    // Get the arguments after keyword MANY
+                    // Filter out the empty inputs and spaces due to multiple commas (e.g. ",,,, ,,, ,   ,")
+                    // Convert String of Numbers array into Integer array
+                    // Check which journals exist, remove/don't add those that don't
+                    let toDelete = args[2].split(',').filter(index => {
+                        if (!isNaN(index)) {
+                            numberIndex = parseInt(index);
+                            if (numberIndex > 0 && numberIndex <= totalJournalNumber) {
+                                return numberIndex;
+                            }
+                        }
+                        else if (index === "recent") {
+                            return true;
+                        }
+                    });
+                    const recentIndex = await getRecentJournalIndex(authorID);
+                    toDelete = Array.from(new Set(toDelete.map((number) => {
+                        if (number === "recent") {
+                            if (recentIndex !== -1) return recentIndex;
+                        }
+                        else return +number;
+                    })));
+                    console.log({ toDelete });
+                    // Send error message if none of the given reminders exist
+                    if (!toDelete.length) {
+                        return fn.sendErrorMessage(message, "All of these **journals DO NOT exist**...");
+                    }
+                    var indexByRecency = false;
+                    if (args[3] !== undefined) {
+                        if (args[3].toLowerCase() === "recent") {
+                            indexByRecency = true;
+                        }
+                    }
+                    var journalTargetIDs = new Array();
+                    var journalStringArray = new Array();
+                    for (i = 0; i < toDelete.length; i++) {
+                        var journalView;
+                        if (indexByRecency) {
+                            journalView = await getOneJournalByRecency(authorID, toDelete[i] - 1);
+                        }
+                        else {
+                            journalView = await getOneJournalByCreatedTime(authorID, toDelete[i] - 1);
+                        }
+                        journalTargetIDs.push(journalView._id);
+                        journalStringArray.push(`__**Journal ${toDelete[i]}:**__\n${journalDocumentToString(journalView)}`);
+                    }
+                    const deleteConfirmMessage = `Are you sure you want to **delete entries ${toDelete.toString()}?**`;
+                    const sortType = indexByRecency ? "By Recency" : "By Date Created";
+                    journalStringArray = fn.getEmbedArray(journalStringArray, '', true, false, journalEmbedColour);
+                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, journalStringArray, deleteConfirmMessage,
+                        forceSkip, `Journal: Delete Entries ${toDelete} (${sortType})`, 600000);
+                    if (confirmDeleteMany) {
+                        console.log(`Deleting ${authorID}'s Entries ${toDelete} (${sortType})`);
+                        await Journal.deleteMany({ _id: { $in: journalTargetIDs } });
+                        return;
+                    }
+                    else return;
+                }
+                else {
+                    var shiftIndex;
+                    let indexByRecency = false;
+                    if (args[2].toLowerCase() === "past") {
+                        shiftIndex = 0;
+                        indexByRecency = false;
+                    }
+                    else if (args[2].toLowerCase() === "recent") {
+                        shiftIndex = 1;
+                        indexByRecency = true;
+                    }
+                    console.log({ shiftIndex });
+                    if (args[2 + shiftIndex]) {
+                        if (args[2 + shiftIndex].toLowerCase() === "past") {
+                            var skipEntries;
+                            if (isNaN(args[3 + shiftIndex])) {
+                                if (args[3 + shiftIndex].toLowerCase() === "recent") {
+                                    skipEntries = await getRecentJournalIndex(authorID);
+                                }
+                                else return message.reply(journalActionHelpMessage);
+                            }
+                            else skipEntries = parseInt(args[3 + shiftIndex]);
+                            const pastNumberOfEntries = parseInt(args[1]);
+                            if (pastNumberOfEntries <= 0 || skipEntries < 0) {
+                                return fn.sendErrorMessageAndUsage(message, journalActionHelpMessage);
+                            }
+                            var journalCollection;
+                            if (indexByRecency) journalCollection = await fn.getEntriesByRecency(Journal, { userID: authorID }, skipEntries, pastNumberOfEntries);
+                            else journalCollection = await getJournalByCreatedAt(authorID, skipEntries, pastNumberOfEntries);
+                            const journalStringArray = fn.getEmbedArray(multipleJournalsToString(message, journalCollection, pastNumberOfEntries, skipEntries, true),
+                                '', true, false, journalEmbedColour);
+                            if (skipEntries >= totalJournalNumber) return;
+                            const sortType = indexByRecency ? "By Recency" : "By Date Created";
+                            const multipleDeleteMessage = `Are you sure you want to **delete ${journalCollection.length} entries past entry ${skipEntries}?**`;
+                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, journalStringArray, multipleDeleteMessage,
+                                forceSkip, `Journal: Multiple Delete Warning! (${sortType})`);
+                            console.log({ multipleDeleteConfirmation });
+                            if (!multipleDeleteConfirmation) return;
+                            console.log({ multipleDeleteConfirmation });
+                            const targetIDs = await journalCollection.map(entry => entry._id);
+                            console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} entries past ${skipEntries} (${sortType})`);
+                            await Journal.deleteMany({ _id: { $in: targetIDs } });
+                            return;
+                        }
+
+                        // They haven't specified the field for the journal delete past function
+                        else if (deleteType === "past") return message.reply(journalActionHelpMessage);
+                        else return message.reply(journalActionHelpMessage);
+                    }
+                }
+            }
+            // Next: JOURNAL DELETE ALL
+            // Next: JOURNAL DELETE MANY
+            // Next: JOURNAL DELETE
+
+            // journal delete <NUMBER/RECENT/ALL>
+            const noJournalsMessage = `**NO JOURNALS**... try \`${PREFIX}${commandUsed} start help\``;
+            if (isNaN(args[1])) {
+                const deleteType = journalType;
+                if (deleteType === "recent") {
+                    const journalView = await getOneJournalByRecency(authorID, 0, false);
+                    if (journalView.length === 0) {
+                        return fn.sendErrorMessage(message, noJournalsMessage);
+                    }
+                    const journalTargetID = journalView._id;
+                    console.log({ journalTargetID });
+                    const journalIndex = await getRecentJournalIndex(authorID);
+                    const journalEmbed = fn.getEmbedArray(`__**Journal ${journalIndex}:**__\n${journalDocumentToString(journalView)}`,
+                        `Journal: Delete Recent Entry`, true, true, journalEmbedColour);
+                    const deleteConfirmMessage = `Are you sure you want to **delete your most recent entry?:**`;
+                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, journalEmbed, deleteConfirmMessage, forceSkip,
+                        `Journal: Delete Recent Entry`, 600000);
+                    if (deleteIsConfirmed) {
+                        await Journal.deleteOne({ _id: journalTargetID });
+                        return;
+                    }
+                }
+                else if (deleteType === "all") {
+                    const confirmDeleteAllMessage = "Are you sure you want to **delete all** of your recorded journals?\n\nYou **cannot UNDO** this!" +
+                        `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
+                    const pastNumberOfEntriesIndex = totalJournalNumber;
+                    if (pastNumberOfEntriesIndex === 0) {
+                        return fn.sendErrorMessage(message, noJournalsMessage);
+                    }
+                    let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, "Journal: Delete All Entries WARNING!");
+                    if (!confirmDeleteAll) return;
+                    const finalDeleteAllMessage = "Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR JOURNALS ON RECORD**?\n\nYou **cannot UNDO** this!"
+                        + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
+                    let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, "Journal: Delete ALL Entries FINAL Warning!");
+                    if (!finalConfirmDeleteAll) return;
+                    console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Entries`);
+                    await Journal.deleteMany({ userID: authorID });
+                    return;
+                }
+                else return message.reply(journalActionHelpMessage);
+            }
+            else {
+                const pastNumberOfEntriesIndex = parseInt(args[1]);
+                let indexByRecency = false;
+                if (args[2] !== undefined) {
+                    if (args[2].toLowerCase() === "recent") {
+                        indexByRecency = true;
+                    }
+                }
+                var journalView;
+                if (indexByRecency) journalView = await getOneJournalByRecency(authorID, pastNumberOfEntriesIndex - 1);
+                else journalView = await getOneJournalByCreatedTime(authorID, pastNumberOfEntriesIndex - 1);
+                if (!journalView) {
+                    return fn.sendErrorMessageAndUsage(message, trySeeCommandMessage, `**JOURNAL ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
+                }
+                const journalTargetID = journalView._id;
+                const sortType = indexByRecency ? "By Recency" : "By Date Created";
+                const deleteConfirmMessage = `Are you sure you want to **delete Entry ${pastNumberOfEntriesIndex}?**`;
+                const journalEmbed = fn.getEmbedArray(`__**Journal ${pastNumberOfEntriesIndex}:**__\n${journalDocumentToString(journalView)}`,
+                    `Journal: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, true, true, journalEmbedColour);
+                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, journalEmbed, deleteConfirmMessage, forceSkip,
+                    `Journal: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
+                if (deleteConfirmation) {
+                    console.log(`Deleting ${authorUsername}'s (${authorID}) Entry ${sortType}`);
+                    await Journal.deleteOne({ _id: journalTargetID });
+                    return;
+                }
+            }
         }
 
 
         else if (journalCommand === "see" || journalCommand === "show") {
-            if (!totalJournalNumber) return message.reply(`**No journal entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
+            let journalSeeUsageMessage = fn.getReadOrDeleteUsageMessage(PREFIX, commandUsed, journalCommand, true, ["Entry", "Entries"]);
+            journalSeeUsageMessage = fn.getMessageEmbed(journalSeeUsageMessage, "Journal: See Help", journalEmbedColour);
+
+            const seeCommands = ["past", "recent", "all"];
+
+            if (journalType) {
+                if (journalType === "help") {
+                    return message.channel.send(journalSeeUsageMessage);
+                }
+                if (!totalJournalNumber) {
+                    return message.reply(`**NO JOURNALS...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
+                }
+                else if (journalType === "number") {
+                    return message.reply(`You have **${totalJournalNumber} journal entries** on record.`);
+                }
+            }
+            else return message.reply(journalActionHelpMessage);
+
+            // Show the user the last journal with the most recent end time (by sorting from largest to smallest end time and taking the first):
+            // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
+            // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
+            if (!seeCommands.includes(journalType) && isNaN(journalType)) {
+                return message.reply(journalActionHelpMessage);
+            }
+            // Do not show the most recent journal embed, when a valid command is called
+            // it will be handled properly later based on the values passed in!
+            else {
+                const seeType = journalType;
+                var pastFunctionality,
+                    pastNumberOfEntriesIndex;
+                let indexByRecency = false;
+                // To check if the given argument is a number!
+                // If it's not a number and has passed the initial 
+                // filter, then use the "past" functionality
+                // Handling Argument 1:
+                const isNumberArg = !isNaN(args[1]);
+                if (seeType === "recent") {
+                    return message.channel.send(await getMostRecentJournal(authorID, journalEmbedColour));
+                }
+                else if (seeType === "all") {
+                    pastNumberOfEntriesIndex = totalJournalNumber;
+                    pastFunctionality = true;
+                }
+                else if (isNumberArg) {
+                    pastNumberOfEntriesIndex = parseInt(args[1]);
+                    if (pastNumberOfEntriesIndex <= 0) {
+                        return fn.sendErrorMessageAndUsage(message, journalActionHelpMessage, `**JOURNAL ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
+                    }
+                    else pastFunctionality = false;
+                }
+                else if (seeType === "past") {
+                    pastFunctionality = true;
+                }
+                // After this filter:
+                // If the first argument after "see" is not past, then it is not a valid call
+                else return message.reply(journalActionHelpMessage);
+                console.log({ pastNumberOfEntriesIndex, pastFunctionality });
+                if (pastFunctionality) {
+                    // Loop through all of the given fields, account for aliases and update fields
+                    // Find Entries, toArray, store data in meaningful output
+                    if (args[3] !== undefined) {
+                        if (args[3].toLowerCase() === "recent") {
+                            indexByRecency = true;
+                        }
+                    }
+                    const sortType = indexByRecency ? "By Recency" : "By Date Created";
+                    if (args[2] !== undefined) {
+                        // If the next argument is NotaNumber, invalid "past" command call
+                        if (isNaN(args[2])) return message.reply(journalActionHelpMessage);
+                        if (parseInt(args[2]) <= 0) return message.reply(journalActionHelpMessage);
+                        const confirmSeeMessage = `Are you sure you want to **see ${args[2]} journals?**`;
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Journal: See ${args[2]} Entries (${sortType})`);
+                        if (!confirmSeeAll) return;
+                    }
+                    else {
+                        // If the next argument is undefined, implied "see all" command call unless "all" was not called:
+                        // => empty "past" command call
+                        if (seeType !== "all") return message.reply(journalActionHelpMessage);
+                        const confirmSeeAllMessage = "Are you sure you want to **see all** of your journal history?";
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Journal: See All Entries");
+                        if (!confirmSeeAll) return;
+                    }
+                    // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
+                    if (pastNumberOfEntriesIndex === undefined) {
+                        pastNumberOfEntriesIndex = parseInt(args[2]);
+                    }
+                    var journalView;
+                    if (indexByRecency) journalView = await fn.getEntriesByRecency(Journal, { userID: authorID }, 0, pastNumberOfEntriesIndex);
+                    else journalView = await getJournalByCreatedAt(authorID, 0, pastNumberOfEntriesIndex);
+                    console.log({ journalView, pastNumberOfEntriesIndex });
+                    const journalStringArray = multipleJournalsToString(message, journalView, pastNumberOfEntriesIndex, 0, true);
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(journalStringArray, `Journal: See ${pastNumberOfEntriesIndex} Entries (${sortType})`, true, true, journalEmbedColour));
+                    return;
+                }
+                // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
+                if (args[2] !== undefined) {
+                    var shiftIndex;
+                    if (args[2].toLowerCase() === "past") {
+                        shiftIndex = 0;
+                        indexByRecency = false;
+                    }
+                    else if (args[2].toLowerCase() === "recent") {
+                        shiftIndex = 1;
+                        indexByRecency = true;
+                    }
+                    if (args[2 + shiftIndex]) {
+                        if (args[2 + shiftIndex].toLowerCase() === "past") {
+                            if (args[3 + shiftIndex] !== undefined) {
+                                const sortType = indexByRecency ? "By Recency" : "By Date Created";
+                                var entriesToSkip;
+                                // If the argument after past is a number, valid command call!
+                                if (!isNaN(args[3 + shiftIndex])) {
+                                    entriesToSkip = parseInt(args[3 + shiftIndex]);
+                                }
+                                else if (args[3 + shiftIndex].toLowerCase() === "recent") {
+                                    entriesToSkip = await getRecentJournalIndex(authorID);
+                                }
+                                else return message.reply(journalActionHelpMessage);
+                                if (entriesToSkip < 0 || entriesToSkip > totalJournalNumber) {
+                                    return fn.sendErrorMessageAndUsage(message, journalActionHelpMessage, "**JOURNAL(S) DO NOT EXIST**...");
+                                }
+                                const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} entries past ${entriesToSkip}?**`;
+                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Journal: See ${args[1]} Entries Past ${entriesToSkip} (${sortType})`);
+                                if (!confirmSeePast) return;
+                                var journalView;
+                                if (indexByRecency) journalView = await fn.getEntriesByRecency(Journal, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
+                                else journalView = await getJournalByCreatedAt(authorID, entriesToSkip, pastNumberOfEntriesIndex);
+                                console.log({ journalView });
+                                const journalStringArray = multipleJournalsToString(message, journalView, pastNumberOfEntriesIndex, entriesToSkip, true);
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(journalStringArray, `Journal: See ${pastNumberOfEntriesIndex} Entries Past ${entriesToSkip} (${sortType})`, true, true, journalEmbedColour));
+                                return;
+                            }
+                        }
+                    }
+                }
+                if (args[2] !== undefined) {
+                    if (args[2].toLowerCase() === "recent") {
+                        indexByRecency = true;
+                    }
+                }
+                var journalView;
+                if (indexByRecency) journalView = await getOneJournalByRecency(authorID, pastNumberOfEntriesIndex - 1);
+                else journalView = await getOneJournalByCreatedTime(authorID, pastNumberOfEntriesIndex - 1);
+                console.log({ journalView });
+                if (!journalView) {
+                    return fn.sendErrorMessage(message, `**JOURNAL ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
+                }
+                // NOT using the past functionality:
+                const sortType = indexByRecency ? "By Recency" : "By Date Created";
+                const journalString = `__**Journal ${pastNumberOfEntriesIndex}:**__\n${journalDocumentToString(journalView)}`;
+                const journalEmbed = fn.getEmbedArray(journalString, `Journal: See Entry ${pastNumberOfEntriesIndex} (${sortType})`, true, true, journalEmbedColour);
+                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, journalEmbed);
+            }
         }
 
 
+        else if (journalCommand === "edit" || journalCommand === "ed" || journalCommand === "change" || journalCommand === "c"
+            || journalCommand === "update" || journalCommand === "upd" || journalCommand === "ch") {
+            let journalEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${journalCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\``
+                + "\n\n`<#_MOST_RECENT_ENTRY>`: **recent; 3** (3rd most recent entry, \\**any number*)"
+                + "\n\n`<recent?>`(OPT.): type **recent** at the indicated spot to sort the journals by **actual time created instead of journal created time!**"
+                + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**";
+            journalEditUsageMessage = fn.getMessageEmbed(journalEditUsageMessage, `Journal: Edit Help`, journalEmbedColour);
+            if (journalType) {
+                if (journalType === "help") {
+                    return message.channel.send(journalEditUsageMessage);
+                }
+                if (!totalJournalNumber) {
+                    return message.reply(`**NO JOURNALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                }
+                if (isNaN(journalType) && journalType !== "recent") {
+                    return message.reply(journalActionHelpMessage);
+                }
+                else {
+                    var pastNumberOfEntriesIndex;
+                    if (journalType === "recent") {
+                        pastNumberOfEntriesIndex = await getRecentJournalIndex(authorID);
+                    }
+                    else {
+                        pastNumberOfEntriesIndex = parseInt(journalType);
+                        if (pastNumberOfEntriesIndex <= 0) {
+                            return fn.sendErrorMessageAndUsage(message, journalActionHelpMessage, `**JOURNAL ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
+                        }
+                    }
+                    var indexByRecency = false;
+                    if (args[2] !== undefined) {
+                        if (args[2].toLowerCase() === "recent") {
+                            indexByRecency = true;
+                        }
+                    }
+                    var journalDocument;
+                    if (indexByRecency) journalDocument = await getOneJournalByRecency(authorID, pastNumberOfEntriesIndex - 1);
+                    else journalDocument = await getOneJournalByCreatedTime(authorID, pastNumberOfEntriesIndex - 1);
+                    if (!journalDocument) {
+                        return fn.sendErrorMessageAndUsage(message, journalActionHelpMessage, `**JOURNAL ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
+                    }
+                    const sortType = indexByRecency ? "By Recency" : "By Date Created";
+                    const { template } = journalDocument;
+                    if (!template) return;
+                    let journalFields = ["Created Date"];
+                    switch (template) {
+                        case 1:
+                            journalFields = journalFields.concat(["Gratitudes", "Actions/Mindsets for Great Day", "Affirmations", "Amazing Things", "Retrospective Better Day"]);
+                            break;
+                        case 2:
+                            journalFields = journalFields.concat(["Prompt", "Entry"]);
+                            break;
+                        case 3:
+                            journalFields = journalFields.concat(["Entry"]);
+                            break;
+                        default: return;
+                    }
+                    let fieldsList = "";
+                    journalFields.forEach((field, i) => {
+                        fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
+                    });
+                    const journalTargetID = journalDocument._id;
+                    var showJournal, continueEdit;
+                    do {
+                        const checkJournal = await getOneJournalByObjectID(journalTargetID);
+                        if (!checkJournal) return;
+                        continueEdit = false;
+                        showJournal = journalDocumentToString(journalDocument);
+                        // Field the user wants to edit
+                        const fieldToEditInstructions = "**Which field do you want to edit?:**";
+                        const fieldToEditAdditionalMessage = `__**Journal ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showJournal}`;
+                        const fieldToEditTitle = `Journal: Edit Field`;
+                        let fieldToEditIndex = await fn.userSelectFromList(bot, message, fieldsList, journalFields.length, fieldToEditInstructions,
+                            fieldToEditTitle, journalEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                        if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
+                        var userEdit, journalEditMessagePrompt = "";
+                        const fieldToEdit = journalFields[fieldToEditIndex];
+                        const type = "Journal";
+                        let { entry, createdAt } = journalDocument;
+
+                        if (fieldToEditIndex === 0) {
+                            journalEditMessagePrompt = `**__Please enter the date and time when this journal entry was created:__**`;
+                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                        }
+                        else switch (template) {
+                            case 1: {
+                                switch (fieldToEditIndex) {
+                                    case 1: {
+                                        journalEditMessagePrompt = `\nWhat are **3** things you are **truly __grateful__** for? 🙏\n(big or small)`;
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        entry.gratitudes = userEdit;
+                                    }
+                                        break;
+                                    case 2: {
+                                        journalEditMessagePrompt = `\nWhat are **3 __actions or mindset shifts__** that would make **today great**? 🧠`;
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        entry.actions = userEdit;
+                                    }
+                                        break;
+                                    case 3: {
+                                        journalEditMessagePrompt = `\nComplete the affirmation:\n\n**__I am...__**`;
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        entry.affirmations = userEdit;
+                                    }
+                                        break;
+                                    case 4: {
+                                        journalEditMessagePrompt = `\nList **3 __amazing__** things that happened today ☘ (big or small)`;
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        entry.amazing = userEdit;
+                                    }
+                                        break;
+                                    case 5: {
+                                        journalEditMessagePrompt = `\n**__How could you have made today better?__** 📈\n\ne.g. **__Retrospective Journal:__**`
+                                            + "\n**__CM__** - **Critical Moment** of suboptimal behaviour/action. 👀\n**__X__** - The **rationalization/thought pattern** behind it. 🧠"
+                                            + "\n**__\\\$__** - How you want to **think** next time! 🤔💭\n\n[From *Metascript Method* - by Mark Queppet]";
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        entry.betterDay = userEdit;
+                                    }
+                                        break;
+                                }
+                            }
+                                break;
+                            case 2: {
+                                switch (fieldToEditIndex) {
+                                    case 1: {
+                                        journalEditMessagePrompt = "\n**Enter the __question or prompt__ you'd like to explore and answer 💭**: ";
+                                        userEdit = await fn.getUserEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        entry.prompt = userEdit;
+                                    }
+                                        break;
+                                    case 2: {
+                                        journalEditMessagePrompt = `\n${entry.prompt || "**Enter your new answer to the prompt ✍:**"}`;
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        entry.message = userEdit;
+                                    }
+                                        break;
+                                    default: return;
+                                }
+                            }
+                                break;
+                            case 3: {
+                                journalEditMessagePrompt = "\n**__Enter your new journal entry__**✍: ";
+                                userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                entry.message = userEdit;
+                                break;
+                            }
+                            default: return;
+                        }
+
+                        console.log({ userEdit });
+                        if (userEdit === false) return;
+                        else if (userEdit === undefined) userEdit = "back";
+                        else if (userEdit !== "back") {
+                            // Parse User Edit
+                            if (fieldToEditIndex === 0) {
+                                const now = Date.now();
+                                userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
+                                console.log({ userEdit });
+                                userEdit = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavings);
+                                if (!userEdit) {
+                                    fn.sendReplyThenDelete(message, `**INVALID TIME**... Try** \`${PREFIX}date\` **for help with **dates and times!**`, 60000);
+                                    continueEdit = true;
+                                }
+                                else userEdit -= HOUR_IN_MS * timezoneOffset;
+                                createdAt = userEdit;
+                            }
+                        }
+                        else continueEdit = true;
+                        console.log({ userEdit });
+
+                        if (!continueEdit) {
+                            try {
+                                console.log(`Editing ${authorID}'s Journal ${pastNumberOfEntriesIndex} (${sortType})`);
+                                if (fieldToEditIndex === 0) {
+                                    journalDocument = await Journal.findOneAndUpdate({ _id: journalTargetID }, { $set: { createdAt } }, { new: true });
+                                }
+                                else journalDocument = await Journal.findOneAndUpdate({ _id: journalTargetID }, { $set: { entry } }, { new: true });
+                                console.log({ continueEdit });
+                                if (journalDocument) {
+                                    pastNumberOfEntriesIndex = indexByRecency ?
+                                        await fn.getEntryIndexByFunction(authorID, journalTargetID, totalJournalNumber, getOneJournalByRecency)
+                                        : await fn.getEntryIndexByFunction(authorID, journalTargetID, totalJournalNumber, getOneJournalByCreatedTime);
+                                    console.log({ journalDocument, journalTargetID, fieldToEditIndex });
+                                    showJournal = journalDocumentToString(journalDocument);
+                                    const continueEditMessage = `Do you want to continue **editing Journal ${pastNumberOfEntriesIndex}?:**\n\n__**Journal ${pastNumberOfEntriesIndex}:**__\n${showJournal}`;
+                                    continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Journal: Continue Editing Journal ${pastNumberOfEntriesIndex}?`, 300000);
+                                }
+                                else {
+                                    message.reply("**Journal not found...**");
+                                    continueEdit = false;
+                                }
+                            }
+                            catch (err) {
+                                return console.log(err);
+                            }
+                        }
+                        else {
+                            console.log({ continueEdit, userEdit });
+                            journalDocument = await Journal.findById(journalTargetID);
+                            if (journalDocument) {
+                                pastNumberOfEntriesIndex = indexByRecency ?
+                                    await fn.getEntryIndexByFunction(authorID, journalTargetID, totalJournalNumber, getOneJournalByRecency)
+                                    : await fn.getEntryIndexByFunction(authorID, journalTargetID, totalJournalNumber, getOneJournalByCreatedTime);
+                                console.log({ journalDocument, journalTargetID, fieldToEditIndex });
+                                showJournal = journalDocumentToString(journalDocument);
+                            }
+                            else {
+                                message.reply("**Journal not found...**");
+                                continueEdit = false;
+                            }
+                        }
+                    }
+                    while (continueEdit === true);
+                    return;
+                }
+            }
+            else return message.reply(journalActionHelpMessage);
+        }
+
         else if (journalCommand === "post" || journalCommand === "p") {
             if (!totalJournalNumber) return message.reply(`**No journal entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
+            if (args[1] !== undefined) {
+                let journalIndex = isNaN(args[1]) ? args[1].toLowerCase() : parseInt(args[1]);
+                let indexByRecency = false;
+                if (journalIndex === "recent") {
+                    journalIndex = 1;
+                    indexByRecency = true;
+                }
+                else if (args[2] !== undefined) {
+                    if (isNaN(args[2])) {
+                        if (args[2].toLowerCase === "recent") {
+                            indexByRecency = true;
+                        }
+                    }
+                }
+                journalIndex--;
+                if (journalIndex < 0 || journalIndex >= totalJournalNumber) {
+                    return message.reply(`**Journal ${journalIndex + 1} does not exist**`);
+                }
+                var journal;
+                if (indexByRecency) journal = await getOneJournalByRecency(authorID, journalIndex);
+                else journal = await getOneJournalByCreatedTime(authorID, journalIndex);
+                const sortType = indexByRecency ? "By Recency" : "By Date Created";
+                const targetChannel = await fn.getPostChannel(bot, message, `Journal ${sortType}`, forceSkip, journalEmbedColour);
+                if (!targetChannel) return;
+                const member = bot.guilds.cache.get(guildID).member(authorID);
+                const posts = fn.getEmbedArray(journalDocumentToString(journal), `${member ? `${member.displayName}'s ` : ""}Journal Entry`
+                    + ` - ${fn.timestampToDateString(journal.createdAt, false, true, true)}`, true, false, journalEmbedColour);
+                posts.forEach(async post => {
+                    await fn.sendMessageToChannel(bot, post, targetChannel);
+                });
+            }
+            else message.channel.send(journalActionHelpMessage);
         }
 
 
@@ -329,10 +1109,6 @@ module.exports = {
                 + "\n\n`<TYPE?>`: (OPT.)\nIf `daily`: **morning/m; night/n**\nIf `weekly`: **reflection/r; goals/g**";
             templateUsageMessage = fn.getMessageEmbed(templateUsageMessage, "Journal: Template Help", journalEmbedColour);
             const templateHelpMessage = `Try \`${PREFIX}${commandUsed} ${journalCommand} help\``;
-            var journalType;
-            if (args[1] !== undefined) {
-                journalType = args[1].toLowerCase();
-            }
             let journalTemplate = getJournalTemplate(args, true, journalEmbedColour);
             if (journalType === "help") return message.channel.send(templateUsageMessage);
             else if (!journalTemplate) return message.reply(templateHelpMessage);

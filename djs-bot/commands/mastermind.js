@@ -692,7 +692,7 @@ module.exports = {
                 if (indexByRecency) mastermindView = await getOneMastermindByRecency(authorID, pastNumberOfEntriesIndex - 1);
                 else mastermindView = await getOneMastermindByCreatedTime(authorID, pastNumberOfEntriesIndex - 1);
                 if (!mastermindView) {
-                    return fn.sendErrorMessageAndUsage(message, trySeeCommandMessage, "**MASTERMIND DOES NOT EXIST**...");
+                    return fn.sendErrorMessageAndUsage(message, trySeeCommandMessage, `**MASTERMIND ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
                 }
                 const mastermindTargetID = mastermindView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
@@ -758,7 +758,7 @@ module.exports = {
                 else if (isNumberArg) {
                     pastNumberOfEntriesIndex = parseInt(args[1]);
                     if (pastNumberOfEntriesIndex <= 0) {
-                        return fn.sendErrorMessageAndUsage(message, mastermindActionHelpMessage, "**MASTERMIND DOES NOT EXIST**...");
+                        return fn.sendErrorMessageAndUsage(message, mastermindActionHelpMessage, `**MASTERMIND ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
                     }
                     else pastFunctionality = false;
                 }
@@ -882,7 +882,6 @@ module.exports = {
                 if (!totalMastermindNumber) {
                     return message.reply(`**NO MASTERMINDS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
-
                 if (isNaN(mastermindType) && mastermindType !== "recent") {
                     return message.reply(mastermindActionHelpMessage);
                 }
@@ -894,10 +893,9 @@ module.exports = {
                     else {
                         pastNumberOfEntriesIndex = parseInt(mastermindType);
                         if (pastNumberOfEntriesIndex <= 0) {
-                            return fn.sendErrorMessageAndUsage(message, mastermindActionHelpMessage, "**MASTERMIND DOES NOT EXIST**...");
+                            return fn.sendErrorMessageAndUsage(message, mastermindActionHelpMessage, `**MASTERMIND ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
                         }
                     }
-
                     var indexByRecency = false;
                     if (args[2] !== undefined) {
                         if (args[2].toLowerCase() === "recent") {
@@ -1056,7 +1054,7 @@ module.exports = {
                                 console.log({ userEdit });
                                 userEdit = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavings);
                                 if (!userEdit) {
-                                    fn.sendReplyThenDelete(message, `**INVALID TIME**... ${mastermindHelpMessage}`, 60000);
+                                    fn.sendReplyThenDelete(message, `**INVALID TIME**... Try** \`${PREFIX}date\` **for help with **dates and times!**`, 60000);
                                     continueEdit = true;
                                 }
                                 else userEdit -= HOUR_IN_MS * timezoneOffset;
@@ -1116,6 +1114,7 @@ module.exports = {
 
 
         else if (mastermindCommand === "post" || mastermindCommand === "p") {
+            if (!totalMastermindNumber) return message.reply(`**No mastermind entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
             if (args[1] !== undefined) {
                 let mastermindIndex = isNaN(args[1]) ? args[1].toLowerCase() : parseInt(args[1]);
                 let indexByRecency = false;
