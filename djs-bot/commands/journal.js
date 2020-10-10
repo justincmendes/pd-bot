@@ -85,7 +85,7 @@ async function getGeneratedPromptAndAnswer(bot, message, prompts) {
                 currentPrompt = false;
             }
         }
-        else return { message: entry, prompt: currentPrompt };
+        else return { message: entry.message, prompt: currentPrompt };
     }
     while (true)
 }
@@ -369,7 +369,7 @@ module.exports = {
                         promptArray = prompts;
                         const journalEntry = await getGeneratedPromptAndAnswer(bot, message, promptArray);
                         if (!journalEntry) return;
-                        const { entry, prompt } = journalEntry;
+                        const { message: entry, prompt } = journalEntry;
                         journalDocument = new Journal({
                             _id: mongoose.Types.ObjectId(),
                             userID: authorID,

@@ -3629,7 +3629,7 @@ module.exports = {
     invalidPrefixes: ['\*', '\_', '\~', '\>', '\\', '\/', '\:', '\`', '\@'],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
     daysOfWeek: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-    fileFooterText: `🗑 to delete this message (not the entries)\n📎 to get all of this in a text file`,
+    fileFooterText: `🗑 to delete this window (not the entries)\n📎 to get all of this in a text file`,
     timeExamples: `e.g. **now **|** 5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a**`,
     futureTimeExamples: `e.g. **in 15 mins **|** next tuesday at 930p **|** 1 month from now 8pm\ntoday at 1:55P **|** July 5 at 9A **|** April 30, 2021 at 8:45am**`,
     intervalExamples: `⏳ Any period longer than **1 minute** ⏳`
