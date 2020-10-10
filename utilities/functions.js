@@ -3486,7 +3486,7 @@ module.exports = {
             collectedEntry = await this.messageDataCollectFirst(bot, message, instructionPrompt, title, embedColour, 600000, false);
             if (!collectedEntry || collectedEntry === "stop") {
                 if (collectedEntry !== "stop") {
-                    this.sendReplyThenDelete(message, `**Exiting...** This was your **entry**: *(Deleting in 10 minutes)*\n${finalEntry.join('\n')}`, 600000);
+                    this.sendMessageThenDelete(message, `**Exiting ${message.author.username}...** This was your **entry**: *(Deleting in 10 minutes)*\n${finalEntry.join('\n')}`, 600000);
                 }
                 return false;
             }

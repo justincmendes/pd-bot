@@ -3,6 +3,7 @@ const Discord = require("discord.js");
 const Journal = require("../database/schemas/journal");
 const Prompt = require("../database/schemas/prompt");
 const User = require("../database/schemas/user");
+const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
@@ -105,6 +106,9 @@ module.exports = {
         const journalCommand = args[0].toLowerCase();
         const authorID = message.author.id;
         const authorUsername = message.author.username;
+        const journalInProgress = await Journal.findOne({ template: 1, userID: authorID, "entry.amazing": undefined, "entry.betterDay": undefined });
+        const totalJournalNumber = await Journal.find({ userID: authorID }).countDocuments();
+        console.log({ journalInProgress, totalJournalNumber });
         // Journal Commands
         if (journalCommand === "help") return message.channel.send(journalUsageMessage);
 
@@ -120,31 +124,33 @@ module.exports = {
                 await fn.createUserSettings(bot, authorID, timezone);
             }
 
-            const templateType = await fn.reactionDataCollect(bot, message, `📜 - **Daily (2-part) Journal Template**`
+            if (journalInProgress) return message.reply(`**You already have a journal entry in progress!** Try** \`${PREFIX}${commandUsed} end\` **to **complete** your journal entry`);
+
+            const templateType = await fn.reactionDataCollect(bot, message, `📜 - **Daily (2-part) Journal Template** (*5-Minute Journal*)`
                 + `\n🗣 - **Prompt/Question & Answer** (Enter a prompt or get a generated prompt)`
-                + `\n✍ - \"**Freehand**\" (No template or prompt)`, ['📜', '🗣', '✍'], "Journal: Template", journalEmbedColour);
+                + `\n✍ - \"**Freehand**\" (No template or prompt)\n❌ - **Exit**`, ['📜', '🗣', '✍', '❌'], "Journal: Template", journalEmbedColour);
             switch (templateType) {
                 case '📜': {
-                    let gratitudes = await fn.getMultilineEntry(bot, message, "What are **3** things you are **truly grateful** for? 🙏",
+                    let gratitudes = await fn.getMultilineEntry(bot, message, "What are **3** things you are **truly __grateful__** for? 🙏\n(big or small)",
                         "Journal: Gratitudes", true, journalEmbedColour);
                     gratitudes = gratitudes.message;
                     console.log({ gratitudes });
                     if (!gratitudes && gratitudes !== '') return;
 
-                    let improvements = await fn.getMultilineEntry(bot, message, "What are **3** things you feel you should **improve** on? 📈",
-                        "Journal: Improvements", true, journalEmbedColour);
-                    improvements = improvements.message;
-                    console.log({ improvements });
-                    if (!improvements && improvements !== '') return;
+                    // let improvements = await fn.getMultilineEntry(bot, message, "What are **3** things/areas you feel you should **__improve__** on? 📈",
+                    //     "Journal: Improvements", true, journalEmbedColour);
+                    // improvements = improvements.message;
+                    // console.log({ improvements });
+                    // if (!improvements && improvements !== '') return;
 
-                    let actions = await fn.getMultilineEntry(bot, message, "What are **3 actions or mindset shifts** that would make **today great**? 🧠‍",
+                    let actions = await fn.getMultilineEntry(bot, message, "What are **3 __actions or mindset shifts__** that would make **today great**? 🧠‍",
                         "Journal: Actions", true, journalEmbedColour);
                     actions = actions.message;
                     console.log({ actions });
                     if (!actions && actions !== '') return;
 
-                    const affirmations = await fn.getSingleEntry(bot, message, "**I am...**",
-                        "Journal: Affirmation", true, journalEmbedColour);
+                    const affirmations = await fn.getSingleEntry(bot, message, "Complete the affirmation:\n\n**__I am...__**",
+                        "Journal: Affirmations", true, journalEmbedColour);
                     console.log({ affirmations });
                     if (!affirmations && affirmations !== '') return;
 
@@ -154,7 +160,6 @@ module.exports = {
                         template: 1,
                         entry: {
                             gratitudes,
-                            improvements,
                             actions,
                             affirmations,
                         },
@@ -168,12 +173,12 @@ module.exports = {
                         .catch(err => console.error(err));
 
                     const confirmEnd = await fn.getUserConfirmation(message, "**Do you want to set a reminder for when you finish your journal entry?**"
-                        + "\n(Ideally for the end of the day, before bed)", forceSkip, "Journal: End of Day - Completion Reminder", 180000);
+                        + "\n(Ideally for the end of the day, before bed)", false, "Journal: End of Day - Completion Reminder", 180000);
                     if (!confirmEnd) return;
 
                     let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavings,
                         "**When** would you like to **finish your journal entry?**",
-                        "Journal: End of Day - Reflection Time", true, journalEmbedColour);
+                        "Journal: End of Day - Reflection Time", forceSkip, journalEmbedColour);
                     if (!endTime) return;
                     endTime -= HOUR_IN_MS * timezoneOffset;
 
@@ -261,24 +266,59 @@ module.exports = {
                         .catch(err => console.error(err));
                 }
                     break;
+                default: return;
             }
+            return;
+        }
+
+
+
+        else if (journalCommand === "end" || journalCommand === "e") {
+            if (!journalInProgress) return message.reply(`**No journals in progress...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
+            let amazing = await fn.getMultilineEntry(bot, message, "List **3 __amazing__** things that happened today ☘ (big or small)", "Journal: The Amazing 3", true, journalEmbedColour);
+            if (!amazing) return;
+            else amazing = amazing.message;
+            // let accomplishments = await fn.getMultilineEntry(bot, message, "List **3 __accomplishments__** today 🏆🥇 (big or small)", "Journal: Accomplishments", true, journalEmbedColour);
+            // if (!accomplishments);
+            // else accomplishments = accomplishments.message;
+            let betterDay = await fn.getMultilineEntry(bot, message, "**__How could you have made today better?__** 📈\n\ne.g. **__Retrospective Journal:__**"
+                + "\n**__CM__** - **Critical Moment** of suboptimal behaviour/action. 👀\n**__X__** - The **rationalization/thought pattern** behind it. 🧠"
+                + "\n**__\\\$__** - How you want to **think** next time! 🤔💭\n\n[From *Metascript Method* - by Mark Queppet]", "Journal: Retrospective Better Day",
+                true, journalEmbedColour);
+            if (!betterDay) return;
+            else betterDay = betterDay.message;
+
+            let journal = journalInProgress;
+            journal.entry.amazing = amazing;
+            journal.entry.betterDay = betterDay;
+            console.log({ journal })
+            const finishedJournal = await Journal.findByIdAndUpdate(journal._id, { $set: { entry: journal.entry } }, { new: true });
+            console.log({ finishedJournal });
+            if (finishedJournal) {
+                console.log(`Completing ${authorUsername}'s (${authorID}) journal entry (Removing Associated Reminders...)`);
+                message.reply("**Your journal entry was successfully completed!**");
+                const endReminder = await Reminder.deleteMany({ connectedDocument: journal._id });
+                console.log({ endReminder });
+            }
+            else return console.log(`There was an error completing ${authorUsername}'s (${authorID}) journal entry`);
             return;
         }
 
 
         else if (journalCommand === "delete" || journalCommand === "remove" || journalCommand === "del" || journalCommand === "d"
             || journalCommand === "rem" || journalCommand === "r") {
+            if (!totalJournalNumber) return message.reply(`**No journal entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
 
         }
 
 
         else if (journalCommand === "see" || journalCommand === "show") {
-
+            if (!totalJournalNumber) return message.reply(`**No journal entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
         }
 
 
         else if (journalCommand === "post" || journalCommand === "p") {
-
+            if (!totalJournalNumber) return message.reply(`**No journal entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
         }
 
 

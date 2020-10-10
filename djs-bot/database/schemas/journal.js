@@ -21,10 +21,6 @@ const journalSchema = mongoose.Schema({
             type: String,
             required: false,
         },
-        improvements: {
-            type: String,
-            required: false,
-        },
         actions: {
             type: String,
             required: false,
@@ -33,7 +29,7 @@ const journalSchema = mongoose.Schema({
             type: String,
             required: false,
         },
-        accomplishments: {
+        amazing: {
             type: String,
             required: false,
         },

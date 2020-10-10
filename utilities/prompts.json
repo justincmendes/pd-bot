@@ -124,28 +124,34 @@
             "message": "If you achieved all of your life goals, how would you feel?"
         },
         {
-            "message": "Where could I add more fun to my life?"
+            "message": "Where could you add more fun to your life?"
         },
         {
-            "message": "How can I surprise my partner/friend/family?"
+            "message": "How can you surprise your partner/friend/family?"
         },
         {
-            "message": "Where do I need some help?"
+            "message": "Where do you need some help?"
         },
         {
-            "message": "Where is fear holding me back?"
+            "message": "Where is fear holding you back?"
         },
         {
-            "message": "Who are my role models?"
+            "message": "Who are your role models?"
         },
         {
-            "message": "What are the five or less things that I must do before I die?"
+            "message": "What are the five or less things that you must do before you die?"
         },
         {
-            "message": "What is stopping me from being completely satisfied with what I already have?"
+            "message": "What is stopping you from being completely satisfied with what you already have?"
         },
         {
-            "message": "What is the purpose of my life?"
+            "message": "What is the purpose of your life?"
+        },
+        {
+            "message": "List 3 recent accomplishments and what you've learned from them."
+        },
+        {
+            "message": "What are 3 things that you can improve on in yourself and/or in the world around you?"
         }
     ]
 }

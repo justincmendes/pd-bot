@@ -398,6 +398,7 @@ module.exports = {
                         reason: weeklyGoalReason,
                     });
                     goalCount++;
+                    if (goalCount >= 10) break;
                 }
                 while (true)
                 console.log({ weeklyGoals });
