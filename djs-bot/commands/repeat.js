@@ -24,7 +24,7 @@ module.exports = {
     name: "repeat",
     description: "Set a personal or group RECURRING reminder",
     aliases: ["rr", "ar", "recur", "recurring", "schedule", "sch", "sched", "auto"],
-    cooldown: 5,
+    cooldown: 3.5,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavingsSetting, forceSkip) {

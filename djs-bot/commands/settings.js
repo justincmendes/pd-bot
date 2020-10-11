@@ -1,8 +1,12 @@
 const User = require("../database/schemas/user");
+const Reminder = require("../database/schemas/reminder");
+const quotes = require("../../utilities/quotes.json").quotes;
 const fn = require("../../utilities/functions");
+const rm = require("../../utilities/reminder");
 require("dotenv").config();
 
 const userEmbedColour = fn.userSettingsEmbedColour;
+const quoteEmbedColour = fn.quoteEmbedColour;
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 const daysOfWeek = fn.daysOfWeek;
 const daysOfWeekList = daysOfWeek.map((day, i) => {
@@ -29,7 +33,7 @@ module.exports = {
     description: "User Settings/Preferences: Timezone, Habits, Reminders, etc.",
     aliases: ["setting", "set", "s", "preferences",
         "user", "u", "usersettings", "userconfig"],
-    cooldown: 5,
+    cooldown: 3.5,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavings, forceSkip) {
@@ -42,7 +46,7 @@ module.exports = {
             + "\n\n\`<ACTION>\`: **edit/change**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         settingUsageMessage = fn.getMessageEmbed(settingUsageMessage, "User Settings: Help", userEmbedColour);
-        const settingHelpMessage = `Try \*${PREFIX}${commandUsed} help\* for more options (and how to edit)`;
+        const settingHelpMessage = `Try ${PREFIX}${commandUsed} help - for more options (and how to edit)`;
         const username = message.channel.type === 'dm' ? authorUsername
             : bot.guilds.cache.get(message.guild.id).member(authorID).displayName;
         const showUserSettings = fn.getMessageEmbed(userDocumentToString(userSettings),
@@ -270,16 +274,16 @@ module.exports = {
                                     if (userEdit) {
                                         userSettingsPrompt = `How often do you want to receive an inspiration quote?`
                                             + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
-                                        let intervalInput = await fn.getUserEditString(message, "Quote Interval", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                        let intervalInput = await fn.getUserEditString(bot, message, "Quote Interval", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                         if (!intervalInput) return;
                                         else if (intervalInput === "back") {
-                                            continueEdit = true;zz
+                                            continueEdit = true;
                                         }
                                         else {
                                             intervalInput = intervalInput.toLowerCase().split(/[\s\n]+/);
                                             const now = Date.now();
                                             const endTime = fn.timeCommandHandlerToUTC(intervalInput[0] === "in" ? intervalInput
-                                                : [("in")].concat(intervalInput), now, timezoneOffset, daylightSavings)
+                                                : ["in"].concat(intervalInput), now, timezoneOffset, daylightSavings)
                                                 - HOUR_IN_MS * timezoneOffset;
                                             interval = endTime - now;
                                             if (!interval) {
@@ -295,7 +299,7 @@ module.exports = {
                                             else {
                                                 userSettingsPrompt = `__**When do you intend to start the first quote?**__`
                                                     + "\n\nType `skip` to **start it now**"
-                                                let quoteTrigger = await fn.getUserEditString(message, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                                let quoteTrigger = await fn.getUserEditString(bot, message, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                                 if (!quoteTrigger) return;
                                                 else {
                                                     const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
@@ -304,7 +308,7 @@ module.exports = {
                                                     else {
                                                         quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
                                                         firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
-                                                            : (["in"].concat(quoteTrigger)), currentTimestamp,
+                                                            : ["in"].concat(quoteTrigger), currentTimestamp,
                                                             timezoneOffset, daylightSavings);
                                                     }
                                                     if (firstQuote) {
@@ -400,7 +404,7 @@ module.exports = {
                                     else {
                                         userSettingsPrompt = `__**When do you intend to start the first quote?**__`
                                             + "\n\nType `skip` to **start it now**"
-                                        let quoteTrigger = await fn.getUserEditString(message, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                        let quoteTrigger = await fn.getUserEditString(bot, message, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                         if (!quoteTrigger) return;
                                         else {
                                             let firstQuote;
@@ -461,6 +465,17 @@ module.exports = {
                 }
                 else continueEdit = true;
                 if (!continueEdit) {
+                    if ((fieldToEditIndex === 4 && userEdit) || fieldToEditIndex === 5 || fieldToEditIndex === 6) {
+                        await Reminder.deleteMany({ userID: authorID, type: "Quote", isDM: true, });
+                        const currentTimestamp = Date.now();
+                        var quoteIndex, currentQuote;
+                        while (!currentQuote) {
+                            quoteIndex = Math.round(Math.random() * quotes.length);
+                            currentQuote = quotes[quoteIndex].message;
+                        }
+                        await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp, userSettings.nextQuote,
+                            currentQuote, "Quote", false, true, userSettings.quoteInterval, quoteEmbedColour);
+                    }
                     const continueEditMessage = `Do you want to continue **editing your settings?**\n\n${userDocumentToString(userSettings)}`;
                     continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Settings: Continue Editing?`, 300000);
                 }

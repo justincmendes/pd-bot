@@ -53,7 +53,7 @@ module.exports = {
     name: "guild",
     description: "Guild Settings/Preferences: Default Timezone, Mastermind Cron/Reset Timing and Roles, Reminders, etc.",
     aliases: ["servers", "server", "guilds", "config", "guildconfig", "guildsettings", "guildpreferences"],
-    cooldown: 5,
+    cooldown: 3.5,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavings, forceSkip) {

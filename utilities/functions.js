@@ -3666,6 +3666,7 @@ module.exports = {
     userSettingsEmbedColour: "#778899",
     guildSettingsEmbedColour: "#964b00",
     pesterEmbedColour: "#FF4500",
+    quoteEmbedColour: "#FF69B4",
     defaultEmbedColour: "#ADD8E6",
 
 };

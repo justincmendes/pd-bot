@@ -2,6 +2,7 @@
 const Discord = require("discord.js");
 const Reminder = require("../djs-bot/database/schemas/reminder");
 const mongoose = require("mongoose");
+const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
 require("dotenv").config();
 
@@ -376,9 +377,21 @@ module.exports = {
                             newEndTime += interval;
                         }
                         const newStartTime = newEndTime - interval;
+                        let updateObject = {
+                            startTime: newStartTime,
+                            endTime: newEndTime
+                        };
+                        if (reminder.type === "Quote") {
+                            var quoteIndex, currentQuote;
+                            while (!currentQuote) {
+                                quoteIndex = Math.round(Math.random() * quotes.length);
+                                currentQuote = quotes[quoteIndex].message;
+                                updateObject.message = currentQuote;
+                            }
+                        }
                         const updateReminder = await Reminder
                             .findOneAndUpdate({ _id: reminderID },
-                                { $set: { startTime: newStartTime, endTime: newEndTime } });
+                                { $set: updateObject });
                         if (updateReminder) return updateReminder;
                     }
                 }

@@ -504,7 +504,7 @@ module.exports = {
     name: "fast",
     description: "Fully Functional Fasting Tracker (for Intermittent Fasting)",
     aliases: ["f", "if", "fasts", "fasting"],
-    cooldown: 5,
+    cooldown: 3.5,
     args: true,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavingSetting, forceSkip) {

@@ -164,7 +164,7 @@ module.exports = {
     name: "mastermind",
     description: "Mastermind Meeting/Group Helper",
     aliases: ["m", "mm", "master", "masterminds"],
-    cooldown: 5,
+    cooldown: 3.5,
     args: true,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavings, forceSkip) {

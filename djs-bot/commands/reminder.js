@@ -18,7 +18,7 @@ module.exports = {
     name: "reminder",
     description: "Set a personal or group SINGLE-USE reminder",
     aliases: ["rm", "remindme", "remind", "reminders"],
-    cooldown: 5,
+    cooldown: 3.5,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavingsSetting, forceSkip) {
