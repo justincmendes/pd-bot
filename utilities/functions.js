@@ -1672,7 +1672,7 @@ module.exports = {
         // 0 - All choices we're null or insufficient/not chosen.
         if (!decision) return false;
         else {
-            if (decision === 1 || decision === 5) messageCreatedTimestamp = Date.now() + 1000;
+            if (decision === 1 || decision === 5) messageCreatedTimestamp = Date.now() + 700;
             var timestampOut, timezoneString, timeWasCalculated;
             switch (decision) {
                 case 1:

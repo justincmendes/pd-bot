@@ -63,14 +63,17 @@ module.exports = {
         //see, edit (when edit, show see first then usage),
         else if (settingCommand === "edit" || settingCommand === "ed" || settingCommand === "e"
             || settingCommand === "change" || settingCommand === "ch" || settingCommand === "c") {
-            var userFields = ["Timezone", "Daylight Savings Time", "Habit Daily Reset Time", "Habit Weekly Reset Time",
-                "Get Quotes", "Next Quote", "Quote Interval", "Likes Pestering Accountability",];
-            let fieldsList = "";
-            userFields.forEach((field, i) => {
-                fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
-            });
-            var continueEdit;
             do {
+                var userFields = userSettings.getQuote ? ["Timezone", "Daylight Savings Time", "Habit Daily Reset Time", "Habit Weekly Reset Time",
+                    "Get Quotes", "Next Quote", "Quote Interval", "Likes Pestering Accountability",]
+                    : ["Timezone", "Daylight Savings Time", "Habit Daily Reset Time", "Habit Weekly Reset Time",
+                        "Get Quotes", "Likes Pestering Accountability",];
+                const quoteAdjustment = userSettings.getQuote ? 0 : 2;
+                let fieldsList = "";
+                userFields.forEach((field, i) => {
+                    fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
+                });
+                var continueEdit;
                 const fieldToEditInstructions = "**Which field do you want to edit?:**";
                 const fieldToEditAdditionalMessage = userDocumentToString(userSettings);
                 const fieldToEditTitle = `${showUserSettings.title}: Edit Field`;
@@ -102,7 +105,7 @@ module.exports = {
                         console.log({ userEdit });
                         break;
                     case 4:
-                        userSettingsPrompt = `Do you want to regularly recieve an **inspirational quote?**`;
+                        userSettingsPrompt = `Do you want to regularly recieve an **inspirational quote?**\n🙌 - **Yes**\n⛔ - **No**`;
                         userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, userSettingsPrompt,
                             ['🙌', '⛔'], type, forceSkip, userEmbedColour);
                         break;
@@ -130,7 +133,7 @@ module.exports = {
                             continueEdit = true;
                         }
                         break;
-                    case 7:
+                    case 7 - quoteAdjustment:
                         userSettingsPrompt = `Are you into **pestering accountability** (💪) or not so much (🙅‍♀️)?`;
                         userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, userSettingsPrompt,
                             ['💪', '🙅‍♀️'], type, forceSkip, userEmbedColour);
@@ -444,7 +447,7 @@ module.exports = {
                                 }
                             }
                             break;
-                        case 7:
+                        case 7 - quoteAdjustment:
                             {
                                 switch (userEdit) {
                                     case '💪': userEdit = true;

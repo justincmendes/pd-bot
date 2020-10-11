@@ -38,13 +38,13 @@ module.exports = {
             let quoteSettings = await User.findOne({ discordID: authorID }, { getQuote: 1, quoteInterval: 1, nextQuote: 1 });
             if (!quoteSettings) return message.reply(`Try \`${PREFIX}settings\` to setup your settings!`);
 
-            var quoteFields = ["Get DM Quotes", "Next Quote", "Quote Interval"];
-            let fieldsList = "";
-            quoteFields.forEach((field, i) => {
-                fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
-            });
-            var continueEdit;
             do {
+                var quoteFields = quoteSettings.getQuote ? ["Get Quotes", "Next Quote", "Quote Interval"] : ["Get Quotes"];
+                let fieldsList = "";
+                quoteFields.forEach((field, i) => {
+                    fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
+                });
+                var continueEdit;
                 const fieldToEditInstructions = "**Which field do you want to edit?:**";
                 const fieldToEditAdditionalMessage = quoteDocumentToString(quoteSettings, timezoneOffset);
                 const fieldToEditTitle = "Quote: Edit Field";
@@ -75,7 +75,7 @@ module.exports = {
                         break;
                     case 2:
                         if (quoteSettings.getQuote) {
-                            quoteSettingsPrompt = `How often do you want to receive an inspiration quote?`
+                            quoteSettingsPrompt = `How often do you want to receive an **inspiration quote?**\n🙌 - **Yes**\n⛔ - **No**`
                                 + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
                             userEdit = await fn.getUserEditString(bot, message, fieldToEdit, quoteSettingsPrompt, type, forceSkip, quoteEmbedColour);
                         }
