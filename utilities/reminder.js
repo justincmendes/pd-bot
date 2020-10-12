@@ -4,6 +4,7 @@ const Reminder = require("../djs-bot/database/schemas/reminder");
 const mongoose = require("mongoose");
 const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
+const { quoteEmbedColour } = require("./functions");
 require("dotenv").config();
 
 const validTypes = fn.reminderTypes;
@@ -127,6 +128,8 @@ module.exports = {
                     case "Goal": embedColour = goalEmbedColour;
                         break;
                     case "Journal": embedColour = journalEmbedColour;
+                        break;
+                    case "Quote": embedColour = quoteEmbedColour;
                         break;
                     default:
                         if (isRecurring) embedColour = repeatEmbedColour;
