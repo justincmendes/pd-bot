@@ -51,8 +51,8 @@ const guildSettingsSchema = mongoose.Schema({
             required: true,
             default: [],
         },
-        channels: {
-            type: [String],
+        channel: {
+            type: String,
             required: true,
             default: [],
         },

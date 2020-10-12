@@ -146,7 +146,7 @@ module.exports = {
                             ['⌚', '⛔'], type, forceSkip, guildEmbedColour);
                         break;
                     case 3:
-                        userSettingsPrompt = `Please enter one or more **mastermind facilitator roles:**`
+                        userSettingsPrompt = `Please enter one or more **mastermind facilitator roles:** (Cap at 5)`
                             + `\n(**Current roles:** ${guildConfig.mastermind.roles.map((roleID) => `<@&${roleID}>`).join(', ')})`;
                         userEdit = await fn.getUserEditString(bot, message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
                         break;
@@ -157,7 +157,7 @@ module.exports = {
                         console.log({ userEdit });
                         break;
                     case 5:
-                        userSettingsPrompt = `Please enter one or more **quote roles (to get recurring inspiration):**`
+                        userSettingsPrompt = `Please enter one or more **quote roles (to get recurring inspiration):** (Cap at 5)`
                             + `\n(**Current roles:** ${guildConfig.quote.roles.map((roleID) => `<@&${roleID}>`).join(', ')})`;
                         userEdit = await fn.getUserEditString(bot, message, fieldToEdit, userSettingsPrompt, type, forceSkip, guildEmbedColour);
                         break;
@@ -234,11 +234,13 @@ module.exports = {
                             break;
                         case 3:
                             {
-                                var roles = new Array()
+                                let roles = new Array()
                                 userEdit.replace(roleRegex, (match, roleID, offset, string) => {
                                     roles.push(roleID);
                                 });
-                                console.log({ updatedRoles: roles });
+                                console.log({ roles });
+                                roles = roles.slice(0, 5); // Cap at 5
+                                console.log({ roles });
                                 guildConfig = await GuildConfig.findOneAndUpdate({ guildID },
                                     {
                                         $set: {
@@ -267,11 +269,13 @@ module.exports = {
                             break;
                         case 5:
                             {
-                                var roles = new Array()
+                                let roles = new Array()
                                 userEdit.replace(roleRegex, (match, roleID, offset, string) => {
                                     roles.push(roleID);
                                 });
-                                console.log({ updatedRoles: roles });
+                                console.log({ roles });
+                                roles = roles.slice(0, 5); // Cap at 5
+                                console.log({ roles });
                                 guildConfig = await GuildConfig.findOneAndUpdate({ guildID },
                                     {
                                         $set: {
