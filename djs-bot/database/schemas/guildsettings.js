@@ -51,6 +51,24 @@ const guildSettingsSchema = mongoose.Schema({
             required: true,
             default: [],
         },
+        channels: {
+            type: [String],
+            required: true,
+            default: [],
+        },
+        getQuote: {
+            type: Boolean,
+            required: true,
+            default: false,
+        },
+        quoteInterval: {
+            type: Number,
+            required: false,
+        },
+        nextQuote: {
+            type: Number,
+            required: false,
+        },
     },
 
 });
