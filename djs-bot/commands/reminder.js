@@ -814,7 +814,7 @@ module.exports = {
             || reminderCommand === "m" || reminderCommand === "create" || reminderCommand === "c" || reminderCommand === "st") {
             let channel = await rm.getChannelOrDM(bot, message,
                 "Please enter the **target channel (using #)** or **\"DM\"** to send your reminder to.",
-                `Reminder: Channel or DM`, reminderEmbedColour);
+                `Reminder: Channel or DM`, true, reminderEmbedColour);
             if (!channel) return;
             const isDM = channel === "DM";
 

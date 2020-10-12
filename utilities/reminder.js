@@ -1,6 +1,7 @@
 // Global Variable Declarations and Initializations
 const Discord = require("discord.js");
 const Reminder = require("../djs-bot/database/schemas/reminder");
+const Guild = require("../djs-bot/database/schemas/guildsettings");
 const mongoose = require("mongoose");
 const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
@@ -140,7 +141,7 @@ module.exports = {
                     .setTitle(typeOut)
                     .setDescription(message)
                     .setFooter(`A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`, channelObject.displayAvatarURL())
-                    .setColor(embedColour)
+                    .setColor(embedColour);
             }
             else {
                 // Add a zero-width space between the @everyone/@here mentions for users who are not
@@ -150,7 +151,7 @@ module.exports = {
                 if (!userPermissions.has("MENTION_EVERYONE")) {
                     message = message.replace(/\@(everyone|here)/g, `\@\u200b$1`);
                 }
-                message += `\n\n\\\*\\\*__A **${fn.millisecondsToTimeString(duration)} ${typeOut}** set by **${username}**__\\\*\\\*`;
+                if (type !== "Quote") message += `\n\n\\\*\\\*__A **${fn.millisecondsToTimeString(duration)} ${typeOut}** set by **${username}**__\\\*\\\*`;
             }
             // var mentions;
             // if (!isDM) {
@@ -372,7 +373,7 @@ module.exports = {
                 const noEdit = reminder.lastEdited === lastUpdateTime;
                 console.log({ noEdit });
                 if (noEdit) if (reminder.isRecurring) {
-                    const endTime = reminder.endTime
+                    const endTime = reminder.endTime;
                     const interval = reminder.interval;
                     if (endTime && interval) {
                         let newEndTime = endTime + interval;
@@ -385,16 +386,23 @@ module.exports = {
                             endTime: newEndTime
                         };
                         if (reminder.type === "Quote") {
-                            var quoteIndex, currentQuote;
+                            var quoteIndex, currentQuote, tags = new Array();
+                            if (!reminder.isDM) {
+                                const roleRegex = /(\<\@\&\d+\>)/g;
+                                tags = reminder.message.match(roleRegex);
+                            }
                             while (!currentQuote) {
                                 quoteIndex = Math.round(Math.random() * quotes.length);
                                 currentQuote = quotes[quoteIndex].message;
-                                updateObject.message = currentQuote;
                             }
+                            if (!reminder.isDM && tags.length) currentQuote += `\n${tags.join(' ')}`;
+                            if (currentQuote) updateObject.message = currentQuote;
+                            const updateNextQuote = await Guild.findOneAndUpdate({ guildID: reminder.guildID },
+                                { $set: { "quote.nextQuote": newEndTime } }, { new: true });
                         }
                         const updateReminder = await Reminder
                             .findOneAndUpdate({ _id: reminderID },
-                                { $set: updateObject });
+                                { $set: updateObject }, { new: true });
                         if (updateReminder) return updateReminder;
                     }
                 }
@@ -607,17 +615,17 @@ module.exports = {
     },
 
     getChannelOrDM: async function (bot, message, instructions = "Please enter a **target channel (using #)** or \"**DM**\":", title = "Enter Channel or DM",
-        embedColour = fn.defaultEmbedColour, dataCollectDelay = 300000, errorReplyDelay = 60000,) {
+        allowDMs = true, embedColour = fn.defaultEmbedColour, dataCollectDelay = 300000, errorReplyDelay = 60000,) {
         var channel;
         do {
             const now = Date.now()
             channel = await fn.messageDataCollectFirst(bot, message, instructions, title, embedColour, dataCollectDelay, false);
             if (!channel || channel === "stop") return false;
-            else if (channel.toLowerCase() === "dm") return channel.toUpperCase();
+            else if (allowDMs && channel.toLowerCase() === "dm") return channel.toUpperCase();
             else {
                 channel = /(\<\#\d+\>)/.exec(channel);
                 if (channel) return channel[1];
-                else fn.sendReplyThenDelete(message, `Please enter a **valid channel** or \"**DM**\"`, errorReplyDelay);
+                else fn.sendReplyThenDelete(message, `Please enter a **valid channel**${allowDMs ? ` or \"**DM**\"` : ""}`, errorReplyDelay);
             }
         }
         while (true)

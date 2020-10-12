@@ -12,8 +12,8 @@ const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs('hour');
 function quoteDocumentToString(quoteDocument, offset) {
     const { getQuote, nextQuote, quoteInterval } = quoteDocument;
     return `__**Get Quotes:**__ ${getQuote ? "Yes" : "No"}`
-        + `\n- **Next Quote:** ${getQuote ? fn.timestampToDateString(nextQuote + (offset * HOUR_IN_MS)) : "N/A"}`
-        + `\n- **Quote Interval:** ${getQuote ? fn.millisecondsToTimeString(quoteInterval) : "N/A"}`;
+        + `\n- **Next Quote:** ${getQuote ? nextQuote ? fn.timestampToDateString(nextQuote + (offset * HOUR_IN_MS)) : "N/A" : "N/A"}`
+        + `\n- **Quote Interval:** ${getQuote ? quoteInterval ? fn.millisecondsToTimeString(quoteInterval) : "N/A" : "N/A"}`;
 }
 
 module.exports = {

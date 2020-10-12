@@ -22,8 +22,8 @@ function userDocumentToString(userSettings) {
         + `\n\n__**Habit Reset Time:**__\n- **Daily:** ${fn.msToTimeFromMidnight(habitCron.daily)}`
         + `\n- **Weekly:** ${fn.getDayOfWeekToString(habitCron.weekly)}`
         + `\n\n__**Get Quotes:**__ ${getQuote ? "Yes" : "No"}`
-        + `\n- **Next Quote:** ${getQuote ? fn.timestampToDateString(nextQuote + (offset * HOUR_IN_MS)) : "N/A"}`
-        + `\n- **Quote Interval:** ${getQuote ? fn.millisecondsToTimeString(quoteInterval) : "N/A"}`
+        + `\n- **Next Quote:** ${getQuote ? nextQuote ? fn.timestampToDateString(nextQuote + (offset * HOUR_IN_MS)) : "N/A" : "N/A"}`
+        + `\n- **Quote Interval:** ${getQuote ? quoteInterval ? fn.millisecondsToTimeString(quoteInterval) : "N/A" : "N/A"}`
         + `\n\n__**Likes Pestering Accountability:**__ ${likesAccountability ? "YES!!!" : "No"}`;
     return output;
 }
@@ -105,7 +105,7 @@ module.exports = {
                         console.log({ userEdit });
                         break;
                     case 4:
-                        userSettingsPrompt = `Do you want to regularly recieve an **inspirational quote?**\n🙌 - **Yes**\n⛔ - **No**`;
+                        userSettingsPrompt = `Do you want to regularly receive an **inspirational quote?**\n🙌 - **Yes**\n⛔ - **No**`;
                         userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, userSettingsPrompt,
                             ['🙌', '⛔'], type, forceSkip, userEmbedColour);
                         break;
@@ -470,13 +470,13 @@ module.exports = {
                 if (!continueEdit) {
                     if ((fieldToEditIndex === 4 && userEdit) || fieldToEditIndex === 5 || fieldToEditIndex === 6) {
                         await Reminder.deleteMany({ userID: authorID, type: "Quote", isDM: true, });
-                        const currentTimestamp = Date.now();
+                        const now = Date.now();
                         var quoteIndex, currentQuote;
                         while (!currentQuote) {
                             quoteIndex = Math.round(Math.random() * quotes.length);
                             currentQuote = quotes[quoteIndex].message;
                         }
-                        await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp, userSettings.nextQuote,
+                        await rm.setNewDMReminder(bot, authorID, now, now, userSettings.nextQuote,
                             currentQuote, "Quote", false, true, userSettings.quoteInterval, quoteEmbedColour);
                     }
                     const continueEditMessage = `Do you want to continue **editing your settings?**\n\n${userDocumentToString(userSettings)}`;

@@ -827,7 +827,7 @@ module.exports = {
             if (!interval) return;
             console.log(fn.millisecondsToTimeString(interval));
 
-            let channel = await rm.getChannelOrDM(bot, message, "Please enter a **target channel (using #)** or \"**DM**\"", `Recurring Reminder: Channel or DM`, repeatEmbedColour);
+            let channel = await rm.getChannelOrDM(bot, message, "Please enter a **target channel (using #)** or \"**DM**\"", `Recurring Reminder: Channel or DM`, true, repeatEmbedColour);
             if (!channel) return;
             const isDM = channel === "DM";
 
