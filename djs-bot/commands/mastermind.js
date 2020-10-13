@@ -229,7 +229,7 @@ module.exports = {
         const mastermindType = args[1] ? args[1].toLowerCase() : false;
         const authorID = message.author.id;
         const authorUsername = message.author.username;
-        const guildID = message.channel.type === 'dm' ? undefined : message.guild.id;
+        let guildID = message.channel.type === 'dm' ? undefined : message.guild.id;
         const isInGuild = !!guildID;
         const totalMastermindNumber = await Mastermind.find({ userID: authorID }).countDocuments();
         const mastermindActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${mastermindCommand} help\``;
@@ -1140,6 +1140,9 @@ module.exports = {
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
                 const targetChannel = await fn.getPostChannel(bot, message, `Mastermind ${sortType}`, forceSkip, mastermindEmbedColour);
                 if (!targetChannel) return;
+                console.log({ targetChannel });
+                if (!guildID) guildID = bot.channels.cache.get(targetChannel).guild.id;
+                console.log({ guildID });
                 const member = bot.guilds.cache.get(guildID).member(authorID);
                 const posts = fn.getEmbedArray(mastermindDocumentToString(bot, mastermind), `${member ? `${member.displayName}'s ` : ""}Mastermind Reflection`
                     + ` - ${fn.timestampToDateString(mastermind.createdAt, false, true, true)}`, true, false, mastermindEmbedColour);
