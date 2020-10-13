@@ -3327,6 +3327,7 @@ module.exports = {
                 },
                 quote: {
                     roles: [],
+                    getQuote: false,
                 },
             });
             const result = await guildConfig.save();

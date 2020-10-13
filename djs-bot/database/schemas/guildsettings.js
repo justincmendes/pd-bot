@@ -53,7 +53,7 @@ const guildSettingsSchema = mongoose.Schema({
         },
         channel: {
             type: String,
-            required: true,
+            required: false,
         },
         getQuote: {
             type: Boolean,
