@@ -397,7 +397,7 @@ module.exports = {
                             }
                             if (!reminder.isDM && tags.length) currentQuote += `\n${tags.join(' ')}`;
                             if (currentQuote) updateObject.message = currentQuote;
-                            const updateNextQuote = await Guild.findOneAndUpdate({ guildID: reminder.guildID },
+                            await Guild.findOneAndUpdate({ guildID: reminder.guildID },
                                 { $set: { "quote.nextQuote": newEndTime } }, { new: true });
                         }
                         const updateReminder = await Reminder

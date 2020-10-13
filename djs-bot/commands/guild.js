@@ -272,7 +272,7 @@ module.exports = {
                                             }
                                         }
                                     }, { new: true });
-                                    console.log({ guildConfig })
+                                    console.log({ guildConfig });
                                 }
                                 else continueEdit = true;
                             }
@@ -283,7 +283,6 @@ module.exports = {
                                 userEdit.replace(roleRegex, (match, roleID, offset, string) => {
                                     roles.push(roleID);
                                 });
-                                console.log({ roles });
                                 roles = roles.slice(0, 5); // Cap at 5
                                 console.log({ roles });
                                 guildConfig = await Guild.findOneAndUpdate({ guildID },
@@ -313,9 +312,9 @@ module.exports = {
                             break;
                         case wantsQuote ? 5 : null:
                             {
-                                quote.channel = channelRegex.exec(userEdit)[1];
-                                if (quote.channel) {
-                                    quote.channel = quote.channel[1];
+                                const channel = channelRegex.exec(userEdit);
+                                if (channel) {
+                                    quote.channel = channel[1];
                                     guildConfig = await Guild.findOneAndUpdate({ guildID },
                                         { $set: { quote } }, { new: true });
                                     console.log({ guildConfig });
@@ -328,7 +327,6 @@ module.exports = {
                                 userEdit.replace(roleRegex, (match, roleID, offset, string) => {
                                     roles.push(roleID);
                                 });
-                                console.log({ roles });
                                 roles = roles.slice(0, 5); // Cap at 5
                                 console.log({ roles });
                                 quote.roles = roles;
