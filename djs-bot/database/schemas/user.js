@@ -51,6 +51,11 @@ const userSettingsSchema = mongoose.Schema({
             default: 0,
         },
     },
+    mastermindCron: {
+        type: Number,
+        required: true,
+        default: 0,
+    },
     getQuote: {
         type: Boolean,
         required: true,

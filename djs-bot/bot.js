@@ -242,9 +242,9 @@ bot.on("guildCreate", async (guild) => {
         // Check if it already exists to avoid duplicates
         if (guildObject) return console.log(`${bot.user.username} is already in ${guild.name}! Won't create new instance in Database.`);
         else {
-            const guild = await fn.createGuildSettings(guild.id, "EST", true);
-            if (guild) console.log(`${bot.user.username} has joined the server ${guild.name}! Saved to Database.`);
-            else console.log(`There was an error adding ${guild.name} to the database.`);
+            const guildSettings = await fn.createGuildSettings(guild.id, "EST", true);
+            if (guildSettings) console.log(`${bot.user.username} has joined the server ${guildSettings.name}! Saved to Database.`);
+            else console.log(`There was an error adding ${guildSettings.name} to the database.`);
         }
     }
     catch (err) {

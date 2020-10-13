@@ -258,7 +258,7 @@ module.exports = {
              */
 
 
-            // 1. Check if the user has the mastermind facilitator role: prompt them to enter the name of ther person
+            // 1. Check if the user has the mastermind facilitator role: prompt them to enter the name of the person
             // they are making the entry for - if it's themselves they can type me/myself
             // -- allow them to enter the user similar to how the pester function works (maybe make it a universal function)
             var targetUser;
