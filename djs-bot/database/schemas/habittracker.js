@@ -15,7 +15,7 @@ const habitLogSchema = mongoose.Schema({
     },
     message: {
         type: String,
-        required: true,
+        required: false,
     },
     count: {
         type: Number,

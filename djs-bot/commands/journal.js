@@ -155,13 +155,13 @@ function journalDocumentToString(journalDoc) {
     switch (template) {
         case 1:
             entryString += "Daily (5-Minute) Journal"
-                + `${entry.gratitudes || entry.actions || entry.affirmations ? `\n**🟡 -- Start -- 🟡**` : ""}`
-                + `${entry.gratitudes ? `\n**__Gratitudes:__**\n${entry.gratitudes}` : ""}`
-                + `${entry.actions ? `\n**__Actions/Mindsets for a Great Day:__**\n${entry.actions}` : ""}`
-                + `${entry.affirmations ? `\n**__Affirmations:__** ***I am...***\n${entry.affirmations}` : ""}`
-                + `${entry.amazing || entry.betterDay ? `\n**🔵 -- End -- 🔵**` : ""}`
-                + `${entry.amazing ? `\n**__Amazing Things That Happened:__**\n${entry.amazing}` : ""}`
-                + `${entry.betterDay ? `\n**__Could Have Done These Better:__**\n${entry.betterDay}` : ""}`
+                // + `${entry.gratitudes || entry.actions || entry.affirmations ? `\n**🟡 -- Start -- 🟡**` : ""}`
+                + `${entry.gratitudes ? `\n🙏 **Gratitudes:**\n${entry.gratitudes}` : ""}`
+                + `${entry.actions ? `\n✊ **Actions/Mindsets for a Great Day:**\n${entry.actions}` : ""}`
+                + `${entry.affirmations ? `\n🗣 **Affirmations:** ***I am...***\n${entry.affirmations}` : ""}`
+                // + `${entry.amazing || entry.betterDay ? `\n**🔵 -- End -- 🔵**` : ""}`
+                + `${entry.amazing ? `\n🍀 **Amazing Things That Happened:**\n${entry.amazing}` : ""}`
+                + `${entry.betterDay ? `\n📈 **Could Have Done These Better:**\n${entry.betterDay}` : ""}`;
             break;
         case 2:
             entryString += "Prompt & Answer"
