@@ -71,6 +71,10 @@ const habitSchema = mongoose.Schema({
             type: Number,
             required: false,
         },
+        connectedType: {
+            type: Number,
+            required: false,
+        },
     },
     
 });

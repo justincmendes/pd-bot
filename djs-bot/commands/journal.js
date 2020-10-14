@@ -156,12 +156,12 @@ function journalDocumentToString(journalDoc) {
         case 1:
             entryString += "Daily (5-Minute) Journal"
                 + `${entry.gratitudes || entry.actions || entry.affirmations ? `\n**🟡 -- Start -- 🟡**` : ""}`
-                + `${entry.gratitudes ? `\n**Gratitudes:**\n${entry.gratitudes}` : ""}`
-                + `${entry.actions ? `\n**Actions/Mindsets for a Great Day:**\n${entry.actions}` : ""}`
-                + `${entry.affirmations ? `\n**Affirmations:** ***I am...***\n${entry.affirmations}` : ""}`
+                + `${entry.gratitudes ? `\n**__Gratitudes:__**\n${entry.gratitudes}` : ""}`
+                + `${entry.actions ? `\n**__Actions/Mindsets for a Great Day:__**\n${entry.actions}` : ""}`
+                + `${entry.affirmations ? `\n**__Affirmations:__** ***I am...***\n${entry.affirmations}` : ""}`
                 + `${entry.amazing || entry.betterDay ? `\n**🔵 -- End -- 🔵**` : ""}`
-                + `${entry.amazing ? `\n**Amazing Things That Happened:**\n${entry.amazing}` : ""}`
-                + `${entry.betterDay ? `\n**Could Have Done These Better:**\n${entry.betterDay}` : ""}`
+                + `${entry.amazing ? `\n**__Amazing Things That Happened:__**\n${entry.amazing}` : ""}`
+                + `${entry.betterDay ? `\n**__Could Have Done These Better:__**\n${entry.betterDay}` : ""}`
             break;
         case 2:
             entryString += "Prompt & Answer"
@@ -326,7 +326,7 @@ module.exports = {
                     await rm.setNewDMReminder(bot, authorID, now, now, endTime, reminderMessage,
                         "Journal", journalDocument._id, false, false, journalEmbedColour);
                     console.log("Journal end reminder set.");
-                    message.reply(`Journal end reminder set for **${fn.timestampToDateString(endTime - Date.now())}** from now!`);
+                    message.reply(`Journal end reminder set for **${fn.millisecondsToTimeString(endTime - Date.now())}** from now!`);
                     return;
                 }
                 // If allowing community prompts (with verification system) - adjust code below
@@ -430,16 +430,13 @@ module.exports = {
             if (!betterDay) return;
             else betterDay = betterDay.message;
 
-            let journal = journalInProgress;
-            journal.entry.amazing = amazing;
-            journal.entry.betterDay = betterDay;
-            console.log({ journal })
-            const finishedJournal = await Journal.findByIdAndUpdate(journal._id, { $set: { entry: journal.entry } }, { new: true });
+            const finishedJournal = await Journal.findByIdAndUpdate(journalInProgress._id,
+                { $set: { "entry.amazing": amazing, "entry.betterDay": betterDay } }, { new: true });
             console.log({ finishedJournal });
             if (finishedJournal) {
                 console.log(`Completing ${authorUsername}'s (${authorID}) journal entry!`);
                 message.reply("**Your journal entry was successfully completed!**");
-                await Reminder.deleteMany({ connectedDocument: journal._id });
+                await Reminder.deleteMany({ connectedDocument: journalInProgress._id });
                 console.log(`Removing Associated Reminders....`);
             }
             else return console.log(`There was an error completing ${authorUsername}'s (${authorID}) journal entry`);

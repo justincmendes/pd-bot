@@ -3272,7 +3272,7 @@ module.exports = {
         const userAddressPossessive = forSelf ? "your" : `<@!${targetUserID}>'s`;
         const userAddress = forSelf ? "you" : `<@!${targetUserID}>`;
         const generalAddressPossessive = forSelf ? "your" : "their";
-        const userTimezone = await this.messageDataCollectFirst(bot, message, `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** or **+/- UTC Offset**.\n\n(i.e. EST, +08:45, -9)`,
+        const userTimezone = await this.messageDataCollectFirst(bot, message, `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** OR **+/- UTC Offset**.\n\n(e.g. EST or +08:45 or -9)`,
             "User Settings: Setup", this.userSettingsEmbedColour, 300000, false);
         if (!userTimezone || userTimezone === "stop") return false;
         const userTimezoneOffset = this.getTimezoneOffset(userTimezone);

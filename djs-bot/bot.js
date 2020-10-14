@@ -130,7 +130,7 @@ bot.on("message", async message => {
     // Pull from the guild settings from the initial user settings
     var timezoneOffset, daylightSavingsSetting;
     if (!userSettings) {
-        const timezone = await fn.getNewUserTimezoneSettings(message, PREFIX);
+        const timezone = await fn.getNewUserTimezoneSettings(bot, message, PREFIX, user.id);
         if (!timezone) return;
         const userInfo = await fn.createUserSettings(bot, user.id, timezone);
         if (!userInfo) return message.reply("**Sorry, I could not setup your user settings, contact the developer for more information!**");
