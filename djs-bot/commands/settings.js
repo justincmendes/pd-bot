@@ -77,7 +77,7 @@ module.exports = {
                 const fieldToEditInstructions = "**Which field do you want to edit?:**";
                 const fieldToEditAdditionalMessage = userDocumentToString(userSettings);
                 const fieldToEditTitle = `${showUserSettings.title}: Edit Field`;
-                let fieldToEditIndex = await fn.userSelectFromList(bot, message, fieldsList, userFields.length, fieldToEditInstructions,
+                let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, userFields.length, fieldToEditInstructions,
                     fieldToEditTitle, userEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
                 if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
                 const type = "Settings";

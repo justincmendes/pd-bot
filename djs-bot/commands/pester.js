@@ -42,7 +42,7 @@ module.exports = {
                 const serverSelectInstructions = "Type the **number** corresponding to the **server** you want to see **Pestering Accountability** for:\n";
                 const postToServerTitle = "Pestering Accountability: Select Server";
                 const serverList = await fn.listOfServerNames(bot, mutualServers);
-                const targetServerIndex = await fn.userSelectFromList(bot, message, serverList, mutualServers.length,
+                const targetServerIndex = await fn.userSelectFromList(bot, PREFIX, message, serverList, mutualServers.length,
                     serverSelectInstructions, postToServerTitle, pesterEmbedColour, 180000);
                 if (targetServerIndex === false) return;
                 else {

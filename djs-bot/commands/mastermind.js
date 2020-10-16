@@ -327,14 +327,14 @@ module.exports = {
             }
 
             if (userWantsTemplate) {
-                let observations = await fn.getMultilineEntry(bot, message, "**__Look back at the previous week ↩:__**"
+                let observations = await fn.getMultilineEntry(bot, PREFIX, message, "**__Look back at the previous week ↩:__**"
                     + "\n**- 📈 How much did you stick to your habits and/or progress on your goals this week?\n- 💭 Make 3 observations.**",
                     "Mastermind Entry: Observations", true, mastermindEmbedColour);
                 observations = observations.message;
                 console.log({ observations });
                 if (!observations && observations !== '') return;
 
-                const areaOfLifeIndex = await fn.userSelectFromList(bot, message, areasOfLifeList, areasOfLife.length, "**__Which Area of Life Needs the Most Attention This Week? 🌱__**",
+                const areaOfLifeIndex = await fn.userSelectFromList(bot, PREFIX, message, areasOfLifeList, areasOfLife.length, "**__Which Area of Life Needs the Most Attention This Week? 🌱__**",
                     "Mastermind Entry: Area of Life Assessment", mastermindEmbedColour);
                 console.log({ areaOfLifeIndex });
                 if (!areaOfLifeIndex && areaOfLifeIndex !== 0) return;
@@ -377,7 +377,7 @@ module.exports = {
                     }
 
                     const goalDescriptionString = `__**Goal #${goalCount}:**__${weeklyGoalDescription === "" ? "" : `\n${weeklyGoalDescription}`}`;
-                    const weeklyGoalType = await fn.userSelectFromList(bot, message, `${areasOfLifeList}\n\n${goalDescriptionString}`, areasOfLife.length,
+                    const weeklyGoalType = await fn.userSelectFromList(bot, PREFIX, message, `${areasOfLifeList}\n\n${goalDescriptionString}`, areasOfLife.length,
                         `**__Which Area of Life does Goal #${goalCount} fall under?__**`,
                         `Mastermind Entry: Weekly Goal ${goalCount}`, mastermindEmbedColour);
                     if (!weeklyGoalType && weeklyGoalType !== 0) break;
@@ -424,7 +424,7 @@ module.exports = {
                 });
             }
             else if (userWantsTemplate === false) {
-                let entry = await fn.getMultilineEntry(bot, message, "**Enter your mastermind entry:**",
+                let entry = await fn.getMultilineEntry(bot, PREFIX, message, "**Enter your mastermind entry:**",
                     "Mastermind Entry: No Template", forceSkip, mastermindEmbedColour);
                 if (entry.message) {
                     entry = entry.message
@@ -928,7 +928,7 @@ module.exports = {
                         const fieldToEditInstructions = "**Which field do you want to edit?:**";
                         const fieldToEditAdditionalMessage = `__**Mastermind ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showMastermind}`;
                         const fieldToEditTitle = `Mastermind: Edit Field`;
-                        let fieldToEditIndex = await fn.userSelectFromList(bot, message, fieldsList, mastermindFields.length, fieldToEditInstructions,
+                        let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, mastermindFields.length, fieldToEditInstructions,
                             fieldToEditTitle, mastermindEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
                         if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
                         var userEdit, mastermindEditMessagePrompt = "";
@@ -995,7 +995,7 @@ module.exports = {
                                     // let additionalInstructions = `Type \`add\` to add a new goal`;
                                     // let additionalKeyword = ["add"];
                                     mastermindEditMessagePrompt = `\n**__Please enter the \`number\` of the goal you'd like to change__**:\n${fn.goalArrayToString(goalsArray, "Weekly", true, true, true)}`;
-                                    let goalIndex = await fn.userSelectFromList(bot, message, fn.goalArrayToString(goalsArray, "Weekly", true, true, true), goalsArray.length, `\n**__Please enter the \`number\` of the goal you'd like to change__:**`,
+                                    let goalIndex = await fn.userSelectFromList(bot, PREFIX, message, fn.goalArrayToString(goalsArray, "Weekly", true, true, true), goalsArray.length, `\n**__Please enter the \`number\` of the goal you'd like to change__:**`,
                                         "Mastermind Entry: Weekly Goal Edit", mastermindEmbedColour);
                                     if (!goalIndex && goalIndex !== 0) return;
 
@@ -1138,7 +1138,7 @@ module.exports = {
                 if (indexByRecency) mastermind = await getOneMastermindByRecency(authorID, mastermindIndex);
                 else mastermind = await getOneMastermindByCreatedTime(authorID, mastermindIndex);
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
-                const targetChannel = await fn.getPostChannel(bot, message, `Mastermind ${sortType}`, forceSkip, mastermindEmbedColour);
+                const targetChannel = await fn.getPostChannel(bot, PREFIX, message, `Mastermind ${sortType}`, forceSkip, mastermindEmbedColour);
                 if (!targetChannel) return;
                 console.log({ targetChannel });
                 if (!guildID) guildID = bot.channels.cache.get(targetChannel).guild.id;

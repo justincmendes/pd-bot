@@ -19,31 +19,36 @@ const rm = require("../utilities/reminder");
 const fs = require("fs");
 bot.commands = new Discord.Collection();
 const cooldowns = new Discord.Collection();
+const spamRecords = new Discord.Collection();
 
 const mongoose = require("mongoose");
-const userEmbedColour = fn.userSettingsEmbedColour;
 const Guild = require("./database/schemas/guildsettings");
 const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
-const prefix = require("./commands/prefix");
 bot.mongoose = require("../utilities/mongoose");
 
-//This shouldn't happen, this would be on Node.js
+const timeoutDurations = [60000, 180000, 540000, 900000] // in ms, max level: 4
+const MESSAGE_SPAM_NUMBER = 15;
+const CLOSE_MESSAGE_SPAM_NUMBER = 7;
+const REFRESH_SPAM_DELAY = 30000;
+const CLOSE_MESSAGE_DELAY = 2000;
+
+
 fs.readdir("./djs-bot/commands", (err, files) => {
+    //This shouldn't happen, this would be on Node.js
     if (err) console.error(err);
 
     //to get the file extension .js
-    let jsfiles = files.filter(f => f.split(".").pop() === "js");
-    if (jsfiles.length <= 0) {
-        console.log("No commands to load!");
-        return;
+    let jsFiles = files.filter(file => file.split(".").pop() === "js");
+    if (jsFiles.length <= 0) {
+        return console.log("No commands to load!");
     }
 
-    console.log(`Loading ${jsfiles.length} commands!`);
+    console.log(`Loading ${jsFiles.length} commands!`);
 
-    jsfiles.forEach((f, i) => {
-        let props = require(`./commands/${f}`);
-        console.log(`${i + 1}: ${f} loaded!`);
+    jsFiles.forEach((file, i) => {
+        let props = require(`./commands/${file}`);
+        console.log(`${i + 1}: ${file} loaded!`);
         bot.commands.set(props.name, props);
     });
 });
@@ -92,8 +97,14 @@ bot.on("ready", async () => {
 // });
 
 bot.on("message", async message => {
+    // If the user is blocked from typing commands - 1 minute timeout, make this a global statement
+    // If their name is part of the timeouts Array List!
     // If the message is from a bot, ignore
     if (message.author.bot) return;
+    else if (spamRecords.has(message.author.id)) {
+        const userSpamCheck = spamRecords.get(message.author.id);
+        if (userSpamCheck.isRateLimited) return;
+    }
 
     var PREFIX;
     if (message.channel.type === 'dm') {
@@ -124,81 +135,151 @@ bot.on("message", async message => {
         || bot.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
     if (!command) return;
 
-    const user = message.author;
-    let userSettings = await User.findOne({ discordID: user.id });
-    // Update the Guild Settings
-    // Pull from the guild settings from the initial user settings
-    var timezoneOffset, daylightSavingsSetting;
-    if (!userSettings) {
-        const timezone = await fn.getNewUserTimezoneSettings(bot, message, PREFIX, user.id);
-        if (!timezone) return;
-        const userInfo = await fn.createUserSettings(bot, user.id, timezone);
-        if (!userInfo) return message.reply("**Sorry, I could not setup your user settings, contact the developer for more information!**");
-        userSettings = userInfo;
-        daylightSavingsSetting = timezone.daylightSavings;
-        timezoneOffset = timezone.offset;
-        const userCount = await User.find({}).countDocuments()
-            .catch(err => console.error(err));
-        bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
-    }
-    else {
-        // const guildMap = userSettings.guilds.map(guild => guild.id);
-        // const thisGuildIncluded = guildMap.includes(message.guild.id);
-        let updateQuery = {
-            discordTag: `${user.username}#${user.discriminator}`,
-            avatar: user.avatar,
-        };
-        daylightSavingsSetting = userSettings.timezone.daylightSavings;
-        // Get the UTC Timezone offset 
-        const timezone = userSettings.timezone.name;
-        let initialOffset = fn.getTimezoneOffset(timezone);
-        console.log({ timezone, initialOffset, daylightSavingsSetting })
-        timezoneOffset = daylightSavingsSetting ?
-            (isNaN(timezone) ? initialOffset + fn.getTimezoneDaylightOffset(timezone)
-                : initialOffset++)
-            : initialOffset;
-        updateQuery.timezone = {
-            name: userSettings.timezone.name,
-            offset: timezoneOffset,
-            daylightSavings: true,
-        };
-        const update = await User.findOneAndUpdate({ discordID: message.author.id }, updateQuery, { new: true });
-        console.log({ update });
-        userSettings = update;
-    }
-
     console.log(`%c User Command: ${PREFIX}${commandName} ${args.join(' ')}`, 'color: green; font-weight: bold;');
 
-    // Help: If command requires args send help message
-    if (!args.length && command.args) {
-        return message.reply(`Try** \`${PREFIX}${commandName} help\` **`);
+    // Spam Prevention:
+    const spamDetails = spamRecords.get(message.author.id);
+    if (spamDetails) {
+        spamDetails.messageCount++;
+        const sendMessageDelay = message.createdTimestamp - spamDetails.lastTimestamp || 0;
+        console.log({ sendMessageDelay });
+        spamDetails.lastTimestamp = message.createdTimestamp;
+        if (sendMessageDelay < CLOSE_MESSAGE_DELAY) {
+            spamDetails.closeMessageCount++;
+        }
+        if (spamDetails.closeMessageCount >= CLOSE_MESSAGE_SPAM_NUMBER || spamDetails.messageCount >= MESSAGE_SPAM_NUMBER) {
+            const timeout = timeoutDurations[spamDetails.timeoutLevel - 1] || fn.getTimeScaleToMultiplyInMs('minute');
+            const userDM = bot.users.cache.get(message.author.id);
+            spamDetails.isRateLimited = true;
+            setTimeout(() => {
+                if (spamDetails) {
+                    spamDetails.closeMessageCount = 0;
+                    spamDetails.messageCount = 1;
+                    spamDetails.isRateLimited = false;
+                    if (spamDetails.timeoutLevel < 4) spamDetails.timeoutLevel++;
+                }
+                if (userDM) userDM.send("**You may now enter my commands again**, please don't spam again - you will be ratelimited for longer!");
+            }, timeout);
+            if (userDM) userDM.send(`**Please don't spam me 🥺**, I will have to stop responding to your commands `
+                + `for at least **__${timeout / fn.getTimeScaleToMultiplyInMs('minute')} minute(s)__.**`);
+            return;
+        }
+        if (spamDetails.messageCount === 2) {
+            setTimeout(() => {
+                if (spamDetails) {
+                    spamDetails.messageCount = 1;
+                    spamDetails.closeMessageCount = 0;
+                }
+            }, REFRESH_SPAM_DELAY);
+        }
     }
+    else {
+        setTimeout(() => {
+            if (spamDetails.isRateLimited) {
+                setTimeout(() => {
+                    spamRecords.delete(message.author.id);
+                }, (timeoutDurations[spamDetails.timeoutLevel - 1] || fn.getTimeScaleToMultiplyInMs('minute'))
+                + fn.getTimeScaleToMultiplyInMs("hour") * 4);
+            }
+            else spamRecords.delete(message.author.id);
+        }, fn.getTimeScaleToMultiplyInMs("day") / 2);
+        spamRecords.set(message.author.id, {
+            lastTimestamp: message.createdTimestamp,
+            messageCount: 1,
+            closeMessageCount: 0,
+            isRateLimited: false,
+            timeoutLevel: 1,
+        });
+    }
+    console.log({ spamRecords });
 
     // Cooldowns:
     if (!cooldowns.has(command.name)) {
         cooldowns.set(command.name, new Discord.Collection());
     }
     const now = Date.now();
-    const timestamps = cooldowns.get(command.name);
+    const cooldownUsers = cooldowns.get(command.name);
     const cooldownAmount = (command.cooldown) * 1000;
-    if (timestamps.has(message.author.id)) {
-        const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
-        if (now < expirationTime) {
-            const timeLeft = (expirationTime - now) / 1000;
-            return fn.sendReplyThenDelete(message, `Please **wait ${timeLeft.toFixed(1)} more second(s)** before reusing the **\`${command.name}\` command**`, timeLeft * 1000);
+    if (cooldownUsers.has(message.author.id)) {
+        const cooldownDetails = cooldownUsers.get(message.author.id);
+        if (cooldownDetails.sentCooldownMessage === false) {
+            const expirationTime = cooldownDetails.endTime + cooldownAmount;
+            if (now < expirationTime) {
+                const timeLeft = (expirationTime - now) / 1000;
+                fn.sendReplyThenDelete(message, `Please **wait ${timeLeft.toFixed(1)} more second(s)** before reusing the **\`${command.name}\` command**`, timeLeft * 1000);
+                if (cooldownUsers.has(message.author.id)) {
+                    cooldownDetails.sentCooldownMessage = true;
+                }
+            }
         }
+        return;
     }
-    timestamps.set(message.author.id, now);
-    setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
+    else {
+        cooldownUsers.set(message.author.id, {
+            endTime: now,
+            sentCooldownMessage: false,
+        });
+        setTimeout(() => cooldownUsers.delete(message.author.id), cooldownAmount);
+    }
 
-    // Check if user wants to skip confirmation windows
-    var forceSkip;
-    const lastArg = args[args.length - 1];
-    if (lastArg == "force") {
-        forceSkip = true;
-        args = args.slice(0, -1);
+    if (commandName !== "ping") {
+        const user = message.author;
+        let userSettings = await User.findOne({ discordID: user.id });
+        // Update the Guild Settings
+        // Pull from the guild settings from the initial user settings
+        var timezoneOffset, daylightSavingsSetting;
+        if (!userSettings) {
+            const timezone = await fn.getNewUserTimezoneSettings(bot, message, PREFIX, user.id);
+            if (!timezone) return;
+            const userInfo = await fn.createUserSettings(bot, user.id, timezone);
+            if (!userInfo) return message.reply("**Sorry, I could not setup your user settings, contact the developer for more information!**");
+            userSettings = userInfo;
+            daylightSavingsSetting = timezone.daylightSavings;
+            timezoneOffset = timezone.offset;
+            const userCount = await User.find({}).countDocuments()
+                .catch(err => console.error(err));
+            bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
+        }
+        else {
+            // const guildMap = userSettings.guilds.map(guild => guild.id);
+            // const thisGuildIncluded = guildMap.includes(message.guild.id);
+            let updateQuery = {
+                discordTag: `${user.username}#${user.discriminator}`,
+                avatar: user.avatar,
+            };
+            daylightSavingsSetting = userSettings.timezone.daylightSavings;
+            // Get the UTC Timezone offset 
+            const timezone = userSettings.timezone.name;
+            let initialOffset = fn.getTimezoneOffset(timezone);
+            console.log({ timezone, initialOffset, daylightSavingsSetting })
+            timezoneOffset = daylightSavingsSetting ?
+                (isNaN(timezone) ? initialOffset + fn.getTimezoneDaylightOffset(timezone)
+                    : initialOffset++)
+                : initialOffset;
+            updateQuery.timezone = {
+                name: userSettings.timezone.name,
+                offset: timezoneOffset,
+                daylightSavings: true,
+            };
+            const update = await User.findOneAndUpdate({ discordID: message.author.id }, updateQuery, { new: true });
+            console.log({ update });
+            userSettings = update;
+        }
+
+        // Help: If command requires args send help message
+        if (!args.length && command.args) {
+            return message.reply(`Try** \`${PREFIX}${commandName} help\` **`);
+        }
+
+        // Check if user wants to skip confirmation windows
+        var forceSkip;
+        const lastArg = args[args.length - 1];
+        if (lastArg == "force") {
+            forceSkip = true;
+            args = args.slice(0, -1);
+        }
+        else forceSkip = false;
     }
-    else forceSkip = false;
 
     try {
         command.run(bot, message, commandName, args, PREFIX,

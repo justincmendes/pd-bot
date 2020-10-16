@@ -26,33 +26,37 @@ const habitSchema = mongoose.Schema({
         type: String,
         required: true,
     },
-    isArchived: {
+    archived: {
         type: Boolean,
         required: true,
         default: false,
-    },
-    // The log timestamps should ALWAYS be
-    name: {
-        type: String,
-        required: true,
-    },
-    type: {
-        type: Number,
-        required: true,
     },
     description: {
         type: String,
         required: true,
     },
+    areaOfLife: {
+        type: Number,
+        required: false,
+    },
     reason: {
         type: String,
         required: true,
+    },
+    connectedGoal: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
     },
     // For Habits that have a daily/general counter!
     settings: {
         isCountType: {
             type: Boolean,
             required: true,
+            default: false,
+        },
+        isWeeklyType: {
+            type: Boolean,
+            required: false,
         },
         // To automatically mark complete or incomplete on day!
         // For streaks - auto-mark completions
@@ -75,8 +79,9 @@ const habitSchema = mongoose.Schema({
             type: Number,
             required: false,
         },
+
     },
-    
+
 });
 
 // habitSchema.pre('remove', (next) => {

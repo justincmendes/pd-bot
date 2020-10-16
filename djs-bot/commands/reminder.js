@@ -529,7 +529,7 @@ module.exports = {
                         const fieldToEditInstructions = "**Which field do you want to edit?:**";
                         const fieldToEditAdditionalMessage = `__**Reminder ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showReminder}`;
                         const fieldToEditTitle = `Reminder: Edit Field`;
-                        let fieldToEditIndex = await fn.userSelectFromList(bot, message, fieldsList, reminderFields.length, fieldToEditInstructions,
+                        let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, reminderFields.length, fieldToEditInstructions,
                             fieldToEditTitle, reminderEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
                         if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
                         var userEdit, reminderEditMessagePrompt = "";
@@ -552,7 +552,7 @@ module.exports = {
                                 break;
                             // Reminder does not need a prompt explanation
                             case 4:
-                                userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
+                                userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, reminderEditMessagePrompt, type, forceSkip, reminderEmbedColour);
                                 break;
                             case 5:
                                 reminderEditMessagePrompt = `Would you like to make this a **__repeating (⌚)__ OR __one-time (1️⃣)__ reminder?**`;
@@ -818,7 +818,7 @@ module.exports = {
             if (!channel) return;
             const isDM = channel === "DM";
 
-            let reminderMessage = await fn.getMultilineEntry(bot, message, `__**Enter the message of this reminder**__:`
+            let reminderMessage = await fn.getMultilineEntry(bot, PREFIX, message, `__**Enter the message of this reminder**__:`
                 + `${isDM ? "" : "\n(Remember to **@mention** the roles/users you want to ping in the message!)"}`,
                 "Reminder: Message", forceSkip, reminderEmbedColour);
             reminderMessage = reminderMessage.message;

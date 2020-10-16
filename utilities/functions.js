@@ -524,12 +524,16 @@ module.exports = {
     },
 
     // Note: This function displays values from 1 onwards but returns a properly indexed value (for arrays)
-    userSelectFromList: async function (bot, message, list, numberOfEntries, instructions, selectTitle,
+    userSelectFromList: async function (bot, PREFIX, message, list, numberOfEntries, instructions, selectTitle,
         messageColour = this.defaultEmbedColour, delayTime = 120000, userMessageDeleteDelay = 0, messageAfterList = "") {
         try {
             do {
                 targetIndex = await this.messageDataCollectFirst(bot, message, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
                     messageColour, delayTime, false, false, true, userMessageDeleteDelay);
+                if (targetIndex.startsWith(PREFIX) && targetIndex !== PREFIX) {
+                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Typed:__**\n${targetIndex}`);
+                    targetIndex = "stop";
+                }
                 const errorMessage = "**Please enter a number on the given list!**";
                 const timeout = 15000;
                 if (isNaN(targetIndex)) {
@@ -2903,7 +2907,7 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserMultilineEditString: async function (bot, message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+    getUserMultilineEditString: async function (bot, PREFIX, message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         let messageIndex = 0;
         let reset = false;
         var collectedEdit, userEdit = new Array();
@@ -2914,9 +2918,15 @@ module.exports = {
         do {
             messageIndex++;
             collectedEdit = await this.messageDataCollectFirst(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000, false);
+            if (collectedEdit) {
+                if (collectedEdit.startsWith(PREFIX) && collectedEdit !== PREFIX) {
+                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Typed:__**\n${collectedEdit}`);
+                    collectedEdit = false;
+                }
+            }
             if (!collectedEdit || collectedEdit === "stop") {
                 if (collectedEdit !== "stop") {
-                    this.sendReplyThenDelete(message, `**Exiting...** This was your **${field} edit!**: *(Deleting in 10 minutes)*\n${userEdit.join('\n')}`, 600000);
+                    message.channel.send(`This was your **${field} edit!**:\n${userEdit.join('\n')}`);
                 }
                 return false;
             }
@@ -2960,7 +2970,7 @@ module.exports = {
                 }
                 else {
                     const resetWarningMessage = "Are you sure you want to __**reset**__ your current edit?\n*(All of your current edit will be lost...)*";
-                    let resetConfirmation = await getUserConfirmation(message, resetWarningMessage, forceSkip, `${this.toTitleCase(type)}: Edit ${field} Reset`);
+                    let resetConfirmation = await getUserConfirmation(message, resetWarningMessage, false, `${this.toTitleCase(type)}: Edit ${field} Reset`);
                     if (resetConfirmation === true) {
                         editMessagePrompt = originalEditMessagePrompt;
                         userEdit = new Array();
@@ -3396,7 +3406,7 @@ module.exports = {
     },
 
 
-    getPostChannel: async function (bot, message, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+    getPostChannel: async function (bot, PREFIX, message, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         // Check all of the servers the bot is in
         let botServers = await bot.guilds.cache.map(guild => guild.id);
         console.log({ botServers });
@@ -3411,7 +3421,7 @@ module.exports = {
         const postToServerTitle = `${type}: Post to Server`;
         const postToChannelTitle = `${type}: Post to Channel`;
         var serverList = await this.listOfServerNames(bot, botUserMutualServerIDs);
-        targetServerIndex = await this.userSelectFromList(bot, message, serverList, botUserMutualServerIDs.length,
+        targetServerIndex = await this.userSelectFromList(bot, PREFIX, message, serverList, botUserMutualServerIDs.length,
             serverSelectInstructions, postToServerTitle, embedColour);
         if (targetServerIndex === false) return false;
         channelList = await this.listOfServerTextChannelsUserCanSendTo(bot, message, botUserMutualServerIDs[targetServerIndex]);
@@ -3421,7 +3431,7 @@ module.exports = {
         }
         channelListDisplay = await this.listOfChannelNames(bot, channelList);
         while (!confirmSendToChannel) {
-            targetChannelIndex = await this.userSelectFromList(bot, message, channelListDisplay, channelList.length,
+            targetChannelIndex = await this.userSelectFromList(bot, PREFIX, message, channelListDisplay, channelList.length,
                 channelSelectInstructions, postToChannelTitle, embedColour, 300000);
             if (targetChannelIndex === false) return false;
             console.log({ targetChannelIndex });
@@ -3463,7 +3473,7 @@ module.exports = {
         return collectedEdit;
     },
 
-    getMultilineEntry: async function (bot, message, instructionPrompt, title, forceSkip = false,
+    getMultilineEntry: async function (bot, PREFIX, message, instructionPrompt, title, forceSkip = false,
         embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = [],
         startingArray = false) {
         let inputIndex = 0;
@@ -3485,9 +3495,15 @@ module.exports = {
         do {
             inputIndex++;
             collectedEntry = await this.messageDataCollectFirst(bot, message, instructionPrompt, title, embedColour, 600000, false);
+            if (collectedEntry) {
+                if (collectedEntry.startsWith(PREFIX) && collectedEntry !== PREFIX) {
+                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Typed:__**\n${collectedEntry}`);
+                    collectedEntry = false;
+                }
+            }
             if (!collectedEntry || collectedEntry === "stop") {
                 if (collectedEntry !== "stop") {
-                    this.sendMessageThenDelete(message, `**Exiting ${message.author.username}...** This was your **entry**: *(Deleting in 10 minutes)*\n${finalEntry.join('\n')}`, 600000);
+                    message.channel.send(`This was your **entry**:\n${finalEntry.join('\n')}`);
                 }
                 return false;
             }

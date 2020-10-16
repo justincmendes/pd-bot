@@ -649,7 +649,7 @@ module.exports = {
                     else if (fastBreaker == "skip") fastBreaker = null;
 
                     // +1 to convert the returned index back to natural numbers
-                    moodValue = await fn.userSelectFromList(bot, message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour);
+                    moodValue = await fn.userSelectFromList(bot, PREFIX, message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour);
                     if (moodValue === false) return;
                     else moodValue++;
                     var reflectionText = "";
@@ -1271,7 +1271,7 @@ module.exports = {
                     const fieldToEditInstructions = "**Which field do you want to edit?:**";
                     const fieldToEditAdditionalMessage = `__**Fast ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showFast}`;
                     const fieldToEditTitle = `Fast: Edit Field`;
-                    let fieldToEditIndex = await fn.userSelectFromList(bot, message, fieldsList, fastFields.length, fieldToEditInstructions,
+                    let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, fastFields.length, fieldToEditInstructions,
                         fieldToEditTitle, fastEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
                     if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
                     var userEdit, fastEditMessagePrompt = "";
@@ -1300,7 +1300,7 @@ module.exports = {
                         case 4:
                             fastEditMessagePrompt = "\n**__Reflection Questions:__\n🤔 - Why did you feel that way?"
                                 + "\n💭 - What did you do that made it great? / What could you have done to make it better?**";
-                            userEdit = await fn.getUserMultilineEditString(bot, message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
+                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
                             break;
                     }
                     if (userEdit === false) return;
@@ -1547,7 +1547,7 @@ module.exports = {
                 const finalEndTimestamp = endTimestamp || Date.now();
                 const endTimeToDate = fn.timestampToDateString(finalEndTimestamp, false, true, true);
                 const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
-                let postChannel = await fn.getPostChannel(bot, message, "Fast", forceSkip, fastEmbedColour);
+                let postChannel = await fn.getPostChannel(bot, PREFIX, message, "Fast", forceSkip, fastEmbedColour);
                 if (!postChannel) await showFastPost(bot, message, fastPost, mistakeMessage);
                 // Overwrite fastPost Title with one specific to user's nickname in respective server
                 fastPost.forEach(async (post, i) => {

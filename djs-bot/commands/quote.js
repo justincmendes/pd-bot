@@ -48,7 +48,7 @@ module.exports = {
                 const fieldToEditInstructions = "**Which field do you want to edit?:**";
                 const fieldToEditAdditionalMessage = quoteDocumentToString(quoteSettings, timezoneOffset);
                 const fieldToEditTitle = "Quote: Edit Field";
-                let fieldToEditIndex = await fn.userSelectFromList(bot, message, fieldsList, quoteFields.length, fieldToEditInstructions,
+                let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, quoteFields.length, fieldToEditInstructions,
                     fieldToEditTitle, quoteEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
                 if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
                 const type = "Quote";
