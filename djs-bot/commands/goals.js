@@ -10,6 +10,8 @@ require("dotenv").config();
 
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 const goalEmbedColour = fn.goalsEmbedColour;
+const goalMax = fn.goalMaxTier1;
+const goalArchiveMax = fn.goalArchiveMaxTier1;
 const areasOfLifeEmojis = fn.areasOfLifeEmojis;
 const areasOfLife = fn.areasOfLife;
 const areasOfLifeCombinedEmoji = fn.getAreasOfLifeEmojiCombinedArray();
@@ -235,6 +237,8 @@ module.exports = {
         // Edit includes the ability to add
         const authorID = message.author.id;
         const authorUsername = message.author.username;
+        const userSettings = await User.findOne({ discordID: authorID });
+        const { tier } = userSettings;
         let goalUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
             + "\n\n\`<ACTION>\`: **add; see; edit; end; archive; delete; post**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
@@ -255,6 +259,12 @@ module.exports = {
 
         else if (goalCommand === "start" || goalCommand === "create" || goalCommand === "s" || goalCommand === "set"
             || goalCommand === "c" || goalCommand === "make" || goalCommand === "m" || goalCommand === "add") {
+            if (tier === 1) {
+                if (totalGoalNumber >= goalMax) {
+                    return message.channel.send(fn.getMessageEmbed(fn.getTierMaxMessage(PREFIX, commandUsed, goalMax, ["Goal", "Goals"], 1, false),
+                        `Long-Term Goal: Tier 1 Maximum`, goalEmbedColour).setFooter(fn.premiumFooterText));
+                }
+            }
             /**
              * Iteratively create new long-term goals until the user is finished!
              */
@@ -1050,6 +1060,13 @@ module.exports = {
 
 
         else if (archiveRegex.test(goalCommand) || goalCommand === "stash" || goalCommand === "store") {
+            if (tier === 1) {
+                if (totalArchiveNumber >= goalArchiveMax) {
+                    return message.channel.send(fn.getMessageEmbed(fn.getTierMaxMessage(PREFIX, commandUsed, goalArchiveMax, ["Goal", "Goals"], 1, true),
+                        `Long-Term Goal Archive: Tier 1 Maximum`, goalEmbedColour).setFooter(fn.premiumFooterText));
+                }
+            }
+
             // Allows for archive - indexing by unarchived entries only!
             let goalEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${goalCommand} <recent?> <force?>\``
                 + "\n\n`<recent?>`(OPT.): type **recent** to order the goals by **actual time created instead of goal start time!**"

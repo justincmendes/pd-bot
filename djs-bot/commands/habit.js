@@ -9,6 +9,8 @@ const rm = require("../../utilities/reminder");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const habitMax = fn.habitMaxTier1;
+const habitArchiveMax = fn.habitArchiveMaxTier1;
 const habitEmbedColour = fn.habitEmbedColour;
 const areasOfLifeEmojis = fn.areasOfLifeEmojis;
 const areasOfLife = fn.areasOfLife;
@@ -40,6 +42,8 @@ module.exports = {
 
         const authorID = message.author.id;
         const authorUsername = message.author.username;
+        const userSettings = await User.findOne({ discordID: authorID });
+        const { tier } = userSettings;
         let habitUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
             + "\n\n\`<ACTION>\`: **add; see; today; log; edit; end; archive; delete; post**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
@@ -60,6 +64,12 @@ module.exports = {
 
         else if (habitCommand === "start" || habitCommand === "create" || habitCommand === "s" || habitCommand === "set"
             || habitCommand === "c" || habitCommand === "make" || habitCommand === "m" || habitCommand === "add") {
+            if (tier === 1) {
+                if (totalHabitNumber >= habitMax) {
+                    return message.channel.send(fn.getMessageEmbed(fn.getTierMaxMessage(PREFIX, commandUsed, habitMax, ["Habit", "Habits"], 1, false),
+                        `Habit: Tier 1 Maximum`, habitEmbedColour).setFooter(fn.premiumFooterText));
+                }
+            }
             /**
              * Iteratively create new habits until the user is finished!
              */
@@ -797,6 +807,12 @@ module.exports = {
 
 
         else if (archiveRegex.test(habitCommand) || habitCommand === "stash" || habitCommand === "store") {
+            if (tier === 1) {
+                if (totalArchiveNumber >= habitArchiveMax) {
+                    return message.channel.send(fn.getMessageEmbed(fn.getTierMaxMessage(PREFIX, commandUsed, habitArchiveMax, ["Habit", "Habits"], 1, true),
+                        `Habit Archive: Tier 1 Maximum`, habitEmbedColour).setFooter(fn.premiumFooterText));
+                }
+            }
             // Allows for archive - indexing by unarchived entries only!
             let goalEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <recent?> <force?>\``
                 + "\n\n`<recent?>`(OPT.): type **recent** to order the goals by **actual time created instead of goal start time!**"

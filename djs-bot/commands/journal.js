@@ -11,6 +11,7 @@ const prompts = require("../../utilities/prompts.json").prompts;
 require("dotenv").config();
 
 const journalEmbedColour = fn.journalEmbedColour;
+const journalMax = fn.journalMaxTier1;
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 
 // Function Declarations and Definitions
@@ -241,6 +242,8 @@ module.exports = {
         const guildID = message.guild.id || false;
         const authorID = message.author.id;
         const authorUsername = message.author.username;
+        const userSettings = await User.findOne({ discordID: authorID });
+        const { premium: tier } = userSettings;
         const journalInProgress = await Journal.findOne({ template: 1, userID: authorID, "entry.amazing": undefined, "entry.betterDay": undefined });
         const totalJournalNumber = await Journal.find({ userID: authorID }).countDocuments();
         console.log({ journalInProgress, totalJournalNumber });
@@ -251,12 +254,18 @@ module.exports = {
         else if (journalCommand === "start" || journalCommand === "st" || journalCommand === "s" || journalCommand === "set" || journalCommand === "create"
             || journalCommand === "make" || journalCommand === "m" || journalCommand === "add" || journalCommand === "a") {
             var journalDocument;
-            const targetUserSettings = await User.findOne({ discordID: authorID });
 
             // Create new User Settings - can be changed by the user themselves if it's incorrect!
-            if (!targetUserSettings) {
+            if (!userSettings) {
                 const timezone = await fn.getNewUserTimezoneSettings(bot, message, PREFIX, authorID);
                 await fn.createUserSettings(bot, authorID, timezone);
+            }
+
+            if (tier === 1) {
+                if (totalJournalNumber >= journalMax) {
+                    return message.channel.send(fn.getMessageEmbed(fn.getTierMaxMessage(PREFIX, commandUsed, journalMax, ["Journal", "Journals"], 1, false),
+                        `Journal: Tier 1 Maximum`, journalEmbedColour).setFooter(fn.premiumFooterText));
+                }
             }
 
             if (journalInProgress) return message.reply(`**You already have a journal entry in progress!** Try** \`${PREFIX}${commandUsed} end\` **to **complete** your journal entry`);

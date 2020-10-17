@@ -4,7 +4,7 @@ const userSettingsSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     discordID: {
         type: String,
-        require: true,
+        required: true,
         unique: true,
     },
     discordTag: {
@@ -18,6 +18,11 @@ const userSettingsSchema = mongoose.Schema({
     guilds: {
         type: Array,
         required: false,
+    },
+    tier: {
+        type: Number,
+        required: true,
+        default: 1,
     },
     // Consider mapping the timezone to Integers to save space/data?
     timezone: {

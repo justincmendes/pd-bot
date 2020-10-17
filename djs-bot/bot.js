@@ -27,9 +27,10 @@ const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
 bot.mongoose = require("../utilities/mongoose");
 
+const pdBotTag = '<@!734097718078603284>';
 const timeoutDurations = [60000, 180000, 540000, 900000] // in ms, max level: 4
-const MESSAGE_SPAM_NUMBER = 15;
-const CLOSE_MESSAGE_SPAM_NUMBER = 7;
+const MESSAGE_SPAM_NUMBER = 14;
+const CLOSE_MESSAGE_SPAM_NUMBER = 8;
 const REFRESH_SPAM_DELAY = 30000;
 const CLOSE_MESSAGE_DELAY = 2000;
 
@@ -115,8 +116,10 @@ bot.on("message", async message => {
         const guildSettings = await Guild.findOne({ guildID });
         PREFIX = guildSettings ? guildSettings.prefix : DEFAULT_PREFIX;
     }
+    const isMention = message.content.startsWith(pdBotTag);
+
     // When the message does not start with prefix, do nothing
-    if (!message.content.startsWith(PREFIX)) return;
+    if (!message.content.startsWith(PREFIX) && !isMention) return;
 
     // Args/Arguments:
     // .slice to remove the first part of message containing the prefix
@@ -124,10 +127,15 @@ bot.on("message", async message => {
     // .shift() takes the first elements of the array
     // args will give all of the arguments passed in from the user
     const messageArray = message.content.split(/ +/);
+    // For @mention prefix command calls, check if the @mention is separated by
+    // a space or not
+    const isSplit = isMention ? messageArray[0] === pdBotTag ? true : false : false;
     // Get the command (Word after prefix)
-    const commandName = messageArray[0].slice(PREFIX.length).toLowerCase();
+    const commandName = isMention ? isSplit ? messageArray[1] ? messageArray[1].toLowerCase() : false
+        : messageArray[0].slice(pdBotTag.length).toLowerCase()
+        : messageArray[0].slice(PREFIX.length).toLowerCase();
     // Get all of the arguments after the initial command
-    let args = messageArray.slice(1);
+    let args = isSplit ? messageArray.slice(2) : messageArray.slice(1);
 
     // Otherwise, begin checking if the message is a viable command!
     // With ALIASES
@@ -141,10 +149,9 @@ bot.on("message", async message => {
     const spamDetails = spamRecords.get(message.author.id);
     if (spamDetails) {
         spamDetails.messageCount++;
-        const sendMessageDelay = message.createdTimestamp - spamDetails.lastTimestamp || 0;
-        console.log({ sendMessageDelay });
+        const messageSendDelay = message.createdTimestamp - spamDetails.lastTimestamp || 0;
         spamDetails.lastTimestamp = message.createdTimestamp;
-        if (sendMessageDelay < CLOSE_MESSAGE_DELAY) {
+        if (messageSendDelay < CLOSE_MESSAGE_DELAY) {
             spamDetails.closeMessageCount++;
         }
         if (spamDetails.closeMessageCount >= CLOSE_MESSAGE_SPAM_NUMBER || spamDetails.messageCount >= MESSAGE_SPAM_NUMBER) {
@@ -191,7 +198,6 @@ bot.on("message", async message => {
             timeoutLevel: 1,
         });
     }
-    console.log({ spamRecords });
 
     // Cooldowns:
     if (!cooldowns.has(command.name)) {

@@ -9,6 +9,7 @@ require("dotenv").config();
 
 
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const mastermindMax = fn.mastermindMaxTier1;
 const mastermindEmbedColour = fn.mastermindEmbedColour;
 const areasOfLifeEmojis = fn.areasOfLifeEmojis;
 const areasOfLife = fn.areasOfLife;
@@ -229,6 +230,8 @@ module.exports = {
         const mastermindType = args[1] ? args[1].toLowerCase() : false;
         const authorID = message.author.id;
         const authorUsername = message.author.username;
+        const userSettings = await User.findOne({ discordID: authorID });
+        const { tier } = userSettings;
         let guildID = message.channel.type === 'dm' ? undefined : message.guild.id;
         const isInGuild = !!guildID;
         const totalMastermindNumber = await Mastermind.find({ userID: authorID }).countDocuments();
@@ -236,6 +239,8 @@ module.exports = {
         if (mastermindCommand === "start" || mastermindCommand === "st" || mastermindCommand === "s" || mastermindCommand === "set" || mastermindCommand === "create"
             || mastermindCommand === "c" || mastermindCommand === "make" || mastermindCommand === "m" || mastermindCommand === "add" || mastermindCommand === "a") {
             /**
+             * 0. If they are not premium and they've reached the max number of entries, limit them!
+             * 
              * 1. Check if the user has the mastermind facilitator role: prompt them to enter the name of ther person
              * they are making the entry for - if it's themselves they can type me/myself
              * -- allow them to enter the user similar to how the pester function works (maybe make it a universal function)
@@ -257,6 +262,13 @@ module.exports = {
              * Footer: if they want to post it to multiple channels they can do so as well! By ?PREFIX commandused post recent
              */
 
+            // 0. Limit Entries
+            if (tier === 1) {
+                if (totalMastermindNumber >= mastermindMax) {
+                    return message.channel.send(fn.getMessageEmbed(fn.getTierMaxMessage(PREFIX, commandUsed, mastermindMax, ["Mastermind", "Masterminds"], 1, false),
+                        `Mastermind: Tier 1 Maximum`, mastermindEmbedColour).setFooter(fn.premiumFooterText));
+                }
+            }
 
             // 1. Check if the user has the mastermind facilitator role: prompt them to enter the name of the person
             // they are making the entry for - if it's themselves they can type me/myself

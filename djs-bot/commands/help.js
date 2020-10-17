@@ -11,7 +11,8 @@ module.exports = {
         let commandHelpMessage = `**USAGE:**\n\`${PREFIX}<COMMAND>\``
             + `\n\n\`<COMMAND>\`: **${bot.commands.map(command => command.name).join('; ')}**`
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
-        commandHelpMessage = fn.getMessageEmbed(commandHelpMessage, "PD Bot Help");
+        commandHelpMessage = fn.getMessageEmbed(commandHelpMessage, "PD Bot Help")
+            .setFooter(fn.premiumFooterText);
         message.channel.send(commandHelpMessage);
     }
 };

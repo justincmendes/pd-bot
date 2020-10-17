@@ -531,7 +531,7 @@ module.exports = {
                 targetIndex = await this.messageDataCollectFirst(bot, message, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
                     messageColour, delayTime, false, false, true, userMessageDeleteDelay);
                 if (targetIndex.startsWith(PREFIX) && targetIndex !== PREFIX) {
-                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Typed:__**\n${targetIndex}`);
+                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${targetIndex}`);
                     targetIndex = "stop";
                 }
                 const errorMessage = "**Please enter a number on the given list!**";
@@ -2920,7 +2920,7 @@ module.exports = {
             collectedEdit = await this.messageDataCollectFirst(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000, false);
             if (collectedEdit) {
                 if (collectedEdit.startsWith(PREFIX) && collectedEdit !== PREFIX) {
-                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Typed:__**\n${collectedEdit}`);
+                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${collectedEdit}`);
                     collectedEdit = false;
                 }
             }
@@ -3250,11 +3250,15 @@ module.exports = {
             userDaylightSavingsSettings = timezoneObject.daylightSavings;
             const daylightOffset = this.isDaylightSavingTime(Date.now(), userDaylightSavingsSettings) ?
                 this.getTimezoneDaylightOffset(timezoneObject.name) : 0;
+            const mastermindServer = bot.guilds.cache.get('709165601993523233');
+            const tier = mastermindServer ? mastermindServer.member(userID) ? 3 : 0 : 0; // User automatically becomes premium if they are in the mastermind group!
+            console.log({ tier });
             const userInfo = new User({
                 _id: mongoose.Types.ObjectId(),
                 discordID: user.id,
                 discordTag: `${user.username}#${user.discriminator}`,
                 avatar: user.avatar,
+                tier,
                 timezone: {
                     name: timezoneObject.name,
                     offset: timezoneObject.offset + daylightOffset,
@@ -3497,7 +3501,7 @@ module.exports = {
             collectedEntry = await this.messageDataCollectFirst(bot, message, instructionPrompt, title, embedColour, 600000, false);
             if (collectedEntry) {
                 if (collectedEntry.startsWith(PREFIX) && collectedEntry !== PREFIX) {
-                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Typed:__**\n${collectedEntry}`);
+                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${collectedEntry}`);
                     collectedEntry = false;
                 }
             }
@@ -3642,8 +3646,22 @@ module.exports = {
         return time;
     },
 
+    getTierMaxMessage: function (PREFIX, commandUsed, thresholdValue, type, tier, supportsArchive = false) {
+        return `You've ${supportsArchive ? "archived" : "created"} the **__maximum number of ${supportsArchive ? "archived " : ""}${type[0].toLowerCase()} entries__** (**${thresholdValue}**) `
+            + `as a **Tier ${tier || 1} user** and cannot ${supportsArchive ? "archive" : "create"} any more ${type[0].toLowerCase()} entries!`
+            + `\n\n\`${PREFIX}${commandUsed} ${supportsArchive ? "archive " : ""}post\` - to **post**${type[0] ? ` a ${type[0].toLowerCase()} ` : ""}to a **channel**`
+            + `\n\`${PREFIX}${commandUsed} ${supportsArchive ? "archive " : ""}see all\` - to **get** all of your ${type[1] ? type[1].toLowerCase() : "entries"} in a **.txt file**`
+            + `\n\`${PREFIX}${commandUsed} ${supportsArchive ? "archive " : ""}delete all\` - to **delete** all of your ${type[1] ? type[1].toLowerCase() : "entries"} to **make space**!`
+            + `\n\n**-- OR --**\n\n**__Donate to support the developer__ to get __more storage__ for all of your entries**`;
+    },
+
+    premiumFooterText: "📞 Contact the developer for more details and any inquiries! (in the server below)\n👋 Join the Personal Development Pod (PD Bot Community): https://discord.gg/Czc3CSy"
+        + "\n-- 📚 Bring all of your questions, suggestions, and personal development experiences!\n-- ✨ The tier options/donation page will be on the future website",
+    // Visit <future website> for more details! (Change footer when ready)
+
 
     invalidPrefixes: ['\*', '\_', '\~', '\>', '\\', '\/', '\:', '\`', '\@'],
+    reminderTypes: ["Reminder", "Habit", "Fast", "Quote", "Goal", "Journal"],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
     daysOfWeek: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     fileFooterText: `🗑 to delete this window (not the entries)\n📎 to get all of this in a text file`,
@@ -3672,7 +3690,6 @@ module.exports = {
         return areasOfLifeList;
     },
 
-    reminderTypes: ["Reminder", "Habit", "Fast", "Quote", "Goal", "Journal"],
     fastEmbedColour: "#32CD32",
     mastermindEmbedColour: "#FF6A00",
     journalEmbedColour: "#EE82EE",
@@ -3685,5 +3702,13 @@ module.exports = {
     pesterEmbedColour: "#FF4500",
     quoteEmbedColour: "#FF69B4",
     defaultEmbedColour: "#ADD8E6",
+
+    mastermindMaxTier1: 12,
+    fastMaxTier1: 15,
+    journalMaxTier1: 14,
+    goalMaxTier1: 10,
+    goalArchiveMaxTier1: 8,
+    habitMaxTier1: 10,
+    habitArchiveMaxTier1: 8,
 
 };

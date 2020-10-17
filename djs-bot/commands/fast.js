@@ -9,6 +9,7 @@ const Reminder = require("../database/schemas/reminder");
 require("dotenv").config();
 
 const fastEmbedColour = fn.fastEmbedColour;
+const fastMax = fn.fastMaxTier1;
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 const timeExamples = fn.timeExamples;
 
@@ -516,6 +517,8 @@ module.exports = {
         const fastHelpMessage = `Try \`${PREFIX}fast help\``;
         const authorID = message.author.id;
         const authorUsername = message.author.username;
+        const userSettings = await User.findOne({ discordID: authorID });
+        const { premium: tier } = userSettings;
         const fastCommand = args[0].toLowerCase();
         const fastInProgress = Fast.find({
             userID: authorID,
@@ -533,6 +536,12 @@ module.exports = {
 
         else if (fastCommand === "start" || fastCommand === "st" || fastCommand === "s" || fastCommand === "set" || fastCommand === "create"
             || fastCommand === "c" || fastCommand === "make" || fastCommand === "m" || fastCommand === "add" || fastCommand === "a") {
+            if (tier === 1) {
+                if (totalFastNumber >= fastMax) {
+                    return message.channel.send(fn.getMessageEmbed(fn.getTierMaxMessage(PREFIX, commandUsed, fastMax, ["Fast", "Fasts"], 1, false),
+                        `Fast: Tier 1 Maximum`, fastEmbedColour).setFooter(fn.premiumFooterText));
+                }
+            }
             // Check if the user does not already have a fast in progress, otherwise start.
             // Using greater than equal to ensure error message sent even though 
             // Any given user should not be able to have more than 1 fast running at a time
