@@ -2932,6 +2932,10 @@ module.exports = {
             }
             if (messageIndex === 1 || reset === true) {
                 if (collectedEdit === "1") {
+                    if (userEdit.join('\n').length > 2000) {
+                        message.reply(`Your edit is too long (must be __less than 2000 characters__ long)`
+                            + `\nTry undoing some line entries by typing \`2\` or reset your edit by typing \`0\``);
+                    }
                     const endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit.join('\n'), type, forceSkip);
                     if (endEditConfirmation === true) {
                         break;
@@ -2959,7 +2963,11 @@ module.exports = {
                 }
             }
             else if (collectedEdit === "1") {
-                let endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit.join('\n'), type, forceSkip);
+                if (userEdit.join('\n').length > 2000) {
+                    message.reply(`Your edit is too long (must be __less than 2000 characters__ long)`
+                        + `\nTry undoing some line entries by typing \`2\` or reset your edit by typing \`0\``);
+                }
+                const endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit.join('\n'), type, forceSkip);
                 if (endEditConfirmation === true) {
                     break;
                 }
@@ -2970,7 +2978,7 @@ module.exports = {
                 }
                 else {
                     const resetWarningMessage = "Are you sure you want to __**reset**__ your current edit?\n*(All of your current edit will be lost...)*";
-                    let resetConfirmation = await getUserConfirmation(message, resetWarningMessage, false, `${this.toTitleCase(type)}: Edit ${field} Reset`);
+                    const resetConfirmation = await getUserConfirmation(message, resetWarningMessage, false, `${this.toTitleCase(type)}: Edit ${field} Reset`);
                     if (resetConfirmation === true) {
                         editMessagePrompt = originalEditMessagePrompt;
                         userEdit = new Array();
@@ -3518,8 +3526,14 @@ module.exports = {
             }
             if (inputIndex === 1 || reset === true) {
                 if (collectedEntry === "1") {
-                    const endConfirmation = await this.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
-                    if (endConfirmation === true) break;
+                    if (finalEntry.join('\n').length > 2000) {
+                        message.reply(`Your entry is too long (must be __less than 2000 characters__ long)`
+                            + `\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``);
+                    }
+                    else {
+                        const endConfirmation = await this.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
+                        if (endConfirmation === true) break;
+                    }
                 }
                 else if (collectedEntry !== "0" && collectedEntry !== "2") {
                     instructionPrompt += `\n\n**Current Entry:**\n${collectedEntry}\n`;
@@ -3529,8 +3543,14 @@ module.exports = {
                 else inputIndex = 0;
             }
             else if (collectedEntry === "1") {
-                const endConfirmation = await this.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
-                if (endConfirmation === true) break;
+                if (finalEntry.join('\n').length > 2000) {
+                    message.reply(`Your entry is too long (must be __less than 2000 characters__ long)`
+                        + `\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``);
+                }
+                else {
+                    const endConfirmation = await this.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
+                    if (endConfirmation === true) break;
+                }
             }
             else if (collectedEntry === "0") {
                 if (finalEntry === "") {

@@ -29,10 +29,10 @@ bot.mongoose = require("../utilities/mongoose");
 
 const pdBotTag = '<@!734097718078603284>';
 const timeoutDurations = [60000, 180000, 540000, 900000] // in ms, max level: 4
-const MESSAGE_SPAM_NUMBER = 14;
-const CLOSE_MESSAGE_SPAM_NUMBER = 8;
-const REFRESH_SPAM_DELAY = 30000;
-const CLOSE_MESSAGE_DELAY = 2000;
+const COMMAND_SPAM_NUMBER = 15;
+const CLOSE_COMMAND_SPAM_NUMBER = 8;
+const REFRESH_SPAM_DELAY = 25000;
+const CLOSE_COMMAND_DELAY = 1800;
 
 
 fs.readdir("./djs-bot/commands", (err, files) => {
@@ -151,10 +151,10 @@ bot.on("message", async message => {
         spamDetails.messageCount++;
         const messageSendDelay = message.createdTimestamp - spamDetails.lastTimestamp || 0;
         spamDetails.lastTimestamp = message.createdTimestamp;
-        if (messageSendDelay < CLOSE_MESSAGE_DELAY) {
+        if (messageSendDelay < CLOSE_COMMAND_DELAY) {
             spamDetails.closeMessageCount++;
         }
-        if (spamDetails.closeMessageCount >= CLOSE_MESSAGE_SPAM_NUMBER || spamDetails.messageCount >= MESSAGE_SPAM_NUMBER) {
+        if (spamDetails.closeMessageCount >= CLOSE_COMMAND_SPAM_NUMBER || spamDetails.messageCount >= COMMAND_SPAM_NUMBER) {
             const timeout = timeoutDurations[spamDetails.timeoutLevel - 1] || fn.getTimeScaleToMultiplyInMs('minute');
             const userDM = bot.users.cache.get(message.author.id);
             spamDetails.isRateLimited = true;
@@ -165,7 +165,7 @@ bot.on("message", async message => {
                     spamDetails.isRateLimited = false;
                     if (spamDetails.timeoutLevel < 4) spamDetails.timeoutLevel++;
                 }
-                if (userDM) userDM.send("**You may now enter my commands again**, please don't spam again - you will be ratelimited for longer!");
+                // if (userDM) userDM.send("**You may now enter my commands again**, please don't spam again - you will be ratelimited for longer!");
             }, timeout);
             if (userDM) userDM.send(`**Please don't spam me 🥺**, I will have to stop responding to your commands `
                 + `for at least **__${timeout / fn.getTimeScaleToMultiplyInMs('minute')} minute(s)__.**`);
@@ -238,7 +238,8 @@ bot.on("message", async message => {
             const timezone = await fn.getNewUserTimezoneSettings(bot, message, PREFIX, user.id);
             if (!timezone) return;
             const userInfo = await fn.createUserSettings(bot, user.id, timezone);
-            if (!userInfo) return message.reply("**Sorry, I could not setup your user settings, contact the developer for more information!**");
+            if (!userInfo) return message.reply("**Sorry, I could not setup your user settings, contact the developer for more information!**"
+                + "\n(https://discord.gg/Czc3CSy)");
             userSettings = userInfo;
             daylightSavingsSetting = timezone.daylightSavings;
             timezoneOffset = timezone.offset;
