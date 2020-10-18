@@ -624,9 +624,7 @@ module.exports = {
                 const deleteType = journalType;
                 if (deleteType === "recent") {
                     const journalView = await getOneJournalByRecency(authorID, 0, false);
-                    if (journalView.length === 0) {
-                        return fn.sendErrorMessage(message, noJournalsMessage);
-                    }
+                    if (!journalView) return fn.sendErrorMessage(message, noJournalsMessage);
                     const journalTargetID = journalView._id;
                     console.log({ journalTargetID });
                     const journalIndex = await getRecentJournalIndex(authorID);

@@ -562,9 +562,7 @@ module.exports = {
                 const deleteType = goalType;
                 if (deleteType === "recent") {
                     const goalView = await getOneGoalByRecency(authorID, 0, isArchived);
-                    if (goalView.length === 0) {
-                        return fn.sendErrorMessage(message, noGoalsMessage);
-                    }
+                    if (!goalView) return fn.sendErrorMessage(message, noGoalsMessage);
                     const goalTargetID = goalView._id;
                     console.log({ goalTargetID });
                     const goalIndex = await getRecentGoalIndex(authorID, isArchived);

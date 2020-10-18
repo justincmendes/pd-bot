@@ -657,9 +657,7 @@ module.exports = {
                 const deleteType = mastermindType;
                 if (deleteType === "recent") {
                     const mastermindView = await getOneMastermindByRecency(authorID, 0, false);
-                    if (mastermindView.length === 0) {
-                        return fn.sendErrorMessage(message, noMastermindsMessage);
-                    }
+                    if (!mastermindView) return fn.sendErrorMessage(message, noMastermindsMessage);
                     const mastermindTargetID = mastermindView._id;
                     console.log({ mastermindTargetID });
                     const mastermindIndex = await getRecentMastermindIndex(authorID);

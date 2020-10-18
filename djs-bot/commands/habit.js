@@ -209,7 +209,7 @@ module.exports = {
                 // Daily Reset or Weekly Reset?
                 // Count Habit or Just check-in
                 // Auto check based on count or streak
-                
+
                 // let resetScale = await fn.reactionDataCollect(bot, message, `📜 - **Daily (2-part) Journal Template** (*5-Minute Journal*)`
                 //     + `\n🗣 - **Prompt/Question & Answer** (Enter a prompt or get a generated prompt)`
                 //     + `\n✍ - \"**Freehand**\" (No template or prompt)\n❌ - **Exit**`, ['📜', '🗣', '✍', '❌'], "Journal: Template", habitEmbedColour);
@@ -454,9 +454,7 @@ module.exports = {
                 const deleteType = habitType;
                 if (deleteType === "recent") {
                     const habitView = await getOneHabitByRecency(authorID, 0, isArchived);
-                    if (habitView.length === 0) {
-                        return fn.sendErrorMessage(message, noGoalsMessage);
-                    }
+                    if (!habitView) return fn.sendErrorMessage(message, noGoalsMessage);
                     const goalTargetID = habitView._id;
                     console.log({ goalTargetID });
                     const goalIndex = await getRecentGoalIndex(authorID, isArchived);

@@ -164,7 +164,7 @@ async function getFastPostEmbedArray(bot, PREFIX, message, fastData, forceSkip =
     const REFRESH_SPAM_DELAY = 25000;
     const CLOSE_MESSAGE_DELAY = 2000;
     const CLOSE_MESSAGE_SPAM_NUMBER = 8;
-    const [startTimestamp, endTimestamp, fastDurationTimestamp, fastBreaker, moodValue, reflectionText] = fastData;
+    const [, , fastDurationTimestamp, fastBreaker, ,] = fastData;
     let postIndex = 0;
     let fastPost = new Array();
     let attachment = null;
@@ -1586,9 +1586,7 @@ module.exports = {
                 else if (indexByRecency) fastView = await getOneFastByRecency(authorID, pastNumberOfEntriesIndex - 1);
                 else fastView = await getOneFastByStartTime(authorID, pastNumberOfEntriesIndex - 1);
                 console.log({ fastView });
-                if (fastView.length === 0) {
-                    return fn.sendErrorMessage(message, "**FAST DOES NOT EXIST**...");
-                }
+                if (!fastView) return fn.sendErrorMessage(message, "**FAST DOES NOT EXIST**...");
 
                 var fastData;
                 if (pastNumberOfEntriesIndex === 1 && fastView.endTime === null) {
