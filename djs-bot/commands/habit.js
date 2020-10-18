@@ -204,7 +204,7 @@ module.exports = {
                 }
 
                 // Related goal?
-                // with none as the lasst
+                // with none as the last
 
                 // Daily Reset or Weekly Reset?
                 // Count Habit or Just check-in

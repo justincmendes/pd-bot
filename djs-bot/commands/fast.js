@@ -156,11 +156,14 @@ function addUserTag(message, post) {
     return `<@${message.author.id}>\n${post}`;
 }
 // Designed not to break when userConfirmation = ❌ (FALSE), but only stop when `stop`
-async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) {
+async function getFastPostEmbedArray(bot, PREFIX, message, fastData, forceSkip = false) {
     let spamDetails = {
         lastTimestamp: null,
         closeMessageCount: 0,
     };
+    const REFRESH_SPAM_DELAY = 25000;
+    const CLOSE_MESSAGE_DELAY = 2000;
+    const CLOSE_MESSAGE_SPAM_NUMBER = 8;
     const [startTimestamp, endTimestamp, fastDurationTimestamp, fastBreaker, moodValue, reflectionText] = fastData;
     let postIndex = 0;
     let fastPost = new Array();
@@ -206,10 +209,10 @@ async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) 
                 const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
                 console.log({ messageSendDelay });
                 spamDetails.lastTimestamp = Date.now();
-                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                if (messageSendDelay < CLOSE_MESSAGE_DELAY) {
                     spamDetails.closeMessageCount++;
                 }
-                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                if (spamDetails.closeMessageCount >= CLOSE_MESSAGE_SPAM_NUMBER) {
                     console.log("Exiting due to spam...");
                     message.reply("**Exiting... __Please don't spam!__**");
                     return false;
@@ -217,7 +220,7 @@ async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) 
                 if (spamDetails.closeMessageCount === 0) {
                     setTimeout(() => {
                         if (spamDetails) spamDetails.closeMessageCount = 0;
-                    }, this.REFRESH_SPAM_DELAY);
+                    }, REFRESH_SPAM_DELAY);
                 }
             }
         }
@@ -1595,7 +1598,7 @@ module.exports = {
                 console.log({ fastData });
 
                 const endTimestamp = fastData[1];
-                let fastPost = await getFastPostEmbedArray(bot, message, fastData, forceSkip);
+                let fastPost = await getFastPostEmbedArray(bot, PREFIX, message, fastData, forceSkip);
                 console.log({ fastPost });
                 if (!fastPost) return;
                 const finalEndTimestamp = endTimestamp || Date.now();
