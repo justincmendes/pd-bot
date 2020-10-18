@@ -26,6 +26,10 @@ const habitSchema = mongoose.Schema({
         type: String,
         required: true,
     },
+    createdAt: {
+        type: Number,
+        required: true,
+    },
     archived: {
         type: Boolean,
         required: true,

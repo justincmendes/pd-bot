@@ -49,7 +49,7 @@ fs.readdir("./djs-bot/commands", (err, files) => {
 
     jsFiles.forEach((file, i) => {
         let props = require(`./commands/${file}`);
-        console.log(`${i + 1}: ${file} loaded!`);
+        console.log(`${i + 1}: ${file} loaded`);
         bot.commands.set(props.name, props);
     });
 });

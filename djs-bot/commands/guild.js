@@ -114,7 +114,8 @@ module.exports = {
 
         //see, edit (when edit, show see first then usage),
         if (guildCommand === "edit" || guildCommand === "ed" || guildCommand === "e"
-            || guildCommand === "change" || guildCommand === "ch" || guildCommand === "c") {
+            || guildCommand === "change" || guildCommand === "ch" || guildCommand === "c"
+            || guildCommand === "setup" || guildCommand === "set" || guildCommand === "s") {
             if (authorID !== guild.owner.id) {
                 message.channel.send(showGuildSettings);
                 return message.reply("Sorry, you do not have permissions to change the **server settings.**");
@@ -286,28 +287,14 @@ module.exports = {
                                 roles = roles.slice(0, 5); // Cap at 5
                                 console.log({ roles });
                                 guildConfig = await Guild.findOneAndUpdate({ guildID },
-                                    {
-                                        $set: {
-                                            mastermind: {
-                                                roles,
-                                                resetDay: guildConfig.mastermind.resetDay,
-                                            }
-                                        }
-                                    }, { new: true });
+                                    { $set: { 'mastermind.roles': roles } }, { new: true });
                                 console.log({ guildConfig });
                             }
                             break;
                         case 4:
                             {
                                 guildConfig = await Guild.findOneAndUpdate({ guildID },
-                                    {
-                                        $set: {
-                                            mastermind: {
-                                                roles: guildConfig.mastermind.roles,
-                                                resetDay: userEdit,
-                                            }
-                                        }
-                                    }, { new: true });
+                                    { $set: { 'mastermind.resetDay': userEdit } }, { new: true });
                             }
                             break;
                         case wantsQuote ? 5 : null:
@@ -347,8 +334,7 @@ module.exports = {
                                 }
                                 // setup interval!
                                 if (typeof userEdit === "boolean") {
-                                    var interval;
-                                    let firstQuote = guildConfig.nextQuote;
+                                    var interval, firstQuote;
                                     let error = false;
                                     quote.getQuote = userEdit;
                                     if (userEdit) {
@@ -358,21 +344,23 @@ module.exports = {
                                         quote.channel = targetChannel[1];
 
                                         guildSettingsPrompt = `Please enter one or more **quote \@roles (to get notified with the quotes):** (Cap at 5)`
-                                            + `\n(**Current roles:** ${guildConfig.quote.roles.map(roleID => `<@&${roleID}>`).join(', ')})`;
+                                            + `\n(**Current roles:** ${guildConfig.quote.roles.map(roleID => `<@&${roleID}>`).join(', ')})`
+                                            + `\n\nType \`same\` to **keep the same roles** as shown above`;
                                         const updatedRoles = await fn.getUserEditString(bot, message, "Quote Role(s)", guildSettingsPrompt, type, forceSkip, guildEmbedColour);
                                         if (!updatedRoles) return;
                                         else if (updatedRoles === "back") {
                                             continueEdit = true;
                                             break;
                                         }
-                                        let roles = new Array()
-                                        updatedRoles.replace(roleRegex, (match, roleID, offset, string) => {
-                                            roles.push(roleID);
-                                        });
-                                        roles = roles.slice(0, 5); // Cap at 5
-                                        console.log({ roles });
-                                        quote.roles = roles;
-
+                                        if (updatedRoles !== "same") {
+                                            let roles = new Array()
+                                            updatedRoles.replace(roleRegex, (match, roleID, offset, string) => {
+                                                roles.push(roleID);
+                                            });
+                                            roles = roles.slice(0, 5); // Cap at 5
+                                            console.log({ roles });
+                                            quote.roles = roles;
+                                        }
                                         guildSettingsPrompt = `How often do you want to receive an inspiration quote?`
                                             + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
                                         let intervalInput = await fn.getUserEditString(bot, message, "Quote Interval", guildSettingsPrompt, type, forceSkip, guildEmbedColour);
@@ -382,19 +370,26 @@ module.exports = {
                                             break;
                                         }
                                         intervalInput = intervalInput.toLowerCase().split(/[\s\n]+/);
-                                        const now = Date.now();
+                                        let now = Date.now();
                                         let endTime = fn.timeCommandHandlerToUTC(intervalInput[0] === "in" ? intervalInput
                                             : ["in"].concat(intervalInput), now, timezoneOffset, daylightSavings);
-                                        if (!endTime) return;
-                                        else endTime -= HOUR_IN_MS * timezoneOffset;
-                                        interval = endTime - now;
+                                        if (!endTime) {
+                                            error = true;
+                                            continueEdit = true;
+                                            interval = false;
+                                        }
+                                        else {
+                                            endTime -= HOUR_IN_MS * timezoneOffset;
+                                            now = Date.now();
+                                            interval = endTime - now;
+                                        }
                                         if (!interval) {
-                                            fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
+                                            fn.sendReplyThenDelete(message, `**INVALID TIME**... ${settingHelpMessage}`, 60000);
                                             error = true;
                                             continueEdit = true;
                                         }
                                         else if (interval < HOUR_IN_MS) {
-                                            fn.sendReplyThenDelete(message, `**INVALID TIME**... ${settingHelpMessage}`, 60000);
+                                            fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
                                             error = true;
                                             continueEdit = true;
                                         }
@@ -434,6 +429,14 @@ module.exports = {
                                             }
                                         }
                                         // Get the first instance!
+                                    }
+                                    else {
+                                        console.log(`Deleting ${authorUsername}'s (${authorID}) recurring quotes`);
+                                        await Reminder.deleteOne({ isDM: false, isRecurring: true, type: "Quote", guildID })
+                                            .catch(err => {
+                                                console.error(err);
+                                                console.log("Deletion of recurring quote has failed!");
+                                            });
                                     }
                                     if (!error) {
                                         guildConfig = await Guild.findOneAndUpdate({ guildID },
@@ -491,6 +494,7 @@ module.exports = {
                                 }
                                 else {
                                     endInterval -= HOUR_IN_MS * timezoneOffset;
+                                    currentTimestamp = Date.now();
                                     const updatedInterval = endInterval - currentTimestamp;
                                     if (updatedInterval < HOUR_IN_MS) {
                                         fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
@@ -498,20 +502,27 @@ module.exports = {
                                     }
                                     else {
                                         quote.quoteInterval = updatedInterval;
+                                        quote.nextQuote += HOUR_IN_MS * timezoneOffset;
                                         guildSettingsPrompt = `__**When do you intend to start the first quote?**__`
-                                            + "\n\nType `skip` to **start it now**"
+                                            + `${quote.nextQuote ? !isNaN(quote.nextQuote) ? `\n**Currently**: ${fn.timestampToDateString(quote.nextQuote)}` : "" : ""}`
+                                            + "\n\nType `same` to **keep it the same**\nType `skip` to **start it now**"
                                         let quoteTrigger = await fn.getUserEditString(bot, message, "First Quote Time", guildSettingsPrompt, type, forceSkip, guildEmbedColour);
                                         if (!quoteTrigger) return;
                                         else {
-                                            let firstQuote;
-                                            const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
-                                            currentTimestamp = Date.now();
-                                            if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
+                                            var firstQuote;
+                                            if (quoteTrigger === "same") {
+                                                firstQuote = quote.nextQuote;
+                                            }
                                             else {
-                                                quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
-                                                firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
-                                                    : (["in"].concat(quoteTrigger)), currentTimestamp,
-                                                    timezoneOffset, daylightSavings);
+                                                const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
+                                                currentTimestamp = Date.now();
+                                                if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
+                                                else {
+                                                    quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
+                                                    firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
+                                                        : (["in"].concat(quoteTrigger)), currentTimestamp,
+                                                        timezoneOffset, daylightSavings);
+                                                }
                                             }
                                             if (firstQuote) {
                                                 firstQuote -= HOUR_IN_MS * timezoneOffset;

@@ -527,6 +527,10 @@ module.exports = {
     userSelectFromList: async function (bot, PREFIX, message, list, numberOfEntries, instructions, selectTitle,
         messageColour = this.defaultEmbedColour, delayTime = 120000, userMessageDeleteDelay = 0, messageAfterList = "") {
         try {
+            let spamDetails = {
+                lastTimestamp: null,
+                closeMessageCount: 0,
+            };
             do {
                 targetIndex = await this.messageDataCollectFirst(bot, message, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
                     messageColour, delayTime, false, false, true, userMessageDeleteDelay);
@@ -549,6 +553,25 @@ module.exports = {
                     // Minus 1 to convert to back array index (was +1 for user understanding)
                     targetIndex = parseInt(targetIndex) - 1;
                     break;
+                }
+                // Spam Prevention:
+                if (spamDetails) {
+                    const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
+                    console.log({ messageSendDelay });
+                    spamDetails.lastTimestamp = Date.now();
+                    if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                        spamDetails.closeMessageCount++;
+                    }
+                    if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                        console.log("Exiting due to spam...");
+                        message.reply("**Exiting... __Please don't spam!__**");
+                        return false;
+                    }
+                    if (spamDetails.closeMessageCount === 0) {
+                        setTimeout(() => {
+                            if (spamDetails) spamDetails.closeMessageCount = 0;
+                        }, this.REFRESH_SPAM_DELAY);
+                    }
                 }
             }
             while (true);
@@ -1676,7 +1699,8 @@ module.exports = {
         // 0 - All choices we're null or insufficient/not chosen.
         if (!decision) return false;
         else {
-            if (decision === 1 || decision === 5) messageCreatedTimestamp = Date.now() + 900;
+            const RELATIVE_ADJUSTMENT = 700;
+            if (decision === 1 || decision === 5) messageCreatedTimestamp = Date.now() + RELATIVE_ADJUSTMENT;
             var timestampOut, timezoneString, timeWasCalculated;
             switch (decision) {
                 case 1:
@@ -1717,7 +1741,6 @@ module.exports = {
                             // But for the case of Months and Years, proper adjustments must be made.
                             const isYearTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("year");
                             const isMonthTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("month");
-                            const timezoneOffset = timezoneString ? this.getTimezoneOffset(timezoneString) : userTimezone;
                             if (isYearTimeScale || isMonthTimeScale) {
                                 // Mutually Exclusive Conditions
                                 if (isYearTimeScale) {
@@ -2908,6 +2931,10 @@ module.exports = {
      * @param {String} embedColour 
      */
     getUserMultilineEditString: async function (bot, PREFIX, message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+        let spamDetails = {
+            lastTimestamp: null,
+            closeMessageCount: 0,
+        };
         let messageIndex = 0;
         let reset = false;
         var collectedEdit, userEdit = new Array();
@@ -2923,11 +2950,35 @@ module.exports = {
                     message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${collectedEdit}`);
                     collectedEdit = false;
                 }
+                // Spam Prevention:
+                else if (spamDetails && collectedEdit !== "0" && collectedEdit !== "1"
+                    && collectedEdit !== "2" && collectedEdit !== "stop") {
+                    const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
+                    console.log({ messageSendDelay });
+                    spamDetails.lastTimestamp = Date.now();
+                    if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                        spamDetails.closeMessageCount++;
+                    }
+                    if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                        console.log("Exiting due to spam...");
+                        message.reply("**Exiting... __Please don't spam!__**");
+                        return false;
+                    }
+                    if (spamDetails.closeMessageCount === 0) {
+                        setTimeout(() => {
+                            if (spamDetails) spamDetails.closeMessageCount = 0;
+                        }, this.REFRESH_SPAM_DELAY);
+                    }
+                }
             }
             if (!collectedEdit || collectedEdit === "stop") {
                 if (collectedEdit !== "stop") {
                     message.channel.send(`This was your **${field} edit!**:\n${userEdit.join('\n')}`);
                 }
+                return false;
+            }
+            else if (collectedEdit.length + userEdit.join('\n').length > 6000) {
+                message.reply("Your edit was **too long** (*over 6000 characters*), so I had to **stop** collecting it.");
                 return false;
             }
             if (messageIndex === 1 || reset === true) {
@@ -3488,6 +3539,10 @@ module.exports = {
     getMultilineEntry: async function (bot, PREFIX, message, instructionPrompt, title, forceSkip = false,
         embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = [],
         startingArray = false) {
+        let spamDetails = {
+            lastTimestamp: null,
+            closeMessageCount: 0,
+        };
         let inputIndex = 0;
         let reset = false;
         var collectedEntry, finalEntry = startingArray || new Array();
@@ -3512,11 +3567,35 @@ module.exports = {
                     message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${collectedEntry}`);
                     collectedEntry = false;
                 }
+                // Spam Prevention:
+                else if (spamDetails && collectedEntry !== "0" && collectedEntry !== "1"
+                    && collectedEntry !== "2" && collectedEntry !== "stop") {
+                    const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
+                    console.log({ messageSendDelay });
+                    spamDetails.lastTimestamp = Date.now();
+                    if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                        spamDetails.closeMessageCount++;
+                    }
+                    if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                        console.log("Exiting due to spam...");
+                        message.reply("**Exiting... __Please don't spam!__**");
+                        return false;
+                    }
+                    if (spamDetails.closeMessageCount === 0) {
+                        setTimeout(() => {
+                            if (spamDetails) spamDetails.closeMessageCount = 0;
+                        }, this.REFRESH_SPAM_DELAY);
+                    }
+                }
             }
             if (!collectedEntry || collectedEntry === "stop") {
                 if (collectedEntry !== "stop") {
                     message.channel.send(`This was your **entry**:\n${finalEntry.join('\n')}`);
                 }
+                return false;
+            }
+            else if (collectedEntry.length + finalEntry.join('\n').length > 6000) {
+                message.reply("Your entry was **too long** (*over 6000 characters*), so I had to **stop** collecting it.");
                 return false;
             }
             if (hasInstructions) {
@@ -3647,15 +3726,15 @@ module.exports = {
         dataCollectDelay = 300000, errorReplyDelay = 60000, timeExamples = this.timeExamples,) {
         var time;
         do {
-            const now = Date.now()
+            const initialTimestamp = Date.now();
             time = await this.messageDataCollectFirst(bot, message, `${instructions}${timeExamples ? `\n\n${timeExamples}` : ""}`, title, embedColour, dataCollectDelay, false);
             if (!time || time === "stop") return false;
             timeArgs = time.toLowerCase().split(/[\s\n]+/);
             time = this.timeCommandHandlerToUTC(forceFutureTime && timeArgs[0] !== "in" && timeArgs[0] !== "now" ?
-                (["in"]).concat(timeArgs) : timeArgs, now, timezoneOffset, daylightSetting);
+                (["in"]).concat(timeArgs) : timeArgs, initialTimestamp, timezoneOffset, daylightSetting);
             if (time === false) this.sendReplyThenDelete(message, `Try** \`${PREFIX}date\` **for **help with entering dates and times**`, errorReplyDelay);
             else if (forceFutureTime) {
-                if (now + this.getTimeScaleToMultiplyInMs("hour") * timezoneOffset > time) {
+                if (initialTimestamp + this.getTimeScaleToMultiplyInMs("hour") * timezoneOffset > time) {
                     this.sendReplyThenDelete(message, `Please enter a date/time in the **future**! Try** \`${PREFIX}date\` **for help`, errorReplyDelay);
                 }
                 else break;
@@ -3669,9 +3748,9 @@ module.exports = {
     getTierMaxMessage: function (PREFIX, commandUsed, thresholdValue, type, tier, supportsArchive = false) {
         return `You've ${supportsArchive ? "archived" : "created"} the **__maximum number of ${supportsArchive ? "archived " : ""}${type[0].toLowerCase()} entries__** (**${thresholdValue}**) `
             + `as a **Tier ${tier || 1} user** and cannot ${supportsArchive ? "archive" : "create"} any more ${type[0].toLowerCase()} entries!`
-            + `\n\n\`${PREFIX}${commandUsed} ${supportsArchive ? "archive " : ""}post\` - to **post**${type[0] ? ` a ${type[0].toLowerCase()} ` : ""}to a **channel**`
-            + `\n\`${PREFIX}${commandUsed} ${supportsArchive ? "archive " : ""}see all\` - to **get** all of your ${type[1] ? type[1].toLowerCase() : "entries"} in a **.txt file**`
-            + `\n\`${PREFIX}${commandUsed} ${supportsArchive ? "archive " : ""}delete all\` - to **delete** all of your ${type[1] ? type[1].toLowerCase() : "entries"} to **make space**!`
+            + `\n\n\`${PREFIX}${commandUsed} post${supportsArchive ? " archive" : ""}\` - to **post**${type[0] ? ` a ${type[0].toLowerCase()} ` : ""}to a **channel**`
+            + `\n\`${PREFIX}${commandUsed} see${supportsArchive ? " archive" : ""} all\` - to **get** all of your ${type[1] ? type[1].toLowerCase() : "entries"} in a **.txt file**`
+            + `\n\`${PREFIX}${commandUsed} delete${supportsArchive ? " archive" : ""} all\` - to **delete** all of your ${type[1] ? type[1].toLowerCase() : "entries"} to **make space**!`
             + `\n\n**-- OR --**\n\n**__Donate to support the developer__ to get __more storage__ for all of your entries**`;
     },
 
@@ -3731,4 +3810,7 @@ module.exports = {
     habitMaxTier1: 10,
     habitArchiveMaxTier1: 8,
 
+    REFRESH_SPAM_DELAY: 20000,
+    CLOSE_MESSAGE_DELAY: 2000,
+    CLOSE_MESSAGE_SPAM_NUMBER: 7,
 };

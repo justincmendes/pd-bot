@@ -157,6 +157,10 @@ function addUserTag(message, post) {
 }
 // Designed not to break when userConfirmation = ❌ (FALSE), but only stop when `stop`
 async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) {
+    let spamDetails = {
+        lastTimestamp: null,
+        closeMessageCount: 0,
+    };
     const [startTimestamp, endTimestamp, fastDurationTimestamp, fastBreaker, moodValue, reflectionText] = fastData;
     let postIndex = 0;
     let fastPost = new Array();
@@ -183,13 +187,56 @@ async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) 
             collectedObject = await fn.messageDataCollectFirst(bot, message, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
                 true, true, true, 3000, true, attachment);
         }
+
         // If user types stop, messageDataCollectFirstObject returns false:
-        if (!collectedObject) return false;
+        if (!collectedObject) {
+            message.channel.send(`This was your **fast post**:\n${fastPost.join('\n')}${attachment ? `\n\n**__Attachment:__**\n${attachment}` : ""}`);
+            return false;
+        }
         collectedMessage = collectedObject.content;
+
+        if (collectedMessage) {
+            if (collectedMessage.startsWith(PREFIX) && collectedMessage !== PREFIX) {
+                message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${collectedMessage}`);
+                return false;
+            }
+            // Spam Prevention:
+            else if (spamDetails && collectedMessage !== "1" && collectedMessage !== "2"
+                && collectedMessage !== "remove" && collectedMessage !== "clear" && collectedMessage !== "clear all") {
+                const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
+                console.log({ messageSendDelay });
+                spamDetails.lastTimestamp = Date.now();
+                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                    spamDetails.closeMessageCount++;
+                }
+                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                    console.log("Exiting due to spam...");
+                    message.reply("**Exiting... __Please don't spam!__**");
+                    return false;
+                }
+                if (spamDetails.closeMessageCount === 0) {
+                    setTimeout(() => {
+                        if (spamDetails) spamDetails.closeMessageCount = 0;
+                    }, this.REFRESH_SPAM_DELAY);
+                }
+            }
+        }
+        else if (collectedMessage.length + fastPost.join('\n').length > 6000) {
+            message.reply("Your entry was **too long** (*over 6000 characters*), so I had to **stop** collecting it.");
+            return false;
+        }
+
         if (postIndex === 1) {
             if (collectedMessage === "1") {
-                fastPost = addUserTag(message, fastPost.join('\n'));
-                break;
+                if (fastPost.join('\n').length > 2000) {
+                    message.reply(`Your entry is too long (must be __less than 2000 characters__ long)`
+                        + `\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``);
+                    continue;
+                }
+                else {
+                    fastPost = addUserTag(message, fastPost.join('\n'));
+                    break;
+                }
             }
             let attachmentArray = collectedObject.attachments;
             console.log({ attachmentArray });
@@ -224,7 +271,7 @@ async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) 
                 // Just check and post the first image/gif
                 if (attachmentArray.some(messageAttachmentIsImage)) {
                     attachment = await findFirstAttachment(attachmentArray);
-                    if (collectedMessage != "") {
+                    if (collectedMessage !== "") {
                         fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
                         fastPost.push(collectedMessage);
                     }
@@ -243,7 +290,8 @@ async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) 
             console.log({ attachment });
         }
 
-        if (collectedMessage === "remove" && attachment !== null) {
+        if (collectedMessage === "stop") return false;
+        else if (collectedMessage === "remove" && attachment !== null) {
             const removeFastWarning = "Are you sure you want to remove your **attached image/gif?**";
             let confirmClearMessage = await fn.getUserConfirmation(message, removeFastWarning, forceSkip, "Fast Post: Remove Attachment");
             if (confirmClearMessage === true) {
@@ -268,9 +316,6 @@ async function getFastPostEmbedArray(bot, message, fastData, forceSkip = false) 
                 attachment = null;
                 postIndex = 0;
             }
-        }
-        else if (collectedMessage === "stop") {
-            return false;
         }
         else if (collectedMessage === "1") {
             fastPost = addUserTag(message, fastPost.join('\n'));

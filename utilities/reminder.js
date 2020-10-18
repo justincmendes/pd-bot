@@ -2,6 +2,7 @@
 const Discord = require("discord.js");
 const Reminder = require("../djs-bot/database/schemas/reminder");
 const Guild = require("../djs-bot/database/schemas/guildsettings");
+const User = require("../djs-bot/database/schemas/user");
 const mongoose = require("mongoose");
 const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
@@ -107,18 +108,19 @@ module.exports = {
         console.log({ reminderObject });
         let { isDM, isRecurring, _id: reminderID, userID, channel, startTime, endTime, message, type,
             connectedDocument, interval, guildID, lastEdited: lastUpdateTime } = reminderObject;
-        console.log({
-            isDM, isRecurring, reminderID, userID, channel, startTime, endTime, message, type,
-            connectedDocument, interval, guildID, lastUpdateTime
-        });
+        // console.log({
+        //     isDM, isRecurring, reminderID, userID, channel, startTime, endTime, message, type,
+        //     connectedDocument, interval, guildID, lastUpdateTime
+        // });
         // const originalMessage = message;
         const reminderDelay = endTime - currentTimestamp;
         const duration = isRecurring ? interval : endTime - startTime;
-        const channelObject = isDM ? bot.users.cache.get(userID) : bot.channels.cache.get(channel);
+        const user = bot.users.cache.get(userID);
+        const channelObject = isDM ? user : bot.channels.cache.get(channel);
         if (channelObject) {
             const channelID = channelObject.id;
-            const username = isDM ? bot.users.cache.get(userID).username :
-                bot.guilds.cache.get(channelObject.guild.id).member(userID).displayName;
+            const usernameAndDiscriminator = user ? `${user.username}#${user.discriminator}` : "someone";
+            const username = isDM ? user ? user.username : "someone" : bot.guilds.cache.get(channelObject.guild.id).member(userID).displayName;
             const typeOut = isRecurring ? `Repeating ${type}` : type;
             if (isDM) {
                 switch (type) {
@@ -161,7 +163,7 @@ module.exports = {
             //     if (tags) mentions = `${tags.join(' ')}`;
             // }
             console.log({ connectedDocument, type, reminderDelay, username, channelID });
-            console.log(`Setting ${username}'s ${fn.millisecondsToTimeString(duration)} reminder!`
+            console.log(`Setting ${username}'s (${usernameAndDiscriminator}) ${fn.millisecondsToTimeString(duration)} reminder!`
                 + `\nTime Left: ${reminderDelay < 0 ? fn.millisecondsToTimeString(0) : fn.millisecondsToTimeString(reminderDelay)}`
                 + `\nRecurring: ${isRecurring}\nDM: ${isDM}\nChannel: ${channelID}`);
             if (isRecurring) {
@@ -169,7 +171,7 @@ module.exports = {
                 // Trigger it once right away then follow the intervals.
                 try {
                     fn.setLongTimeout(async () => {
-                        await this.updateRecurringReminderStartAndEndTimeByObjectID(reminderID, lastUpdateTime)
+                        await this.updateRecurringReminderByObjectID(reminderID, lastUpdateTime)
                             .then(async (complete) => {
                                 console.log({ complete });
                                 if (complete) {
@@ -178,7 +180,7 @@ module.exports = {
                                     startTime = endTime;
                                     endTime += interval;
                                     const recurringReminder = fn.setLongInterval(async () => {
-                                        await this.updateRecurringReminderStartAndEndTimeByObjectID(reminderID, lastUpdateTime)
+                                        await this.updateRecurringReminderByObjectID(reminderID, lastUpdateTime)
                                             .then((update) => {
                                                 console.log({ update });
                                                 if (update) {
@@ -223,7 +225,7 @@ module.exports = {
 
     resetReminders: async function (bot) {
         const allReminders = await this.getAllReminders();
-        console.log({ allReminders });
+        console.log("Reinitializing all reminders.");
         if (allReminders) {
             allReminders.forEach(async (reminder) => {
                 await this.sendReminderByObject(bot, new Date().getTime(), reminder);
@@ -366,7 +368,7 @@ module.exports = {
         console.log(`Deleting all of ${userID}'s reminders`);
     },
 
-    updateRecurringReminderStartAndEndTimeByObjectID: async function (reminderID, lastUpdateTime) {
+    updateRecurringReminderByObjectID: async function (reminderID, lastUpdateTime) {
         if (reminderID) {
             const reminder = await this.getOneReminderByObjectID(reminderID);
             if (reminder) {
@@ -397,8 +399,14 @@ module.exports = {
                             }
                             if (!reminder.isDM && tags.length) currentQuote += `\n${tags.join(' ')}`;
                             if (currentQuote) updateObject.message = currentQuote;
-                            await Guild.findOneAndUpdate({ guildID: reminder.guildID },
-                                { $set: { "quote.nextQuote": newEndTime } }, { new: true });
+                            if (reminder.isDM) {
+                                await User.findOneAndUpdate({ discordID: reminder.userID },
+                                    { $set: { nextQuote: newEndTime } }, { new: true });
+                            }
+                            else {
+                                await Guild.findOneAndUpdate({ guildID: reminder.guildID },
+                                    { $set: { "quote.nextQuote": newEndTime } }, { new: true });
+                            }
                         }
                         const updateReminder = await Reminder
                             .findOneAndUpdate({ _id: reminderID },

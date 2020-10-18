@@ -62,7 +62,8 @@ module.exports = {
 
         //see, edit (when edit, show see first then usage),
         else if (settingCommand === "edit" || settingCommand === "ed" || settingCommand === "e"
-            || settingCommand === "change" || settingCommand === "ch" || settingCommand === "c") {
+            || settingCommand === "change" || settingCommand === "ch" || settingCommand === "c"
+            || settingCommand === "setup" || settingCommand === "set" || settingCommand === "s") {
             do {
                 var userFields = userSettings.getQuote ? ["Timezone", "Daylight Savings Time", "Habit Daily Reset Time", "Habit Weekly Reset Time",
                     "Get Quotes", "Next Quote", "Quote Interval", "Likes Pestering Accountability",]
@@ -271,8 +272,7 @@ module.exports = {
                                 }
                                 // setup interval!
                                 if (typeof userEdit === "boolean") {
-                                    var interval;
-                                    let firstQuote = userSettings.nextQuote;
+                                    var interval, firstQuote;
                                     let error = false;
                                     if (userEdit) {
                                         userSettingsPrompt = `How often do you want to receive an inspiration quote?`
@@ -284,18 +284,26 @@ module.exports = {
                                         }
                                         else {
                                             intervalInput = intervalInput.toLowerCase().split(/[\s\n]+/);
-                                            const now = Date.now();
+                                            let now = Date.now();
                                             const endTime = fn.timeCommandHandlerToUTC(intervalInput[0] === "in" ? intervalInput
                                                 : ["in"].concat(intervalInput), now, timezoneOffset, daylightSavings)
                                                 - HOUR_IN_MS * timezoneOffset;
-                                            interval = endTime - now;
+                                            if (!endTime) {
+                                                error = true;
+                                                continueEdit = true;
+                                                interval = false;
+                                            }
+                                            else {
+                                                now = Date.now();
+                                                interval = endTime - now;
+                                            }
                                             if (!interval) {
-                                                fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
+                                                fn.sendReplyThenDelete(message, `**INVALID TIME**... ${settingHelpMessage}`, 60000);
                                                 error = true;
                                                 continueEdit = true;
                                             }
                                             else if (interval < HOUR_IN_MS) {
-                                                fn.sendReplyThenDelete(message, `**INVALID TIME**... ${settingHelpMessage}`, 60000);
+                                                fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
                                                 error = true;
                                                 continueEdit = true;
                                             }
@@ -334,6 +342,14 @@ module.exports = {
                                             }
                                         }
                                         // Get the first instance!
+                                    }
+                                    else {
+                                        console.log(`Deleting ${authorUsername}'s (${authorID}) recurring quotes`);
+                                        await Reminder.deleteOne({ userID: authorID, isDM: true, isRecurring: true, type: "Quote" })
+                                            .catch(err => {
+                                                console.error(err);
+                                                console.log("Deletion of recurring quote has failed!");
+                                            });
                                     }
                                     if (!error) {
                                         userSettings = await User.findOneAndUpdate({ discordID: authorID },
@@ -399,26 +415,35 @@ module.exports = {
                                 }
                                 else {
                                     endInterval -= HOUR_IN_MS * timezoneOffset;
+                                    currentTimestamp = Date.now();
                                     const updatedInterval = endInterval - currentTimestamp;
                                     if (updatedInterval < HOUR_IN_MS) {
                                         fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
                                         continueEdit = true;
                                     }
                                     else {
+                                        let { nextQuote } = userSettings;
+                                        nextQuote += HOUR_IN_MS * timezoneOffset;
                                         userSettingsPrompt = `__**When do you intend to start the first quote?**__`
-                                            + "\n\nType `skip` to **start it now**"
+                                            + `${nextQuote ? !isNaN(nextQuote) ? `\n**Currently**: ${fn.timestampToDateString(nextQuote)}` : "" : ""}`
+                                            + "\n\nType `same` to **keep it the same**\nType `skip` to **start it now**";
                                         let quoteTrigger = await fn.getUserEditString(bot, message, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                         if (!quoteTrigger) return;
                                         else {
-                                            let firstQuote;
-                                            const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
-                                            currentTimestamp = Date.now();
-                                            if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
+                                            var firstQuote;
+                                            if (quoteTrigger === "same") {
+                                                firstQuote = nextQuote;
+                                            }
                                             else {
-                                                quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
-                                                firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
-                                                    : (["in"].concat(quoteTrigger)), currentTimestamp,
-                                                    timezoneOffset, daylightSavings);
+                                                const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
+                                                currentTimestamp = Date.now();
+                                                if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
+                                                else {
+                                                    quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
+                                                    firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
+                                                        : (["in"].concat(quoteTrigger)), currentTimestamp,
+                                                        timezoneOffset, daylightSavings);
+                                                }
                                             }
                                             if (firstQuote) {
                                                 firstQuote -= HOUR_IN_MS * timezoneOffset;

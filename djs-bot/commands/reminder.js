@@ -824,13 +824,16 @@ module.exports = {
             reminderMessage = reminderMessage.message;
             if (!reminderMessage) return;
 
+            var currentTimestamp;
             let reminderEndTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavingsSetting,
                 `Enter the **date/time** when you want the reminder to be triggered:`, `Reminder: End Time`, true,
                 reminderEmbedColour, 300000, 60000, futureTimeExamples);
             if (!reminderEndTime) return;
-            else reminderEndTime -= HOUR_IN_MS * timezoneOffset;
+            else {
+                currentTimestamp = Date.now();
+                reminderEndTime -= HOUR_IN_MS * timezoneOffset;
+            }
 
-            let currentTimestamp = Date.now();
             let duration = reminderEndTime - currentTimestamp;
             duration = fn.millisecondsToTimeString(duration > 0 ? duration : 0);
             const confirmCreationMessage = `Are you sure you want to set the following **one-time reminder** to send -\n**in ${channel} after ${duration} from now**:\n\n${reminderMessage}`;
