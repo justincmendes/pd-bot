@@ -326,10 +326,10 @@ module.exports = {
                     const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(message, habitCollection, numberArg, 0), '', true, false, habitEmbedColour);
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} goals?**`;
                     const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, goalArray, multipleDeleteMessage, forceSkip,
-                        `Habit${isArchived ? ` Archive` : ""}: Delete Past ${numberArg} Goals (${sortType})`, 600000);
+                        `Habit${isArchived ? ` Archive` : ""}: Delete Past ${numberArg} Habits (${sortType})`, 600000);
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await habitCollection.map(entry => entry._id);
-                    console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Goals (${sortType})`);
+                    console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Habits (${sortType})`);
                     await deleteManyByIdAndReminders(targetIDs);
                     return;
                 }
@@ -387,9 +387,9 @@ module.exports = {
                     const sortType = indexByRecency ? "By Recency" : "By Date Created";
                     goalArray = fn.getEmbedArray(goalArray, '', true, false, habitEmbedColour);
                     const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, goalArray, deleteConfirmMessage,
-                        forceSkip, `Habit${isArchived ? ` Archive` : ""}: Delete Goals ${toDelete} (${sortType})`, 600000);
+                        forceSkip, `Habit${isArchived ? ` Archive` : ""}: Delete Habits ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
-                        console.log(`Deleting ${authorID}'s Goals ${toDelete} (${sortType})`);
+                        console.log(`Deleting ${authorID}'s Habits ${toDelete} (${sortType})`);
                         await deleteManyByIdAndReminders(goalTargetIDs);
                         return;
                     }
@@ -459,10 +459,10 @@ module.exports = {
                     console.log({ habitTargetID });
                     const habitIndex = await getRecentGoalIndex(authorID, isArchived);
                     const habitEmbed = fn.getEmbedArray(`__**Habit ${habitIndex}:**__ ${goalDocumentToString(habitView)}`,
-                        `Habit${isArchived ? ` Archive` : ""}: Delete Recent Habit`, true, true, habitEmbedColour);
+                        `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, true, true, habitEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent goal?:**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, habitEmbed, deleteConfirmMessage, forceSkip,
-                        `Habit${isArchived ? ` Archive` : ""}: Delete Recent Habit`, 600000);
+                        `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, 600000);
                     if (deleteIsConfirmed) {
                         await deleteOneByIdAndReminders(habitTargetID);
                         return;
@@ -475,13 +475,13 @@ module.exports = {
                     if (pastNumberOfEntriesIndex === 0) {
                         return fn.sendErrorMessage(message, noHabitsMessage);
                     }
-                    let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: Delete All Goals WARNING!`);
+                    let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: Delete All Habits WARNING!`);
                     if (!confirmDeleteAll) return;
                     const finalDeleteAllMessage = "Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR HABITS ON RECORD**?\n\nYou **cannot UNDO** this!"
                         + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
-                    let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, `Habit${isArchived ? ` Archive` : ""}: Delete ALL Goals FINAL Warning!`);
+                    let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, `Habit${isArchived ? ` Archive` : ""}: Delete ALL Habits FINAL Warning!`);
                     if (!finalConfirmDeleteAll) return;
-                    console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Goals`);
+                    console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Habits`);
                     await deleteUserGoalsAndReminders(authorID);
                     return;
                 }
@@ -578,7 +578,7 @@ module.exports = {
                 console.log({ pastNumberOfEntriesIndex: goalIndex, pastFunctionality });
                 if (pastFunctionality) {
                     // Loop through all of the given fields, account for aliases and update fields
-                    // Find Goals, toArray, store data in meaningful output
+                    // Find Habits, toArray, store data in meaningful output
                     if (args[3 + archiveShift] !== undefined) {
                         if (args[3 + archiveShift].toLowerCase() === "recent") {
                             indexByRecency = true;
@@ -590,7 +590,7 @@ module.exports = {
                         if (isNaN(args[2 + archiveShift])) return message.reply(habitActionHelpMessage);
                         if (parseInt(args[2 + archiveShift]) <= 0) return message.reply(habitActionHelpMessage);
                         const confirmSeeMessage = `Are you sure you want to **see ${args[2 + archiveShift]} goals?**`;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[2 + archiveShift]} Goals (${sortType})`);
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[2 + archiveShift]} Habits (${sortType})`);
                         if (!confirmSeeAll) return;
                     }
                     else {
@@ -598,7 +598,7 @@ module.exports = {
                         // => empty "past" command call
                         if (seeType !== "all") return message.reply(habitActionHelpMessage);
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your goal history?";
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See All Goals`);
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See All Habits`);
                         if (!confirmSeeAll) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
@@ -610,7 +610,7 @@ module.exports = {
                     else goalView = await getHabitsByCreatedAt(authorID, 0, goalIndex, isArchived);
                     console.log({ goalView, pastNumberOfEntriesIndex: goalIndex });
                     const goalArray = multipleGoalsToStringArray(message, goalView, goalIndex, 0);
-                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalArray, `Habit${isArchived ? ` Archive` : ""}: See ${goalIndex} Goals (${sortType})`, true, true, habitEmbedColour));
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalArray, `Habit${isArchived ? ` Archive` : ""}: See ${goalIndex} Habits (${sortType})`, true, true, habitEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -641,14 +641,14 @@ module.exports = {
                                     return fn.sendErrorMessageAndUsage(message, habitActionHelpMessage, `**${isArchived ? "ARCHIVED " : ""}GOAL(S) DO NOT EXIST**...`);
                                 }
                                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1 + archiveShift]} entries past ${entriesToSkip}?**`;
-                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[1 + archiveShift]} Goals Past ${entriesToSkip} (${sortType})`);
+                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[1 + archiveShift]} Habits Past ${entriesToSkip} (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var goalView;
                                 if (indexByRecency) goalView = await fn.getEntriesByRecency(Habit, { userID: authorID, archived: isArchived }, entriesToSkip, goalIndex);
                                 else goalView = await getHabitsByCreatedAt(authorID, entriesToSkip, goalIndex, isArchived);
                                 console.log({ goalView });
                                 const goalStringArray = multipleGoalsToStringArray(message, goalView, goalIndex, entriesToSkip);
-                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalStringArray, `Habit${isArchived ? ` Archive` : ""}: See ${goalIndex} Goals Past ${entriesToSkip} (${sortType})`, true, true, habitEmbedColour));
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalStringArray, `Habit${isArchived ? ` Archive` : ""}: See ${goalIndex} Habits Past ${entriesToSkip} (${sortType})`, true, true, habitEmbedColour));
                                 return;
                             }
                         }
@@ -894,7 +894,7 @@ module.exports = {
             const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
             const goalStringArray = multipleGoalsToStringArray(message, goals, totalHabitNumber, 0);
             if (goalStringArray.length) goalStringArray[0] = `<@!${authorID}>\n${goalStringArray[0]}`;
-            const posts = fn.getEmbedArray(goalStringArray, `${member ? `${member.displayName}'s ` : ""}Long-Term Goals`
+            const posts = fn.getEmbedArray(goalStringArray, `${member ? `${member.displayName}'s ` : ""}Long-Term Habits`
                 + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, false, habitEmbedColour);
             posts.forEach(async post => {
                 await fn.sendMessageToChannel(bot, post, targetChannel);

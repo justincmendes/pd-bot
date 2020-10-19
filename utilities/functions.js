@@ -222,7 +222,7 @@ module.exports = {
                         console.log(`${reacted.first().author.username}'s message was collected!`);
                         confirm.delete();
                         console.log(`Message Sent (in function): ${reacted.first().content}`);
-                        if (deleteUserMessage) {
+                        if (deleteUserMessage && message.channel.type !== 'dm') {
                             reacted.first().delete({ timeout: userMessageDeleteDelay });
                         }
                         if (getObject) return reacted.first();
