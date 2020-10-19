@@ -161,9 +161,9 @@ async function getFastPostEmbedArray(bot, PREFIX, message, fastData, forceSkip =
         lastTimestamp: null,
         closeMessageCount: 0,
     };
-    const REFRESH_SPAM_DELAY = 25000;
+    const REFRESH_SPAM_DELAY = 22500;
     const CLOSE_MESSAGE_DELAY = 2000;
-    const CLOSE_MESSAGE_SPAM_NUMBER = 8;
+    const CLOSE_MESSAGE_SPAM_NUMBER = 7;
     const [, , fastDurationTimestamp, fastBreaker, ,] = fastData;
     let postIndex = 0;
     let fastPost = new Array();
@@ -182,16 +182,10 @@ async function getFastPostEmbedArray(bot, PREFIX, message, fastData, forceSkip =
     do {
         postIndex++;
         console.log({ attachment });
-        if (attachment === null) {
-            collectedObject = await fn.messageDataCollectFirst(bot, message, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
-                true, true, true, 3000);
-        }
-        else {
-            collectedObject = await fn.messageDataCollectFirst(bot, message, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
-                true, true, true, 3000, true, attachment);
-        }
+        collectedObject = await fn.messageDataCollect(bot, message, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
+            true, true, true, 3000, attachment, `Character Count: ${fastPost.join('\n').length}`);
 
-        // If user types stop, messageDataCollectFirstObject returns false:
+        // If user types stop, messageDataCollect returns false:
         if (!collectedObject) {
             message.channel.send(`This was your **fast post**:\n${fastPost.join('\n')}${attachment ? `\n\n**__Attachment:__**\n${attachment}` : ""}`);
             return false;
@@ -518,7 +512,7 @@ async function getUserReminderEndTime(bot, message, startTimestamp, fastTimeHelp
     do {
         const reminderPrompt = "__**How long do you intend to fast?**__\nI will DM you **when your fast is done and an hour before it's done**"
             + "\n\nType `skip` to **start your fast without setting up an end of fast reminder**";
-        const userTimeInput = await fn.messageDataCollectFirst(bot, message, reminderPrompt, "Fast: Duration", fastEmbedColour);
+        const userTimeInput = await fn.messageDataCollect(bot, message, reminderPrompt, "Fast: Duration", fastEmbedColour);
         if (userTimeInput === "skip") return undefined;
         if (userTimeInput === "stop" || userTimeInput === false) return false;
         // Undo the timezoneOffset to get the end time in UTC
@@ -700,7 +694,7 @@ module.exports = {
                 else if (quickEnd === `✍`) {
                     // Send message and as for fastBreaker and upload a picture too
                     // which can be referenced later or sent to a server when DMs are handled!
-                    fastBreaker = await fn.messageDataCollectFirst(bot, message, fastBreakerPrompt, "Fast: Fast Breaker", fastEmbedColour, 300000);
+                    fastBreaker = await fn.messageDataCollect(bot, message, fastBreakerPrompt, "Fast: Fast Breaker", fastEmbedColour, 300000);
                     console.log({ fastBreaker });
                     if (!fastBreaker || fastBreaker == "stop") return;
                     else if (fastBreaker == "skip") fastBreaker = null;
@@ -713,7 +707,7 @@ module.exports = {
                     let messageIndex = 0;
                     let reset = false;
                     do {
-                        let userReflection = await fn.messageDataCollectFirst(bot, message, reflectionTextPrompt, "Fast: Reflection", fastEmbedColour, 900000);
+                        let userReflection = await fn.messageDataCollect(bot, message, reflectionTextPrompt, "Fast: Reflection", fastEmbedColour, 900000);
                         if (!userReflection) return;
                         if (userReflection === "1") break;
                         else if (userReflection === "reset") {

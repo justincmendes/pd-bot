@@ -288,7 +288,7 @@ module.exports = {
                 }
 
                 const goalDescriptionString = `__**Goal:**__${goalDescription === "" ? "" : `\n${goalDescription}`}`;
-                const goalCheckpoints = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}`
+                let goalCheckpoints = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}`
                     + `\n\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**`,
                     `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalCheckpoints.message && goalCheckpoints.message !== "") return;
@@ -296,18 +296,20 @@ module.exports = {
                     reset = true;
                     continue;
                 }
+                else goalCheckpoints = goalCheckpoints.message;
 
                 const goalCheckpointsString = `__**Checkpoints:**__${goalCheckpoints === "" ? "" : `\n${goalCheckpoints}`}`;
-                const goalSteps = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**`,
+                let goalSteps = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**`,
                     `Long-Term Goal: Creation - Actionable Steps`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalSteps.message && goalSteps.message !== "") return;
                 else if (goalSteps.returnVal === "reset") {
                     reset = true;
                     continue;
                 }
+                else goalSteps = goalSteps.message;
 
                 const goalStepsString = `__**Steps:**__${goalSteps === "" ? "" : `\n${goalSteps}`}`;
-                const goalReason = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}`
+                let goalReason = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}`
                     + `\n\n💭 **__Why__ do you want to accomplish this goal?**`,
                     `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalReason.message && goalReason.message !== "") return;
@@ -315,6 +317,7 @@ module.exports = {
                     reset = true;
                     continue;
                 }
+                else goalReason = goalReason.message;
 
                 let time = ["started", "plan to have finished"];
                 for (i = 0; i < 2; i++) {
@@ -353,9 +356,9 @@ module.exports = {
                             end: time[1],
                             type: goalType,
                             description: goalDescription,
-                            checkpoints: goalCheckpoints.message,
-                            steps: goalSteps.message,
-                            reason: goalReason.message,
+                            checkpoints: goalCheckpoints,
+                            steps: goalSteps,
+                            reason: goalReason,
                         },
                     });
                     await goalDocument.save()

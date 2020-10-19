@@ -590,7 +590,7 @@ module.exports = {
             error = false;
             const reminderPrompt = `__**When do you intend to start the first ${isRecurring ? "recurring " : ""}reminder?**__`
                 + "\n\nType `skip` to **start it now**";
-            const userTimeInput = await fn.messageDataCollectFirst(bot, message, reminderPrompt,
+            const userTimeInput = await fn.messageDataCollect(bot, message, reminderPrompt,
                 `${isRecurring ? "Repeat " : ""}Reminder: First Reminder`, isRecurring ? repeatEmbedColour : reminderEmbedColour);
             if (!userTimeInput || userTimeInput === "stop") return false;
             startTimestamp = Date.now();
@@ -627,7 +627,7 @@ module.exports = {
         var channel;
         do {
             const now = Date.now()
-            channel = await fn.messageDataCollectFirst(bot, message, instructions, title, embedColour, dataCollectDelay, false);
+            channel = await fn.messageDataCollect(bot, message, instructions, title, embedColour, dataCollectDelay, false);
             if (!channel || channel === "stop") return false;
             else if (allowDMs && channel.toLowerCase() === "dm") return channel.toUpperCase();
             else {
@@ -689,7 +689,7 @@ module.exports = {
         title = `Interval`, embedColour = fn.defaultEmbedColour, dataCollectDelay = 300000, errorReplyDelay = 60000,
         intervalExamples = fn.intervalExamples,) {
         do {
-            let interval = await fn.messageDataCollectFirst(bot, message, `${instructions}\n\n${intervalExamples}`,
+            let interval = await fn.messageDataCollect(bot, message, `${instructions}\n\n${intervalExamples}`,
                 title, embedColour, dataCollectDelay, false, false);
             if (!interval || interval === "stop") return false;
             const timeArgs = interval.toLowerCase().split(' ');

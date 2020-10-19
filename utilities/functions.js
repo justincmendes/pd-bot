@@ -176,20 +176,35 @@ module.exports = {
         }
     },
 
+    /**
+     * 
+     * @param {Discord.Client} bot 
+     * @param {Object} message 
+     * @param {String} prompt 
+     * @param {String} title Default: "Message Reaction"
+     * @param {String} colour Default: "#ADD8E6"
+     * @param {Number} delayTime Default: 60000
+     * @param {Boolean} showNewLineInstructions Default: true
+     * @param {Boolean} getObject Default: false
+     * @param {Boolean} deleteUserMessage Default: true
+     * @param {Number} userMessageDeleteDelay Default: 0
+     * @param {String | null} imageURL Default: null (No image will be attached) 
+     * @param {String | null} additionalFooterText Default: null
+     */
     messageDataCollectFirst: async function (bot, message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000,
-        showNewLineInstructions = true, getObject = false, deleteUserMessage = true, userMessageDeleteDelay = 0, attachImage = false, imageURL = "") {
+        showNewLineInstructions = true, getObject = false, deleteUserMessage = true, userMessageDeleteDelay = 0, imageURL = null, additionalFooterText = null) {
         const userOriginal = message.author.id;
         var result;
         const deleteDelay = 3000;
         const MS_TO_SECONDS = 1000;
-        const footerText = `*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+        const footerText = `*(expires in ${delayTime / MS_TO_SECONDS}s)*${additionalFooterText ? `\n${additionalFooterText}` : ""}`;
         let textEntryInstructions = `🛑 - Type \`stop\` to **cancel**`;
         textEntryInstructions = `${showNewLineInstructions ? `\n\n↩ - Press \`SHIFT+ENTER\` to enter a **newline** before sending!` : "\n"}\n${textEntryInstructions}`;
         prompt = prompt + textEntryInstructions;
         let embeds = this.getEmbedArray(prompt, title, true, false, colour);
         embeds.forEach((embed, i) => {
             embeds[i] = embed.setFooter(footerText);
-            if (attachImage === true) {
+            if (imageURL) {
                 embeds[i] = embeds[i].setImage(imageURL);
             }
         });
@@ -559,10 +574,10 @@ module.exports = {
                     const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
                     console.log({ messageSendDelay });
                     spamDetails.lastTimestamp = Date.now();
-                    if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                    if (messageSendDelay < 2500) {
                         spamDetails.closeMessageCount++;
                     }
-                    if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                    if (spamDetails.closeMessageCount >= 5) {
                         console.log("Exiting due to spam...");
                         message.reply("**Exiting... __Please don't spam!__**");
                         return false;
@@ -570,8 +585,9 @@ module.exports = {
                     if (spamDetails.closeMessageCount === 0) {
                         setTimeout(() => {
                             if (spamDetails) spamDetails.closeMessageCount = 0;
-                        }, this.REFRESH_SPAM_DELAY);
+                        }, 30000);
                     }
+                    console.log({ spamDetails })
                 }
             }
             while (true);
@@ -2944,7 +2960,8 @@ module.exports = {
         const originalEditMessagePrompt = editMessagePrompt;
         do {
             messageIndex++;
-            collectedEdit = await this.messageDataCollectFirst(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000, false);
+            collectedEdit = await this.messageDataCollectFirst(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`,
+                embedColour, 600000, false, false, true, 3000, false, `Character Count: ${userEdit.join('\n').length}`);
             if (collectedEdit) {
                 if (collectedEdit.startsWith(PREFIX) && collectedEdit !== PREFIX) {
                     message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${collectedEdit}`);
@@ -3561,7 +3578,8 @@ module.exports = {
         const originalPrompt = instructionPrompt;
         do {
             inputIndex++;
-            collectedEntry = await this.messageDataCollectFirst(bot, message, instructionPrompt, title, embedColour, 600000, false);
+            collectedEntry = await this.messageDataCollectFirst(bot, message, instructionPrompt, title, embedColour, 600000,
+                false, false, true, 3000, false, `Character Count: ${finalEntry.join('\n').length}`);
             if (collectedEntry) {
                 if (collectedEntry.startsWith(PREFIX) && collectedEntry !== PREFIX) {
                     message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${collectedEntry}`);

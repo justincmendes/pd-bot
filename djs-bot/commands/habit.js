@@ -449,22 +449,22 @@ module.exports = {
             // Next: GOAL DELETE
 
             // goal delete <NUMBER/RECENT/ALL>
-            const noGoalsMessage = `**NO ${isArchived ? "ARCHIVED " : ""}HABITS**... try \`${PREFIX}${commandUsed} start help\``;
+            const noHabitsMessage = `**NO ${isArchived ? "ARCHIVED " : ""}HABITS**... try \`${PREFIX}${commandUsed} start help\``;
             if (isNaN(args[1 + archiveShift])) {
                 const deleteType = habitType;
                 if (deleteType === "recent") {
                     const habitView = await getOneHabitByRecency(authorID, 0, isArchived);
-                    if (!habitView) return fn.sendErrorMessage(message, noGoalsMessage);
-                    const goalTargetID = habitView._id;
-                    console.log({ goalTargetID });
-                    const goalIndex = await getRecentGoalIndex(authorID, isArchived);
-                    const goalEmbed = fn.getEmbedArray(`__**Habit ${goalIndex}:**__ ${goalDocumentToString(habitView)}`,
+                    if (!habitView) return fn.sendErrorMessage(message, noHabitsMessage);
+                    const habitTargetID = habitView._id;
+                    console.log({ habitTargetID });
+                    const habitIndex = await getRecentGoalIndex(authorID, isArchived);
+                    const habitEmbed = fn.getEmbedArray(`__**Habit ${habitIndex}:**__ ${goalDocumentToString(habitView)}`,
                         `Habit${isArchived ? ` Archive` : ""}: Delete Recent Habit`, true, true, habitEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent goal?:**`;
-                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, goalEmbed, deleteConfirmMessage, forceSkip,
+                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, habitEmbed, deleteConfirmMessage, forceSkip,
                         `Habit${isArchived ? ` Archive` : ""}: Delete Recent Habit`, 600000);
                     if (deleteIsConfirmed) {
-                        await deleteOneByIdAndReminders(goalTargetID);
+                        await deleteOneByIdAndReminders(habitTargetID);
                         return;
                     }
                 }
@@ -473,7 +473,7 @@ module.exports = {
                         `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
                     const pastNumberOfEntriesIndex = totalHabitNumber;
                     if (pastNumberOfEntriesIndex === 0) {
-                        return fn.sendErrorMessage(message, noGoalsMessage);
+                        return fn.sendErrorMessage(message, noHabitsMessage);
                     }
                     let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: Delete All Goals WARNING!`);
                     if (!confirmDeleteAll) return;
