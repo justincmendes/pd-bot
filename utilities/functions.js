@@ -191,7 +191,7 @@ module.exports = {
      * @param {String | null} imageURL Default: null (No image will be attached) 
      * @param {String | null} additionalFooterText Default: null
      */
-    messageDataCollectFirst: async function (bot, message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000,
+    messageDataCollect: async function (bot, message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000,
         showNewLineInstructions = true, getObject = false, deleteUserMessage = true, userMessageDeleteDelay = 0, imageURL = null, additionalFooterText = null) {
         const userOriginal = message.author.id;
         var result;
@@ -547,7 +547,7 @@ module.exports = {
                 closeMessageCount: 0,
             };
             do {
-                targetIndex = await this.messageDataCollectFirst(bot, message, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
+                targetIndex = await this.messageDataCollect(bot, message, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
                     messageColour, delayTime, false, false, true, userMessageDeleteDelay);
                 if (targetIndex.startsWith(PREFIX) && targetIndex !== PREFIX) {
                     message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${targetIndex}`);
@@ -2879,7 +2879,7 @@ module.exports = {
         editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**`;
         do {
             reset = false;
-            collectedEdit = await this.messageDataCollectFirst(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            collectedEdit = await this.messageDataCollect(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
             if (collectedEdit === "stop") return false;
             else if (!collectedEdit) return "back";
             else if (collectedEdit === "back") {
@@ -2960,7 +2960,7 @@ module.exports = {
         const originalEditMessagePrompt = editMessagePrompt;
         do {
             messageIndex++;
-            collectedEdit = await this.messageDataCollectFirst(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`,
+            collectedEdit = await this.messageDataCollect(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`,
                 embedColour, 600000, false, false, true, 3000, false, `Character Count: ${userEdit.join('\n').length}`);
             if (collectedEdit) {
                 if (collectedEdit.startsWith(PREFIX) && collectedEdit !== PREFIX) {
@@ -3107,7 +3107,7 @@ module.exports = {
         editMessagePrompt += `\n${additionalInstructions === '' ? `***(Please enter a number from \`1-${maxNumber}\`)***` : additionalInstructions}`
             + `\n\nType \`back\` to go **back to the main edit menu**`;
         while (true) {
-            collectedEdit = await this.messageDataCollectFirst(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            collectedEdit = await this.messageDataCollect(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
             if (collectedEdit === "stop") return false;
             else if (!collectedEdit) return "back";
             // Check if the given message is a number
@@ -3362,7 +3362,7 @@ module.exports = {
         const userAddressPossessive = forSelf ? "your" : `<@!${targetUserID}>'s`;
         const userAddress = forSelf ? "you" : `<@!${targetUserID}>`;
         const generalAddressPossessive = forSelf ? "your" : "their";
-        const userTimezone = await this.messageDataCollectFirst(bot, message, `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** OR **+/- UTC Offset**.\n\n(e.g. EST or +08:45 or -9)`,
+        const userTimezone = await this.messageDataCollect(bot, message, `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** OR **+/- UTC Offset**.\n\n(e.g. EST or +08:45 or -9)`,
             "User Settings: Setup", this.userSettingsEmbedColour, 300000, false);
         if (!userTimezone || userTimezone === "stop") return false;
         const userTimezoneOffset = this.getTimezoneOffset(userTimezone);
@@ -3535,7 +3535,7 @@ module.exports = {
         }
         do {
             reset = false;
-            collectedEdit = await this.messageDataCollectFirst(bot, message, instructionPrompt, title, embedColour, 600000);
+            collectedEdit = await this.messageDataCollect(bot, message, instructionPrompt, title, embedColour, 600000);
             if (!collectedEdit || collectedEdit === "stop") return false;
             if (hasInstructions) {
                 if (instructionKeywords.includes(collectedEdit)) {
@@ -3578,7 +3578,7 @@ module.exports = {
         const originalPrompt = instructionPrompt;
         do {
             inputIndex++;
-            collectedEntry = await this.messageDataCollectFirst(bot, message, instructionPrompt, title, embedColour, 600000,
+            collectedEntry = await this.messageDataCollect(bot, message, instructionPrompt, title, embedColour, 600000,
                 false, false, true, 3000, false, `Character Count: ${finalEntry.join('\n').length}`);
             if (collectedEntry) {
                 if (collectedEntry.startsWith(PREFIX) && collectedEntry !== PREFIX) {
@@ -3745,7 +3745,7 @@ module.exports = {
         var time;
         do {
             const initialTimestamp = Date.now();
-            time = await this.messageDataCollectFirst(bot, message, `${instructions}${timeExamples ? `\n\n${timeExamples}` : ""}`, title, embedColour, dataCollectDelay, false);
+            time = await this.messageDataCollect(bot, message, `${instructions}${timeExamples ? `\n\n${timeExamples}` : ""}`, title, embedColour, dataCollectDelay, false);
             if (!time || time === "stop") return false;
             timeArgs = time.toLowerCase().split(/[\s\n]+/);
             time = this.timeCommandHandlerToUTC(forceFutureTime && timeArgs[0] !== "in" && timeArgs[0] !== "now" ?
