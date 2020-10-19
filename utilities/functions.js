@@ -549,7 +549,8 @@ module.exports = {
             do {
                 targetIndex = await this.messageDataCollect(bot, message, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
                     messageColour, delayTime, false, false, true, userMessageDeleteDelay);
-                if (targetIndex.startsWith(PREFIX) && targetIndex !== PREFIX) {
+                if (!targetIndex) return;
+                else if (targetIndex.startsWith(PREFIX) && targetIndex !== PREFIX) {
                     message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${targetIndex}`);
                     targetIndex = "stop";
                 }
