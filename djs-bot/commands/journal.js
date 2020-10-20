@@ -55,7 +55,7 @@ function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = fn.j
     return journalView;
 }
 
-async function getGeneratedPromptAndAnswer(bot, message, prompts) {
+async function getGeneratedPromptAndAnswer(bot, message, PREFIX, prompts) {
     const newPromptInstructions = `Type \`n\` to generate a **new prompt**`;
     const newPromptKeywords = ['n'];
     let newPrompt = true;
@@ -76,7 +76,7 @@ async function getGeneratedPromptAndAnswer(bot, message, prompts) {
         if (!entry) return false;
         else if (entry.returnVal === 'n') {
             if (entry.message) {
-                const confirmNewPrompt = await fn.getUserConfirmation(message,
+                const confirmNewPrompt = await fn.getUserConfirmation(bot, message, PREFIX,
                     "**__Are you sure you want to generate a new prompt?__**\n\n**Your current journal entry will be lost!**",
                     false, "Journal: New Prompt Confirmation");
                 if (confirmNewPrompt) newPrompt = false;
@@ -293,7 +293,7 @@ module.exports = {
                     console.log({ actions });
                     if (!actions && actions !== '') return;
 
-                    const affirmations = await fn.getSingleEntry(bot, message, "Complete the affirmation:\n\n**__I am...__**",
+                    const affirmations = await fn.getSingleEntry(bot, message, PREFIX, "Complete the affirmation:\n\n**__I am...__**",
                         "Journal: Affirmations", true, journalEmbedColour);
                     console.log({ affirmations });
                     if (!affirmations && affirmations !== '') return;
@@ -317,7 +317,7 @@ module.exports = {
                         })
                         .catch(err => console.error(err));
 
-                    const confirmEnd = await fn.getUserConfirmation(message, "**Do you want to set a reminder for when you want to finish your journal entry?**"
+                    const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, "**Do you want to set a reminder for when you want to finish your journal entry?**"
                         + "\n(Ideally for the end of the day, before bed)", false, "Journal: End of Day - Completion Reminder", 180000);
                     if (!confirmEnd) return;
 
@@ -342,7 +342,7 @@ module.exports = {
                         + "\n\n⚙ - **Generate Prompts**\n🖋 - **Create Prompt**\n❌ - **Exit**", ['⚙', '🖋', '❌'], "Journal: Prompt", journalEmbedColour);
                     // 🗣 - **Get Prompts** from the **Community**\n
                     if (promptType === '🖋') {
-                        const userPrompt = await fn.getSingleEntry(bot, message, `**Enter a __question or prompt__ you'd like to explore and answer:**`,
+                        const userPrompt = await fn.getSingleEntry(bot, message, PREFIX, `**Enter a __question or prompt__ you'd like to explore and answer:**`,
                             "Journal: Create Prompt", forceSkip, journalEmbedColour);
                         if (!userPrompt) return;
                         let journalEntry = await fn.getMultilineEntry(bot, PREFIX, message, userPrompt, "Journal: Prompt and Answer", forceSkip, journalEmbedColour);
@@ -374,7 +374,7 @@ module.exports = {
                         // }
                         // else promptArray = prompts;
                         promptArray = prompts;
-                        const journalEntry = await getGeneratedPromptAndAnswer(bot, message, promptArray);
+                        const journalEntry = await getGeneratedPromptAndAnswer(bot, message, PREFIX, promptArray);
                         if (!journalEntry) return;
                         const { message: entry, prompt } = journalEntry;
                         journalDocument = new Journal({
@@ -493,7 +493,7 @@ module.exports = {
                         '', true, false, journalEmbedColour);
                     console.log({ journalStringArray });
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} entries?** `;
-                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, journalStringArray, multipleDeleteMessage, forceSkip,
+                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, journalStringArray, multipleDeleteMessage, forceSkip,
                         `Journal: Delete Past ${numberArg} Entries (${sortType})`, 600000);
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await journalCollection.map(entry => entry._id);
@@ -554,7 +554,7 @@ module.exports = {
                     const deleteConfirmMessage = `Are you sure you want to **delete entries ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By Date Created";
                     journalStringArray = fn.getEmbedArray(journalStringArray, '', true, false, journalEmbedColour);
-                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, journalStringArray, deleteConfirmMessage,
+                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, journalStringArray, deleteConfirmMessage,
                         forceSkip, `Journal: Delete Entries ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Entries ${toDelete} (${sortType})`);
@@ -597,7 +597,7 @@ module.exports = {
                             if (skipEntries >= totalJournalNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By Date Created";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${journalCollection.length} entries past entry ${skipEntries}?**`;
-                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, journalStringArray, multipleDeleteMessage,
+                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, journalStringArray, multipleDeleteMessage,
                                 forceSkip, `Journal: Multiple Delete Warning! (${sortType})`);
                             console.log({ multipleDeleteConfirmation });
                             if (!multipleDeleteConfirmation) return;
@@ -631,7 +631,7 @@ module.exports = {
                     const journalEmbed = fn.getEmbedArray(`__**Journal ${journalIndex}:**__\n${journalDocumentToString(journalView)}`,
                         `Journal: Delete Recent Entry`, true, true, journalEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent entry?:**`;
-                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, journalEmbed, deleteConfirmMessage, forceSkip,
+                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, journalEmbed, deleteConfirmMessage, forceSkip,
                         `Journal: Delete Recent Entry`, 600000);
                     if (deleteIsConfirmed) {
                         await Journal.deleteOne({ _id: journalTargetID });
@@ -645,11 +645,11 @@ module.exports = {
                     if (pastNumberOfEntriesIndex === 0) {
                         return fn.sendErrorMessage(message, noJournalsMessage);
                     }
-                    let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, "Journal: Delete All Entries WARNING!");
+                    let confirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmDeleteAllMessage, forceSkip, "Journal: Delete All Entries WARNING!");
                     if (!confirmDeleteAll) return;
                     const finalDeleteAllMessage = "Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR JOURNALS ON RECORD**?\n\nYou **cannot UNDO** this!"
                         + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
-                    let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, "Journal: Delete ALL Entries FINAL Warning!");
+                    let finalConfirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, finalDeleteAllMessage, "Journal: Delete ALL Entries FINAL Warning!");
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Entries`);
                     await Journal.deleteMany({ userID: authorID });
@@ -676,7 +676,7 @@ module.exports = {
                 const deleteConfirmMessage = `Are you sure you want to **delete Entry ${pastNumberOfEntriesIndex}?**`;
                 const journalEmbed = fn.getEmbedArray(`__**Journal ${pastNumberOfEntriesIndex}:**__\n${journalDocumentToString(journalView)}`,
                     `Journal: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, true, true, journalEmbedColour);
-                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, journalEmbed, deleteConfirmMessage, forceSkip,
+                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, journalEmbed, deleteConfirmMessage, forceSkip,
                     `Journal: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Entry ${sortType}`);
@@ -759,7 +759,7 @@ module.exports = {
                         if (isNaN(args[2])) return message.reply(journalActionHelpMessage);
                         if (parseInt(args[2]) <= 0) return message.reply(journalActionHelpMessage);
                         const confirmSeeMessage = `Are you sure you want to **see ${args[2]} journals?**`;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Journal: See ${args[2]} Entries (${sortType})`);
+                        let confirmSeeAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeeMessage, forceSkip, `Journal: See ${args[2]} Entries (${sortType})`);
                         if (!confirmSeeAll) return;
                     }
                     else {
@@ -767,7 +767,7 @@ module.exports = {
                         // => empty "past" command call
                         if (seeType !== "all") return message.reply(journalActionHelpMessage);
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your journal history?";
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Journal: See All Entries");
+                        let confirmSeeAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeeAllMessage, forceSkip, "Journal: See All Entries");
                         if (!confirmSeeAll) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
@@ -810,7 +810,7 @@ module.exports = {
                                     return fn.sendErrorMessageAndUsage(message, journalActionHelpMessage, "**JOURNAL(S) DO NOT EXIST**...");
                                 }
                                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} entries past ${entriesToSkip}?**`;
-                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Journal: See ${args[1]} Entries Past ${entriesToSkip} (${sortType})`);
+                                const confirmSeePast = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeePastMessage, forceSkip, `Journal: See ${args[1]} Entries Past ${entriesToSkip} (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var journalView;
                                 if (indexByRecency) journalView = await fn.getEntriesByRecency(Journal, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
@@ -925,7 +925,7 @@ module.exports = {
 
                         if (fieldToEditIndex === 0) {
                             journalEditMessagePrompt = `**__Please enter the date and time when this journal entry was created:__**`;
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
                         }
                         else switch (template) {
                             case 1: {
@@ -969,7 +969,7 @@ module.exports = {
                                 switch (fieldToEditIndex) {
                                     case 1: {
                                         journalEditMessagePrompt = "\n**Enter the __question or prompt__ you'd like to explore and answer 💭**: ";
-                                        userEdit = await fn.getUserEditString(bot, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
                                         entry.prompt = userEdit;
                                     }
                                         break;
@@ -1028,7 +1028,7 @@ module.exports = {
                                     console.log({ journalDocument, journalTargetID, fieldToEditIndex });
                                     showJournal = journalDocumentToString(journalDocument);
                                     const continueEditMessage = `Do you want to continue **editing Journal ${pastNumberOfEntriesIndex}?:**\n\n__**Journal ${pastNumberOfEntriesIndex}:**__\n${showJournal}`;
-                                    continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Journal: Continue Editing Journal ${pastNumberOfEntriesIndex}?`, 300000);
+                                    continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Journal: Continue Editing Journal ${pastNumberOfEntriesIndex}?`, 300000);
                                 }
                                 else {
                                     message.reply("**Journal not found...**");

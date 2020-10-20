@@ -28,66 +28,54 @@ module.exports = {
         }
     },
 
-    getUserConfirmation: async function (message, confirmationMessage, forceSkip = false, embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,
-        confirmationInstructions = "✅ to proceed\n❌ to cancel") {
-        if (forceSkip === true) return true;
-        const agree = "✅";
-        const disagree = "❌";
-        const userOriginal = message.author.id;
-        const MS_TO_SECONDS = 1000;
-        const footerText = `${confirmationInstructions}\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
-        var confirmation;
-        const embed = this.getMessageEmbed(confirmationMessage, embedTitle, "#FF0000").setFooter(footerText);
-        await message.channel.send(embed)
-            .then(async confirm => {
-                await this.quickReact(confirm, agree, 1);
-                await this.quickReact(confirm, disagree, 2);
-                const filter = (reaction, user) => {
-                    const filterOut = user.id == userOriginal && (reaction.emoji.name == agree || reaction.emoji.name == disagree);
-                    // console.log(`For ${user.username}'s ${reaction.emoji.name} reaction, the filter value is: ${filterOut}`);
-                    return filterOut;
-                };
-
-                // Create the awaitReactions promise object for the confirmation message just sent
-                confirmation = await confirm.awaitReactions(filter, { time: delayTime, max: 1 })
-                    .then(reacted => {
-                        console.log(`User's ${reacted.first().emoji.name} collected!`);
-                        if (reacted.first().emoji.name == agree) {
-                            confirm.delete();
-                            this.sendMessageThenDelete(message, "Confirmed!", deleteDelay);
-                            console.log(`Confirmation Value (in function): true`);
-                            return true;
-                        }
-                        else {
-                            confirm.delete();
-                            console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
-                            this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                            return false;
-                        }
-                    })
-                    // When the user DOESN'T react!
-                    .catch(err => {
-                        console.error(err);
-                        confirm.delete();
-                        console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
-                        console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
-                        this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                        return false;
-                    });
-            }).catch(err => console.error(err));
-        return confirmation;
-    },
-
-    getPaginatedUserConfirmation: async function (bot, message, embedArray, confirmationMessage, forceSkip = false,
-        embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000,
-        confirmationInstructions = "✅ to proceed\n❌ to cancel") {
+    getUserConfirmation: async function (bot, message, PREFIX, confirmationMessage, forceSkip = false, embedTitle = "Confirmation",
+        delayTime = 60000, deleteDelay = 3000, confirmationInstructions = this.confirmationInstructions) {
         try {
             if (forceSkip === true) return true;
-            const MS_TO_SECONDS = 1000;
+            const proceedRegex = /(?:y(?:es)?)|1/i;
+            const cancelRegex = /(?:no?)|0/i;
+            do {
+                const confirmation = await this.messageDataCollect(bot, message, confirmationMessage, embedTitle, "#FF0000",
+                    delayTime, false, false, true, 0, null, confirmationInstructions, false);
+                if (!confirmation) return false;
+                else if (confirmation.startsWith(PREFIX) && confirmation !== PREFIX) {
+                    this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+                    message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Command Entered:__**\n${confirmation}`);
+                    return null;
+                }
+                else if (proceedRegex.test(confirmation)) {
+                    this.sendMessageThenDelete(message, "Confirmed!", deleteDelay);
+                    console.log(`Confirmation Value (in function): true`);
+                    return true;
+                }
+                else if (cancelRegex.test(confirmation)) {
+                    console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
+                    this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+                    return false;
+                }
+                else continue;
+            }
+            while (true)
+        }
+        catch (err) {
+            const SECONDS_IN_MS = 1000;
+            console.error(err);
+            console.log(`ERROR: User didn't react within ${delayTime / SECONDS_IN_MS}s!`);
+            console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
+            this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+            return null;
+        }
+    },
+
+    getPaginatedUserConfirmation: async function (bot, message, PREFIX, embedArray, confirmationMessage, forceSkip = false,
+        embedTitle = "Confirmation", delayTime = 60000, deleteDelay = 3000, confirmationInstructions = this.confirmationInstructions) {
+        try {
+            if (forceSkip === true) return true;
+            const SECONDS_IN_MS = 1000;
             if (embedArray) {
                 if (embedArray.length) {
                     confirmationInstructions += embedArray.length > 1 ? `\n⬅ to scroll left\n➡ to scroll right` : "";
-                    const footerText = `${confirmationInstructions}\n*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+                    const footerText = `${confirmationInstructions}\n*(expires in ${delayTime / SECONDS_IN_MS}s)*`;
                     embedArray.forEach(embed => {
                         embed.setTitle(embedTitle)
                             .setFooter(footerText)
@@ -99,7 +87,7 @@ module.exports = {
             else return false;
             // let currentPage = 0;
             const embed = await this.sendPaginationEmbed(bot, message.channel.id, message.author.id, embedArray, false);
-            const confirmation = await this.getUserConfirmation(message, confirmationMessage, forceSkip,
+            const confirmation = await this.getUserConfirmation(bot, message, PREFIX, confirmationMessage, forceSkip,
                 embedArray[0].title, delayTime, deleteDelay, confirmationInstructions);
             const embedDeleted = embed.deleted;
             if (confirmation) {
@@ -112,9 +100,10 @@ module.exports = {
             }
         }
         catch (err) {
+            const SECONDS_IN_MS = 1000;
             console.error(err);
             embed.delete();
-            console.log(`ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`);
+            console.log(`ERROR: User didn't react within ${delayTime / SECONDS_IN_MS}s!`);
             console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
             this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
             return false;
@@ -188,17 +177,18 @@ module.exports = {
      * @param {Boolean} deleteUserMessage Default: true
      * @param {Number} userMessageDeleteDelay Default: 0
      * @param {String | null} imageURL Default: null (No image will be attached) 
-     * @param {String | null} additionalFooterText Default: null
+     * @param {String | false} additionalFooterText Default: false
+     * @param {Boolean} showStopInstructions Default: true
      */
-    messageDataCollect: async function (bot, message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000,
-        showNewLineInstructions = true, getObject = false, deleteUserMessage = true, userMessageDeleteDelay = 0, imageURL = null, additionalFooterText = null) {
+    messageDataCollect: async function (bot, message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000, showNewLineInstructions = true,
+        getObject = false, deleteUserMessage = true, userMessageDeleteDelay = 0, imageURL = null, additionalFooterText = false, showStopInstructions = true) {
         const userOriginal = message.author.id;
         var result;
         const deleteDelay = 3000;
         const MS_TO_SECONDS = 1000;
-        const footerText = `*(expires in ${delayTime / MS_TO_SECONDS}s)*${additionalFooterText ? `\n${additionalFooterText}` : ""}`;
-        let textEntryInstructions = `🛑 - Type \`stop\` to **cancel**`;
-        textEntryInstructions = `${showNewLineInstructions ? `\n\n↩ - Press \`SHIFT+ENTER\` to enter a **newline** before sending!` : "\n"}\n${textEntryInstructions}`;
+        const footerText = `${additionalFooterText ? `${additionalFooterText}\n` : ""}*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
+        textEntryInstructions = `${showNewLineInstructions ? `\n\n↩ - Press \`SHIFT+ENTER\` to enter a **newline** before sending!` : ""}`
+            + `${showStopInstructions ? `\n\n🛑 - Type \`stop\` to **cancel**` : ""}`;
         prompt = prompt + textEntryInstructions;
         let embeds = this.getEmbedArray(prompt, title, true, false, colour);
         embeds.forEach((embed, i) => {
@@ -2821,15 +2811,15 @@ module.exports = {
             .catch(err => console.error(err));
     },
 
-    getEditEndConfirmation: async function (message, field, userEdit, type, forceSkip = false) {
+    getEditEndConfirmation: async function (bot, message, PREFIX, field, userEdit, type, forceSkip = false) {
         const resetWarningMessage = `**Are you sure you want to change your ${field} to:**\n${userEdit}`;
-        let endEditConfirmation = await this.getUserConfirmation(message, resetWarningMessage, forceSkip, `${this.toTitleCase(type)}: Edit ${field} Confirmation`, 60000, 0);
+        let endEditConfirmation = await this.getUserConfirmation(bot, message, PREFIX, resetWarningMessage, forceSkip, `${this.toTitleCase(type)}: Edit ${field} Confirmation`, 60000, 0);
         return endEditConfirmation;
     },
 
-    getBackToMainMenuConfirmation: async function (message, forceSkip) {
+    getBackToMainMenuConfirmation: async function (bot, message, PREFIX, forceSkip) {
         const backToMainEditMessage = "Are you sure you want to go **back to the main edit menu?**";
-        const backToMainEdit = await this.getUserConfirmation(message, backToMainEditMessage, forceSkip, "Edit: Back to Main Menu");
+        const backToMainEdit = await this.getUserConfirmation(bot, message, PREFIX, backToMainEditMessage, forceSkip, "Edit: Back to Main Menu");
         return backToMainEdit;
     },
 
@@ -2842,7 +2832,7 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserEditString: async function (bot, message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+    getUserEditString: async function (bot, message, PREFIX, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         var collectedEdit, reset;
         let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n` : "\n"}`;
         editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**`;
@@ -2852,15 +2842,15 @@ module.exports = {
             if (collectedEdit === "stop") return false;
             else if (!collectedEdit) return "back";
             else if (collectedEdit === "back") {
-                const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
+                const backToMainEdit = await this.getBackToMainMenuConfirmation(bot, message, PREFIX, forceSkip);
                 if (backToMainEdit === false) reset = true;
+                else if (backToMainEdit === null) return false;
                 else return collectedEdit;
             }
             if (!reset) {
-                const confirmEdit = await this.getEditEndConfirmation(message, field, collectedEdit, type, forceSkip);
-                if (!confirmEdit) {
-                    reset = true;
-                }
+                const confirmEdit = await this.getEditEndConfirmation(bot, message, PREFIX, field, collectedEdit, type, forceSkip);
+                if (confirmEdit === false) reset = true;
+                else if (confirmEdit === null) return false;
             }
         }
         while (reset);
@@ -2891,15 +2881,15 @@ module.exports = {
             if (collectedEdit === "❌") return false;
             else if (!collectedEdit) return "back";
             else if (collectedEdit === backEmoji) {
-                const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
+                const backToMainEdit = await this.getBackToMainMenuConfirmation(bot, message, PREFIX, forceSkip);
                 if (backToMainEdit === false) reset = true;
+                else if (backToMainEdit === null) return false;
                 else return collectedEdit;
             }
             if (!reset) {
-                const confirmEdit = await this.getEditEndConfirmation(message, field, collectedEdit, type, forceSkip);
-                if (!confirmEdit) {
-                    reset = true;
-                }
+                const confirmEdit = await this.getEditEndConfirmation(bot, message, PREFIX, field, collectedEdit, type, forceSkip);
+                if (confirmEdit === false) reset = true;
+                else if (confirmEdit === null) return false;
             }
         }
         while (reset);
@@ -2973,10 +2963,9 @@ module.exports = {
                         message.reply(`Your edit is too long (must be __less than 2000 characters__ long)`
                             + `\nTry undoing some line entries by typing \`2\` or reset your edit by typing \`0\``);
                     }
-                    const endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit.join('\n'), type, forceSkip);
-                    if (endEditConfirmation === true) {
-                        break;
-                    }
+                    const endEditConfirmation = await this.getEditEndConfirmation(bot, message, PREFIX, field, userEdit.join('\n'), type, forceSkip);
+                    if (endEditConfirmation === true) break;
+                    else if (endEditConfirmation === null) return false;
                 }
                 else if (collectedEdit !== "0" && collectedEdit !== "back" && collectedEdit !== "2") {
                     editMessagePrompt = `${editMessagePrompt}\n\n**Current Edit:**\n${collectedEdit}\n`;
@@ -2984,30 +2973,31 @@ module.exports = {
                     reset = false;
                 }
                 else if (collectedEdit === "back") {
-                    const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
+                    const backToMainEdit = await this.getBackToMainMenuConfirmation(bot, message, PREFIX, forceSkip);
                     if (backToMainEdit === true) {
                         userEdit = "back";
                         break;
                     }
+                    else if (backToMainEdit === null) return false;
                 }
                 else messageIndex = 0;
             }
             else if (collectedEdit === "back") {
-                const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
+                const backToMainEdit = await this.getBackToMainMenuConfirmation(bot, message, PREFIX, forceSkip);
                 if (backToMainEdit === true) {
                     userEdit = "back";
                     break;
                 }
+                else if (backToMainEdit === null) return false;
             }
             else if (collectedEdit === "1") {
                 if (userEdit.join('\n').length > 2000) {
                     message.reply(`Your edit is too long (must be __less than 2000 characters__ long)`
                         + `\nTry undoing some line entries by typing \`2\` or reset your edit by typing \`0\``);
                 }
-                const endEditConfirmation = await this.getEditEndConfirmation(message, field, userEdit.join('\n'), type, forceSkip);
-                if (endEditConfirmation === true) {
-                    break;
-                }
+                const endEditConfirmation = await this.getEditEndConfirmation(bot, message, PREFIX, field, userEdit.join('\n'), type, forceSkip);
+                if (endEditConfirmation === true) break;
+                else if (endEditConfirmation === null) return false;
             }
             else if (collectedEdit === "0") {
                 if (userEdit === "") {
@@ -3021,6 +3011,7 @@ module.exports = {
                         userEdit = new Array();
                         reset = true;
                     }
+                    else if (resetConfirmation === null) return false;
                 }
             }
             // Undo Mechanism
@@ -3082,8 +3073,9 @@ module.exports = {
             // Check if the given message is a number
             else if (isNaN(collectedEdit)) {
                 if (collectedEdit === "back") {
-                    const backToMainEdit = await this.getBackToMainMenuConfirmation(message, forceSkip);
+                    const backToMainEdit = await this.getBackToMainMenuConfirmation(bot, message, PREFIX, forceSkip);
                     if (backToMainEdit === true) return collectedEdit;
+                    else if (backToMainEdit === null) return false;
                 }
                 else this.sendReplyThenDelete(message, numberErrorMessage, 15000);
             }
@@ -3097,8 +3089,9 @@ module.exports = {
                     if (Array.isArray(numberMappingArray)) {
                         showEdit = numberMappingArray[collectedEdit - 1] ? numberMappingArray[collectedEdit - 1] : collectedEdit;
                     }
-                    let confirmEdit = await this.getEditEndConfirmation(message, field, showEdit, type, forceSkip);
+                    let confirmEdit = await this.getEditEndConfirmation(bot, message, PREFIX, field, showEdit, type, forceSkip);
                     if (confirmEdit === true) return collectedEdit;
+                    else if (confirmEdit === null) return false;
                 }
             }
         }
@@ -3331,7 +3324,7 @@ module.exports = {
         const userAddressPossessive = forSelf ? "your" : `<@!${targetUserID}>'s`;
         const userAddress = forSelf ? "you" : `<@!${targetUserID}>`;
         const generalAddressPossessive = forSelf ? "your" : "their";
-        const userTimezone = await this.messageDataCollect(bot, message, `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** OR **+/- UTC Offset**.\n\n(e.g. EST or +08:45 or -9)`,
+        const userTimezone = await this.messageDataCollect(bot, message, `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** OR **+/- UTC Offset**.\n\n(e.g. \"EST\" | \"+08:45\" | \"-9\")`,
             "User Settings: Setup", this.userSettingsEmbedColour, 300000, false);
         if (!userTimezone || userTimezone === "stop") return false;
         const userTimezoneOffset = this.getTimezoneOffset(userTimezone);
@@ -3351,7 +3344,7 @@ module.exports = {
                 break;
         }
         if (typeof userDaylightSavingsSetting === 'boolean') {
-            const confirmSettings = await this.getUserConfirmation(message, `**__Are you sure ${userAddress} want${forSelf ? "" : "s"} the following settings?:__**`
+            const confirmSettings = await this.getUserConfirmation(bot, message, PREFIX, `**__Are you sure ${userAddress} want${forSelf ? "" : "s"} the following settings?:__**`
                 + `\n⌚ - Timezone: **${userTimezone}**`
                 + `\n🌄 - Daylight Savings Time (DST)?: **${userDaylightSavingsSetting ? "Yes" : "No"}**`
                 + `\n\n(**${this.toTitleCase(userAddress)} can always change ${generalAddressPossessive} user settings** with \`${PREFIX}user edit\` OR \`${PREFIX}u e\` for short)`,
@@ -3479,18 +3472,19 @@ module.exports = {
             return false;
         }
         channelListDisplay = await this.listOfChannelNames(bot, channelList);
-        while (!confirmSendToChannel) {
+        while (confirmSendToChannel === false) {
             targetChannelIndex = await this.userSelectFromList(bot, PREFIX, message, channelListDisplay, channelList.length,
                 channelSelectInstructions, postToChannelTitle, embedColour, 300000);
             if (targetChannelIndex === false) return false;
             console.log({ targetChannelIndex });
             let targetChannelName = await bot.channels.cache.get(channelList[targetChannelIndex]).name;
-            confirmSendToChannel = await this.getUserConfirmation(message, `Are you sure you want to send it to **#${targetChannelName}**?`, forceSkip);
+            confirmSendToChannel = await this.getUserConfirmation(bot, message, PREFIX, `Are you sure you want to send it to **#${targetChannelName}**?`, forceSkip);
+            if (confirmSendToChannel === null) return false;
         }
         return channelList[targetChannelIndex];
     },
 
-    getSingleEntry: async function (bot, message, instructionPrompt, title, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
+    getSingleEntry: async function (bot, message, PREFIX, instructionPrompt, title, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
         let reset = false;
         var collectedEdit;
         instructionPrompt += !additionalInstructions ? "" : `\n\n${additionalInstructions}`;
@@ -3512,10 +3506,9 @@ module.exports = {
                 }
             }
             if (!reset) {
-                const confirmEntry = await this.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${collectedEdit}`, forceSkip, title);
-                if (!confirmEntry) {
-                    reset = true;
-                }
+                const confirmEntry = await this.getUserConfirmation(bot, message, PREFIX, `**__Are you sure you want to enter:__**\n${collectedEdit}`, forceSkip, title);
+                if (confirmEntry === false) reset = true;
+                else if (confirmEntry === null) return false;
             }
         }
         while (reset);
@@ -3597,8 +3590,9 @@ module.exports = {
                             + `\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``);
                     }
                     else {
-                        const endConfirmation = await this.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
+                        const endConfirmation = await this.getUserConfirmation(bot, message, PREFIX, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
                         if (endConfirmation === true) break;
+                        else if (endConfirmation === null) return false;
                     }
                 }
                 else if (collectedEntry !== "0" && collectedEntry !== "2") {
@@ -3614,8 +3608,9 @@ module.exports = {
                         + `\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``);
                 }
                 else {
-                    const endConfirmation = await this.getUserConfirmation(message, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
+                    const endConfirmation = await this.getUserConfirmation(bot, message, PREFIX, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
                     if (endConfirmation === true) break;
+                    else if (endConfirmation === null) return false;
                 }
             }
             else if (collectedEntry === "0") {
@@ -3624,12 +3619,13 @@ module.exports = {
                 }
                 else {
                     const resetWarningMessage = `__Are you sure you want to **reset** the current entry for this section?:__\n${finalEntry.join('\n')}`;
-                    let resetConfirmation = await this.getUserConfirmation(message, resetWarningMessage, false, `${title} Reset`);
+                    let resetConfirmation = await this.getUserConfirmation(bot, message, PREFIX, resetWarningMessage, false, `${title} Reset`);
                     if (resetConfirmation === true) {
                         instructionPrompt = originalPrompt;
                         finalEntry = new Array();
                         reset = true;
                     }
+                    else if (resetConfirmation === null) return false;
                 }
             }
             // Undo Mechanism
@@ -3788,6 +3784,7 @@ module.exports = {
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)** **`
         + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years`
         + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12.75m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50.5h 20m 95s**`,
+    confirmationInstructions: "✅ Accept: \"Y\" \"yes\" \"1\"\n❌ Decline: \"N\" \"no\" \"0\"",
     areasOfLifeEmojis: ['🥦', '🧠', '📚', '🙏', '🗣', '💼', '🎓', '💸', '🏠'],
     areasOfLife: ["Physical Health", "Mental/Mindset", "Personal Development", "Spiritual",
         "Social", "Career", "Education", "Finances", "Physical Environment"],

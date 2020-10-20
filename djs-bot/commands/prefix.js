@@ -57,7 +57,7 @@ module.exports = {
                         + `${specialCharacterArrayToList(invalidPrefixes)}\n${arrayToMultilineList(invalidPrefixNames)}`, 600000);
                     return false;
                 }
-                const confirmation = await fn.getUserConfirmation(message, `Are you sure you want to change your **guild prefix ${PREFIX}** to **${newPrefix}**?`,
+                const confirmation = await fn.getUserConfirmation(bot, message, PREFIX, `Are you sure you want to change your **guild prefix ${PREFIX}** to **${newPrefix}**?`,
                     forceSkip, "Prefix Change");
                 if (confirmation === false) return false;
                 await GuildSettings.findOneAndUpdate({ guildID: message.guild.id }, { $set: { prefix: newPrefix } })

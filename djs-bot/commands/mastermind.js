@@ -351,22 +351,22 @@ module.exports = {
                 console.log({ areaOfLifeIndex });
                 if (!areaOfLifeIndex && areaOfLifeIndex !== 0) return;
 
-                const areaOfLifeReason = await fn.getSingleEntry(bot, message, `**Why does ${areasOfLifeEmojis[areaOfLifeIndex]} __${areasOfLife[areaOfLifeIndex]}__ need the most attention this week?**`,
+                const areaOfLifeReason = await fn.getSingleEntry(bot, message, PREFIX, `**Why does ${areasOfLifeEmojis[areaOfLifeIndex]} __${areasOfLife[areaOfLifeIndex]}__ need the most attention this week?**`,
                     "Mastermind Entry: Area of Life Assessment", forceSkip, mastermindEmbedColour);
                 console.log({ areaOfLifeReason });
                 if (!areaOfLifeReason && areaOfLifeReason !== '') return;
 
-                const stopEntry = await fn.getSingleEntry(bot, message, "**What do you want to __stop__ doing this week?**",
+                const stopEntry = await fn.getSingleEntry(bot, message, PREFIX, "**What do you want to __stop__ doing this week?**",
                     "Mastermind Entry: Stop", forceSkip, mastermindEmbedColour);
                 console.log({ stopEntry });
                 if (!stopEntry && stopEntry !== '') return;
 
-                const startEntry = await fn.getSingleEntry(bot, message, "**What do you want to __start__ doing this week?**",
+                const startEntry = await fn.getSingleEntry(bot, message, PREFIX, "**What do you want to __start__ doing this week?**",
                     "Mastermind Entry: Start", forceSkip, mastermindEmbedColour);
                 console.log({ startEntry });
                 if (!startEntry && startEntry !== '') return;
 
-                const continueEntry = await fn.getSingleEntry(bot, message, "**What went well this past week that you want to __continue__ doing for this week?**",
+                const continueEntry = await fn.getSingleEntry(bot, message, PREFIX, "**What went well this past week that you want to __continue__ doing for this week?**",
                     "Mastermind Entry: Continue", forceSkip, mastermindEmbedColour);
                 console.log({ continueEntry });
                 if (!continueEntry && continueEntry !== '') return;
@@ -379,7 +379,7 @@ module.exports = {
                         : `Type \`set\` to **submit** all goals entered so far (**Goals 1-${goalCount - 1}**)`
                         : `Type \`set\` to **skip** entering any goals`}\nType \`reset\` to **reset** all of your current **weekly goals**`;
                     const completionKeywords = ["set", "reset"];
-                    const weeklyGoalDescription = await fn.getSingleEntry(bot, message, `**🎯 What is __Goal #${goalCount}__ of this week's goals?**`,
+                    const weeklyGoalDescription = await fn.getSingleEntry(bot, message, PREFIX, `**🎯 What is __Goal #${goalCount}__ of this week's goals?**`,
                         `Mastermind Entry: Weekly Goal ${goalCount}`, forceSkip, mastermindEmbedColour, completionInstructions, completionKeywords);
                     if (!weeklyGoalDescription && weeklyGoalDescription !== "" || weeklyGoalDescription === "set") break;
                     else if (weeklyGoalDescription === "reset") {
@@ -395,7 +395,7 @@ module.exports = {
                     if (!weeklyGoalType && weeklyGoalType !== 0) break;
 
                     const goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[weeklyGoalType]} ${areasOfLife[weeklyGoalType]}`;
-                    const weeklyGoalReason = await fn.getSingleEntry(bot, message, `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
+                    const weeklyGoalReason = await fn.getSingleEntry(bot, message, PREFIX, `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
                         `Mastermind Entry: Weekly Goal ${goalCount}`, forceSkip, mastermindEmbedColour, completionInstructions, completionKeywords);
                     if (!weeklyGoalReason && weeklyGoalReason !== "" || weeklyGoalReason === "set") break;
                     else if (weeklyGoalReason === "reset") {
@@ -472,7 +472,7 @@ module.exports = {
             // 6. Post
             if (mastermindDocument) {
                 if (isUserCreating) {
-                    const postConfirmation = await fn.getUserConfirmation(message, `**Would you like to __post__ your mastermind entry to a __server's channel?__**`,
+                    const postConfirmation = await fn.getUserConfirmation(bot, message, PREFIX, `**Would you like to __post__ your mastermind entry to a __server's channel?__**`,
                         false, "Mastermind: Post", 180000);
                     if (!postConfirmation) return;
                     await this.run(bot, message, commandUsed, ["post", "recent"], PREFIX, timezoneOffset, daylightSavings, forceSkip);
@@ -526,7 +526,7 @@ module.exports = {
                     const mastermindStringArray = fn.getEmbedArray(multipleMastermindsToString(bot, message, mastermindCollection, numberArg, 0, true),
                         '', true, false, mastermindEmbedColour);
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} entries?**`;
-                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, mastermindStringArray, multipleDeleteMessage, forceSkip,
+                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, mastermindStringArray, multipleDeleteMessage, forceSkip,
                         `Mastermind: Delete Past ${numberArg} Entries (${sortType})`, 600000);
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await mastermindCollection.map(entry => entry._id);
@@ -587,7 +587,7 @@ module.exports = {
                     const deleteConfirmMessage = `Are you sure you want to **delete entries ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By Date Created";
                     mastermindStringArray = fn.getEmbedArray(mastermindStringArray, '', true, false, mastermindEmbedColour);
-                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, mastermindStringArray, deleteConfirmMessage,
+                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, mastermindStringArray, deleteConfirmMessage,
                         forceSkip, `Mastermind: Delete Entries ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Entries ${toDelete} (${sortType})`);
@@ -630,7 +630,7 @@ module.exports = {
                             if (skipEntries >= totalMastermindNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By Date Created";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${mastermindCollection.length} entries past entry ${skipEntries}?**`;
-                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, mastermindStringArray, multipleDeleteMessage,
+                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, mastermindStringArray, multipleDeleteMessage,
                                 forceSkip, `Mastermind: Multiple Delete Warning! (${sortType})`);
                             console.log({ multipleDeleteConfirmation });
                             if (!multipleDeleteConfirmation) return;
@@ -664,7 +664,7 @@ module.exports = {
                     const mastermindEmbed = fn.getEmbedArray(`__**Mastermind ${mastermindIndex}:**__\n${mastermindDocumentToString(bot, mastermindView)}`,
                         `Mastermind: Delete Recent Entry`, true, true, mastermindEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent entry?:**`;
-                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, mastermindEmbed, deleteConfirmMessage, forceSkip,
+                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, mastermindEmbed, deleteConfirmMessage, forceSkip,
                         `Mastermind: Delete Recent Entry`, 600000);
                     if (deleteIsConfirmed) {
                         await Mastermind.deleteOne({ _id: mastermindTargetID });
@@ -678,11 +678,11 @@ module.exports = {
                     if (pastNumberOfEntriesIndex === 0) {
                         return fn.sendErrorMessage(message, noMastermindsMessage);
                     }
-                    let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, "Mastermind: Delete All Entries WARNING!");
+                    let confirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmDeleteAllMessage, forceSkip, "Mastermind: Delete All Entries WARNING!");
                     if (!confirmDeleteAll) return;
                     const finalDeleteAllMessage = "Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR MASTERMINDS ON RECORD**?\n\nYou **cannot UNDO** this!"
                         + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
-                    let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, "Mastermind: Delete ALL Entries FINAL Warning!");
+                    let finalConfirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, finalDeleteAllMessage, "Mastermind: Delete ALL Entries FINAL Warning!");
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Entries`);
                     await Mastermind.deleteMany({ userID: authorID });
@@ -709,7 +709,7 @@ module.exports = {
                 const deleteConfirmMessage = `Are you sure you want to **delete Entry ${pastNumberOfEntriesIndex}?**`;
                 const mastermindEmbed = fn.getEmbedArray(`__**Mastermind ${pastNumberOfEntriesIndex}:**__\n${mastermindDocumentToString(bot, mastermindView)}`,
                     `Mastermind: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, true, true, mastermindEmbedColour);
-                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, mastermindEmbed, deleteConfirmMessage, forceSkip,
+                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, mastermindEmbed, deleteConfirmMessage, forceSkip,
                     `Mastermind: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Entry ${sortType}`);
@@ -793,7 +793,7 @@ module.exports = {
                         if (isNaN(args[2])) return message.reply(mastermindActionHelpMessage);
                         if (parseInt(args[2]) <= 0) return message.reply(mastermindActionHelpMessage);
                         const confirmSeeMessage = `Are you sure you want to **see ${args[2]} masterminds?**`;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Mastermind: See ${args[2]} Entries (${sortType})`);
+                        let confirmSeeAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeeMessage, forceSkip, `Mastermind: See ${args[2]} Entries (${sortType})`);
                         if (!confirmSeeAll) return;
                     }
                     else {
@@ -801,7 +801,7 @@ module.exports = {
                         // => empty "past" command call
                         if (seeType !== "all") return message.reply(mastermindActionHelpMessage);
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your mastermind history?";
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, "Mastermind: See All Entries");
+                        let confirmSeeAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeeAllMessage, forceSkip, "Mastermind: See All Entries");
                         if (!confirmSeeAll) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
@@ -844,7 +844,7 @@ module.exports = {
                                     return fn.sendErrorMessageAndUsage(message, mastermindActionHelpMessage, "**MASTERMIND(S) DO NOT EXIST**...");
                                 }
                                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} entries past ${entriesToSkip}?**`;
-                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Mastermind: See ${args[1]} Entries Past ${entriesToSkip} (${sortType})`);
+                                const confirmSeePast = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeePastMessage, forceSkip, `Mastermind: See ${args[1]} Entries Past ${entriesToSkip} (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var mastermindView;
                                 if (indexByRecency) mastermindView = await fn.getEntriesByRecency(Mastermind, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
@@ -947,7 +947,7 @@ module.exports = {
                         let { journal, createdAt } = mastermindDocument;
                         if (fieldToEditIndex === 0) {
                             mastermindEditMessagePrompt = `**__Please enter the date and time when this mastermind entry was created:__**`;
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                         }
                         else if (!usedTemplate) {
                             if (fieldToEditIndex === 1) {
@@ -966,7 +966,7 @@ module.exports = {
                             case 2:
                                 {
                                     mastermindEditMessagePrompt = `\n**__Which Area of Life Needs the Most Attention? 🌱__**\n${areasOfLifeList}`;
-                                    let areaOfLifeType = await fn.getUserEditNumber(bot, message, fieldToEdit, areasOfLife.length, type, areasOfLifeCombinedEmoji, forceSkip, mastermindEmbedColour, mastermindEditMessagePrompt);
+                                    let areaOfLifeType = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, areasOfLife.length, type, areasOfLifeCombinedEmoji, forceSkip, mastermindEmbedColour, mastermindEditMessagePrompt);
                                     if (!areaOfLifeType) return;
                                     else if (areaOfLifeType === "back") break;
                                     areaOfLifeType--;
@@ -974,7 +974,7 @@ module.exports = {
                                     mastermindEditMessagePrompt = `\n**Why does ${areasOfLifeEmojis[areaOfLifeType]} __${areasOfLife[areaOfLifeType]}__ need the most attention this week?`;
                                     // let additionalInstructions = `Type \`same\` to keep the previous entry you've had`;
                                     // let additionalKeywords = ["same"];
-                                    let areaOfLifeReason = await fn.getUserEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                                    let areaOfLifeReason = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                                     console.log({ areaOfLifeReason });
                                     if (!areaOfLifeReason) return;
                                     else if (areaOfLifeReason === "back") break;
@@ -986,17 +986,17 @@ module.exports = {
                                 }
                             case 3:
                                 mastermindEditMessagePrompt = "What do you want to __stop__ doing?";
-                                userEdit = await fn.getUserEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                                userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                                 journal.stopEntry = userEdit;
                                 break;
                             case 4:
                                 mastermindEditMessagePrompt = "What do you want to __start__ doing?";
-                                userEdit = await fn.getUserEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                                userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                                 journal.startEntry = userEdit;
                                 break;
                             case 5:
                                 mastermindEditMessagePrompt = "What went well in the previous week that you want to __continue__ doing for?";
-                                userEdit = await fn.getUserEditString(bot, message, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
+                                userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, mastermindEditMessagePrompt, type, forceSkip, mastermindEmbedColour);
                                 journal.continueEntry = userEdit;
                                 break;
                             case 6:
@@ -1012,11 +1012,11 @@ module.exports = {
                                     // let extraInstructions = `Type \`delete\` to **delete** this particular goal (**Goal ${goalIndex + 1}**)`
                                     // + `Type \`same\` to **keep this category the same** as it was before`;
                                     // let extraKeywords = ["delete", "same"];
-                                    let weeklyGoalDescription = await fn.getUserEditString(bot, message, "Goal Description", `\n**🎯 What is __Goal #${goalIndex + 1}__?:**`, type, forceSkip, mastermindEmbedColour);
+                                    let weeklyGoalDescription = await fn.getUserEditString(bot, message, PREFIX, "Goal Description", `\n**🎯 What is __Goal #${goalIndex + 1}__?:**`, type, forceSkip, mastermindEmbedColour);
                                     if (!weeklyGoalDescription && weeklyGoalDescription !== "") return;
                                     else if (weeklyGoalDescription === "back") break;
                                     // else if (weeklyGoalDescription === "delete") {
-                                    //     const confirmGoalDeletion = await fn.getUserConfirmation(message,
+                                    //     const confirmGoalDeletion = await fn.getUserConfirmation(bot, message, PREFIX,
                                     //         `Are you sure you want to delete **Goal ${goalIndex + 1}?**\n${fn.goalArrayToString([goalsArray[goalIndex]], "Weekly", false)}`,
                                     //         false, `Mastermind: Delete Weekly Goal ${goalIndex + 1}`);
 
@@ -1026,7 +1026,7 @@ module.exports = {
                                     // }
 
                                     let goalDescriptionString = `__**Goal #${goalIndex + 1}:**__${weeklyGoalDescription === "" ? "" : `\n${weeklyGoalDescription}`}`;
-                                    let weeklyGoalType = await fn.getUserEditNumber(bot, message, "Goal Category", areasOfLife.length, type, areasOfLifeCombinedEmoji,
+                                    let weeklyGoalType = await fn.getUserEditNumber(bot, message, PREFIX, "Goal Category", areasOfLife.length, type, areasOfLifeCombinedEmoji,
                                         forceSkip, mastermindEmbedColour, `\n**__Which Area of Life does Goal #${goalIndex + 1} fall under?__**\n${areasOfLifeList}\n\n${goalDescriptionString}`);
                                     console.log({ weeklyGoalType });
                                     if (!weeklyGoalType && weeklyGoalType !== 0) break;
@@ -1034,12 +1034,12 @@ module.exports = {
                                     weeklyGoalType--;
 
                                     let goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[weeklyGoalType]} ${areasOfLife[weeklyGoalType]}`;
-                                    let weeklyGoalReason = await fn.getUserEditString(bot, message, "Goal Reason", `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
+                                    let weeklyGoalReason = await fn.getUserEditString(bot, message, PREFIX, "Goal Reason", `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
                                         type, forceSkip, mastermindEmbedColour);
                                     if (!weeklyGoalReason && weeklyGoalReason !== "") return;
                                     else if (weeklyGoalReason === "back") break;
                                     // else if (weeklyGoalReason === "delete") {
-                                    //     const confirmGoalDeletion = await fn.getUserConfirmation(message,
+                                    //     const confirmGoalDeletion = await fn.getUserConfirmation(bot, message, PREFIX,
                                     //         `Are you sure you want to delete **Goal ${goalIndex + 1}?**\n${fn.goalArrayToString([goalsArray[goalIndex]], "Weekly", false)}`,
                                     //         false, `Mastermind: Delete Weekly Goal ${goalIndex + 1}`);
 
@@ -1088,7 +1088,7 @@ module.exports = {
                                     console.log({ mastermindDocument, mastermindTargetID, fieldToEditIndex });
                                     showMastermind = mastermindDocumentToString(bot, mastermindDocument);
                                     const continueEditMessage = `Do you want to continue **editing Mastermind ${pastNumberOfEntriesIndex}?:**\n\n__**Mastermind ${pastNumberOfEntriesIndex}:**__\n${showMastermind}`;
-                                    continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Mastermind: Continue Editing Mastermind ${pastNumberOfEntriesIndex}?`, 300000);
+                                    continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Mastermind: Continue Editing Mastermind ${pastNumberOfEntriesIndex}?`, 300000);
                                 }
                                 else {
                                     message.reply("**Mastermind not found...**");
@@ -1198,7 +1198,7 @@ module.exports = {
             const confirmTemplateGenerationTitle = `Mastermind: Confirm ${numberOfUsers} User Template`;
             var namesForTemplate = new Array();
             console.log({ numberOfUsers });
-            let userConfirmation = await fn.getUserConfirmation(message, confirmTemplateGenerationMessage, forceSkip, confirmTemplateGenerationTitle, 30000);
+            let userConfirmation = await fn.getUserConfirmation(bot, message, PREFIX, confirmTemplateGenerationMessage, forceSkip, confirmTemplateGenerationTitle, 30000);
             if (userConfirmation === false) return;
             if (args[2] !== undefined) {
                 var names = args;

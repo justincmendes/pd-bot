@@ -89,16 +89,16 @@ module.exports = {
                 switch (fieldToEditIndex) {
                     case 0:
                         userSettingsPrompt = `Please enter your **__timezone__** as an **abbreviation** or **+/- UTC Offset**:`;
-                        userEdit = await fn.getUserEditString(bot, message, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
+                        userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
                         break;
                     case 1:
                         userSettingsPrompt = `Does your timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No**`;
-                        userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, userSettingsPrompt,
+                        userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
                             ['⌚', '⛔'], type, forceSkip, userEmbedColour);
                         break;
                     case 2:
                         userSettingsPrompt = `Enter the **time of day** (i.e. 1a, 3:30AM, etc.) you would like your **habits to reset daily:**`;
-                        userEdit = await fn.getUserEditString(bot, message, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
+                        userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
                         break;
                     case 3:
                         userSettingsPrompt = `Enter the number corresponding to the __**day of the week**__ when you would like your **weekly habits counter to reset:**`;
@@ -108,14 +108,14 @@ module.exports = {
                         break;
                     case 4:
                         userSettingsPrompt = `Do you want to regularly receive an **inspirational quote?**\n🙌 - **Yes**\n⛔ - **No**`;
-                        userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, userSettingsPrompt,
+                        userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
                             ['🙌', '⛔'], type, forceSkip, userEmbedColour);
                         break;
                     case 5:
                         if (userSettings.getQuote) {
                             userSettingsPrompt = `__**When do you intend to start the next quote?**__`
                                 + "\n\nType `skip` to **start it now**"
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
                         }
                         else {
                             fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
@@ -127,7 +127,7 @@ module.exports = {
                         if (userSettings.getQuote) {
                             userSettingsPrompt = `How often do you want to receive an inspiration quote?`
                                 + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
                         }
                         else {
                             fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
@@ -137,7 +137,7 @@ module.exports = {
                         break;
                     case 7 - quoteAdjustment:
                         userSettingsPrompt = `Are you into **pestering accountability** (💪) or not so much (🙅‍♀️)?`;
-                        userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, userSettingsPrompt,
+                        userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
                             ['💪', '🙅‍♀️'], type, forceSkip, userEmbedColour);
                         break;
                 }
@@ -278,7 +278,7 @@ module.exports = {
                                     if (userEdit) {
                                         userSettingsPrompt = `How often do you want to receive an inspiration quote?`
                                             + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
-                                        let intervalInput = await fn.getUserEditString(bot, message, "Quote Interval", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                        let intervalInput = await fn.getUserEditString(bot, message, PREFIX, "Quote Interval", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                         if (!intervalInput) return;
                                         else if (intervalInput === "back") {
                                             continueEdit = true;
@@ -311,7 +311,7 @@ module.exports = {
                                             else {
                                                 userSettingsPrompt = `__**When do you intend to start the first quote?**__`
                                                     + "\n\nType `skip` to **start it now**"
-                                                let quoteTrigger = await fn.getUserEditString(bot, message, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                                let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                                 if (!quoteTrigger) return;
                                                 else {
                                                     const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
@@ -428,7 +428,7 @@ module.exports = {
                                         userSettingsPrompt = `__**When do you intend to start the first quote?**__`
                                             + `${nextQuote ? !isNaN(nextQuote) ? `\n**Currently**: ${fn.timestampToDateString(nextQuote)}` : "" : ""}`
                                             + "\n\nType `same` to **keep it the same**\nType `skip` to **start it now**";
-                                        let quoteTrigger = await fn.getUserEditString(bot, message, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                        let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                         if (!quoteTrigger) return;
                                         else {
                                             var firstQuote;
@@ -506,7 +506,7 @@ module.exports = {
                             currentQuote, "Quote", false, true, userSettings.quoteInterval, quoteEmbedColour);
                     }
                     const continueEditMessage = `Do you want to continue **editing your settings?**\n\n${userDocumentToString(userSettings)}`;
-                    continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Settings: Continue Editing?`, 300000);
+                    continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Settings: Continue Editing?`, 300000);
                 }
             }
             while (continueEdit === true)

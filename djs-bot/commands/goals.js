@@ -263,7 +263,7 @@ module.exports = {
                 if (!goalType && goalType !== 0) return;
 
                 const goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[goalType]} **${areasOfLife[goalType]}**`;
-                const goalDescription = await fn.getSingleEntry(bot, message, `${goalTypeString}\n\n🎯 **What is your __long-term goal__?**`,
+                const goalDescription = await fn.getSingleEntry(bot, message, PREFIX, `${goalTypeString}\n\n🎯 **What is your __long-term goal__?**`,
                     `Long-Term Goal: Creation - Set Goal`, forceSkip, goalEmbedColour, additionalInstructions, additionalKeywords);
                 if (!goalDescription && goalDescription !== "") return;
                 else if (goalDescription === "reset") {
@@ -308,7 +308,7 @@ module.exports = {
                     do {
                         const index = i;
                         let goalsTimePrompt = `**Please enter the date and time when you __${time[i]}__ this goal:**\n(e.g. now, OR March 22, 2027)`;
-                        time[i] = await fn.getSingleEntry(bot, message, goalsTimePrompt, "Long-Term Goal: Creation - Set Time", forceSkip, goalEmbedColour,
+                        time[i] = await fn.getSingleEntry(bot, message, PREFIX, goalsTimePrompt, "Long-Term Goal: Creation - Set Time", forceSkip, goalEmbedColour,
                             additionalInstructions, additionalKeywords);
                         if (!time[i]) return;
                         else if (time[i] === "reset") {
@@ -354,7 +354,7 @@ module.exports = {
                         .catch(err => console.error(err));
 
                     // Setup reminder!
-                    const confirmReminders = await fn.getUserConfirmation(message, "__Would you like to get **reminders before this goal ends?:**__"
+                    const confirmReminders = await fn.getUserConfirmation(bot, message, PREFIX, "__Would you like to get **reminders before this goal ends?:**__"
                         + "\n\n**1 year, 6 months, 1 month, 1 week, and 1 day before**", false, "Long-Term Goal: Reminders", 180000);
                     if (confirmReminders) {
                         await setGoalReminders(bot, authorID, timezoneOffset, PREFIX, commandUsed, goalDocument._id,
@@ -365,7 +365,7 @@ module.exports = {
                     reset = true;
                     continue;
                 }
-                const createAnother = await fn.getUserConfirmation(message, "Would you like to create another **long-term goal?**",
+                const createAnother = await fn.getUserConfirmation(bot, message, PREFIX, "Would you like to create another **long-term goal?**",
                     false, "Long-Term Goal: Create Another", 180000);
                 console.log({ createAnother });
                 if (!createAnother) return;
@@ -423,7 +423,7 @@ module.exports = {
                     else goalCollection = await getGoalsByStartTime(authorID, 0, numberArg, isArchived);
                     const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(message, goalCollection, numberArg, 0), '', true, false, goalEmbedColour);
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} goals?**`;
-                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, goalArray, multipleDeleteMessage, forceSkip,
+                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalArray, multipleDeleteMessage, forceSkip,
                         `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Past ${numberArg} Goals (${sortType})`, 600000);
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await goalCollection.map(entry => entry._id);
@@ -484,7 +484,7 @@ module.exports = {
                     const deleteConfirmMessage = `Are you sure you want to **delete goals ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By Start Time";
                     goalArray = fn.getEmbedArray(goalArray, '', true, false, goalEmbedColour);
-                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, goalArray, deleteConfirmMessage,
+                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalArray, deleteConfirmMessage,
                         forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goals ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Goals ${toDelete} (${sortType})`);
@@ -526,7 +526,7 @@ module.exports = {
                             if (skipEntries >= totalGoalNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By Start Time";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${goalCollection.length} goals past goal ${skipEntries}?**`;
-                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, goalArray, multipleDeleteMessage,
+                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalArray, multipleDeleteMessage,
                                 forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: Multiple Delete Warning! (${sortType})`);
                             console.log({ multipleDeleteConfirmation });
                             if (!multipleDeleteConfirmation) return;
@@ -559,7 +559,7 @@ module.exports = {
                     const goalEmbed = fn.getEmbedArray(`__**Goal ${goalIndex}:**__ ${goalDocumentToString(goalView)}`,
                         `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`, true, true, goalEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent goal?:**`;
-                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, goalEmbed, deleteConfirmMessage, forceSkip,
+                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalEmbed, deleteConfirmMessage, forceSkip,
                         `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`, 600000);
                     if (deleteIsConfirmed) {
                         await fn.deleteOneByIdAndReminders(Goal, goalTargetID);
@@ -573,11 +573,11 @@ module.exports = {
                     if (pastNumberOfEntriesIndex === 0) {
                         return fn.sendErrorMessage(message, noGoalsMessage);
                     }
-                    let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete All Goals WARNING!`);
+                    let confirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmDeleteAllMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete All Goals WARNING!`);
                     if (!confirmDeleteAll) return;
                     const finalDeleteAllMessage = "Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR GOALS ON RECORD**?\n\nYou **cannot UNDO** this!"
                         + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
-                    let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete ALL Goals FINAL Warning!`);
+                    let finalConfirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, finalDeleteAllMessage, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete ALL Goals FINAL Warning!`);
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Goals`);
                     await fn.deleteUserEntriesAndReminders(Goal, authorID);
@@ -604,7 +604,7 @@ module.exports = {
                 const goalEmbed = fn.getEmbedArray(`__**Goal ${pastNumberOfEntriesIndex}:**__ ${goalDocumentToString(goalView)}`,
                     `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goal ${pastNumberOfEntriesIndex} (${sortType})`, true, true, goalEmbedColour);
                 const deleteConfirmMessage = `Are you sure you want to **delete Goal ${pastNumberOfEntriesIndex}?**`;
-                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, goalEmbed, deleteConfirmMessage, forceSkip,
+                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalEmbed, deleteConfirmMessage, forceSkip,
                     `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goal ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Goal ${sortType}`);
@@ -692,7 +692,7 @@ module.exports = {
                         if (isNaN(args[2 + archiveShift])) return message.reply(goalActionHelpMessage);
                         if (parseInt(args[2 + archiveShift]) <= 0) return message.reply(goalActionHelpMessage);
                         const confirmSeeMessage = `Are you sure you want to **see ${args[2 + archiveShift]} goals?**`;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${args[2 + archiveShift]} Goals (${sortType})`);
+                        let confirmSeeAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeeMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${args[2 + archiveShift]} Goals (${sortType})`);
                         if (!confirmSeeAll) return;
                     }
                     else {
@@ -700,7 +700,7 @@ module.exports = {
                         // => empty "past" command call
                         if (seeType !== "all") return message.reply(goalActionHelpMessage);
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your goal history?";
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: See All Goals`);
+                        let confirmSeeAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeeAllMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: See All Goals`);
                         if (!confirmSeeAll) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
@@ -743,7 +743,7 @@ module.exports = {
                                     return fn.sendErrorMessageAndUsage(message, goalActionHelpMessage, `**${isArchived ? "ARCHIVED " : ""}GOAL(S) DO NOT EXIST**...`);
                                 }
                                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1 + archiveShift]} entries past ${entriesToSkip}?**`;
-                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${args[1 + archiveShift]} Goals Past ${entriesToSkip} (${sortType})`);
+                                const confirmSeePast = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeePastMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${args[1 + archiveShift]} Goals Past ${entriesToSkip} (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var goalView;
                                 if (indexByRecency) goalView = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived }, entriesToSkip, goalIndex);
@@ -851,15 +851,15 @@ module.exports = {
                     switch (fieldToEditIndex) {
                         case 0:
                             goalEditMessagePrompt = "\n__**Please enter the date/time ⌚ of when you started this goal:**__";
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
                             break;
                         case 1:
                             goalEditMessagePrompt = "\n__**Please enter the date/time ⌚ of when you ended or intend to end this goal:**__";
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
                             break;
                         case 2:
                             goalEditMessagePrompt = `\n**__Which area of life does your long-term goal fall under?__ 🌱**\n${areasOfLifeList}`;
-                            userEdit = await fn.getUserEditNumber(bot, message, fieldToEdit, areasOfLife.length, type, areasOfLifeCombinedEmoji, forceSkip, goalEmbedColour, goalEditMessagePrompt);
+                            userEdit = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, areasOfLife.length, type, areasOfLifeCombinedEmoji, forceSkip, goalEmbedColour, goalEditMessagePrompt);
                             if (!userEdit) return;
                             else if (userEdit === "back") break;
                             userEdit--;
@@ -957,7 +957,7 @@ module.exports = {
                                 console.log({ goalDocument, goalTargetID, fieldToEditIndex });
                                 showGoal = goalDocumentToString(goalDocument);
                                 const continueEditMessage = `Do you want to continue **editing Goal ${goalIndex}?:**\n\n__**Goal ${goalIndex}:**__ ${showGoal}`;
-                                continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: Continue Editing Goal ${goalIndex}?`, 300000);
+                                continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: Continue Editing Goal ${goalIndex}?`, 300000);
                             }
                             else {
                                 message.reply("**Goal not found...**");
@@ -1040,7 +1040,7 @@ module.exports = {
                     `Long-Term Goal${isArchived ? " Archive" : ""}: End Selection`, goalEmbedColour, 600000, 0);
                 if (!targetGoalIndex) return;
                 const targetGoal = goalArray[targetGoalIndex];
-                const confirmEnd = await fn.getUserConfirmation(message, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
+                const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
                     forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: End Confirmation`);
                 if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { completed: true, "goal.end": Date.now() + HOUR_IN_MS * timezoneOffset } },
                     (err, result) => {
@@ -1091,7 +1091,7 @@ module.exports = {
                     `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Selection`, goalEmbedColour, 600000, 0);
                 if (!targetGoalIndex && targetGoalIndex !== 0) return;
                 const targetGoal = goalArray[targetGoalIndex];
-                const confirmEnd = await fn.getUserConfirmation(message, `**Are you sure you want to archive this goal?**`
+                const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to archive this goal?**`
                     + `\n(it will not be deleted, but won't show up in your \`${PREFIX}${commandUsed} post\`\nand you won't get reminders for it anymore)`
                     + `\n\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
                     forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Confirmation`);

@@ -4,3 +4,17 @@
 // Show all of the options as an abbreviation (and the corresponding UTC offset + Location)
 // Show examples for the format of numerical entries i.e. +4:00, -9, +12:45, ... along with the boundaries of these entries
 // FUTURE: Show the options for the full written form: i.e. Africa/Abidjan, Canada/Central, ...
+
+const fn = require("../../utilities/functions");
+
+module.exports = {
+    name: "timezones",
+    description: "Timezone Instructions",
+    aliases: ["timezone", "tz"],
+    cooldown: 5,
+    args: false,
+    run: async function run(bot, message, commandUsed, args, PREFIX,
+        timezoneOffset, daylightSavings, forceSkip) {
+        message.channel.send(fn.getMessageEmbed("Timezone Instructions in progress!", "Timezone Instructions"));
+    }
+};

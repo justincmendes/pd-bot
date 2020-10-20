@@ -622,14 +622,41 @@ module.exports = {
         while (true)
     },
 
-    getChannelOrDM: async function (bot, message, instructions = "Please enter a **target channel (using #)** or \"**DM**\":", title = "Enter Channel or DM",
+    getChannelOrDM: async function (bot, message, PREFIX, instructions = "Please enter a **target channel (using #)** or \"**DM**\":", title = "Enter Channel or DM",
         allowDMs = true, embedColour = fn.defaultEmbedColour, dataCollectDelay = 300000, errorReplyDelay = 60000,) {
+        let spamDetails = {
+            lastTimestamp: null,
+            closeMessageCount: 0,
+        };
         var channel;
         do {
-            const now = Date.now()
             channel = await fn.messageDataCollect(bot, message, instructions, title, embedColour, dataCollectDelay, false);
             if (!channel || channel === "stop") return false;
-            else if (allowDMs && channel.toLowerCase() === "dm") return channel.toUpperCase();
+            else if (channel.startsWith(PREFIX) && channel !== PREFIX) {
+                message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${channel}`);
+                return false;
+            }
+            // Spam Prevention:
+            if (spamDetails) {
+                const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
+                console.log({ messageSendDelay });
+                spamDetails.lastTimestamp = Date.now();
+                if (messageSendDelay < 2500) {
+                    spamDetails.closeMessageCount++;
+                }
+                if (spamDetails.closeMessageCount >= 5) {
+                    console.log("Exiting due to spam...");
+                    message.reply("**Exiting... __Please don't spam!__**");
+                    return false;
+                }
+                if (spamDetails.closeMessageCount === 0) {
+                    setTimeout(() => {
+                        if (spamDetails) spamDetails.closeMessageCount = 0;
+                    }, 30000);
+                }
+                console.log({ spamDetails })
+            }
+            if (allowDMs && channel.toLowerCase() === "dm") return channel.toUpperCase();
             else {
                 channel = /(\<\#\d+\>)/.exec(channel);
                 if (channel) return channel[1];
@@ -643,7 +670,7 @@ module.exports = {
         instructionPrompt, type, embedColour = fn.defaultEmbedColour, errorReplyDelay = 60000,
         intervalExamples = fn.intervalExamples) {
         do {
-            let interval = await fn.getUserEditString(bot, message, field, `${instructionPrompt}\n\n${intervalExamples}`,
+            let interval = await fn.getUserEditString(bot, message, PREFIX, field, `${instructionPrompt}\n\n${intervalExamples}`,
                 type, true, embedColour);
             if (!interval || interval === "stop") return false;
             else if (interval === "back") return interval;

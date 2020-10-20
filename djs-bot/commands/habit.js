@@ -187,7 +187,7 @@ module.exports = {
             const additionalKeywords = ["reset"];
             do {
                 reset = false;
-                const habitDescription = await fn.getSingleEntry(bot, message, "👣📈 **What is the __habit__ you'd like to track?**",
+                const habitDescription = await fn.getSingleEntry(bot, message, PREFIX, "👣📈 **What is the __habit__ you'd like to track?**",
                     `Habit: Creation - Description`, forceSkip, habitEmbedColour, additionalInstructions, additionalKeywords);
                 if (!habitDescription && habitDescription !== "") return;
                 else if (habitDescription === "reset") {
@@ -335,7 +335,7 @@ module.exports = {
                     else habitCollection = await getHabitsByCreatedAt(authorID, 0, numberArg, isArchived);
                     const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(message, habitCollection, numberArg, 0), '', true, false, habitEmbedColour);
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} habits?**`;
-                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, goalArray, multipleDeleteMessage, forceSkip,
+                    const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalArray, multipleDeleteMessage, forceSkip,
                         `Habit${isArchived ? ` Archive` : ""}: Delete Past ${numberArg} Habits (${sortType})`, 600000);
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await habitCollection.map(entry => entry._id);
@@ -396,7 +396,7 @@ module.exports = {
                     const deleteConfirmMessage = `Are you sure you want to **delete habits ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By Date Created";
                     habitArray = fn.getEmbedArray(habitArray, '', true, false, habitEmbedColour);
-                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, habitArray, deleteConfirmMessage,
+                    const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, habitArray, deleteConfirmMessage,
                         forceSkip, `Habit${isArchived ? ` Archive` : ""}: Delete Habits ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Habits ${toDelete} (${sortType})`);
@@ -438,7 +438,7 @@ module.exports = {
                             if (skipEntries >= totalHabitNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By Date Created";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${habitCollection.length} habits past habit ${skipEntries}?**`;
-                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, goalArray, multipleDeleteMessage,
+                            const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalArray, multipleDeleteMessage,
                                 forceSkip, `Habit${isArchived ? ` Archive` : ""}: Multiple Delete Warning! (${sortType})`);
                             console.log({ multipleDeleteConfirmation });
                             if (!multipleDeleteConfirmation) return;
@@ -471,7 +471,7 @@ module.exports = {
                     const habitEmbed = fn.getEmbedArray(`__**Habit ${habitIndex}:**__ ${goalDocumentToString(habitView)}`,
                         `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, true, true, habitEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent goal?:**`;
-                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, habitEmbed, deleteConfirmMessage, forceSkip,
+                    const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, habitEmbed, deleteConfirmMessage, forceSkip,
                         `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, 600000);
                     if (deleteIsConfirmed) {
                         await deleteOneByIdAndReminders(Habit, habitTargetID);
@@ -485,11 +485,11 @@ module.exports = {
                     if (pastNumberOfEntriesIndex === 0) {
                         return fn.sendErrorMessage(message, noHabitsMessage);
                     }
-                    let confirmDeleteAll = await fn.getUserConfirmation(message, confirmDeleteAllMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: Delete All Habits WARNING!`);
+                    let confirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmDeleteAllMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: Delete All Habits WARNING!`);
                     if (!confirmDeleteAll) return;
                     const finalDeleteAllMessage = "Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR HABITS ON RECORD**?\n\nYou **cannot UNDO** this!"
                         + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
-                    let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, `Habit${isArchived ? ` Archive` : ""}: Delete ALL Habits FINAL Warning!`);
+                    let finalConfirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, finalDeleteAllMessage, `Habit${isArchived ? ` Archive` : ""}: Delete ALL Habits FINAL Warning!`);
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Habits`);
                     await fn.deleteUserEntriesAndReminders(Habit, authorID);
@@ -516,7 +516,7 @@ module.exports = {
                 const goalEmbed = fn.getEmbedArray(`__**Habit ${pastNumberOfEntriesIndex}:**__ ${goalDocumentToString(habitView)}`,
                     `Habit${isArchived ? ` Archive` : ""}: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`, true, true, habitEmbedColour);
                 const deleteConfirmMessage = `Are you sure you want to **delete Habit ${pastNumberOfEntriesIndex}?**`;
-                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, goalEmbed, deleteConfirmMessage, forceSkip,
+                const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalEmbed, deleteConfirmMessage, forceSkip,
                     `Habit${isArchived ? ` Archive` : ""}: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Habit ${sortType}`);
@@ -604,7 +604,7 @@ module.exports = {
                         if (isNaN(args[2 + archiveShift])) return message.reply(habitActionHelpMessage);
                         if (parseInt(args[2 + archiveShift]) <= 0) return message.reply(habitActionHelpMessage);
                         const confirmSeeMessage = `Are you sure you want to ** see ${args[2 + archiveShift]} habits ?** `;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[2 + archiveShift]} Habits(${sortType})`);
+                        let confirmSeeAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeeMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[2 + archiveShift]} Habits(${sortType})`);
                         if (!confirmSeeAll) return;
                     }
                     else {
@@ -612,7 +612,7 @@ module.exports = {
                         // => empty "past" command call
                         if (seeType !== "all") return message.reply(habitActionHelpMessage);
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your goal history?";
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeAllMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See All Habits`);
+                        let confirmSeeAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeeAllMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See All Habits`);
                         if (!confirmSeeAll) return;
                     }
                     // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
@@ -655,7 +655,7 @@ module.exports = {
                                     return fn.sendErrorMessageAndUsage(message, habitActionHelpMessage, `** ${isArchived ? "ARCHIVED " : ""} GOAL(S) DO NOT EXIST **...`);
                                 }
                                 const confirmSeePastMessage = `Are you sure you want to ** see ${args[1 + archiveShift]} entries past ${entriesToSkip}?** `;
-                                const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[1 + archiveShift]} Habits Past ${entriesToSkip} (${sortType})`);
+                                const confirmSeePast = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeePastMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[1 + archiveShift]} Habits Past ${entriesToSkip} (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var habitView;
                                 if (indexByRecency) habitView = await fn.getEntriesByRecency(Habit, { userID: authorID, archived: isArchived }, entriesToSkip, habitIndex);
@@ -760,15 +760,15 @@ module.exports = {
                     switch (fieldToEditIndex) {
                         case 0:
                             goalEditMessagePrompt = "\n__**Please enter the date/time ⌚ of when you started this goal:**__";
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, habitEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, type, forceSkip, habitEmbedColour);
                             break;
                         case 1:
                             goalEditMessagePrompt = "\n__**Please enter the date/time ⌚ of when you ended or intend to end this goal:**__";
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, habitEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, type, forceSkip, habitEmbedColour);
                             break;
                         case 2:
                             goalEditMessagePrompt = `\n**__Which area of life does your habit fall under?__ 🌱**\n${areasOfLifeList}`;
-                            userEdit = await fn.getUserEditNumber(bot, message, fieldToEdit, areasOfLife.length, type, areasOfLifeCombinedEmoji, forceSkip, habitEmbedColour, goalEditMessagePrompt);
+                            userEdit = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, areasOfLife.length, type, areasOfLifeCombinedEmoji, forceSkip, habitEmbedColour, goalEditMessagePrompt);
                             if (!userEdit) return;
                             else if (userEdit === "back") break;
                             userEdit--;
@@ -776,7 +776,7 @@ module.exports = {
                             break;
                         case 3:
                             goalEditMessagePrompt = "\n🎯 **What is your __habit__?**";
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, habitEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, type, forceSkip, habitEmbedColour);
                             goal.description = userEdit;
                             break;
                         case 4:
@@ -796,11 +796,11 @@ module.exports = {
                             break;
                         case 7:
                             goalEditMessagePrompt = `\n**__Currently:__ ${completed ? "Completed" : "In Progress"}\n\n✅ - Completed\n\n🏃‍♂️ - In Progress**`;
-                            userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, goalEditMessagePrompt, ['✅', '🏃‍♂️'], type, forceSkip, habitEmbedColour);
+                            userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, ['✅', '🏃‍♂️'], type, forceSkip, habitEmbedColour);
                             break;
                         case 8:
                             goalEditMessagePrompt = `\n**__Currently:__ ${archived ? "Archived" : "NOT Archived"}\n\n📁 - Archive\n\n📜 - No Archive**`;
-                            userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, goalEditMessagePrompt, ['📁', '📜'], type, forceSkip, habitEmbedColour);
+                            userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, ['📁', '📜'], type, forceSkip, habitEmbedColour);
                             break;
                     }
                     console.log({ userEdit });
@@ -866,7 +866,7 @@ module.exports = {
                                 console.log({ goalDocument: habitDocument, goalTargetID: habitTargetID, fieldToEditIndex });
                                 showGoal = goalDocumentToString(habitDocument);
                                 const continueEditMessage = `Do you want to continue **editing Habit ${habitIndex}?:**\n\n__**Habit ${habitIndex}:**__ ${showGoal}`;
-                                continueEdit = await fn.getUserConfirmation(message, continueEditMessage, forceSkip, `Habit${isArchived ? " Archive" : ""}: Continue Editing Habit ${habitIndex}?`, 300000);
+                                continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Habit${isArchived ? " Archive" : ""}: Continue Editing Habit ${habitIndex}?`, 300000);
                             }
                             else {
                                 message.reply("**Habit not found...**");
@@ -949,7 +949,7 @@ module.exports = {
                     `Habit${isArchived ? " Archive" : ""}: End Selection`, habitEmbedColour, 600000, 0);
                 if (!targetGoalIndex) return;
                 const targetGoal = habitArray[targetGoalIndex];
-                const confirmEnd = await fn.getUserConfirmation(message, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
+                const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
                     forceSkip, `Habit${isArchived ? " Archive" : ""}: End Confirmation`);
                 if (confirmEnd) await Habit.updateOne({ _id: targetGoal._id }, { $set: { completed: true, "goal.end": Date.now() + HOUR_IN_MS * timezoneOffset } },
                     (err, result) => {
@@ -1009,7 +1009,7 @@ module.exports = {
                     `Habit${isArchived ? " Archive" : ""}: Archive Selection`, habitEmbedColour, 600000, 0);
                 if (!targetHabitIndex && targetHabitIndex !== 0) return;
                 const targetHabit = habitArray[targetHabitIndex];
-                const confirmEnd = await fn.getUserConfirmation(message, `**Are you sure you want to archive this habit?**`
+                const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to archive this habit?**`
                     + `\n(it will not be deleted, but won't show up in your regular \`${PREFIX}${commandUsed} see\` \`${PREFIX}${commandUsed} post\` \`${PREFIX}${commandUsed} delete\` commands`
                     + `\nand you won't get reminders for it anymore)`
                     + `\n\n🎯 - __**Description:**__\n${targetHabit.description}`,
