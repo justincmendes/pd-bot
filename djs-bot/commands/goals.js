@@ -390,8 +390,11 @@ module.exports = {
                 if (goalType === "help") {
                     return message.channel.send(goalDeleteUsageMessage);
                 }
-                if (!totalGoalNumber) {
-                    return message.reply(`**NO ${isArchived ? "ARCHIVED " : ""}GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                if (!totalGoalNumber && !isArchived) {
+                    return message.reply(`**NO GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                }
+                else if (!totalArchiveNumber && isArchived) {
+                    return message.reply(`**NO ARCHIVED GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
             }
             else return message.reply(goalActionHelpMessage);
@@ -623,11 +626,15 @@ module.exports = {
                 if (goalType === "help") {
                     return message.channel.send(goalSeeUsageMessage);
                 }
-                if (!totalGoalNumber) {
-                    return message.reply(`**NO ${isArchived ? `ARCHIVED ` : ""}GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                if (!totalGoalNumber && !isArchived) {
+                    return message.reply(`**NO GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
-                else if (goalType === "number") {
-                    return message.reply(`You have **${totalGoalNumber} goal entries** on record.`);
+                else if (!totalArchiveNumber && isArchived) {
+                    return message.reply(`**NO ARCHIVED GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                }
+                else if (args[1 + archiveShift] ? args[1 + archiveShift].toLowerCase() : false === "number") {
+                    if (isArchived) return message.reply(`You have **${totalArchiveNumber} archived goal entries** on record.`);
+                    else return message.reply(`You have **${totalGoalNumber} goal entries** on record.`);
                 }
             }
             else return message.reply(goalActionHelpMessage);
@@ -782,8 +789,11 @@ module.exports = {
                 if (goalType === "help") {
                     return message.channel.send(goalEditUsageMessage);
                 }
-                if (!totalGoalNumber) {
-                    return message.reply(`**NO ${isArchived ? "ARCHIVED " : ""}GOALS**... try \`${PREFIX}${commandUsed} start\` to set one up!`);
+                if (!totalGoalNumber && !isArchived) {
+                    return message.reply(`**NO GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                }
+                else if (!totalArchiveNumber && isArchived) {
+                    return message.reply(`**NO ARCHIVED GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
                 if (isNaN(goalType) && goalType !== "recent" && !archiveRegex.test(goalType)) {
                     return message.reply(goalActionHelpMessage);
@@ -1079,7 +1089,7 @@ module.exports = {
 
                 let targetGoalIndex = await fn.userSelectFromList(bot, PREFIX, message, goalList, goalArray.length, "__**Which goal would you like to archive?:**__",
                     `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Selection`, goalEmbedColour, 600000, 0);
-                if (!targetGoalIndex) return;
+                if (!targetGoalIndex && targetGoalIndex !== 0) return;
                 const targetGoal = goalArray[targetGoalIndex];
                 const confirmEnd = await fn.getUserConfirmation(message, `**Are you sure you want to archive this goal?**`
                     + `\n(it will not be deleted, but won't show up in your \`${PREFIX}${commandUsed} post\`\nand you won't get reminders for it anymore)`

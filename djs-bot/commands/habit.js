@@ -295,8 +295,11 @@ module.exports = {
                 if (habitType === "help") {
                     return message.channel.send(goalDeleteUsageMessage);
                 }
-                if (!totalHabitNumber) {
-                    return message.reply(`**NO ${isArchived ? "ARCHIVED " : ""}HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                if (!totalHabitNumber && !isArchived) {
+                    return message.reply(`**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                }
+                else if (!totalArchiveNumber && isArchived) {
+                    return message.reply(`**NO ARCHIVED HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
             }
             else return message.reply(habitActionHelpMessage);
@@ -528,11 +531,15 @@ module.exports = {
                 if (habitType === "help") {
                     return message.channel.send(goalSeeUsageMessage);
                 }
-                if (!totalHabitNumber) {
-                    return message.reply(`**NO ${isArchived ? `ARCHIVED ` : ""}HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                if (!totalHabitNumber && !isArchived) {
+                    return message.reply(`**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
-                else if (habitType === "number") {
-                    return message.reply(`You have **${totalHabitNumber} goal entries** on record.`);
+                else if (!totalArchiveNumber && isArchived) {
+                    return message.reply(`**NO ARCHIVED HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+                }
+                else if (args[1 + archiveShift] ? args[1 + archiveShift].toLowerCase() : false === "number") {
+                    if (isArchived) return message.reply(`You have **${totalArchiveNumber} archived habits entries** on record.`);
+                    else return message.reply(`You have **${totalArchiveNumber} archived habits entries** on record.`);
                 }
             }
             else return message.reply(habitActionHelpMessage);
@@ -565,7 +572,7 @@ module.exports = {
                 else if (isNumberArg) {
                     habitIndex = parseInt(args[1 + archiveShift]);
                     if (habitIndex <= 0) {
-                        return fn.sendErrorMessageAndUsage(message, habitActionHelpMessage, `**${isArchived ? "ARCHIVED " : ""}GOAL DOES NOT EXIST**...`);
+                        return fn.sendErrorMessageAndUsage(message, habitActionHelpMessage, `** ${isArchived ? "ARCHIVED " : ""}GOAL DOES NOT EXIST **...`);
                     }
                     else pastFunctionality = false;
                 }
@@ -589,8 +596,8 @@ module.exports = {
                         // If the next argument is NotaNumber, invalid "past" command call
                         if (isNaN(args[2 + archiveShift])) return message.reply(habitActionHelpMessage);
                         if (parseInt(args[2 + archiveShift]) <= 0) return message.reply(habitActionHelpMessage);
-                        const confirmSeeMessage = `Are you sure you want to **see ${args[2 + archiveShift]} habits?**`;
-                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[2 + archiveShift]} Habits (${sortType})`);
+                        const confirmSeeMessage = `Are you sure you want to ** see ${args[2 + archiveShift]} habits ?** `;
+                        let confirmSeeAll = await fn.getUserConfirmation(message, confirmSeeMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[2 + archiveShift]} Habits(${sortType})`);
                         if (!confirmSeeAll) return;
                     }
                     else {
@@ -610,7 +617,7 @@ module.exports = {
                     else habitView = await getHabitsByCreatedAt(authorID, 0, habitIndex, isArchived);
                     console.log({ goalView: habitView, pastNumberOfEntriesIndex: habitIndex });
                     const goalArray = multipleGoalsToStringArray(message, habitView, habitIndex, 0);
-                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalArray, `Habit${isArchived ? ` Archive` : ""}: See ${habitIndex} Habits (${sortType})`, true, true, habitEmbedColour));
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalArray, `Habit${isArchived ? ` Archive` : ""}: See ${habitIndex} Habits(${sortType})`, true, true, habitEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -638,9 +645,9 @@ module.exports = {
                                 }
                                 else return message.reply(habitActionHelpMessage);
                                 if (entriesToSkip < 0 || entriesToSkip > totalHabitNumber) {
-                                    return fn.sendErrorMessageAndUsage(message, habitActionHelpMessage, `**${isArchived ? "ARCHIVED " : ""}GOAL(S) DO NOT EXIST**...`);
+                                    return fn.sendErrorMessageAndUsage(message, habitActionHelpMessage, `** ${isArchived ? "ARCHIVED " : ""} GOAL(S) DO NOT EXIST **...`);
                                 }
-                                const confirmSeePastMessage = `Are you sure you want to **see ${args[1 + archiveShift]} entries past ${entriesToSkip}?**`;
+                                const confirmSeePastMessage = `Are you sure you want to ** see ${args[1 + archiveShift]} entries past ${entriesToSkip}?** `;
                                 const confirmSeePast = await fn.getUserConfirmation(message, confirmSeePastMessage, forceSkip, `Habit${isArchived ? ` Archive` : ""}: See ${args[1 + archiveShift]} Habits Past ${entriesToSkip} (${sortType})`);
                                 if (!confirmSeePast) return;
                                 var habitView;
@@ -664,11 +671,11 @@ module.exports = {
                 else habitView = await getOneHabitByCreatedAt(authorID, habitIndex - 1, isArchived);
                 console.log({ goalView: habitView });
                 if (!habitView) {
-                    return fn.sendErrorMessage(message, `**${isArchived ? "ARCHIVED " : ""}GOAL ${habitIndex} DOES NOT EXIST**...`);
+                    return fn.sendErrorMessage(message, `** ${isArchived ? "ARCHIVED " : ""} GOAL ${habitIndex} DOES NOT EXIST **...`);
                 }
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
-                const habitString = `__**Habit ${habitIndex}:**__ ${goalDocumentToString(habitView)}`;
+                const habitString = `__ ** Habit ${habitIndex}:** __ ${goalDocumentToString(habitView)} `;
                 const habitEmbed = fn.getEmbedArray(habitString, `Habit${isArchived ? ` Archive` : ""}: See Habit ${habitIndex} (${sortType})`, true, true, habitEmbedColour);
                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, habitEmbed);
             }
@@ -677,7 +684,7 @@ module.exports = {
 
         else if (habitCommand === "edit" || habitCommand === "change" || habitCommand === "ed"
             || habitCommand === "ch" || habitCommand === "c") {
-            let goalEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <GOAL #> <recent?> <force?>\``
+            let goalEditUsageMessage = `** USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <GOAL #> <recent?> <force?>\``
                 + "\n\n`<HABIT #>`: **recent; 3** (3rd most recent entry, \\**any number*)"
                 + `\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**`
                 + "\n\n`<recent?>`(OPT.): type **recent** at the indicated spot to sort the habits by **actual time created instead of habit created time!**"
@@ -993,18 +1000,20 @@ module.exports = {
 
                 let targetHabitIndex = await fn.userSelectFromList(bot, PREFIX, message, goalList, habitArray.length, "__**Which habit would you like to archive?:**__",
                     `Habit${isArchived ? " Archive" : ""}: Archive Selection`, habitEmbedColour, 600000, 0);
-                if (!targetHabitIndex) return;
+                if (!targetHabitIndex && targetHabitIndex !== 0) return;
                 const targetHabit = habitArray[targetHabitIndex];
                 const confirmEnd = await fn.getUserConfirmation(message, `**Are you sure you want to archive this habit?**`
                     + `\n(it will not be deleted, but won't show up in your regular \`${PREFIX}${commandUsed} see\` \`${PREFIX}${commandUsed} post\` \`${PREFIX}${commandUsed} delete\` commands`
                     + `\nand you won't get reminders for it anymore)`
                     + `\n\n🎯 - __**Description:**__\n${targetHabit.description}`,
                     forceSkip, `Habit${isArchived ? " Archive" : ""}: Archive Confirmation`);
-                if (confirmEnd) await Habit.updateOne({ _id: targetHabit._id }, { $set: { archived: true } }, (err, result) => {
-                    if (err) return console.error(err);
-                    console.log({ result });
-                    Reminder.deleteMany({ connectedDocument: targetHabit._id });
-                });
+                if (confirmEnd) {
+                    await Habit.updateOne({ _id: targetHabit._id }, { $set: { archived: true } }, (err, result) => {
+                        if (err) return console.error(err);
+                        console.log({ result });
+                        Reminder.deleteMany({ connectedDocument: targetHabit._id });
+                    });
+                }
                 else continue;
             }
             while (true)
