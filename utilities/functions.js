@@ -32,11 +32,11 @@ module.exports = {
         delayTime = 60000, deleteDelay = 3000, confirmationInstructions = this.confirmationInstructions) {
         try {
             if (forceSkip === true) return true;
-            const proceedRegex = /(?:y(?:es)?)|1/i;
-            const cancelRegex = /(?:no?)|0/i;
+            const proceedRegex = /^(?:y(?:es)?)|1$/i;
+            const cancelRegex = /^(?:no?)|0$/i;
             do {
                 const confirmation = await this.messageDataCollect(bot, message, confirmationMessage, embedTitle, "#FF0000",
-                    delayTime, false, false, true, 0, null, confirmationInstructions, false);
+                    delayTime, false, false, false, 0, null, confirmationInstructions, false);
                 if (!confirmation) return false;
                 else if (confirmation.startsWith(PREFIX) && confirmation !== PREFIX) {
                     this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
