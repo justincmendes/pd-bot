@@ -19,6 +19,13 @@ const areasOfLifeList = fn.getAreasOfLifeList().join('\n');
 
 // Private Function Declarations
 
+async function getRecentHabit(userID, isArchived, embedColour) {
+    const recentGoalToString = `__**Habit ${await getRecentHabitIndex(userID, isArchived)}:**__`
+        + `${goalDocumentToString(await getOneGoalByRecency(userID, 0, isArchived))}`;
+    const goalEmbed = fn.getMessageEmbed(recentGoalToString, `Long-Term Goal: See Recent Goal`, embedColour);
+    return goalEmbed;
+}
+
 async function getHabitIndexByFunction(userID, habitID, totalHabits, archived, getOneHabit) {
     let i = 0;
     while (true) {
@@ -563,7 +570,7 @@ module.exports = {
                 // Handling Argument 1:
                 const isNumberArg = !isNaN(args[1 + archiveShift]);
                 if (seeType === "recent") {
-                    return message.channel.send(await getRecentGoal(authorID, isArchived, habitEmbedColour));
+                    return message.channel.send(await getRecentHabit(authorID, isArchived, habitEmbedColour));
                 }
                 else if (seeType === "all") {
                     habitIndex = totalHabitNumber;
@@ -641,7 +648,7 @@ module.exports = {
                                     entriesToSkip = parseInt(args[3 + archiveShift + shiftIndex]);
                                 }
                                 else if (args[3 + archiveShift + shiftIndex].toLowerCase() === "recent") {
-                                    entriesToSkip = await getRecentGoal(authorID, isArchived, habitEmbedColour);
+                                    entriesToSkip = await getRecentHabit(authorID, isArchived, habitEmbedColour);
                                 }
                                 else return message.reply(habitActionHelpMessage);
                                 if (entriesToSkip < 0 || entriesToSkip > totalHabitNumber) {

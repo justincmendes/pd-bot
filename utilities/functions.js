@@ -747,9 +747,10 @@ module.exports = {
         return -1;
     },
 
-    getProperDateAndTimeArray: function (dateTimeArray, adjustedArgs, dayYearTimeOffset = 0) {
+    getProperDateAndTimeArray: function (dateTimeArray, adjustedArgs, timezoneOffset, dayYearTimeOffset = 0) {
+        const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         const yearIncluded = !!(dateTimeArray[2 + dayYearTimeOffset]);
-        const dayIndex = this.getNthNumberIndex(adjustedArgs, dayYearTimeOffset);
+        const dayIndex = this.getNthNumberIndex(adjustedArgs, 1 + dayYearTimeOffset);
         const extractedDay = adjustedArgs[dayIndex];
         console.log({ dayIndex, extractedDay });
         if (dayIndex == -1) return false;
@@ -798,7 +799,7 @@ module.exports = {
         else {
             // **POTENTIAL PROBLEM/ISSUE** - the year will be off at New Year's when different people are in different
             // years depending on their timezone offset
-            year = new Date().getUTCFullYear();
+            year = new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear();
             if (day !== dateTimeArray[2]) {
                 const extractedTime = dateTimeArray[2].replace(day, "");
                 console.log({ extractedTime, day });
@@ -1715,9 +1716,9 @@ module.exports = {
         // 0 - All choices we're null or insufficient/not chosen.
         if (!decision) return false;
         else {
-            const RELATIVE_ADJUSTMENT = 700;
+            const RELATIVE_ADJUSTMENT = 900;
             if (decision === 1 || decision === 5) messageCreatedTimestamp = Date.now() + RELATIVE_ADJUSTMENT;
-            var timestampOut, timezoneString, timeWasCalculated;
+            var timestampOut, timezoneString;
             switch (decision) {
                 case 1:
                     if (relativeTimeTest) {
@@ -1779,7 +1780,6 @@ module.exports = {
                                 if (timestampOut < 0 && !argsHaveDefinedTime) {
                                     timestampOut -= HOUR_IN_MS;
                                 }
-                                timeWasCalculated = true;
                                 console.log({ timestampOut });
                             }
                             // Days and Weeks:
@@ -1793,7 +1793,8 @@ module.exports = {
 
                         console.log({ timestampOut, timeDifference, timeScaleToMultiply, numberOfTimeScales });
                         if (timestampOut === undefined) {
-                            timestampOut = messageCreatedTimestamp + timeDifference;
+                            // Adjust output based on timezone
+                            timestampOut = messageCreatedTimestamp + timeDifference + HOUR_IN_MS * userTimezone;
                         }
                     }
                     break;
@@ -1827,14 +1828,13 @@ module.exports = {
                             console.log({ year, month, day, hour, minute });
                             timestampOut = new Date(year, month, day, hour, minute).getTime();
                         }
-                        timeWasCalculated = true;
                         console.log({ timestampOut });
                     }
                     break;
                 case 3:
                     if (absoluteTimeRegex) {
                         console.log("Absolute Time test...");
-                        const properDateTimeArray = this.getProperDateAndTimeArray(absoluteTimeTest, adjustedArgs, 1);
+                        const properDateTimeArray = this.getProperDateAndTimeArray(absoluteTimeTest, adjustedArgs, userTimezone, 1);
                         console.log({ properDateTimeArray });
                         if (!properDateTimeArray) return false;
 
@@ -1851,7 +1851,6 @@ module.exports = {
                         console.log({ year, month, day, hour, minute });
                         timestampOut = new Date(year, month, day, hour, minute).getTime();
                         console.log({ timestampOut });
-                        timeWasCalculated = true;
                     }
                     break;
                 case 4:
@@ -1859,7 +1858,7 @@ module.exports = {
                         // If the first element is defined: (i.e. the month)
                         if (monthTimeTest[1]) {
                             console.log("Relative Month and Absolute Time test...");
-                            const properDateTimeArray = this.getProperDateAndTimeArray(monthTimeTest, adjustedArgs, 1);
+                            const properDateTimeArray = this.getProperDateAndTimeArray(monthTimeTest, adjustedArgs, userTimezone, 1);
                             console.log({ properDateTimeArray });
                             if (!properDateTimeArray) return false;
 
@@ -1877,7 +1876,6 @@ module.exports = {
                             console.log({ year, month, day, hour, minute });
                             timestampOut = new Date(year, month, day, hour, minute).getTime();
                             console.log({ timestampOut });
-                            timeWasCalculated = true;
                         }
                     }
                     break;
@@ -1889,13 +1887,8 @@ module.exports = {
                             else return false;
                         }
                         const futurePastMultiple = futureTruePastFalse ? 1 : -1;
-                        const date = new Date(messageCreatedTimestamp);
-                        let year = date.getUTCFullYear();
-                        const month = date.getUTCMonth();
-                        let day = date.getUTCDate();
-                        let hour = date.getUTCHours() + userTimezone;
-                        let minute = date.getUTCMinutes();
-                        let second = date.getUTCSeconds();
+                        let timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
+                        let [year, month, day, hour, minute, second,] = timeArray;
                         for (i = 2; i <= 6; i++) {
                             if (yearDayHourMinuteTest[i]) {
                                 // Extract y-h-d-m-s
@@ -1918,38 +1911,14 @@ module.exports = {
                         }
                         timestampOut = new Date(year, month, day, hour, minute, second).getTime();
                         timezoneString = yearDayHourMinuteTest[8];
-                        timeWasCalculated = true;
                     }
                     break;
             }
         }
 
-        // Daylights Savings Adjustment:
-        if (timeWasCalculated && userDaylightSavingSetting) {
-            const userCurrentTimeIsDaylight = this.isDaylightSavingTime(messageCreatedTimestamp, userDaylightSavingSetting);
-            const outputTimeIsDaylight = this.isDaylightSavingTime(timestampOut, userDaylightSavingSetting);
-            console.log({ outputTimeIsDaylight, userCurrentTimeIsDaylight });
-            if (userCurrentTimeIsDaylight) {
-                if (!outputTimeIsDaylight) {
-                    timestampOut -= HOUR_IN_MS;
-                }
-            }
-            else {
-                if (outputTimeIsDaylight) {
-                    timestampOut += HOUR_IN_MS;
-                }
-            }
-        }
-
-        // Adjust output based on timezone and daylight saving time considerations
-        if (timestampOut !== undefined) {
-            console.log({ timestampOut, timezoneString, userTimezone, userDaylightSavingSetting });
-            timestampOut = this.getUTCOffsetAdjustedTimestamp(timestampOut, userTimezone, userDaylightSavingSetting, timezoneString);
-            console.log({ timestampOut });
-            if (isNaN(timestampOut)) return false;
-            else return timestampOut;
-        }
-        else timestampOut = false;
+        console.log({ timestampOut, timezoneString, userTimezone, userDaylightSavingSetting });
+        if (timestampOut === undefined || isNaN(timestampOut)) timestampOut === false;
+        return timestampOut;
     },
 
     /**
@@ -2031,7 +2000,7 @@ module.exports = {
         }
         if (yearDayHourMinuteTest) {
             const yearDayHourMinuteElements = this.getNumberOfDefinedElements(yearDayHourMinuteTest);
-            if (yearDayHourMinuteElements >= 2) {
+            if (yearDayHourMinuteElements >= 2 && yearDayHourMinuteTest[0] !== "in") {
                 if (relativeTimeElements) {
                     if (relativeTimeElements < 4) {
                         choice = 5;

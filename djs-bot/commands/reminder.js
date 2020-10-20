@@ -812,17 +812,21 @@ module.exports = {
         // CREATE:
         else if (reminderCommand === "set" || reminderCommand === "s" || reminderCommand === "start" || reminderCommand === "make"
             || reminderCommand === "m" || reminderCommand === "create" || reminderCommand === "c" || reminderCommand === "st") {
-            let channel = await rm.getChannelOrDM(bot, message,
-                "Please enter the **target channel (using #)** or **\"DM\"** to send your reminder to.",
-                `Reminder: Channel or DM`, true, reminderEmbedColour);
-            if (!channel) return;
-            const isDM = channel === "DM";
+            // let channel = await rm.getChannelOrDM(bot, message,
+            //     "Please enter the **target channel (using #)** or **\"DM\"** to send your reminder to.",
+            //     `Reminder: Channel or DM`, true, reminderEmbedColour);
+            // if (!channel) return;
+            // const isDM = channel === "DM";
 
-            let reminderMessage = await fn.getMultilineEntry(bot, PREFIX, message, `__**Enter the message of this reminder**__:`
-                + `${isDM ? "" : "\n(Remember to **@mention** the roles/users you want to ping in the message!)"}`,
-                "Reminder: Message", forceSkip, reminderEmbedColour);
-            reminderMessage = reminderMessage.message;
-            if (!reminderMessage) return;
+            // let reminderMessage = await fn.getMultilineEntry(bot, PREFIX, message, `__**Enter the message of this reminder**__:`
+            //     + `${isDM ? "" : "\n(Remember to **@mention** the roles/users you want to ping in the message!)"}`,
+            //     "Reminder: Message", forceSkip, reminderEmbedColour);
+            // reminderMessage = reminderMessage.message;
+            // if (!reminderMessage) return;
+
+            let channel = "DM";
+            let reminderMessage = "TESTING";
+            const isDM = channel === "DM";
 
             var currentTimestamp;
             let reminderEndTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavingsSetting,
