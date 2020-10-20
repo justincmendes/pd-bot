@@ -176,7 +176,8 @@ module.exports = {
                                 console.log({ complete });
                                 if (complete) {
                                     console.log("Updated Recurring Reminder in Database!");
-                                    channelObject.send(message);
+                                    if (bot.channels.cache.get(channel)) channelObject.send(message);
+                                    else this.deleteOneReminderByObjectID(reminderID);
                                     startTime = endTime;
                                     endTime += interval;
                                     const recurringReminder = fn.setLongInterval(async () => {
@@ -187,7 +188,8 @@ module.exports = {
                                                     startTime += interval;
                                                     endTime += interval;
                                                     console.log("Updated Recurring Reminder in Database!");
-                                                    channelObject.send(message);
+                                                    if (bot.channels.cache.get(channel)) channelObject.send(message);
+                                                    else this.deleteOneReminderByObjectID(reminderID);
                                                 }
                                                 else clearInterval(recurringReminder);
                                             })

@@ -3783,7 +3783,7 @@ module.exports = {
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)** **`
         + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years`
         + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12.75m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50.5h 20m 95s**`,
-    confirmationInstructions: "✅ Accept: \"Y\" \"yes\" \"1\"\n❌ Decline: \"N\" \"no\" \"0\"",
+    confirmationInstructions: "✅ Accept: \'Y\' \'yes\' \'1\'\n❌ Decline: \'N\' \'no\' \'0\'",
     areasOfLifeEmojis: ['🥦', '🧠', '📚', '🙏', '🗣', '💼', '🎓', '💸', '🏠'],
     areasOfLife: ["Physical Health", "Mental/Mindset", "Personal Development", "Spiritual",
         "Social", "Career", "Education", "Finances", "Physical Environment"],
