@@ -10,10 +10,11 @@ const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs('hour');
 
 // Private Function Declarations
 function quoteDocumentToString(quoteDocument, offset) {
-    const { getQuote, nextQuote, quoteInterval } = quoteDocument;
+    const { getQuote, nextQuote, quoteInterval, tier } = quoteDocument;
     return `__**Get Quotes:**__ ${getQuote ? "Yes" : "No"}`
         + `\n- **Next Quote:** ${getQuote ? nextQuote ? fn.timestampToDateString(nextQuote + (offset * HOUR_IN_MS)) : "N/A" : "N/A"}`
-        + `\n- **Quote Interval:** ${getQuote ? quoteInterval ? fn.millisecondsToTimeString(quoteInterval) : "N/A" : "N/A"}`;
+        + `\n- **Quote Interval:** ${getQuote ? quoteInterval ? fn.millisecondsToTimeString(quoteInterval) : "N/A" : "N/A"}`
+        + `\n\n__**Account Premium Level:**__ ${fn.getTierStarString(tier)}`;
 }
 
 module.exports = {
@@ -37,7 +38,7 @@ module.exports = {
             || quoteCommand === "settings" || quoteCommand === "setting" || quoteCommand === "configuration" || quoteCommand === "config"
             || quoteCommand === "c" || quoteCommand === "edit" || quoteCommand === "ed" || quoteCommand === "e"
             || quoteCommand === "change" || quoteCommand === "ch") {
-            let quoteSettings = await User.findOne({ discordID: authorID }, { getQuote: 1, quoteInterval: 1, nextQuote: 1 });
+            let quoteSettings = await User.findOne({ discordID: authorID }, { getQuote: 1, quoteInterval: 1, nextQuote: 1, tier: 1 });
             if (!quoteSettings) return message.reply(`Try \`${PREFIX}settings\` to setup your settings!`);
 
             do {

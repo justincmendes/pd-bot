@@ -16,7 +16,7 @@ const daysOfWeekList = daysOfWeek.map((day, i) => {
 
 function userDocumentToString(userSettings) {
     const { timezone: { name, offset, daylightSavings }, likesPesteringAccountability: likesAccountability,
-        habitCron, getQuote, quoteInterval, nextQuote, } = userSettings
+        habitCron, getQuote, quoteInterval, nextQuote, tier, } = userSettings;
     const output = `__**Timezone:**__ ${name}\n- **UTC Offset (in hours):** ${fn.hoursToUTCOffset(offset)}`
         + `\n- **Daylight Savings Time:** ${daylightSavings ? "Yes" : "No"}`
         + `\n\n__**Habit Reset Time:**__\n- **Daily:** ${fn.msToTimeFromMidnight(habitCron.daily)}`
@@ -24,7 +24,8 @@ function userDocumentToString(userSettings) {
         + `\n\n__**Get Quotes:**__ ${getQuote ? "Yes" : "No"}`
         + `\n- **Next Quote:** ${getQuote ? nextQuote ? fn.timestampToDateString(nextQuote + (offset * HOUR_IN_MS)) : "N/A" : "N/A"}`
         + `\n- **Quote Interval:** ${getQuote ? quoteInterval ? fn.millisecondsToTimeString(quoteInterval) : "N/A" : "N/A"}`
-        + `\n\n__**Likes Pestering Accountability:**__ ${likesAccountability ? "YES!!!" : "No"}`;
+        + `\n\n__**Likes Pestering Accountability:**__ ${likesAccountability ? "YES!!!" : "No"}`
+        + `\n\n__**Account Premium Level:**__ ${fn.getTierStarString(tier)}`;
     return output;
 }
 

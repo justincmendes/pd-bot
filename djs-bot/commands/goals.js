@@ -90,22 +90,6 @@ async function getGoalsByStartTime(userID, entryIndex, numberOfEntries = 1, arch
     }
 }
 
-async function deleteManyByIdAndReminders(targetIDs) {
-    await Goal.deleteMany({ _id: { $in: targetIDs } });
-    await Reminder.deleteMany({ connectedDocument: { $in: targetIDs } });
-}
-
-async function deleteUserGoalsAndReminders(userID) {
-    const allUserGoalIDs = await Goal.find({ userID }, { _id: 1 });
-    await Goal.deleteMany({ userID });
-    if (allUserGoalIDs.length) await Reminder.deleteMany({ connectedDocument: { $in: allUserGoalIDs } });
-}
-
-async function deleteOneByIdAndReminders(targetID) {
-    await Goal.findByIdAndDelete(targetID);
-    await Reminder.deleteMany({ connectedDocument: targetID });
-}
-
 async function getRecentGoalIndex(userID, archived) {
     try {
         var index;
@@ -441,7 +425,7 @@ module.exports = {
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await goalCollection.map(entry => entry._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Goals (${sortType})`);
-                    await deleteManyByIdAndReminders(targetIDs);
+                    await fn.deleteManyByIdAndReminders(Goal, targetIDs);
                     return;
                 }
                 if (deleteType === "many") {
@@ -501,7 +485,7 @@ module.exports = {
                         forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goals ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Goals ${toDelete} (${sortType})`);
-                        await deleteManyByIdAndReminders(goalTargetIDs);
+                        await fn.deleteManyByIdAndReminders(Goal, goalTargetIDs);
                         return;
                     }
                     else return;
@@ -545,7 +529,7 @@ module.exports = {
                             if (!multipleDeleteConfirmation) return;
                             const targetIDs = await goalCollection.map(entry => entry._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} goals past ${skipEntries} (${sortType})`);
-                            await deleteManyByIdAndReminders(targetIDs);
+                            await fn.deleteManyByIdAndReminders(Goal, targetIDs);
                             return;
                         }
 
@@ -575,7 +559,7 @@ module.exports = {
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, goalEmbed, deleteConfirmMessage, forceSkip,
                         `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`, 600000);
                     if (deleteIsConfirmed) {
-                        await deleteOneByIdAndReminders(goalTargetID);
+                        await fn.deleteOneByIdAndReminders(Goal, goalTargetID);
                         return;
                     }
                 }
@@ -593,7 +577,7 @@ module.exports = {
                     let finalConfirmDeleteAll = await fn.getUserConfirmation(message, finalDeleteAllMessage, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete ALL Goals FINAL Warning!`);
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Goals`);
-                    await deleteUserGoalsAndReminders(authorID);
+                    await fn.deleteUserEntriesAndReminders(Goal, authorID);
                     return;
                 }
                 else return message.reply(goalActionHelpMessage);
@@ -621,7 +605,7 @@ module.exports = {
                     `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goal ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Goal ${sortType}`);
-                    await deleteOneByIdAndReminders(goalTargetID);
+                    await fn.deleteOneByIdAndReminders(Goal, goalTargetID);
                     return;
                 }
             }

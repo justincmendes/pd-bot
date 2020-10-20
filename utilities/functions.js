@@ -6,7 +6,6 @@ const mongoose = require('mongoose');
 const Reminder = require('../djs-bot/database/schemas/reminder');
 const User = require('../djs-bot/database/schemas/user');
 const Guild = require('../djs-bot/database/schemas/guildsettings');
-const user = require("../djs-bot/database/schemas/user");
 const DEFAULT_PREFIX = '?';
 const TIMEOUT_MS = 375
 require("dotenv").config();
@@ -3764,6 +3763,23 @@ module.exports = {
         return time;
     },
 
+    deleteManyByIdAndReminders: async function (Model, targetIDs) {
+        await Model.deleteMany({ _id: { $in: targetIDs } });
+        await Reminder.deleteMany({ connectedDocument: { $in: targetIDs } });
+    },
+
+    deleteUserEntriesAndReminders: async function (Model, userID) {
+        const allUserGoalIDs = await Model.find({ userID }, { _id: 1 });
+        await Model.deleteMany({ userID });
+        if (allUserGoalIDs.length) await Reminder.deleteMany({ connectedDocument: { $in: allUserGoalIDs } });
+    },
+
+    deleteOneByIdAndReminders: async function (Model, targetID) {
+        await Model.findByIdAndDelete(targetID);
+        await Reminder.deleteMany({ connectedDocument: targetID });
+    },
+
+
     getTierMaxMessage: function (PREFIX, commandUsed, thresholdValue, type, tier, supportsArchive = false) {
         return `You've ${supportsArchive ? "archived" : "created"} the **__maximum number of ${supportsArchive ? "archived " : ""}${type[0].toLowerCase()} entries__** (**${thresholdValue}**) `
             + `as a **Tier ${tier || 1} user** and cannot ${supportsArchive ? "archive" : "create"} any more ${type[0].toLowerCase()} entries!`
@@ -3771,6 +3787,19 @@ module.exports = {
             + `\n\`${PREFIX}${commandUsed} see${supportsArchive ? " archive" : ""} all\` - to **get** all of your ${type[1] ? type[1].toLowerCase() : "entries"} in a **.txt file**`
             + `\n\`${PREFIX}${commandUsed} delete${supportsArchive ? " archive" : ""} all\` - to **delete** all of your ${type[1] ? type[1].toLowerCase() : "entries"} to **make space**!`
             + `\n\n**-- OR --**\n\n**__Donate to support the developer__ to get __more storage__ for all of your entries**`;
+    },
+
+    getTierStarString: function (tier) {
+        tier = tier ? tier : 1;
+        var output = "";
+        for (i = 0; i < tier; i++) {
+            output += "🌟 ";
+        }
+        for (i = tier; i < 3; i++) {
+            output += "⭐ ";
+        }
+        output += `(${tier}/3)`;
+        return output;
     },
 
     premiumFooterText: "📞 Contact the developer for more details and any inquiries! (in the server below)\n👋 Join the Personal Development Pod (PD Bot Community): https://discord.gg/Czc3CSy"
