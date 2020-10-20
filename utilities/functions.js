@@ -32,10 +32,8 @@ module.exports = {
         delayTime = 60000, deleteDelay = 3000, confirmationInstructions = this.confirmationInstructions) {
         try {
             if (forceSkip === true) return true;
-            const proceedRegex = /\b(?:(?:y(?:es)?)|1)\b/i;
-            const cancelRegex = /\b(?:(?:no?)|0)\b/i;
             do {
-                const confirmation = await this.messageDataCollect(bot, message, confirmationMessage, embedTitle, "#FF0000",
+                let confirmation = await this.messageDataCollect(bot, message, confirmationMessage, embedTitle, "#FF0000",
                     delayTime, false, false, false, 0, null, confirmationInstructions, false);
                 if (!confirmation) return false;
                 else if (confirmation.startsWith(PREFIX) && confirmation !== PREFIX) {
@@ -43,12 +41,13 @@ module.exports = {
                     message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Command Entered:__**\n${confirmation}`);
                     return null;
                 }
-                else if (proceedRegex.test(confirmation)) {
+                confirmation = confirmation ? confirmation.toLowerCase() : false;
+                if (confirmation === "yes" || confirmation === "y" || confirmation === "1") {
                     this.sendMessageThenDelete(message, "Confirmed!", deleteDelay);
                     console.log(`Confirmation Value (in function): true`);
                     return true;
                 }
-                else if (cancelRegex.test(confirmation)) {
+                else if (confirmation === "no" || confirmation === "n" || confirmation === "0") {
                     console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
                     this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
                     return false;
