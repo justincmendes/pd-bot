@@ -280,7 +280,8 @@ module.exports = {
                 if (mastermindRoles) {
                     const permissions = message.guild.member(authorID).roles.cache.some(role => mastermindRoles.includes(role));
                     if (permissions) {
-                        let chooseUser = await fn.messageDataCollect(bot, message, "**Who are you writing the mastermind weekly reflection for?**\n(Type \`me\` or \`myself\` if it's you)",
+                        let chooseUser = await fn.messageDataCollect(bot, message, PREFIX,
+                            "**Who are you writing the mastermind weekly reflection for?**\n(Type \`me\` or \`myself\` if it's you)",
                             "Mastermind Entry: User", mastermindEmbedColour, 60000);
                         if (!chooseUser || chooseUser === "stop") return;
                         chooseUser = chooseUser.toLowerCase();

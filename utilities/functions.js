@@ -33,8 +33,8 @@ module.exports = {
         try {
             if (forceSkip === true) return true;
             do {
-                let confirmation = await this.messageDataCollect(bot, message, confirmationMessage, embedTitle, "#FF0000",
-                    delayTime, false, false, false, 0, null, confirmationInstructions, false);
+                let confirmation = await this.messageDataCollect(bot, message, PREFIX, confirmationMessage, embedTitle, "#FF0000",
+                    delayTime, false, false, true, false, 0, null, confirmationInstructions, false);
                 if (!confirmation) return false;
                 else if (confirmation.startsWith(PREFIX) && confirmation !== PREFIX) {
                     this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
@@ -167,6 +167,7 @@ module.exports = {
      * 
      * @param {Discord.Client} bot 
      * @param {Object} message 
+     * @param {String} PREFIX
      * @param {String} prompt 
      * @param {String} title Default: "Message Reaction"
      * @param {String} colour Default: "#ADD8E6"
@@ -178,9 +179,10 @@ module.exports = {
      * @param {String | null} imageURL Default: null (No image will be attached) 
      * @param {String | false} additionalFooterText Default: false
      * @param {Boolean} showStopInstructions Default: true
+     * @param {Boolean} allowCommandCalls Default: true
      */
-    messageDataCollect: async function (bot, message, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000, showNewLineInstructions = true,
-        getObject = false, deleteUserMessage = true, userMessageDeleteDelay = 0, imageURL = null, additionalFooterText = false, showStopInstructions = true) {
+    messageDataCollect: async function (bot, message, PREFIX, prompt, title = "Message Reaction", colour = this.defaultEmbedColour, delayTime = 60000, showNewLineInstructions = true,
+        getObject = false, allowCommandCalls = false, deleteUserMessage = true, userMessageDeleteDelay = 0, imageURL = null, additionalFooterText = false, showStopInstructions = true) {
         const userOriginal = message.author.id;
         var result;
         const deleteDelay = 3000;
@@ -213,8 +215,16 @@ module.exports = {
                         if (deleteUserMessage && message.channel.type !== 'dm') {
                             reacted.first().delete({ timeout: userMessageDeleteDelay });
                         }
+                        const finalMessage = reacted.first().content;
+                        if (!allowCommandCalls) {
+                            if (finalMessage.startsWith(PREFIX) && finalMessage !== PREFIX) {
+                                this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+                                message.reply(`For this command, any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${finalMessage}`);
+                                return false;
+                            }
+                        }
                         if (getObject) return reacted.first();
-                        else return reacted.first().content;
+                        else return finalMessage;
                     })
                     // When the user DOESN'T react!
                     .catch(err => {
@@ -535,13 +545,9 @@ module.exports = {
                 closeMessageCount: 0,
             };
             do {
-                targetIndex = await this.messageDataCollect(bot, message, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
-                    messageColour, delayTime, false, false, true, userMessageDeleteDelay);
-                if (!targetIndex) return;
-                else if (targetIndex.startsWith(PREFIX) && targetIndex !== PREFIX) {
-                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${targetIndex}`);
-                    targetIndex = "stop";
-                }
+                targetIndex = await this.messageDataCollect(bot, message, PREFIX, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
+                    messageColour, delayTime, false, false, false, true, userMessageDeleteDelay);
+                if (!targetIndex) return false;
                 const errorMessage = "**Please enter a number on the given list!**";
                 const timeout = 15000;
                 if (isNaN(targetIndex)) {
@@ -1705,7 +1711,7 @@ module.exports = {
         // 0 - All choices we're null or insufficient/not chosen.
         if (!decision) return false;
         else {
-            const RELATIVE_ADJUSTMENT = 900;
+            const RELATIVE_ADJUSTMENT = 1000;
             if (decision === 1 || decision === 5) messageCreatedTimestamp = Date.now() + RELATIVE_ADJUSTMENT;
             var timestampOut, timezoneString;
             switch (decision) {
@@ -2837,7 +2843,7 @@ module.exports = {
         editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**`;
         do {
             reset = false;
-            collectedEdit = await this.messageDataCollect(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            collectedEdit = await this.messageDataCollect(bot, message, PREFIX, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
             if (collectedEdit === "stop") return false;
             else if (!collectedEdit) return "back";
             else if (collectedEdit === "back") {
@@ -2918,15 +2924,11 @@ module.exports = {
         const originalEditMessagePrompt = editMessagePrompt;
         do {
             messageIndex++;
-            collectedEdit = await this.messageDataCollect(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`,
-                embedColour, 600000, false, false, true, 3000, false, `Character Count: ${userEdit.join('\n').length}`);
+            collectedEdit = await this.messageDataCollect(bot, message, PREFIX, editMessagePrompt, `${this.toTitleCase(type)}: Edit`,
+                embedColour, 600000, false, false, false, true, 3000, false, `Character Count: ${userEdit.join('\n').length}`);
             if (collectedEdit) {
-                if (collectedEdit.startsWith(PREFIX) && collectedEdit !== PREFIX) {
-                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${collectedEdit}`);
-                    collectedEdit = false;
-                }
                 // Spam Prevention:
-                else if (spamDetails && collectedEdit !== "0" && collectedEdit !== "1"
+                if (spamDetails && collectedEdit !== "0" && collectedEdit !== "1"
                     && collectedEdit !== "2" && collectedEdit !== "stop") {
                     const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
                     console.log({ messageSendDelay });
@@ -3059,14 +3061,14 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserEditNumber: async function (bot, message, field, maxNumber, type, numberMappingArray = false, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = '') {
+    getUserEditNumber: async function (bot, message, PREFIX, field, maxNumber, type, numberMappingArray = false, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = '') {
         var collectedEdit;
         const numberErrorMessage = `**Please Enter a Number from 1-${maxNumber}**`;
         let editMessagePrompt = `**What will you change your *${field}* to?:**`
         editMessagePrompt += `\n${additionalInstructions === '' ? `***(Please enter a number from \`1-${maxNumber}\`)***` : additionalInstructions}`
             + `\n\nType \`back\` to go **back to the main edit menu**`;
         while (true) {
-            collectedEdit = await this.messageDataCollect(bot, message, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
+            collectedEdit = await this.messageDataCollect(bot, message, PREFIX, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
             if (collectedEdit === "stop") return false;
             else if (!collectedEdit) return "back";
             // Check if the given message is a number
@@ -3323,7 +3325,8 @@ module.exports = {
         const userAddressPossessive = forSelf ? "your" : `<@!${targetUserID}>'s`;
         const userAddress = forSelf ? "you" : `<@!${targetUserID}>`;
         const generalAddressPossessive = forSelf ? "your" : "their";
-        const userTimezone = await this.messageDataCollect(bot, message, `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** OR **+/- UTC Offset**.\n\n(e.g. \"EST\" | \"+08:45\" | \"-9\")`,
+        const userTimezone = await this.messageDataCollect(bot, message, PREFIX,
+            `Please enter ${userAddressPossessive} __**current timezone**__ as an **abbreviation** OR **+/- UTC Offset**.\n\n(e.g. \"EST\" | \"+08:45\" | \"-9\")`,
             "User Settings: Setup", this.userSettingsEmbedColour, 300000, false);
         if (!userTimezone || userTimezone === "stop") return false;
         const userTimezoneOffset = this.getTimezoneOffset(userTimezone);
@@ -3497,7 +3500,7 @@ module.exports = {
         }
         do {
             reset = false;
-            collectedEdit = await this.messageDataCollect(bot, message, instructionPrompt, title, embedColour, 600000);
+            collectedEdit = await this.messageDataCollect(bot, message, PREFIX, instructionPrompt, title, embedColour, 600000);
             if (!collectedEdit || collectedEdit === "stop") return false;
             if (hasInstructions) {
                 if (instructionKeywords.includes(collectedEdit)) {
@@ -3539,15 +3542,11 @@ module.exports = {
         const originalPrompt = instructionPrompt;
         do {
             inputIndex++;
-            collectedEntry = await this.messageDataCollect(bot, message, instructionPrompt, title, embedColour, 600000,
-                false, false, true, 3000, false, `Character Count: ${finalEntry.join('\n').length}`);
+            collectedEntry = await this.messageDataCollect(bot, message, PREFIX, instructionPrompt, title, embedColour, 600000,
+                false, false, false, true, 3000, false, `Character Count: ${finalEntry.join('\n').length}`);
             if (collectedEntry) {
-                if (collectedEntry.startsWith(PREFIX) && collectedEntry !== PREFIX) {
-                    message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${collectedEntry}`);
-                    collectedEntry = false;
-                }
                 // Spam Prevention:
-                else if (spamDetails && collectedEntry !== "0" && collectedEntry !== "1"
+                if (spamDetails && collectedEntry !== "0" && collectedEntry !== "1"
                     && collectedEntry !== "2" && collectedEntry !== "stop") {
                     const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
                     console.log({ messageSendDelay });
@@ -3709,7 +3708,7 @@ module.exports = {
         var time;
         do {
             const initialTimestamp = Date.now();
-            time = await this.messageDataCollect(bot, message, `${instructions}${timeExamples ? `\n\n${timeExamples}` : ""}`, title, embedColour, dataCollectDelay, false);
+            time = await this.messageDataCollect(bot, message, PREFIX, `${instructions}${timeExamples ? `\n\n${timeExamples}` : ""}`, title, embedColour, dataCollectDelay, false);
             if (!time || time === "stop") return false;
             timeArgs = time.toLowerCase().split(/[\s\n]+/);
             time = this.timeCommandHandlerToUTC(forceFutureTime && timeArgs[0] !== "in" && timeArgs[0] !== "now" ?

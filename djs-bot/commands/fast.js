@@ -182,8 +182,8 @@ async function getFastPostEmbedArray(bot, message, PREFIX, fastData, forceSkip =
     do {
         postIndex++;
         console.log({ attachment });
-        collectedObject = await fn.messageDataCollect(bot, message, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
-            true, true, true, 3000, attachment, `Character Count: ${fastPost.join('\n').length}`);
+        collectedObject = await fn.messageDataCollect(bot, message, PREFIX, fastPostMessagePrompt, "Fast: Post Creation", fastEmbedColour, 1800000,
+            true, true, false, true, 3000, attachment, `Character Count: ${fastPost.join('\n').length}`);
 
         // If user types stop, messageDataCollect returns false:
         if (!collectedObject) {
@@ -505,23 +505,29 @@ function setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fast
  * @param {*} forceSkip 
  * In relative terms (NOT UTC)
  */
-async function getUserReminderEndTime(bot, message, PREFIX, startTimestamp, fastTimeHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
+async function getUserReminderEndTime(bot, message, PREFIX, fastTimeHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
     // Setup Reminder:
     let setReminder = true;
     var reminderEndTime;
     do {
         const reminderPrompt = "__**How long do you intend to fast?**__\nI will DM you **when your fast is done and an hour before it's done**"
             + "\n\nType `skip` to **start your fast without setting up an end of fast reminder**";
-        const userTimeInput = await fn.messageDataCollect(bot, message, reminderPrompt, "Fast: Duration", fastEmbedColour);
+        const userTimeInput = await fn.messageDataCollect(bot, message, PREFIX, reminderPrompt, "Fast: Duration", fastEmbedColour);
         if (userTimeInput === "skip") return undefined;
         if (userTimeInput === "stop" || userTimeInput === false) return false;
         // Undo the timezoneOffset to get the end time in UTC
-        const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/)
-        reminderEndTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, startTimestamp - HOUR_IN_MS * userTimezoneOffset,
+        const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
+        var intendedFastDuration;
+        const now = Date.now();
+        reminderEndTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now,
             userTimezoneOffset, userDaylightSavingSetting);
-        const intendedFastDuration = reminderEndTime - startTimestamp;
-        console.log({ userTimeInput, startTimestamp, reminderEndTime, intendedFastDuration });
-        if (reminderEndTime > startTimestamp && intendedFastDuration >= HOUR_IN_MS) setReminder = true;
+        if (reminderEndTime || reminderEndTime === 0) {
+            reminderEndTime -= HOUR_IN_MS * userTimezoneOffset;
+            intendedFastDuration = reminderEndTime - now;
+        }
+        else intendedFastDuration = false;
+        console.log({ userTimeInput, now, reminderEndTime, intendedFastDuration });
+        if (reminderEndTime - HOUR_IN_MS * userTimezoneOffset > now && intendedFastDuration >= HOUR_IN_MS) setReminder = true;
         else {
             setReminder = false;
             fn.sendReplyThenDelete(message, `**Please enter a proper time in the future __> 1 hour__!**...\n${fastTimeHelpMessage} for **valid time inputs!**`, 30000);
@@ -603,7 +609,7 @@ module.exports = {
                     `__**When did you start your fast?**__: Enter a Date/Time`, `Fast: Start Time`, false, fastEmbedColour, 300000, 60000, timeExamples);
                 if (!startTimestamp && startTimestamp !== 0) return;
                 // Setup Reminder:
-                const reminderEndTime = await getUserReminderEndTime(bot, message, PREFIX, startTimestamp, `Try \`${PREFIX}date\``, timezoneOffset, daylightSavingSetting, forceSkip);
+                const reminderEndTime = await getUserReminderEndTime(bot, message, PREFIX, `Try \`${PREFIX}date\``, timezoneOffset, daylightSavingSetting, forceSkip);
                 if (reminderEndTime === false) return;
 
                 let newFast = new Fast({
@@ -694,7 +700,7 @@ module.exports = {
                 else if (quickEnd === `✍`) {
                     // Send message and as for fastBreaker and upload a picture too
                     // which can be referenced later or sent to a server when DMs are handled!
-                    fastBreaker = await fn.messageDataCollect(bot, message, fastBreakerPrompt, "Fast: Fast Breaker", fastEmbedColour, 300000);
+                    fastBreaker = await fn.messageDataCollect(bot, message, PREFIX, fastBreakerPrompt, "Fast: Fast Breaker", fastEmbedColour, 300000);
                     console.log({ fastBreaker });
                     if (!fastBreaker || fastBreaker == "stop") return;
                     else if (fastBreaker == "skip") fastBreaker = null;
@@ -1345,7 +1351,7 @@ module.exports = {
                             {
                                 let moodEmojis = ["😖", "😔", "😐", "🙂", "😄"];
                                 fastEditMessagePrompt = "**__How did you feel during this past fast?__\n\nEnter a number from 1-5 (1 = worst, 5 = best)**\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖";
-                                userEdit = await fn.getUserEditNumber(bot, message, fieldToEdit, 5, type, moodEmojis, forceSkip, fastEmbedColour, fastEditMessagePrompt);
+                                userEdit = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, 5, type, moodEmojis, forceSkip, fastEmbedColour, fastEditMessagePrompt);
                                 break;
                             }
                         case 4:
@@ -1430,7 +1436,7 @@ module.exports = {
                                             await Reminder.deleteMany(connectedReminderQuery);
                                         }
                                         else {
-                                            reminderEndTime = await getUserReminderEndTime(bot, message, PREFIX, startTimestamp,
+                                            reminderEndTime = await getUserReminderEndTime(bot, message, PREFIX,
                                                 `Try \`${fieldToEditIndex === 0 ? `${PREFIX}${commandUsed} start help` : `${PREFIX}${commandUsed} end help`}\``,
                                                 timezoneOffset, daylightSavingSetting, forceSkip);
                                             if (!reminderEndTime && reminderEndTime !== 0) changeReminders = false;
