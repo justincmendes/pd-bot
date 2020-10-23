@@ -632,7 +632,7 @@ module.exports = {
         };
         var channel;
         do {
-            channel = await fn.messageDataCollect(bot, message, instructions, title, embedColour, dataCollectDelay, false);
+            channel = await fn.messageDataCollect(bot, message, PREFIX, instructions, title, embedColour, dataCollectDelay, false);
             if (!channel || channel === "stop") return false;
             else if (channel.startsWith(PREFIX) && channel !== PREFIX) {
                 message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${channel}`);
