@@ -452,10 +452,8 @@ module.exports = {
                 fn.sendErrorMessage(message, `**REMINDERS ${i + entriesToSkip + 1}**+ ONWARDS DO NOT EXIST...`);
                 break;
             }
-            var reminderData;
-            reminderData = this.reminderDocumentToDataArray(reminderArray[i]);
             const reminderString = `__**Reminder ${i + entriesToSkip + 1}:**__`
-                + `\n${this.reminderDataArrayToString(bot, reminderData, userTimezoneOffset)}`;
+                + `\n${this.reminderDocumentToString(bot, reminderArray[i], userTimezoneOffset)}`;
             if (toArray) remindersToString.push(reminderString);
             else {
                 remindersToString = `${remindersToString}${reminderString}`;
@@ -467,19 +465,14 @@ module.exports = {
         return remindersToString;
     },
 
-    reminderDocumentToDataArray: function (reminderDoc) {
-        const { isDM, isRecurring, _id, userID, channel, startTime, endTime, message, type, interval, guildID } = reminderDoc;
-        return [isDM, isRecurring, _id, userID, channel, startTime, endTime, message, type, interval, guildID];
-    },
-
-    reminderDataArrayToString: function (bot, reminderData, userTimezoneOffset = 0, replaceRoles = true) {
-        const [isDM, isRecurring, , , channel, startTime, endTime, message, type, interval, guildID] = reminderData;
+    reminderDocumentToString: function (bot, reminderDocument, userTimezoneOffset = 0, replaceRoles = true) {
+        const { isDM, isRecurring, channel, startTime, endTime, message, type, interval, guildID } = reminderDocument;
         const reminderType = type === "Reminder" ? "" : `, ${type}`;
         const typeString = "**Type:**" + (isRecurring ? " Repeating" : " One-Time") + reminderType + (isDM ? ", DM" : ", Channel");
         const intervalString = isRecurring ? `**Interval:** ${fn.millisecondsToTimeString(interval)}\n` : "";
         const channelName = isDM ? "" : `**Channel:** \#${bot.channels.cache.get(channel).name}\n`;
         const guildString = isDM ? "" : `**Guild:** ${bot.guilds.cache.get(guildID).name}\n`;
-        console.log({ reminderData });
+        console.log({ reminderDocument });
         return `${typeString}\n${intervalString}${guildString}${channelName}`
             + `**Start Time:** ${fn.timestampToDateString(startTime + HOUR_IN_MS * userTimezoneOffset)}`
             + `\n**End Time:** ${fn.timestampToDateString(endTime + HOUR_IN_MS * userTimezoneOffset)}`
@@ -578,18 +571,18 @@ module.exports = {
 
     getMostRecentReminder: async function (bot, userID, isRecurring, userTimezoneOffset, embedColour = reminderEmbedColour) {
         const recentReminderToString = `__**Reminder ${await this.getRecentReminderIndex(userID, isRecurring)}:**__`
-            + `\n${this.reminderDataArrayToString(bot,
-                this.reminderDocumentToDataArray(await this.getOneReminderByRecency(userID, 0, isRecurring)), userTimezoneOffset)}`;
+            + `\n${this.reminderDocumentToString(bot, await this.getOneReminderByRecency(userID, 0, isRecurring), userTimezoneOffset)}`;
         const reminderEmbed = fn.getMessageEmbed(recentReminderToString, `Reminder: See Recent Reminder`, embedColour);
         return (reminderEmbed);
     },
 
-    getUserFirstRecurringEndDuration: async function (bot, message, PREFIX, helpMessage, userTimezoneOffset, userDaylightSavingSetting, isRecurring) {
+    getUserFirstRecurringEndDuration: async function (bot, message, PREFIX, helpMessage, userTimezoneOffset,
+        userDaylightSavingSetting, isRecurring, timeExamples = fn.timeExamples) {
         var firstEndTime, error, startTimestamp;
         do {
             error = false;
             const reminderPrompt = `__**When do you intend to start the first ${isRecurring ? "recurring " : ""}reminder?**__`
-                + "\n\nType `skip` to **start it now**";
+                + `\n\n${timeExamples}\n\nType \`skip\` to **start it now**`;
             const userTimeInput = await fn.messageDataCollect(bot, message, PREFIX, reminderPrompt,
                 `${isRecurring ? "Repeat " : ""}Reminder: First Reminder`, isRecurring ? repeatEmbedColour : reminderEmbedColour);
             if (!userTimeInput || userTimeInput === "stop") return false;

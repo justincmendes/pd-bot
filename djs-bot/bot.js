@@ -66,7 +66,8 @@ bot.on("ready", async () => {
     bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
 
     // Reinstantiating the current reminders:
-    await rm.resetReminders(bot);
+    // await rm.resetReminders(bot);
+    // For Testing
 
     // //Generating Link
     //Method 1:
@@ -120,6 +121,8 @@ bot.on("message", async message => {
         PREFIX = guildSettings ? guildSettings.prefix : DEFAULT_PREFIX;
     }
     const isMention = message.content.startsWith(pdBotTag);
+
+    PREFIX = '?'; // For Testing
 
     // When the message does not start with prefix, do nothing
     if (!message.content.startsWith(PREFIX) && !isMention) return;
