@@ -479,11 +479,6 @@ module.exports = {
                     return message.reply(reminderActionHelpMessage);
                 }
                 else {
-                    var reminderFields = ["Type", "Send to (DM or Channel)", "Start Time", "End Time", "Message", "Repeat", "Interval"];
-                    let fieldsList = "";
-                    reminderFields.forEach((field, i) => {
-                        fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
-                    });
                     if (reminderIndex === "recent") {
                         pastNumberOfEntriesIndex = await rm.getRecentReminderIndex(authorID, false);
                     }
@@ -514,6 +509,14 @@ module.exports = {
                         if (!checkReminder) return;
                         let { channel, startTime, endTime, message: reminderMessage, isDM, isRecurring, interval,
                             type, connectedDocument, guildID, } = reminderDocument;
+
+                        var reminderFields = ["Type", "Send to (DM or Channel)", "Start Time", "End Time", "Message", "Repeat"];
+                        if (isRecurring) reminderFields = reminderFields.concat("Interval");
+                        let fieldsList = "";
+                        reminderFields.forEach((field, i) => {
+                            fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
+                        });
+
                         continueEdit = false;
                         showReminder = rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
                         // Field the user wants to edit
@@ -535,9 +538,11 @@ module.exports = {
                                 userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, reminderEmbedColour);
                                 break;
                             case 2:
+                                reminderEditMessagePrompt = `\n${fn.timeExamples}`;
                                 userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, reminderEmbedColour);
                                 break;
                             case 3:
+                                reminderEditMessagePrompt = `\n${fn.futureTimeExamples}`;
                                 userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, reminderEmbedColour);
                                 break;
                             // Reminder does not need a prompt explanation
@@ -551,7 +556,7 @@ module.exports = {
                                 break;
                             case 6:
                                 if (isRecurring === true) {
-                                    reminderEditMessagePrompt = `**Please enter the time you'd like in-between recurring reminders (interval):**`;
+                                    reminderEditMessagePrompt = `**Please enter the time you'd like in-between recurring reminders (interval):**\n\n${fn.intervalExamples}`;
                                     userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, reminderEmbedColour);
                                 }
                                 else userEdit = 0;

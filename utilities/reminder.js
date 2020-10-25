@@ -174,7 +174,9 @@ module.exports = {
                                 console.log({ complete });
                                 if (complete) {
                                     console.log("Updated Recurring Reminder in Database!");
-                                    if (bot.channels.cache.get(channel)) channelObject.send(message);
+                                    if (bot.channels.cache.get(channel) || bot.users.cache.get(userID)) {
+                                        channelObject.send(message);
+                                    }
                                     else this.deleteOneReminderByObjectID(reminderID);
                                     startTime = endTime;
                                     endTime += interval;
@@ -186,7 +188,9 @@ module.exports = {
                                                     startTime += interval;
                                                     endTime += interval;
                                                     console.log("Updated Recurring Reminder in Database!");
-                                                    if (bot.channels.cache.get(channel)) channelObject.send(message);
+                                                    if (bot.channels.cache.get(channel) || bot.users.cache.get(userID)) {
+                                                        channelObject.send(message);
+                                                    }
                                                     else this.deleteOneReminderByObjectID(reminderID);
                                                 }
                                                 else clearInterval(recurringReminder);
