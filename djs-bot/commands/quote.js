@@ -34,7 +34,7 @@ module.exports = {
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         quoteUsageMessage = fn.getMessageEmbed(quoteUsageMessage, "Quote: Help", quoteEmbedColour);
         if (quoteCommand === "help") return message.channel.send(quoteUsageMessage);
-        else if (quoteCommand === "setup" || quoteCommand === "start" || quoteCommand === "st" || quoteCommand === "s"
+        else if (quoteCommand === "setup" || quoteCommand === "set" || quoteCommand === "start" || quoteCommand === "st" || quoteCommand === "s"
             || quoteCommand === "settings" || quoteCommand === "setting" || quoteCommand === "configuration" || quoteCommand === "config"
             || quoteCommand === "c" || quoteCommand === "edit" || quoteCommand === "ed" || quoteCommand === "e"
             || quoteCommand === "change" || quoteCommand === "ch") {
