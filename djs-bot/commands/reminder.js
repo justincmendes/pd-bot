@@ -573,9 +573,9 @@ module.exports = {
                         else if (userEdit !== "back") {
                             // Parse User Edit
                             if (fieldToEditIndex === 2 || fieldToEditIndex === 3) {
-                                const now = Date.now();
                                 userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                                 console.log({ userEdit });
+                                const now = Date.now();
                                 reminderData[fieldToEditIndex + 3] = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavingsSetting);
                                 if (!reminderData[fieldToEditIndex + 3]) {
                                     fn.sendReplyThenDelete(message, `**INVALID TIME**... Try** \`${PREFIX}date\` **for **help with dates and times**`, 60000);
@@ -762,10 +762,9 @@ module.exports = {
                                             break;
                                     }
                                     console.log({ continueEdit, userEdit, newReminder });
-                                    currentTimestamp = Date.now();
                                     reminderView = await Reminder.findById(reminderTargetID);
                                     if (reminderView) {
-                                        await rm.sendReminderByObject(bot, currentTimestamp, newReminder);
+                                        await rm.sendReminderByObject(bot, newReminder);
                                         pastNumberOfEntriesIndex = indexByRecency ? await rm.getReminderIndexByRecency(authorID, reminderTargetID, reminderData[1]) : await rm.getReminderIndexByEndTime(authorID, reminderTargetID, reminderData[1]);
                                         console.log({ reminderView, reminderData, reminderTargetID, fieldToEditIndex });
                                         reminderData = rm.reminderDocumentToDataArray(reminderView);
@@ -830,7 +829,7 @@ module.exports = {
                 reminderEmbedColour, 300000, 60000, futureTimeExamples);
             if (!reminderEndTime) return;
             else {
-                currentTimestamp = Date.now();
+                currentTimestamp = fn.getNowFlooredToSecond();
                 reminderEndTime -= HOUR_IN_MS * timezoneOffset;
             }
 
@@ -840,9 +839,8 @@ module.exports = {
             const confirmCreation = await fn.getUserConfirmation(bot, message, PREFIX, confirmCreationMessage, forceSkip, "Reminder: Confirm Creation", 180000);
             if (!confirmCreation) return;
             else {
-                currentTimestamp = Date.now();
                 if (isDM) {
-                    await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp,
+                    await rm.setNewDMReminder(bot, authorID, currentTimestamp,
                         reminderEndTime, reminderMessage, reminderType, false, false, false, reminderEmbedColour);
                 }
                 else {
@@ -850,12 +848,12 @@ module.exports = {
                     const userPermissions = bot.channels.cache.get(channelID).permissionsFor(authorID);
                     console.log({ userPermissions });
                     if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL")) {
-                        await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp, currentTimestamp,
+                        await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp,
                             reminderEndTime, reminderMessage, reminderType, false, false, false);
                     }
                     else return message.reply(`You are **not authorized to send messages** to that channel...`);
                 }
-                duration = reminderEndTime - currentTimestamp;
+                duration = reminderEndTime - fn.getNowFlooredToSecond();
                 duration = fn.millisecondsToTimeString(duration > 0 ? duration : 0);
                 return message.reply(`Your **one-time reminder** has been set to trigger in **${duration}** from now!`);
             }

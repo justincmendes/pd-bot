@@ -11,11 +11,13 @@
 // and allow for environment variables when hosting
 require("dotenv").config();
 const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.DASHBOARD_CLIENT_ID;
 const DEFAULT_PREFIX = '?';
 const Discord = require("discord.js");
 const bot = new Discord.Client({ partials: ["MESSAGE", "CHANNEL", "REACTION"] });
 const fn = require("../utilities/functions");
 const rm = require("../utilities/reminder");
+const hb = require("../utilities/habit");
 const fs = require("fs");
 bot.commands = new Discord.Collection();
 const cooldowns = new Discord.Collection();
@@ -27,7 +29,7 @@ const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
 bot.mongoose = require("../utilities/mongoose");
 
-const pdBotTag = '<@!734097718078603284>';
+const pdBotTag = `<@!${CLIENT_ID}>`;
 const timeoutDurations = [60000, 180000, 540000, 900000] // in ms, max level: 4
 const COMMAND_SPAM_NUMBER = 15;
 const CLOSE_COMMAND_SPAM_NUMBER = 8;
@@ -107,6 +109,7 @@ bot.on("message", async message => {
         if (userSpamCheck.isRateLimited) return;
     }
 
+
     var PREFIX;
     if (message.channel.type === 'dm') {
         PREFIX = DEFAULT_PREFIX;
@@ -149,7 +152,7 @@ bot.on("message", async message => {
     const spamDetails = spamRecords.get(message.author.id);
     if (spamDetails) {
         spamDetails.messageCount++;
-        const messageSendDelay = message.createdTimestamp - spamDetails.lastTimestamp || 0;
+        const messageSendDelay = message.createdTimestamp - (spamDetails.lastTimestamp || 0);
         spamDetails.lastTimestamp = message.createdTimestamp;
         if (messageSendDelay < CLOSE_COMMAND_DELAY) {
             spamDetails.closeMessageCount++;

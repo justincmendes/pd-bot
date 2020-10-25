@@ -1,25 +1,29 @@
 const mongoose = require("mongoose");
 // const Reminder = require("./reminder");
 
-// **Finalize the interaction between the log and countHabits
-
 // Last time tracked/checked will be the most recent of: log
 // Can map log to checkInMessage and show user all of the past logs!
 // Can map log to Total Tracked to show the users the days they hit the goal!
 
 /**
- * Useful Metrics to Calculate:
+ * Useful Metrics to Calculate: These metrics can be calculated by looking at the habit object
  * totalTracked
  * totalMissed
  * totalSkip
  * totalDays
+ * allTimeAvg (checked + skipped / total) - how many were tracked
+ * 
  * **Gives week, month and year averages:
  * pastWeek (since weekly cron time)
  * pastMonth
  * pastYear
- * pastXDays (most common 7 and 30)
- * allTimeAvg (checked + skipped / total)
+ * pastXDays (most common 7 and 30)* - to be calculated
  */
+
+// Can calculate as counting the number of logs found from 
+// the last Habit Cron expected timestamp (saves space)
+// However, this reduces the speed of the habit command (cached data vs. reading and computation)
+
 const habitSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     userID: {
@@ -51,6 +55,10 @@ const habitSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: false,
     },
+    nextCron: {
+        type: Number,
+        required: true,
+    },
     // For Habits that have a daily/general counter!
     settings: {
         isCountType: {
@@ -58,33 +66,85 @@ const habitSchema = mongoose.Schema({
             required: true,
             default: false,
         },
+        countMetric: {
+            type: String,
+            required: false,
+        },
         isWeeklyType: {
             type: Boolean,
             required: false,
         },
+        cronPeriods: {
+            type: Number,
+            required: false,
+        },
         // To automatically mark complete or incomplete on day!
         // For streaks - auto-mark completions
-        autoMarkCountGoal: {
-            type: Boolean,
+        // 0. None
+        // 1. Auto-mark streak (each cron)
+        // 2. Auto-mark based on count goal
+        autoLogType: {
+            type: Number,
             required: false,
         },
         // Count Goals: To be used in tandem with auto-mark
         // Or just have stored for the user to have the target set
-        dailyGoal: {
-            type: Number,
-            required: false,
-        },
+        // 0. None
+        // 1. Daily
+        // 2. Weekly
         // If it's a cumulative goal instead of a daily number
-        totalGoal: {
+        // 3. Total
+        countGoalType: {
             type: Number,
             required: false,
         },
-        connectedType: {
+        countGoal: {
             type: Number,
+            required: false,
+        },
+        integration: {
+            name: {
+                type: String,
+                required: false,
+            },
+            type: {
+                type: Number,
+                required: false,
+            },
+            amount: {
+                type: Number,
+                required: false,
+            },
             required: false,
         },
 
+
     },
+    currentLog: {
+        type: Number,
+        required: true,
+        default: 0,
+    },
+    pastWeek: {
+        type: Number,
+        required: true,
+        default: 0,
+    },
+    pastMonth: {
+        type: Number,
+        required: true,
+        default: 0,
+    },
+    pastYear: {
+        type: Number,
+        required: true,
+        default: 0,
+    },
+    lastEdited: {
+        type: Number,
+        required: true,
+        default: null,
+    }
 
 });
 
@@ -92,34 +152,5 @@ const habitSchema = mongoose.Schema({
 //     Reminder.collection.deleteMany({ connectedDocument: this._id }, next);
 //     console.log(`Habit: Removing Associated Reminders (${this._id})...`);
 // });
-
-// These metrics can be calculated by looking at the habit object
-// totalTracked: Number,
-// totalMissed: Number,
-// totalSkip: Number,
-// totalDays: Number,
-
-
-// Can calculate as counting the number of logs found from 
-// the last Habit Cron expected timestamp (saves space)
-
-// Past 7 Days since weekly cron
-// pastWeek: Number,
-
-// Past 7 Days
-// pastSeven: Number,
-
-// Past 30 Days
-// pastThirty: Number,
-
-// How many were tracked
-// allTimeAvg: Number,
-
-// monthAvg: Number,
-
-// **FOUND IN USER SETTINGS**
-// Relative to January 1, 1970 00:00:00 UTC.
-// dailyCronTime: Number,
-// weeklyCronDay: Number,
 
 module.exports = mongoose.model("Habit", habitSchema, "habits");

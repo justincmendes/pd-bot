@@ -127,7 +127,7 @@ module.exports = {
                                                 interval = false;
                                             }
                                             else {
-                                                now = Date.now();
+                                                now = fn.getNowFlooredToSecond();
                                                 interval = endTime - now;
                                             }
                                             if (!interval) {
@@ -147,7 +147,7 @@ module.exports = {
                                                 if (!quoteTrigger) return;
                                                 else {
                                                     const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
-                                                    currentTimestamp = Date.now();
+                                                    currentTimestamp = fn.getNowFlooredToSecond();
                                                     if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                                     else {
                                                         quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
@@ -203,7 +203,7 @@ module.exports = {
                             {
                                 let nextQuote;
                                 const isCurrent = userEdit === "skip" || userEdit === "now";
-                                currentTimestamp = Date.now();
+                                currentTimestamp = fn.getNowFlooredToSecond();
                                 if (isCurrent) nextQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                 else {
                                     userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
@@ -248,7 +248,7 @@ module.exports = {
                                 }
                                 else {
                                     endInterval -= HOUR_IN_MS * timezoneOffset;
-                                    currentTimestamp = Date.now();
+                                    currentTimestamp = fn.getNowFlooredToSecond();
                                     const updatedInterval = endInterval - currentTimestamp;
                                     if (updatedInterval < HOUR_IN_MS) {
                                         fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
@@ -269,7 +269,7 @@ module.exports = {
                                             }
                                             else {
                                                 const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
-                                                currentTimestamp = Date.now();
+                                                currentTimestamp = fn.getNowFlooredToSecond();
                                                 if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                                 else {
                                                     quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
@@ -310,14 +310,14 @@ module.exports = {
                 else continueEdit = true;
                 if (!continueEdit) {
                     if (userEdit) {
+                        const currentTimestamp = fn.getNowFlooredToSecond();
                         await Reminder.deleteMany({ userID: authorID, type: "Quote", isDM: true, });
-                        const currentTimestamp = Date.now();
                         var quoteIndex, currentQuote;
                         while (!currentQuote) {
                             quoteIndex = Math.round(Math.random() * quotes.length);
                             currentQuote = quotes[quoteIndex].message;
                         }
-                        await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp, quoteSettings.nextQuote,
+                        await rm.setNewDMReminder(bot, authorID, currentTimestamp, quoteSettings.nextQuote,
                             currentQuote, "Quote", false, true, quoteSettings.quoteInterval, quoteEmbedColour);
                     }
                     const continueEditMessage = `Do you want to continue **editing your quote settings?**\n\n${quoteDocumentToString(quoteSettings, timezoneOffset)}`;

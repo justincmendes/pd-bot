@@ -579,10 +579,10 @@ module.exports = {
                         else if (userEdit !== "back") {
                             // Parse User Edit
                             if (fieldToEditIndex === 2 || fieldToEditIndex === 3) {
-                                const timestamp = Date.now();
                                 userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                                 console.log({ userEdit });
-                                reminderData[fieldToEditIndex + 3] = fn.timeCommandHandlerToUTC(userEdit, timestamp, timezoneOffset, daylightSavingsSetting);
+                                const now = Date.now();
+                                reminderData[fieldToEditIndex + 3] = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavingsSetting);
                                 if (!reminderData[fieldToEditIndex + 3]) {
                                     fn.sendReplyThenDelete(message, `**INVALID TIME**... ${repeatHelpMessage}`, 60000);
                                     continueEdit = true;
@@ -774,10 +774,9 @@ module.exports = {
                                             break;
                                     }
                                     console.log({ continueEdit, userEdit, newReminder });
-                                    currentTimestamp = Date.now();
                                     reminderView = await Reminder.findById(reminderTargetID);
                                     if (reminderView) {
-                                        await rm.sendReminderByObject(bot, currentTimestamp, newReminder);
+                                        await rm.sendReminderByObject(bot, newReminder);
                                         pastNumberOfEntriesIndex = indexByRecency ? await rm.getReminderIndexByRecency(authorID, reminderTargetID, reminderData[1]) : await rm.getReminderIndexByEndTime(authorID, reminderTargetID, reminderData[1]);
                                         console.log({ reminderView, reminderData, reminderTargetID, fieldToEditIndex });
                                         reminderData = rm.reminderDocumentToDataArray(reminderView);
@@ -840,7 +839,7 @@ module.exports = {
             let duration = await rm.getUserFirstRecurringEndDuration(bot, message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
             console.log({ duration });
             if (!duration && duration !== 0) return;
-            const currentTimestamp = Date.now();
+            const currentTimestamp = fn.getNowFlooredToSecond();
             duration = duration > 0 ? duration : 0;
             const confirmCreationMessage = `Are you sure you want to set the following **recurring reminder** to send -\n**in ${channel} after ${fn.millisecondsToTimeString(duration)} from now**`
                 + ` (and repeat every **${fn.millisecondsToTimeString(interval)}**):\n\n${repeatMessage}`;
@@ -848,7 +847,7 @@ module.exports = {
             if (!confirmCreation) return;
             else {
                 if (isDM) {
-                    await rm.setNewDMReminder(bot, authorID, currentTimestamp, currentTimestamp,
+                    await rm.setNewDMReminder(bot, authorID, currentTimestamp,
                         currentTimestamp + duration, repeatMessage, reminderType, true, true, interval);
                 }
                 else {
@@ -856,12 +855,12 @@ module.exports = {
                     const userPermissions = bot.channels.cache.get(channelID).permissionsFor(authorID);
                     console.log({ userPermissions });
                     if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL")) {
-                        await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp, currentTimestamp,
+                        await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp,
                             currentTimestamp + duration, repeatMessage, reminderType, true, true, interval);
                     }
                     else return message.reply(`You are **not authorized to send messages** to that channel...`);
                 }
-                duration = currentTimestamp + duration - Date.now();
+                duration = currentTimestamp + duration - fn.getNowFlooredToSecond();
                 return message.reply(`Your **recurring reminder** has been set to trigger in **${fn.millisecondsToTimeString(duration)}** from now!`);
             }
         }

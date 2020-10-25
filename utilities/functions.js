@@ -6,9 +6,19 @@ const mongoose = require('mongoose');
 const Reminder = require('../djs-bot/database/schemas/reminder');
 const User = require('../djs-bot/database/schemas/user');
 const Guild = require('../djs-bot/database/schemas/guildsettings');
-const DEFAULT_PREFIX = '?';
-const TIMEOUT_MS = 375
 require("dotenv").config();
+
+const DEFAULT_PREFIX = '?';
+const TIMEOUT_MS = 375;
+// Timescale Constants
+const SECOND_IN_MS = 1000;
+const MINUTE_IN_MS = 60000;
+const HOUR_IN_MS = 3.6e+6;
+const DAY_IN_MS = 8.64e+7;
+const WEEK_IN_MS = 6.048e+8;
+const MONTH_IN_MS = 2.628e+9;
+// const YEAR_IN_MS = DAY_IN_MS * 365;
+const YEAR_IN_MS = 3.154e+10;
 
 // Private Function Declarations
 
@@ -28,28 +38,31 @@ module.exports = {
         }
     },
 
-    getUserConfirmation: async function (bot, message, PREFIX, confirmationMessage, forceSkip = false, embedTitle = "Confirmation",
+    getUserConfirmation: async function (bot, message, PREFIX, confirmationPrompt, forceSkip = false, embedTitle = "Confirmation",
         delayTime = 60000, deleteDelay = 3000, confirmationInstructions = this.confirmationInstructions) {
         try {
             if (forceSkip === true) return true;
             do {
-                let confirmation = await this.messageDataCollect(bot, message, PREFIX, confirmationMessage, embedTitle, "#FF0000",
-                    delayTime, false, false, true, false, 0, null, confirmationInstructions, false);
+                let confirmation = await this.messageDataCollect(bot, message, PREFIX, confirmationPrompt, embedTitle, "#FF0000",
+                    delayTime, false, true, false, false, 0, null, confirmationInstructions, false);
                 if (!confirmation) return false;
-                else if (confirmation.startsWith(PREFIX) && confirmation !== PREFIX) {
+                let confirmationMessage = confirmation.content;
+                if (confirmationMessage.startsWith(PREFIX) && confirmationMessage !== PREFIX) {
                     this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                    message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Command Entered:__**\n${confirmation}`);
+                    message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Command Entered:__**\n${confirmationMessage}`);
                     return null;
                 }
-                confirmation = confirmation ? confirmation.toLowerCase() : false;
-                if (confirmation === "yes" || confirmation === "y" || confirmation === "1") {
+                confirmationMessage = confirmationMessage ? confirmationMessage.toLowerCase() : false;
+                if (confirmationMessage === "yes" || confirmationMessage === "y" || confirmationMessage === "1") {
                     this.sendMessageThenDelete(message, "Confirmed!", deleteDelay);
                     console.log(`Confirmation Value (in function): true`);
+                    confirmation.delete()
                     return true;
                 }
-                else if (confirmation === "no" || confirmation === "n" || confirmation === "0") {
+                else if (confirmationMessage === "no" || confirmationMessage === "n" || confirmationMessage === "0" || confirmationMessage === "stop") {
                     console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
                     this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+                    confirmation.delete()
                     return false;
                 }
                 else continue;
@@ -547,7 +560,9 @@ module.exports = {
             do {
                 targetIndex = await this.messageDataCollect(bot, message, PREFIX, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
                     messageColour, delayTime, false, false, false, true, userMessageDeleteDelay);
+                var currentTimestamp;
                 if (!targetIndex) return false;
+                else currentTimestamp = Date.now();
                 const errorMessage = "**Please enter a number on the given list!**";
                 const timeout = 15000;
                 if (isNaN(targetIndex)) {
@@ -566,9 +581,9 @@ module.exports = {
                 }
                 // Spam Prevention:
                 if (spamDetails) {
-                    const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
+                    const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
                     console.log({ messageSendDelay });
-                    spamDetails.lastTimestamp = Date.now();
+                    spamDetails.lastTimestamp = currentTimestamp || Date.now();
                     if (messageSendDelay < 2500) {
                         spamDetails.closeMessageCount++;
                     }
@@ -680,7 +695,6 @@ module.exports = {
      * @param {Number} ordinalDayOfWeek First, Second, Third, Fourth...
      */
     getUTCTimestampOfDayOfWeek: function (year, targetMonth, targetDayOfWeek, ordinalDayOfWeek) {
-        const DAY_IN_MS = this.getTimeScaleToMultiplyInMs("day");
         const WEEK_IN_MS = DAY_IN_MS * 7;
         const startOfMonth = new Date(year, targetMonth);
         let targetDate = startOfMonth.getTime();
@@ -700,7 +714,6 @@ module.exports = {
     getDaylightSavingTimeStartAndEndTimestampInMs: function (targetTimestamp) {
         if (isNaN(targetTimestamp)) return false;
         // Step 1: Convert the timestamp to since since Jan 1, xxxx (of the given timestamp's year!)
-        const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         const targetDate = new Date(targetTimestamp);
         const targetYear = targetDate.getUTCFullYear();
         // Step 2: Find the timestamp of the second Sunday of March at 2:00AM
@@ -714,7 +727,7 @@ module.exports = {
 
     /**
      * 
-     * @param {Number} targetTimestamp UTC Timestamp to be checked for falling within UTC Daylight Saving Time
+     * @param {Number} targetTimestamp Timezone Adjusted Timestamp to be checked for falling within UTC Daylight Saving Time
      * @param {Boolean} userDaylightSavingSetting If the user opted for having Daylight Saving Time adjustments
      */
     isDaylightSavingTime: function (targetTimestamp, userDaylightSavingSetting) {
@@ -743,7 +756,6 @@ module.exports = {
     },
 
     getProperDateAndTimeArray: function (dateTimeArray, adjustedArgs, timezoneOffset, dayYearTimeOffset = 0) {
-        const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         const yearIncluded = !!(dateTimeArray[2 + dayYearTimeOffset]);
         const dayIndex = this.getNthNumberIndex(adjustedArgs, 1 + dayYearTimeOffset);
         const extractedDay = adjustedArgs[dayIndex];
@@ -792,8 +804,6 @@ module.exports = {
             }
         }
         else {
-            // **POTENTIAL PROBLEM/ISSUE** - the year will be off at New Year's when different people are in different
-            // years depending on their timezone offset
             year = new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear();
             if (day !== dateTimeArray[2]) {
                 const extractedTime = dateTimeArray[2].replace(day, "");
@@ -1668,11 +1678,11 @@ module.exports = {
     // Using Regular Expressions
     // Assumes that the userTimezone is already daylight-savings adjusted
     timeCommandHandlerToUTC: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
+        const startTimestamp = Date.now();
         if (!Array.isArray(args) && typeof args === 'string') {
             args = args.toLowerCase().split(/[\s\n]+/);
         }
 
-        const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         if (args[0].toLowerCase() === "now") {
             return this.getUTCOffsetAdjustedTimestamp(messageCreatedTimestamp, userTimezone, userDaylightSavingSetting);
         }
@@ -1711,7 +1721,7 @@ module.exports = {
         // 0 - All choices we're null or insufficient/not chosen.
         if (!decision) return false;
         else {
-            const RELATIVE_ADJUSTMENT = 1000;
+            const RELATIVE_ADJUSTMENT = Date.now() - startTimestamp;
             if (decision === 1 || decision === 5) messageCreatedTimestamp = Date.now() + RELATIVE_ADJUSTMENT;
             var timestampOut, timezoneString;
             switch (decision) {
@@ -1780,7 +1790,6 @@ module.exports = {
                             // Days and Weeks:
                             else {
                                 if (argsHaveDefinedTime) {
-                                    const DAY_IN_MS = this.getTimeScaleToMultiplyInMs("day");
                                     timeDifference += DAY_IN_MS + timeAdjustment - this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone);
                                 }
                             }
@@ -1834,7 +1843,7 @@ module.exports = {
                         if (!properDateTimeArray) return false;
 
                         // Now deal with the validity of the given date and time
-                        const yearMonthDay = this.getValidYearMonthDay(properDateTimeArray[0], absoluteTimeTest[1], properDateTimeArray[1]);
+                        const yearMonthDay = this.getValidYearMonthDay(properDateTimeArray[0], absoluteTimeTest[1], properDateTimeArray[1], userTimezone);
                         console.log({ yearMonthDay });
                         if (!yearMonthDay) return false;
                         const [year, month, day] = yearMonthDay;
@@ -1858,7 +1867,7 @@ module.exports = {
                             if (!properDateTimeArray) return false;
 
                             // Now deal with the validity of the given date and time
-                            const yearMonthDay = this.getValidYearMonthDay(properDateTimeArray[0], monthTimeTest[1], properDateTimeArray[1]);
+                            const yearMonthDay = this.getValidYearMonthDay(properDateTimeArray[0], monthTimeTest[1], properDateTimeArray[1], userTimezone);
                             console.log({ yearMonthDay });
                             if (!yearMonthDay) return false;
                             const [year, month, day] = yearMonthDay;
@@ -1913,20 +1922,31 @@ module.exports = {
 
         console.log({ timestampOut, timezoneString, userTimezone, userDaylightSavingSetting });
         if (timestampOut === undefined || isNaN(timestampOut)) timestampOut === false;
+        // Round down to the nearest second
+        else timestampOut = this.floorToNearestThousand(timestampOut);
         return timestampOut;
+    },
+
+    floorToNearestThousand: function (number) {
+        return Math.floor(number / 1000) * 1000;
+    },
+
+    getNowFlooredToSecond: function () {
+        return this.floorToNearestThousand(Date.now());
     },
 
     /**
      * 
-     * @param {number} year 
-     * @param {number | string} month 
-     * @param {number} day 
+     * @param {Number} year 
+     * @param {Number | string} month 
+     * @param {Number} day 
+     * @param {Number} timezoneOffset
      */
-    getValidYearMonthDay: function (year, month, day) {
+    getValidYearMonthDay: function (year, month, day, timezoneOffset) {
         year = parseInt(year);
         if (year < 0) return false;
         if (year <= 99) {
-            const currentMillennium = Math.floor((new Date().getUTCFullYear()) / 1000) * 1000;
+            const currentMillennium = Math.floor((new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()) / 1000) * 1000;
             year += currentMillennium;
         }
         console.log({ year });
@@ -2058,6 +2078,16 @@ module.exports = {
         else false;
     },
 
+    getDayOfYear: function (timestamp) {
+        const date = new Date(timestamp);
+        var dayCount = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+        var month = date.getUTCMonth();
+        var day = date.getUTCDate();
+        var dayOfYear = dayCount[month] + day;
+        if (month > 1 && this.isLeapYear(date.getUTCFullYear())) dayOfYear++;
+        return dayOfYear;
+    },
+
     getUTCMonthFromMonthString: function (monthString) {
         monthString = monthString.toLowerCase();
         var month;
@@ -2180,7 +2210,6 @@ module.exports = {
             if (!targetDayOfWeek && targetDayOfWeek !== 0) return false;
 
             // Get how far the relative day of week is from the current day of the week
-            const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
             let currentDate = new Date(Date.now() + timezone * HOUR_IN_MS);
             let currentDayOfWeek = currentDate.getUTCDay();
             console.log({ currentDate, currentDayOfWeek, targetDayOfWeek });
@@ -2223,17 +2252,14 @@ module.exports = {
      * @param {number} milliseconds Give the a time in milliseconds to be split into hours, minutes, seconds, and remaining milliseconds
      */
     getHoursMinutesSecondsMillisecondsArray: function (milliseconds) {
-        const MS_PER_HOUR = this.getTimeScaleToMultiplyInMs("hour");
-        const MS_PER_MINUTE = this.getTimeScaleToMultiplyInMs("minute");
-        const MS_PER_SECOND = this.getTimeScaleToMultiplyInMs("second");
-        const hours = Math.floor(milliseconds / MS_PER_HOUR);
-        const minutes = Math.floor((milliseconds - MS_PER_HOUR * hours) / MS_PER_MINUTE);
-        const seconds = Math.floor((milliseconds - MS_PER_HOUR * hours - MS_PER_MINUTE * minutes) / MS_PER_SECOND);
-        const ms = milliseconds - MS_PER_HOUR * hours - MS_PER_MINUTE * minutes - MS_PER_SECOND * seconds;
+        const hours = Math.floor(milliseconds / HOUR_IN_MS);
+        const minutes = Math.floor((milliseconds - HOUR_IN_MS * hours) / MINUTE_IN_MS);
+        const seconds = Math.floor((milliseconds - HOUR_IN_MS * hours - MINUTE_IN_MS * minutes) / SECOND_IN_MS);
+        const ms = milliseconds - HOUR_IN_MS * hours - MINUTE_IN_MS * minutes - SECOND_IN_MS * seconds;
         return [hours, minutes, seconds, ms];
     },
 
-    timestampToDateString: function (timestamp, showTime = true, showDayOfWeek = false, monthInText = false) {
+    timestampToDateString: function (timestamp, showTime = true, showDayOfWeek = true, monthInText = true) {
         if (timestamp === undefined || timestamp === null || timestamp === false) return null;
         const date = new Date(timestamp);
         const year = date.getUTCFullYear();
@@ -2289,7 +2315,6 @@ module.exports = {
      */
     getUTCOffsetAdjustedTimestamp: function (timestamp, userDefaultTimezone, userDaylightSavingSetting, timezone = undefined) {
         if (timestamp === undefined || timestamp === null) return undefined;
-        const HOUR_IN_MS = this.getTimeScaleToMultiplyInMs("hour");
         var timezoneOffset;
         timezoneOffset = timezone ? this.getTimezoneOffset(timezone) : userDefaultTimezone;
         console.log({ timestamp, timezoneOffset });
@@ -2426,14 +2451,6 @@ module.exports = {
     },
 
     getTimeScaleToMultiplyInMs: function (relativeTimeScale) {
-        const SECOND_IN_MS = 1000;
-        const MINUTE_IN_MS = 60000;
-        const HOUR_IN_MS = 3.6e+6;
-        const DAY_IN_MS = 8.64e+7;
-        const WEEK_IN_MS = 6.048e+8;
-        const MONTH_IN_MS = 2.628e+9;
-        // const YEAR_IN_MS = DAY_IN_MS * 365;
-        const YEAR_IN_MS = 3.154e+10;
         var timeScaleToMultiply;
         relativeTimeScale = relativeTimeScale.toLowerCase();
         // First Letter Switch
@@ -2484,8 +2501,6 @@ module.exports = {
 
     // Assuming the militaryTimeString is correctly formatted.
     getTimePastMidnightInMs: function (militaryTimeString) {
-        const HOUR_IN_MS = 3.6e+6;
-        const MINUTE_IN_MS = 60000;
         var timePastMidnight = 0;
         const timeArray = this.getMilitaryTimeHoursAndMinsArray(militaryTimeString);
         timePastMidnight += parseInt(timeArray[1]) * HOUR_IN_MS;
@@ -2495,8 +2510,6 @@ module.exports = {
     },
 
     getTimeSinceMidnightInMsUTC: function (timeInMS, UTCHourOffset = 0) {
-        const DAY_IN_MS = 8.64e+7;
-        const HOUR_IN_MS = 3.6e+6;
         const timePastMidnight = Math.abs(timeInMS) % DAY_IN_MS;
         console.log({ timePastMidnight });
         return (DAY_IN_MS + timePastMidnight + (HOUR_IN_MS * parseInt(UTCHourOffset)) % DAY_IN_MS);
@@ -2566,9 +2579,8 @@ module.exports = {
     },
 
     msToTimeFromMidnight: function (milliseconds, inMilitaryTime = false) {
-        const defaultTime = "00:00:00";
+        const defaultTime = inMilitaryTime ? "00:00:00" : "12:00 AM";
         if (isNaN(milliseconds)) return defaultTime;
-        const DAY_IN_MS = this.getTimeScaleToMultiplyInMs("day");
         milliseconds = milliseconds % DAY_IN_MS;
         let [hours, mins, seconds,] = this.getHoursMinutesSecondsMillisecondsArray(milliseconds);
         var timeString;
@@ -2926,29 +2938,9 @@ module.exports = {
             messageIndex++;
             collectedEdit = await this.messageDataCollect(bot, message, PREFIX, editMessagePrompt, `${this.toTitleCase(type)}: Edit`,
                 embedColour, 600000, false, false, false, true, 3000, false, `Character Count: ${userEdit.join('\n').length}`);
-            if (collectedEdit) {
-                // Spam Prevention:
-                if (spamDetails && collectedEdit !== "0" && collectedEdit !== "1"
-                    && collectedEdit !== "2" && collectedEdit !== "stop") {
-                    const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
-                    console.log({ messageSendDelay });
-                    spamDetails.lastTimestamp = Date.now();
-                    if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
-                        spamDetails.closeMessageCount++;
-                    }
-                    if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
-                        console.log("Exiting due to spam...");
-                        message.reply("**Exiting... __Please don't spam!__**");
-                        return false;
-                    }
-                    if (spamDetails.closeMessageCount === 0) {
-                        setTimeout(() => {
-                            if (spamDetails) spamDetails.closeMessageCount = 0;
-                        }, this.REFRESH_SPAM_DELAY);
-                    }
-                }
-            }
-            if (!collectedEdit || collectedEdit === "stop") {
+            var currentTimestamp;
+            if (collectedEdit) currentTimestamp = Date.now();
+            else if (!collectedEdit || collectedEdit === "stop") {
                 if (collectedEdit !== "stop") {
                     message.channel.send(`This was your **${field} edit!**:\n${userEdit.join('\n')}`);
                 }
@@ -3044,6 +3036,26 @@ module.exports = {
             else {
                 editMessagePrompt = editMessagePrompt + collectedEdit + "\n";
                 userEdit.push(collectedEdit);
+            }
+            // Spam Prevention:
+            if (spamDetails && collectedEdit !== "0" && collectedEdit !== "1"
+                && collectedEdit !== "2" && collectedEdit !== "stop") {
+                const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
+                console.log({ messageSendDelay });
+                spamDetails.lastTimestamp = currentTimestamp || Date.now();
+                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                    spamDetails.closeMessageCount++;
+                }
+                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                    console.log("Exiting due to spam...");
+                    message.reply("**Exiting... __Please don't spam!__**");
+                    return false;
+                }
+                if (spamDetails.closeMessageCount === 0) {
+                    setTimeout(() => {
+                        if (spamDetails) spamDetails.closeMessageCount = 0;
+                    }, this.REFRESH_SPAM_DELAY);
+                }
             }
         }
         while (true)
@@ -3287,7 +3299,7 @@ module.exports = {
             }
             const user = bot.users.cache.get(userID);
             userDaylightSavingsSettings = timezoneObject.daylightSavings;
-            const daylightOffset = this.isDaylightSavingTime(Date.now(), userDaylightSavingsSettings) ?
+            const daylightOffset = this.isDaylightSavingTime(Date.now() + timezoneObject.offset * HOUR_IN_MS, userDaylightSavingsSettings) ?
                 this.getTimezoneDaylightOffset(timezoneObject.name) : 0;
             const mastermindServer = bot.guilds.cache.get('709165601993523233');
             const tier = mastermindServer ? mastermindServer.member(userID) ? 3 : 0 : 0; // User automatically becomes premium if they are in the mastermind group!
@@ -3364,7 +3376,7 @@ module.exports = {
     createGuildSettings: async function (guildID, timezone = "EST", daylightSavings = true) {
         try {
             const initialOffset = this.getTimezoneOffset(timezone);
-            const daylightOffset = this.isDaylightSavingTime(Date.now(), daylightSavings) ?
+            const daylightOffset = this.isDaylightSavingTime(Date.now() + initialOffset * HOUR_IN_MS, daylightSavings) ?
                 this.getTimezoneDaylightOffset(timezone) : 0;
             const guildConfig = new Guild({
                 _id: mongoose.Types.ObjectId(),
@@ -3486,7 +3498,8 @@ module.exports = {
         return channelList[targetChannelIndex];
     },
 
-    getSingleEntry: async function (bot, message, PREFIX, instructionPrompt, title, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
+    getSingleEntry: async function (bot, message, PREFIX, instructionPrompt, title, forceSkip = false,
+        embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
         let reset = false;
         var collectedEdit;
         instructionPrompt += !additionalInstructions ? "" : `\n\n${additionalInstructions}`;
@@ -3517,6 +3530,27 @@ module.exports = {
         return collectedEdit;
     },
 
+    getSingleEntryWithCharacterLimit: async function (bot, message, PREFIX, instructionPrompt, title, characterLimit, entryType, forceSkip = false,
+        embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
+        try {
+            var entry;
+            do {
+                entry = await this.getSingleEntry(bot, message, PREFIX, instructionPrompt, title,
+                    forceSkip, embedColour, additionalInstructions, additionalKeywords);
+                if (!entry && entry !== "") return false;
+                else if (entry.length < characterLimit || instructionKeywords.includes(entry)) break;
+                else message.reply(`**Please enter ${entryType ? entryType.toLowerCase() : "something"} less than ${characterLimit || 2000} characters**`
+                    + `\n**__You sent:__**\n${entry}`);
+            }
+            while (true)
+            return entry;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
     getMultilineEntry: async function (bot, PREFIX, message, instructionPrompt, title, forceSkip = false,
         embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = [],
         startingArray = false) {
@@ -3544,29 +3578,9 @@ module.exports = {
             inputIndex++;
             collectedEntry = await this.messageDataCollect(bot, message, PREFIX, instructionPrompt, title, embedColour, 600000,
                 false, false, false, true, 3000, false, `Character Count: ${finalEntry.join('\n').length}`);
-            if (collectedEntry) {
-                // Spam Prevention:
-                if (spamDetails && collectedEntry !== "0" && collectedEntry !== "1"
-                    && collectedEntry !== "2" && collectedEntry !== "stop") {
-                    const messageSendDelay = Date.now() - spamDetails.lastTimestamp || 0;
-                    console.log({ messageSendDelay });
-                    spamDetails.lastTimestamp = Date.now();
-                    if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
-                        spamDetails.closeMessageCount++;
-                    }
-                    if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
-                        console.log("Exiting due to spam...");
-                        message.reply("**Exiting... __Please don't spam!__**");
-                        return false;
-                    }
-                    if (spamDetails.closeMessageCount === 0) {
-                        setTimeout(() => {
-                            if (spamDetails) spamDetails.closeMessageCount = 0;
-                        }, this.REFRESH_SPAM_DELAY);
-                    }
-                }
-            }
-            if (!collectedEntry || collectedEntry === "stop") {
+            var currentTimestamp;
+            if (collectedEntry) currentTimestamp = Date.now();
+            else if (!collectedEntry || collectedEntry === "stop") {
                 if (collectedEntry !== "stop") {
                     message.channel.send(`This was your **entry**:\n${finalEntry.join('\n')}`);
                 }
@@ -3656,6 +3670,26 @@ module.exports = {
                 instructionPrompt = instructionPrompt + collectedEntry + "\n";
                 finalEntry.push(collectedEntry);
             }
+            // Spam Prevention:
+            if (spamDetails && collectedEntry !== "0" && collectedEntry !== "1"
+                && collectedEntry !== "2" && collectedEntry !== "stop") {
+                const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
+                console.log({ messageSendDelay });
+                spamDetails.lastTimestamp = currentTimestamp || Date.now();
+                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                    spamDetails.closeMessageCount++;
+                }
+                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                    console.log("Exiting due to spam...");
+                    message.reply("**Exiting... __Please don't spam!__**");
+                    return false;
+                }
+                if (spamDetails.closeMessageCount === 0) {
+                    setTimeout(() => {
+                        if (spamDetails) spamDetails.closeMessageCount = 0;
+                    }, this.REFRESH_SPAM_DELAY);
+                }
+            }
         }
         while (true)
         return { message: finalEntry.join('\n'), returnVal: 1, array: finalEntry };
@@ -3707,15 +3741,16 @@ module.exports = {
         dataCollectDelay = 300000, errorReplyDelay = 60000, timeExamples = this.timeExamples,) {
         var time;
         do {
-            const initialTimestamp = Date.now();
             time = await this.messageDataCollect(bot, message, PREFIX, `${instructions}${timeExamples ? `\n\n${timeExamples}` : ""}`, title, embedColour, dataCollectDelay, false);
             if (!time || time === "stop") return false;
             timeArgs = time.toLowerCase().split(/[\s\n]+/);
+            let now = Date.now();
             time = this.timeCommandHandlerToUTC(forceFutureTime && timeArgs[0] !== "in" && timeArgs[0] !== "now" ?
-                (["in"]).concat(timeArgs) : timeArgs, initialTimestamp, timezoneOffset, daylightSetting);
+                (["in"]).concat(timeArgs) : timeArgs, now, timezoneOffset, daylightSetting);
             if (time === false) this.sendReplyThenDelete(message, `Try** \`${PREFIX}date\` **for **help with entering dates and times**`, errorReplyDelay);
             else if (forceFutureTime) {
-                if (initialTimestamp + this.getTimeScaleToMultiplyInMs("hour") * timezoneOffset > time) {
+                now = this.getNowFlooredToSecond();
+                if (now + HOUR_IN_MS * timezoneOffset > time) {
                     this.sendReplyThenDelete(message, `Please enter a date/time in the **future**! Try** \`${PREFIX}date\` **for help`, errorReplyDelay);
                 }
                 else break;

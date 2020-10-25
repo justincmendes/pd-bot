@@ -301,7 +301,7 @@ module.exports = {
                     journalDocument = new Journal({
                         _id: mongoose.Types.ObjectId(),
                         userID: authorID,
-                        createdAt: Date.now() + HOUR_IN_MS * timezoneOffset,
+                        createdAt: fn.getNowFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
                         template: 1,
                         entry: {
                             gratitudes,
@@ -310,16 +310,16 @@ module.exports = {
                         },
                     });
 
-                    journalDocument.save()
+                    await journalDocument.save()
                         .then(result => {
                             message.reply("**Your journal entry was successfully created!**");
                             console.log({ result });
                         })
                         .catch(err => console.error(err));
 
-                    const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, "**Do you want to set a reminder for when you want to finish your journal entry?**"
+                    const confirmEndReminder = await fn.getUserConfirmation(bot, message, PREFIX, "**Do you want to set a reminder for when you want to finish your journal entry?**"
                         + "\n(Ideally for the end of the day, before bed)", false, "Journal: End of Day - Completion Reminder", 180000);
-                    if (!confirmEnd) return;
+                    if (!confirmEndReminder) return;
 
                     let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavings,
                         "**When** would you like to **finish your journal entry?**",
@@ -327,13 +327,13 @@ module.exports = {
                     if (!endTime) return;
                     endTime -= HOUR_IN_MS * timezoneOffset;
 
-                    const now = Date.now();
                     const reminderMessage = `**__Time to complete your journal entry for today!__**`
                         + `\n\nType** \`?${commandUsed} end\` **- to write your **end of day reflection journal**`;
-                    await rm.setNewDMReminder(bot, authorID, now, now, endTime, reminderMessage,
+                    const now = fn.getNowFlooredToSecond();
+                    await rm.setNewDMReminder(bot, authorID, now, endTime, reminderMessage,
                         "Journal", journalDocument._id, false, false, journalEmbedColour);
                     console.log("Journal end reminder set.");
-                    message.reply(`Journal end reminder set for **${fn.millisecondsToTimeString(endTime - Date.now())}** from now!`);
+                    message.reply(`Journal end reminder set for **${fn.millisecondsToTimeString(endTime - fn.getNowFlooredToSecond())}** from now!`);
                     return;
                 }
                 // If allowing community prompts (with verification system) - adjust code below
@@ -351,7 +351,7 @@ module.exports = {
                         journalDocument = new Journal({
                             _id: mongoose.Types.ObjectId(),
                             userID: authorID,
-                            createdAt: Date.now() + HOUR_IN_MS * timezoneOffset,
+                            createdAt: fn.getNowFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
                             template: 2,
                             entry: {
                                 message: journalEntry,
@@ -380,7 +380,7 @@ module.exports = {
                         journalDocument = new Journal({
                             _id: mongoose.Types.ObjectId(),
                             userID: authorID,
-                            createdAt: Date.now() + HOUR_IN_MS * timezoneOffset,
+                            createdAt: fn.getNowFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
                             template: 2,
                             entry: {
                                 message: entry,
@@ -404,7 +404,7 @@ module.exports = {
                     journalDocument = new Journal({
                         _id: mongoose.Types.ObjectId(),
                         userID: authorID,
-                        createdAt: Date.now() + HOUR_IN_MS * timezoneOffset,
+                        createdAt: fn.getNowFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
                         template: 3,
                         entry: { message: journalEntry, },
                     });
@@ -998,9 +998,9 @@ module.exports = {
                         else if (userEdit !== "back") {
                             // Parse User Edit
                             if (fieldToEditIndex === 0) {
-                                const now = Date.now();
                                 userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                                 console.log({ userEdit });
+                                const now = Date.now();
                                 userEdit = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavings);
                                 if (!userEdit) {
                                     fn.sendReplyThenDelete(message, `**INVALID TIME**... Try** \`${PREFIX}date\` **for help with **dates and times!**`, 60000);

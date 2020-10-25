@@ -419,7 +419,7 @@ module.exports = {
                 mastermindDocument = new Mastermind({
                     _id: mongoose.Types.ObjectId(),
                     userID: targetUser,
-                    createdAt: Date.now() + HOUR_IN_MS * targetUserTimezoneOffset,
+                    createdAt: fn.getNowFlooredToSecond() + HOUR_IN_MS * targetUserTimezoneOffset,
                     createdBy: authorID,
                     usedTemplate: userWantsTemplate,
                     guildID,
@@ -444,7 +444,7 @@ module.exports = {
                     mastermindDocument = new Mastermind({
                         _id: mongoose.Types.ObjectId(),
                         userID: targetUser,
-                        createdAt: Date.now() + HOUR_IN_MS * targetUserTimezoneOffset,
+                        createdAt: fn.getNowFlooredToSecond() + HOUR_IN_MS * targetUserTimezoneOffset,
                         createdBy: authorID,
                         usedTemplate: userWantsTemplate,
                         guildID,
@@ -1060,9 +1060,9 @@ module.exports = {
                         else if (userEdit !== "back") {
                             // Parse User Edit
                             if (fieldToEditIndex === 0) {
-                                const now = Date.now();
                                 userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                                 console.log({ userEdit });
+                                const now = Date.now();
                                 userEdit = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavings);
                                 if (!userEdit) {
                                     fn.sendReplyThenDelete(message, `**INVALID TIME**... Try** \`${PREFIX}date\` **for help with **dates and times!**`, 60000);

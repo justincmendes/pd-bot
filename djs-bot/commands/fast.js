@@ -48,7 +48,7 @@ function fastDocumentToDataArray(fastDocument, userTimezone = 0, calculateFastDu
             fastDuration = givenEndTimestamp - startTimestamp;
         }
         else {
-            let currentUTCTimestamp = Date.now();
+            let currentUTCTimestamp = fn.getNowFlooredToSecond();
             fastDuration = currentUTCTimestamp + (userTimezone * HOUR_IN_MS) - startTimestamp;
         }
     }
@@ -470,12 +470,12 @@ async function getCurrentOrMostRecentFast(userID) {
  * @param {Number} endTimestamp Reminder End Time in relative user timezone
  * @param {Number} sendHoursBeforeEnd 
  */
-function setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, currentTimestamp, startTimestamp, endTimestamp, sendHoursBeforeEnd = 1) {
+function setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, startTimestamp, endTimestamp, sendHoursBeforeEnd = 1) {
     const intendedFastDuration = endTimestamp - startTimestamp;
     sendHoursBeforeEnd = intendedFastDuration > 0 ? (sendHoursBeforeEnd > 0 ? sendHoursBeforeEnd : 0) : 0;
     const preEndMessage = `**At least __${sendHoursBeforeEnd}__ more hour(s) left of your __${fn.millisecondsToTimeString(intendedFastDuration)}__ fast!**\n(Started: __${fn.timestampToDateString(startTimestamp)}__)`
         + `\nYou're at least **${(((intendedFastDuration - HOUR_IN_MS * sendHoursBeforeEnd) / intendedFastDuration) * 100).toFixed(2)}% finished!**\n\nFinish strong - I'm cheering you on 😁`;
-    rm.setNewDMReminder(bot, authorID, currentTimestamp, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * (userTimezoneOffset + sendHoursBeforeEnd),
+    rm.setNewDMReminder(bot, authorID, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * (userTimezoneOffset + sendHoursBeforeEnd),
         preEndMessage, "Fast", fastDocumentID, false);
 }
 /**
@@ -488,12 +488,12 @@ function setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentI
  * @param {Number} startTimestamp In relative user timezone
  * @param {Number} endTimestamp Reminder End Time in relative user timezone
  */
-function setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, startTimestamp, endTimestamp) {
+function setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, startTimestamp, endTimestamp) {
     const intendedFastDuration = endTimestamp - startTimestamp;
     const endMessage = `**Your __${fn.millisecondsToTimeString(intendedFastDuration)}__ fast is done!** (Started: __${fn.timestampToDateString(startTimestamp)}__)`
         + `\nGreat job tracking and completing your fast!\nIf you want to **edit** your fast before ending, type \`?${commandUsed} edit current\``
         + `\nIf you want to **end** your fast, type \`?${commandUsed} end\``;
-    rm.setNewDMReminder(bot, authorID, currentTimestamp, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * userTimezoneOffset, endMessage, "Fast",
+    rm.setNewDMReminder(bot, authorID, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * userTimezoneOffset, endMessage, "Fast",
         fastDocumentID, false);
 }
 /**
@@ -518,11 +518,12 @@ async function getUserReminderEndTime(bot, message, PREFIX, fastTimeHelpMessage,
         // Undo the timezoneOffset to get the end time in UTC
         const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
         var intendedFastDuration;
-        const now = Date.now();
+        let now = Date.now();
         reminderEndTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now,
             userTimezoneOffset, userDaylightSavingSetting);
         if (reminderEndTime || reminderEndTime === 0) {
             reminderEndTime -= HOUR_IN_MS * userTimezoneOffset;
+            now = fn.getNowFlooredToSecond();
             intendedFastDuration = reminderEndTime - now;
         }
         else intendedFastDuration = false;
@@ -625,17 +626,16 @@ module.exports = {
                     mood: null,
                     reflection: null
                 });
-                const currentTimestamp = message.createdTimestamp;
                 const fastDocumentID = newFast._id;
                 console.log({ fastDocumentID });
                 const reminderEndTimeExists = reminderEndTime || reminderEndTime === 0;
                 if (reminderEndTimeExists) {
                     // First Reminder: 1 Hour Warning/Motivation
-                    if (currentTimestamp + HOUR_IN_MS * timezoneOffset < reminderEndTime) {
-                        setFastEndHourReminder(bot, timezoneOffset, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime, 1);
+                    if (message.createdTimestamp + HOUR_IN_MS * timezoneOffset < reminderEndTime) {
+                        setFastEndHourReminder(bot, timezoneOffset, authorID, fastDocumentID, startTimestamp, reminderEndTime, 1);
                     }
                     // Second Reminder: End Time
-                    setFastEndReminder(bot, timezoneOffset, commandUsed, authorID, fastDocumentID, currentTimestamp, startTimestamp, reminderEndTime);
+                    setFastEndReminder(bot, timezoneOffset, commandUsed, authorID, fastDocumentID, startTimestamp, reminderEndTime);
                 }
                 await newFast.save()
                     .then(result => console.log(result))
@@ -812,7 +812,6 @@ module.exports = {
             // If the user wants fast help, do not proceed to show them the fast.
             const seeCommands = ["past", "recent", "current", "all"];
             var fastBreaker, reflectionText;
-            currentTimestamp = Date.now();
 
             // MAKE THIS OPERATION INTO A FUNCTION!
             if (args[1] !== undefined) {
@@ -1365,10 +1364,10 @@ module.exports = {
                     else if (userEdit !== "back") {
                         // Parse User Edit
                         if (fieldToEditIndex === 0 || fieldToEditIndex === 1) {
-                            const timestamp = Date.now();
                             userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                             console.log({ userEdit });
-                            fastData[fieldToEditIndex] = fn.timeCommandHandlerToUTC(userEdit, timestamp, timezoneOffset, daylightSavingSetting);
+                            const now = Date.now();
+                            fastData[fieldToEditIndex] = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavingSetting);
                             if (!fastData[fieldToEditIndex]) {
                                 fn.sendReplyThenDelete(message, `**INVALID TIME**... Try \`${PREFIX}date\` for **help with entering dates and times**`, 60000);
                             }
@@ -1448,12 +1447,10 @@ module.exports = {
                                             });
                                             // First Reminder: 1 Hour Warning/Motivation
                                             if ((reminderEndTime + timezoneOffset * HOUR_IN_MS) > currentTimestamp) {
-                                                setFastEndHourReminder(bot, timezoneOffset, authorID, fastTargetID, currentTimestamp,
-                                                    startTimestamp, reminderEndTime, 1);
+                                                setFastEndHourReminder(bot, timezoneOffset, authorID, fastTargetID, startTimestamp, reminderEndTime, 1);
                                             }
                                             // Second Reminder: End Time
-                                            setFastEndReminder(bot, timezoneOffset, commandUsed, authorID, fastTargetID, currentTimestamp,
-                                                startTimestamp, reminderEndTime);
+                                            setFastEndReminder(bot, timezoneOffset, commandUsed, authorID, fastTargetID, startTimestamp, reminderEndTime);
                                         }
                                         else fastData[1] = null;
                                     }

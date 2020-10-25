@@ -227,7 +227,7 @@ module.exports = {
                                 if (updatedTimezone || updatedTimezone === 0) {
                                     const daylightSetting = guildConfig.timezone.daylightSavings
                                     if (daylightSetting) {
-                                        updatedTimezone += fn.isDaylightSavingTime(Date.now(), true) ?
+                                        updatedTimezone += fn.isDaylightSavingTime(Date.now() + updatedTimezone * HOUR_IN_MS, true) ?
                                             fn.getTimezoneDaylightOffset(userEdit) : 0;
                                     }
                                     guildConfig = await Guild.findOneAndUpdate({ guildID }, {
@@ -261,7 +261,7 @@ module.exports = {
                                     const originalTimezone = guildConfig.timezone.name;
                                     let updatedTimezoneOffset = fn.getTimezoneOffset(originalTimezone);
                                     if (userEdit === true) {
-                                        updatedTimezoneOffset += fn.isDaylightSavingTime(Date.now(), true) ?
+                                        updatedTimezoneOffset += fn.isDaylightSavingTime(Date.now() + updatedTimezoneOffset * HOUR_IN_MS, true) ?
                                             fn.getTimezoneDaylightOffset(originalTimezone) : 0;
                                     }
                                     guildConfig = await Guild.findOneAndUpdate({ guildID }, {
@@ -380,7 +380,7 @@ module.exports = {
                                         }
                                         else {
                                             endTime -= HOUR_IN_MS * timezoneOffset;
-                                            now = Date.now();
+                                            now = fn.getNowFlooredToSecond();
                                             interval = endTime - now;
                                         }
                                         if (!interval) {
@@ -401,7 +401,7 @@ module.exports = {
                                             if (!quoteTrigger) return;
                                             else {
                                                 const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
-                                                currentTimestamp = Date.now();
+                                                currentTimestamp = fn.getNowFlooredToSecond();
                                                 if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                                 else {
                                                     quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
@@ -454,7 +454,7 @@ module.exports = {
                             {
                                 let nextQuote;
                                 const isCurrent = userEdit === "skip" || userEdit === "now";
-                                currentTimestamp = Date.now();
+                                currentTimestamp = fn.getNowFlooredToSecond();
                                 if (isCurrent) nextQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                 else {
                                     userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
@@ -494,7 +494,7 @@ module.exports = {
                                 }
                                 else {
                                     endInterval -= HOUR_IN_MS * timezoneOffset;
-                                    currentTimestamp = Date.now();
+                                    currentTimestamp = fn.getNowFlooredToSecond();
                                     const updatedInterval = endInterval - currentTimestamp;
                                     if (updatedInterval < HOUR_IN_MS) {
                                         fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
@@ -515,7 +515,7 @@ module.exports = {
                                             }
                                             else {
                                                 const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
-                                                currentTimestamp = Date.now();
+                                                currentTimestamp = fn.getNowFlooredToSecond();
                                                 if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                                 else {
                                                     quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
@@ -552,8 +552,8 @@ module.exports = {
                 if (!continueEdit) {
                     if (guildConfig.quote.getQuote) {
                         if (fieldToEditIndex >= 5 && fieldToEditIndex <= 9) {
+                            const now = fn.getNowFlooredToSecond();
                             await Reminder.deleteMany({ type: "Quote", isDM: false, guildID });
-                            const now = Date.now();
                             let currentQuote = null;
                             var quoteIndex;
                             while (!currentQuote) {
@@ -566,7 +566,7 @@ module.exports = {
                                     currentQuote += `<@&${role}> `;
                                 });
                             }
-                            await rm.setNewChannelReminder(bot, authorID, guildConfig.quote.channel, now, now, guildConfig.quote.nextQuote,
+                            await rm.setNewChannelReminder(bot, authorID, guildConfig.quote.channel, now, guildConfig.quote.nextQuote,
                                 currentQuote, "Quote", guildConfig._id, true, guildConfig.quote.quoteInterval);
                         }
                     }
