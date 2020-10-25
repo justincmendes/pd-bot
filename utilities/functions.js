@@ -2884,7 +2884,7 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserEditBoolean: async function (bot, message, field, instructionPrompt, emojiArray, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+    getUserEditBoolean: async function (bot, message, PREFIX, field, instructionPrompt, emojiArray, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         var collectedEdit, reset;
         let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n` : "\n"}`;
         const backEmoji = '⬅';

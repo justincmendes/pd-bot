@@ -910,11 +910,11 @@ module.exports = {
                             break;
                         case 7:
                             goalEditMessagePrompt = `\n**__Currently:__ ${completed ? "Completed" : "In Progress"}\n\n✅ - Completed\n\n🏃‍♂️ - In Progress**`;
-                            userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, goalEditMessagePrompt, ['✅', '🏃‍♂️'], type, forceSkip, goalEmbedColour);
+                            userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, ['✅', '🏃‍♂️'], type, forceSkip, goalEmbedColour);
                             break;
                         case 8:
                             goalEditMessagePrompt = `\n**__Currently:__ ${archived ? "Archived" : "NOT Archived"}\n\n📁 - Archive\n\n📜 - No Archive**`;
-                            userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, goalEditMessagePrompt, ['📁', '📜'], type, forceSkip, goalEmbedColour);
+                            userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, ['📁', '📜'], type, forceSkip, goalEmbedColour);
                             break;
                     }
                     console.log({ userEdit });
