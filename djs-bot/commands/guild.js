@@ -179,7 +179,7 @@ module.exports = {
                         break;
                     case wantsQuote ? 7 : 6:
                         guildSettingsPrompt = `Do you want to regularly receive an **inspirational quote?**\n🙌 - **Yes**\n⛔ - **No**`;
-                        userEdit = await fn.getUserEditBoolean(bot, message, fieldToEdit, guildSettingsPrompt,
+                        userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt,
                             ['🙌', '⛔'], type, forceSkip, guildEmbedColour);
                         break;
                     case wantsQuote ? 8 : null:
