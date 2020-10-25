@@ -662,7 +662,7 @@ module.exports = {
                                                     }
                                                     reminderData[9] = interval;
                                                     // GET THE INTENDED END TIME!
-                                                    const endTime = await rm.getEditEndTime(bot, message, reminderHelpMessage, timezoneOffset, daylightSavingsSetting,
+                                                    const endTime = await rm.getEditEndTime(bot, message, PREFIX, reminderHelpMessage, timezoneOffset, daylightSavingsSetting,
                                                         forceSkip, true, reminderData[7], reminderData[0], reminderData[4], reminderData[9]);
                                                     if (!endTime) {
                                                         continueEdit = true;
@@ -677,7 +677,7 @@ module.exports = {
                                                 else if (userEdit === false && reminderData[1] === true) {
                                                     reminderData[1] = userEdit;
                                                     // GET THE INTENDED END TIME! (For non-recurring)
-                                                    const endTime = await rm.getEditEndTime(bot, message, reminderHelpMessage, timezoneOffset, daylightSavingsSetting,
+                                                    const endTime = await rm.getEditEndTime(bot, message, PREFIX, reminderHelpMessage, timezoneOffset, daylightSavingsSetting,
                                                         forceSkip, false, reminderData[7], reminderData[0], reminderData[4], reminderData[9]);
                                                     if (!endTime) {
                                                         continueEdit = true;

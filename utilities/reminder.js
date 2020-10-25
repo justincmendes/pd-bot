@@ -584,13 +584,13 @@ module.exports = {
         return (reminderEmbed);
     },
 
-    getUserFirstRecurringEndDuration: async function (bot, message, helpMessage, userTimezoneOffset, userDaylightSavingSetting, isRecurring) {
+    getUserFirstRecurringEndDuration: async function (bot, message, PREFIX, helpMessage, userTimezoneOffset, userDaylightSavingSetting, isRecurring) {
         var firstEndTime, error, startTimestamp;
         do {
             error = false;
             const reminderPrompt = `__**When do you intend to start the first ${isRecurring ? "recurring " : ""}reminder?**__`
                 + "\n\nType `skip` to **start it now**";
-            const userTimeInput = await fn.messageDataCollect(bot, message, reminderPrompt,
+            const userTimeInput = await fn.messageDataCollect(bot, message, PREFIX, reminderPrompt,
                 `${isRecurring ? "Repeat " : ""}Reminder: First Reminder`, isRecurring ? repeatEmbedColour : reminderEmbedColour);
             if (!userTimeInput || userTimeInput === "stop") return false;
             startTimestamp = fn.getNowFlooredToSecond();
@@ -608,7 +608,7 @@ module.exports = {
             if (!error) {
                 if (firstEndTime >= startTimestamp) {
                     const duration = firstEndTime - startTimestamp;
-                    // const confirmReminder = await fn..getUserConfirmation(message,
+                    // const confirmReminder = await fn..getUserConfirmation(bot, message, PREFIX,
                     //     `Are you sure you want to **start the first reminder** after **${fn..millisecondsToTimeString(duration)}**?`,
                     //     forceSkip, "Repeat Reminder: First Reminder Confirmation");
                     // if (confirmReminder) return duration;
@@ -685,9 +685,9 @@ module.exports = {
         while (true);
     },
 
-    getEditEndTime: async function (bot, message, reminderHelpMessage, timezoneOffset,
+    getEditEndTime: async function (bot, message, PREFIX, reminderHelpMessage, timezoneOffset,
         daylightSavingsSetting, forceSkip, isRecurring, reminderMessage, isDM, channelID = false, interval = false) {
-        let duration = await this.getUserFirstRecurringEndDuration(bot, message, reminderHelpMessage,
+        let duration = await this.getUserFirstRecurringEndDuration(bot, message, PREFIX, reminderHelpMessage,
             timezoneOffset, daylightSavingsSetting, isRecurring);
         console.log({ duration })
         if (!duration && duration !== 0) return false;
@@ -695,7 +695,7 @@ module.exports = {
         const channel = isDM ? "DM" : bot.channels.cache.get(channelID);
         const confirmCreationMessage = `Are you sure you want to set the following **${isRecurring ? "recurring" : "one-time"} reminder** to send`
             + ` - **in ${channel.name ? channel.name : "DM"} after ${fn.millisecondsToTimeString(duration)}**${isRecurring ? ` (and repeat every **${fn.millisecondsToTimeString(interval)}**)` : ""}:\n\n${reminderMessage}`;
-        const confirmCreation = await fn.getUserConfirmation(message, confirmCreationMessage, forceSkip, `${isRecurring ? "Recurring " : ""}Reminder: Confirm Creation`, 180000);
+        const confirmCreation = await fn.getUserConfirmation(bot, message, PREFIX, confirmCreationMessage, forceSkip, `${isRecurring ? "Recurring " : ""}Reminder: Confirm Creation`, 180000);
         if (!confirmCreation) return false;
         else {
             const currentTimestamp = fn.getNowFlooredToSecond();

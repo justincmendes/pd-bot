@@ -668,7 +668,7 @@ module.exports = {
                                                     }
                                                     reminderData[9] = interval;
                                                     // GET THE INTENDED END TIME!
-                                                    const endTime = await rm.getEditEndTime(bot, message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting,
+                                                    const endTime = await rm.getEditEndTime(bot, message, PREFIX, repeatHelpMessage, timezoneOffset, daylightSavingsSetting,
                                                         forceSkip, true, reminderData[7], reminderData[0], reminderData[4], reminderData[9]);
                                                     if (!endTime) {
                                                         continueEdit = true;
@@ -683,7 +683,7 @@ module.exports = {
                                                 else if (userEdit === false && reminderData[1] === true) {
                                                     reminderData[1] = userEdit;
                                                     // GET THE INTENDED END TIME! (For non-recurring)
-                                                    const endTime = await rm.getEditEndTime(bot, message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting,
+                                                    const endTime = await rm.getEditEndTime(bot, message, PREFIX, repeatHelpMessage, timezoneOffset, daylightSavingsSetting,
                                                         forceSkip, false, reminderData[7], reminderData[0], reminderData[4], reminderData[9]);
                                                     if (!endTime) {
                                                         continueEdit = true;
@@ -836,7 +836,7 @@ module.exports = {
             repeatMessage = repeatMessage.message;
             if (!repeatMessage) return;
 
-            let duration = await rm.getUserFirstRecurringEndDuration(bot, message, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
+            let duration = await rm.getUserFirstRecurringEndDuration(bot, message, PREFIX, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
             console.log({ duration });
             if (!duration && duration !== 0) return;
             const currentTimestamp = fn.getNowFlooredToSecond();
