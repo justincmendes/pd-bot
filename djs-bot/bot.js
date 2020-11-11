@@ -69,10 +69,10 @@ bot.on("ready", async () => {
 
     bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
 
-    // await fn.rescheduleAllDST();
-    // await hb.resetAllHabitCrons();
-    // await rm.resetReminders(bot);
-    // await fn.updateAllUsers(bot);
+    await fn.rescheduleAllDST();
+    await hb.resetAllHabitCrons();
+    await rm.resetReminders(bot);
+    await fn.updateAllUsers(bot);
 
     // For Testing
     // await hb.habitCron(await Habit.findById("5f9711afa1b3d3321c142504"), -5, { daily: 10800000, weekly: 0 });
@@ -205,7 +205,7 @@ bot.on("message", async message => {
         PREFIX = guildSettings ? guildSettings.prefix : DEFAULT_PREFIX;
     }
     const isMention = message.content.startsWith(pdBotTag);
-    PREFIX = '?'; // For Testing
+    // PREFIX = '?'; // For Testing
 
     // When the message does not start with prefix, do nothing
     if (!message.content.startsWith(PREFIX) && !isMention) return;
