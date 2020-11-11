@@ -7,9 +7,10 @@ const habitLogSchema = mongoose.Schema({
         type: Number,
         required: true,
     },
-    // Allow for Checked: 1 - ✅; Missed: 0 - 🔲; Skip: 2 - ➖ (still counts as a log);
+    // Allow for Undefined: 0 - 🔲; Checked: 1 - ✅; 
+    // Missed: 2 - ❌; Skip: 3 - ⏭ (still counts as a log);
     // Store as a number for making a cheaper habit object
-    type: {
+    state: {
         type: Number,
         required: true,
     },

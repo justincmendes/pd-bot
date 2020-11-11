@@ -36,7 +36,7 @@ const userSettingsSchema = mongoose.Schema({
             required: true,
             default: -5,
         },
-        daylightSavings: {
+        daylightSaving: {
             type: Boolean,
             required: true,
             default: true,
@@ -67,7 +67,7 @@ const userSettingsSchema = mongoose.Schema({
         default: false,
     },
     quoteInterval: {
-        type: Number,
+        type: String,
         required: false,
     },
     nextQuote: {
@@ -75,6 +75,11 @@ const userSettingsSchema = mongoose.Schema({
         required: false,
     },
     likesPesteringAccountability: {
+        type: Boolean,
+        required: true,
+        default: false,
+    },
+    deleteRepliesDuringCommand: {
         type: Boolean,
         required: true,
         default: false,

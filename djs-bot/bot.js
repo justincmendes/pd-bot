@@ -14,7 +14,10 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.DASHBOARD_CLIENT_ID;
 const DEFAULT_PREFIX = '?';
 const Discord = require("discord.js");
-const bot = new Discord.Client({ partials: ["MESSAGE", "CHANNEL", "REACTION"] });
+const bot = new Discord.Client({
+    partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+    ws: { intents: Discord.Intents.PRIVILEDGED }
+});
 const fn = require("../utilities/functions");
 const rm = require("../utilities/reminder");
 const hb = require("../utilities/habit");
@@ -27,14 +30,15 @@ const mongoose = require("mongoose");
 const Guild = require("./database/schemas/guildsettings");
 const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
+const Habit = require("./database/schemas/habit");
 bot.mongoose = require("../utilities/mongoose");
 
 const pdBotTag = `<@!${CLIENT_ID}>`;
 const timeoutDurations = [60000, 180000, 540000, 900000] // in ms, max level: 4
 const COMMAND_SPAM_NUMBER = 15;
-const CLOSE_COMMAND_SPAM_NUMBER = 8;
-const REFRESH_SPAM_DELAY = 25000;
-const CLOSE_COMMAND_DELAY = 1800;
+const CLOSE_COMMAND_SPAM_NUMBER = fn.CLOSE_COMMAND_SPAM_NUMBER;
+const REFRESH_SPAM_DELAY = fn.REFRESH_COMMAND_SPAM_DELAY;
+const CLOSE_COMMAND_DELAY = fn.CLOSE_COMMAND_DELAY;
 
 
 fs.readdir("./djs-bot/commands", (err, files) => {
@@ -65,8 +69,90 @@ bot.on("ready", async () => {
 
     bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
 
-    // Reinstantiating the current reminders:
-    await rm.resetReminders(bot);
+    // await fn.rescheduleAllDST();
+    // await hb.resetAllHabitCrons();
+    // await rm.resetReminders(bot);
+    // await fn.updateAllUsers(bot);
+
+    // For Testing
+    // await hb.habitCron(await Habit.findById("5f9711afa1b3d3321c142504"), -5, { daily: 10800000, weekly: 0 });
+    // console.log(fn.timestampToDateString(1605513600000));
+    // console.log(fn.getCurrentUTCTimestampFlooredToSecond());
+    // console.log(hb.getPastDaysStreak([
+    //     {
+    //         timestamp: new Date(2020, 10, 8, 4).getTime(),
+    //         state: 1
+    //     },
+    //     {
+    //         timestamp: new Date(2020, 10, 7, 4).getTime(),
+    //         state: 1
+    //     },
+    //     {
+    //         timestamp: new Date(2020, 10, 5, 4).getTime(),
+    //         state: 1
+    //     },
+    //     {
+    //         timestamp: new Date(2020, 10, 3, 4).getTime(),
+    //         state: 1
+    //     },
+    //     {
+    //         timestamp: new Date(2020, 10, 2, 4).getTime(),
+    //         state: 1
+    //     },
+    //     {
+    //         timestamp: new Date(2020, 10, 0, 4).getTime(),
+    //         state: 1
+    //     },
+    // ], -5, { daily: 10800000, weekly: 0 }, 3, new Date(2020, 10, 1, 4).getTime()));
+    // await hb.habitCron(bot, '208829852583723008');
+    // hb.calculateCurrentStreak([
+    // {
+    //     timestamp: new Date(2020, 11, 8, 4).getTime(),
+    //     state: 1
+    // },
+    // {
+    //     timestamp: new Date(2020, 11, 2, 4).getTime(),
+    //     state: 1
+    // },
+    // {
+    //     timestamp: new Date(2020, 10, 25, 4).getTime(),
+    //     state: 1
+    // },
+    // {
+    //     timestamp: new Date(2020, 10, 21, 4).getTime(),
+    //     state: 1
+    // },
+    // {
+    //     timestamp: new Date(2020, 10, 12, 4).getTime(),
+    //     state: 1
+    // },
+
+
+    // {
+    //     timestamp: new Date(2020, 10, 28, 4).getTime(),
+    //     state: 1
+    // },
+    // {
+    //     timestamp: new Date(2020, 10, 26, 4).getTime(),
+    //     state: 1
+    // },
+    // {
+    //     timestamp: new Date(2020, 10, 24, 4).getTime(),
+    //     state: 1
+    // },
+    // {
+    //     timestamp: new Date(2020, 10, 23, 4).getTime(),
+    //     state: 1
+    // },
+    // {
+    //     timestamp: new Date(2020, 10, 22, 4).getTime(),
+    //     state: 1
+    // },
+    // ], -5, { daily: 10800000, weekly: 0 }, false, 2, hb.getNextCronTimeUTC(-5, { daily: 10800000, weekly: 0 }, true, 2,
+    //     new Date(2020, 9, 29, 12).getTime() - 5 * 8.64e+7) - 5 * 8.64e+7);
+    // console.log(fn.timestampToDateString(hb.getNextCronTimeUTC(-5, { daily: 10800000, weekly: 0 }, true, 2,
+    //     new Date(2020, 9, 30, 12).getTime() - 5 * 8.64e+7) - 5 * 8.64e+7));
+
 
     // //Generating Link
     //Method 1:
@@ -109,7 +195,6 @@ bot.on("message", async message => {
         if (userSpamCheck.isRateLimited) return;
     }
 
-
     var PREFIX;
     if (message.channel.type === 'dm') {
         PREFIX = DEFAULT_PREFIX;
@@ -120,6 +205,7 @@ bot.on("message", async message => {
         PREFIX = guildSettings ? guildSettings.prefix : DEFAULT_PREFIX;
     }
     const isMention = message.content.startsWith(pdBotTag);
+    PREFIX = '?'; // For Testing
 
     // When the message does not start with prefix, do nothing
     if (!message.content.startsWith(PREFIX) && !isMention) return;
@@ -159,7 +245,7 @@ bot.on("message", async message => {
         }
         if (spamDetails.closeMessageCount >= CLOSE_COMMAND_SPAM_NUMBER || spamDetails.messageCount >= COMMAND_SPAM_NUMBER) {
             const timeout = timeoutDurations[spamDetails.timeoutLevel - 1] || fn.getTimeScaleToMultiplyInMs('minute');
-            const userDM = bot.users.cache.get(message.author.id);
+            const userDM = await bot.users.fetch(message.author.id);
             spamDetails.isRateLimited = true;
             setTimeout(() => {
                 if (spamDetails) {
@@ -236,7 +322,7 @@ bot.on("message", async message => {
         let userSettings = await User.findOne({ discordID: user.id });
         // Update the Guild Settings
         // Pull from the guild settings from the initial user settings
-        var timezoneOffset, daylightSavingsSetting;
+        var timezoneOffset, daylightSavingSetting;
         if (!userSettings) {
             const timezone = await fn.getNewUserTimezoneSettings(bot, message, PREFIX, user.id);
             if (!timezone) return;
@@ -244,36 +330,27 @@ bot.on("message", async message => {
             if (!userInfo) return message.reply("**Sorry, I could not setup your user settings, contact the developer for more information!**"
                 + "\n(https://discord.gg/Czc3CSy)");
             userSettings = userInfo;
-            daylightSavingsSetting = timezone.daylightSavings;
+            daylightSavingSetting = timezone.daylightSaving;
             timezoneOffset = timezone.offset;
             const userCount = await User.find({}).countDocuments()
                 .catch(err => console.error(err));
             bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
         }
         else {
+            // Future: Try a mixture of an event listener + a initial check on start-up to save resources
+            // on checking whether a user has changed their credentials each time! ✅
+
             // const guildMap = userSettings.guilds.map(guild => guild.id);
             // const thisGuildIncluded = guildMap.includes(message.guild.id);
-            let updateQuery = {
-                discordTag: `${user.username}#${user.discriminator}`,
-                avatar: user.avatar,
-            };
-            daylightSavingsSetting = userSettings.timezone.daylightSavings;
-            // Get the UTC Timezone offset 
-            const timezone = userSettings.timezone.name;
-            let initialOffset = fn.getTimezoneOffset(timezone);
-            console.log({ timezone, initialOffset, daylightSavingsSetting })
-            timezoneOffset = daylightSavingsSetting ?
-                (isNaN(timezone) ? initialOffset + fn.getTimezoneDaylightOffset(timezone)
-                    : initialOffset++)
-                : initialOffset;
-            updateQuery.timezone = {
-                name: userSettings.timezone.name,
-                offset: timezoneOffset,
-                daylightSavings: true,
-            };
-            const update = await User.findOneAndUpdate({ discordID: message.author.id }, updateQuery, { new: true });
-            console.log({ update });
-            userSettings = update;
+            // let updateQuery = {
+            //     discordTag: `${user.username}#${user.discriminator}`,
+            //     avatar: user.avatar,
+            // };
+            // const update = await User.findOneAndUpdate({ discordID: message.author.id }, updateQuery, { new: true });
+            // console.log({ update });
+            // userSettings = update;
+            timezoneOffset = userSettings.timezone.offset;
+            daylightSavingSetting = userSettings.daylightSaving;
         }
 
         // Help: If command requires args send help message
@@ -293,7 +370,7 @@ bot.on("message", async message => {
 
     try {
         command.run(bot, message, commandName, args, PREFIX,
-            timezoneOffset, daylightSavingsSetting, forceSkip);
+            timezoneOffset, daylightSavingSetting, forceSkip);
     } catch (err) {
         console.error(err);
         return message.reply("There was an error trying to execute that command!");
@@ -353,6 +430,19 @@ bot.on('guildDelete', async (guild) => {
     catch (err) {
         return console.error(err);
     }
+});
+
+bot.on('guildMemberUpdate', async (member) => {
+    const user = member.user;
+    const { id, avatar, username, discriminator } = user;
+    // console.log({ user, id, avatar, username, discriminator });
+    const updateUser = await User.findOneAndUpdate({ discordID: id }, {
+        $set: { avatar, discordTag: `${username}#${discriminator}`, }
+    }, { new: true });
+    if (updateUser) {
+        console.log({ updateUser });
+    }
+    return;
 });
 
 // To ensure that the MongoDB is connected before logging in

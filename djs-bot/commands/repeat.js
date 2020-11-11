@@ -1,5 +1,6 @@
 // Global Variable Declarations and Initializations
 const Discord = require("discord.js");
+const User = require("../database/schemas/user");
 const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
@@ -7,6 +8,7 @@ const rm = require("../../utilities/reminder");
 require("dotenv").config();
 
 const validTypes = fn.reminderTypes;
+const repeatMax = fn.repeatMaxTier1;
 const repeatEmbedColour = fn.repeatReminderEmbedColour;
 const reminderType = "Reminder";
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
@@ -24,7 +26,7 @@ module.exports = {
     name: "repeat",
     description: "Set a personal or group RECURRING reminder",
     aliases: ["rr", "ar", "recur", "recurring", "schedule", "sch", "sched", "auto"],
-    cooldown: 3.5,
+    cooldown: 1.5,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavingsSetting, forceSkip) {
@@ -49,6 +51,8 @@ module.exports = {
         }
 
         const reminderActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${reminderCommand} help\``;
+        const userSettings = await User.findOne({ discordID: authorID });
+        const { tier } = userSettings;
 
         if (reminderCommand === "delete" || reminderCommand === "del" || reminderCommand === "d" || reminderCommand === "remove" || reminderCommand === "rem" || reminderCommand === "r") {
             let reminderDeleteUsageMessage = fn.getReadOrDeleteUsageMessage(PREFIX, commandUsed, reminderCommand, true, ["Reminder", "Reminders"]);
@@ -95,8 +99,12 @@ module.exports = {
                         `Recurring Reminder: Delete Past ${numberArg} Reminders (${sortType})`, 600000);
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await reminderCollection.map(reminder => reminder._id);
-                    console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Reminders (${sortType})`);
-                    await Reminder.deleteMany({ _id: { $in: targetIDs } });
+                    if (targetIDs) {
+                        if (targetIDs.length) {
+                            console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Reminders (${sortType})`);
+                            await Reminder.deleteMany({ _id: { $in: targetIDs } });
+                        }
+                    }
                     return;
                 }
                 if (deleteType === "many") {
@@ -153,11 +161,14 @@ module.exports = {
                     const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, reminderStringArray, deleteConfirmMessage,
                         forceSkip, `Recurring Reminder: Delete Reminders ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
-                        console.log(`Deleting ${authorID}'s Reminders ${toDelete} (${sortType})`);
-                        await Reminder.deleteMany({ _id: { $in: reminderTargetIDs } });
-                        return;
+                        if (reminderTargetIDs) {
+                            if (reminderTargetIDs.length) {
+                                console.log(`Deleting ${authorID}'s Reminders ${toDelete} (${sortType})`);
+                                await Reminder.deleteMany({ _id: { $in: reminderTargetIDs } });
+                            }
+                        }
                     }
-                    else return;
+                    return;
                 }
                 else {
                     var shiftIndex;
@@ -197,8 +208,12 @@ module.exports = {
                                 forceSkip, `Recurring Reminder: Multiple Delete Warning! (${sortType})`);
                             if (!multipleDeleteConfirmation) return;
                             const targetIDs = await reminderCollection.map(reminder => reminder._id);
-                            console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} reminder(s) past ${skipEntries} (${sortType})`);
-                            await Reminder.deleteMany({ _id: { $in: targetIDs } });
+                            if (targetIDs) {
+                                if (targetIDs.length) {
+                                    console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} reminder(s) past ${skipEntries} (${sortType})`);
+                                    await Reminder.deleteMany({ _id: { $in: targetIDs } });
+                                }
+                            }
                             return;
                         }
 
@@ -230,9 +245,12 @@ module.exports = {
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, reminderEmbed, deleteConfirmMessage, forceSkip,
                         `Recurring Reminder: Delete Recent Reminder`, 600000);
                     if (deleteIsConfirmed) {
-                        await Reminder.deleteOne({ _id: reminderTargetID });
-                        return;
+                        if (reminderTargetID) {
+                            console.log(`Deleting ${authorUsername}'s (${authorID}) recent reminder`);
+                            await Reminder.deleteOne({ _id: reminderTargetID });
+                        }
                     }
+                    return;
                 }
                 else if (deleteType === "all") {
                     const confirmDeleteAllMessage = "Are you sure you want to **delete all** of your recorded recurring reminders?\n\nYou **cannot UNDO** this!" +
@@ -275,10 +293,12 @@ module.exports = {
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, reminderEmbed, deleteConfirmMessage, forceSkip,
                     `Recurring Reminder: Delete Reminder ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
-                    console.log(`Deleting ${authorUsername}'s (${authorID}) Reminder ${sortType}`);
-                    await Reminder.deleteOne({ _id: reminderTargetID });
-                    return;
+                    if (reminderTargetID) {
+                        console.log(`Deleting ${authorUsername}'s (${authorID}) Reminder ${sortType}`);
+                        await Reminder.deleteOne({ _id: reminderTargetID });
+                    }
                 }
+                return;
             }
         }
 
@@ -549,7 +569,7 @@ module.exports = {
                                 reminderEditMessagePrompt = `\n${fn.futureTimeExamples}`;
                                 userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, repeatEmbedColour);
                                 break;
-                            // Reminder does not need a prompt explanation
+                            // Reminder Message does not need a prompt explanation
                             case 4:
                                 userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, repeatEmbedColour);
                                 break;
@@ -560,7 +580,7 @@ module.exports = {
                                 break;
                             case 6:
                                 if (isRecurring === true) {
-                                    reminderEditMessagePrompt = `**Please enter the time you'd like in-between recurring reminders (interval):**\n\n${fn.intervalExamples}`;
+                                    reminderEditMessagePrompt = `**Please enter the time you'd like in-between recurring reminders (interval):**\n\n${fn.intervalExamplesOver1Minute}`;
                                     userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, repeatEmbedColour);
                                 }
                                 else userEdit = 0;
@@ -598,11 +618,11 @@ module.exports = {
                                         {
                                             let userType = fn.toTitleCase(userEdit)
                                             if (validTypes.includes(userType)) {
-                                                let removeConnectedDocsConf = await fn.getUserConfirmation(bot, message, PREFIX,
+                                                let removeConnectedDocs = await fn.getUserConfirmation(bot, message, PREFIX,
                                                     `Are you sure you want to change the reminder type to **"${userType}"**`
                                                     + `\n\n*(This reminder will **lose** it's **connected document**, if any)*`,
                                                     forceSkip, "Recurring Reminder: Change Type Confirmation", 90000);
-                                                if (removeConnectedDocsConf) {
+                                                if (removeConnectedDocs) {
                                                     type = userType;
                                                     connectedDocument = undefined;
                                                 }
@@ -661,20 +681,22 @@ module.exports = {
                                                         continueEdit = true;
                                                         break;
                                                     }
+                                                    let { duration: intervalDuration, args: intervalArgs } = interval;
                                                     // GET THE INTENDED END TIME!
                                                     endTime = await rm.getEditEndTime(bot, message, PREFIX, repeatHelpMessage, timezoneOffset, daylightSavingsSetting,
-                                                        forceSkip, true, reminderMessage, isDM, channel, interval);
+                                                        forceSkip, true, reminderMessage, isDM, channel, intervalDuration);
                                                     if (!endTime) {
                                                         continueEdit = true;
                                                         break;
                                                     }
+                                                    interval = intervalArgs;
                                                 }
                                                 // From Repeating to One-Time
                                                 else if (userEdit === false && isRecurring === true) {
                                                     isRecurring = userEdit;
                                                     // GET THE INTENDED END TIME! (For non-recurring)
                                                     endTime = await rm.getEditEndTime(bot, message, PREFIX, repeatHelpMessage, timezoneOffset, daylightSavingsSetting,
-                                                        forceSkip, false, reminderMessage, isDM, channel, interval);
+                                                        forceSkip, false, reminderMessage, isDM, channel, false);
                                                     if (!endTime) {
                                                         continueEdit = true;
                                                         break;
@@ -702,6 +724,7 @@ module.exports = {
                                                     continueEdit = true;
                                                     break;
                                                 }
+                                                else interval = interval.args;
                                             }
                                             else {
                                                 fn.sendReplyThenDelete(message, `**Interval cannot be set for one-time reminder**, try changing the **repeat** first`, 30000);
@@ -786,11 +809,20 @@ module.exports = {
 
         else if (reminderCommand === "set" || reminderCommand === "s" || reminderCommand === "start" || reminderCommand === "make"
             || reminderCommand === "m" || reminderCommand === "create" || reminderCommand === "c" || reminderCommand === "st") {
+            if (tier === 1) {
+                if (totalReminderNumber >= repeatMax) {
+                    return message.channel.send(fn.getMessageEmbed(
+                        fn.getTierMaxMessage(PREFIX, commandUsed, repeatMax, ["Recurring Reminder", "Recurring Reminders"], 1, false),
+                        `Recurring Reminder: Tier 1 Maximum`, repeatEmbedColour).setFooter(fn.premiumFooterText));
+                }
+            }
+
             let interval = await rm.getInterval(bot, message, PREFIX, timezoneOffset, daylightSavingsSetting,
                 `__**Please enter the time you'd like in-between recurring reminders (interval):**__`,
                 `Recurring Reminder: Interval`, repeatEmbedColour);
             if (!interval) return;
-            console.log(fn.millisecondsToTimeString(interval));
+            let { duration: intervalDuration, args: intervalArgs } = interval;
+            console.log(fn.millisecondsToTimeString(intervalDuration));
 
             let channel = await rm.getChannelOrDM(bot, message, PREFIX, "Please enter a **target channel (using #)** or \"**DM**\"",
                 `Recurring Reminder: Channel or DM`, true, repeatEmbedColour);
@@ -805,16 +837,16 @@ module.exports = {
             let duration = await rm.getUserFirstRecurringEndDuration(bot, message, PREFIX, repeatHelpMessage, timezoneOffset, daylightSavingsSetting, true);
             console.log({ duration });
             if (!duration && duration !== 0) return;
-            const currentTimestamp = fn.getNowFlooredToSecond();
+            const currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
             duration = duration > 0 ? duration : 0;
             const confirmCreationMessage = `Are you sure you want to set the following **recurring reminder** to send -\n**in ${channel} after ${fn.millisecondsToTimeString(duration)} from now**`
-                + ` (and repeat every **${fn.millisecondsToTimeString(interval)}**):\n\n${repeatMessage}`;
+                + ` (and repeat every **${fn.millisecondsToTimeString(intervalDuration)}**):\n\n${repeatMessage}`;
             const confirmCreation = await fn.getUserConfirmation(bot, message, PREFIX, confirmCreationMessage, forceSkip, "Recurring Reminder: Confirm Creation", 180000);
             if (!confirmCreation) return;
             else {
                 if (isDM) {
                     await rm.setNewDMReminder(bot, authorID, currentTimestamp,
-                        currentTimestamp + duration, repeatMessage, reminderType, false, true, interval);
+                        currentTimestamp + duration, repeatMessage, reminderType, false, true, intervalArgs);
                 }
                 else {
                     const channelID = /\<\#(\d+)\>/.exec(channel)[1];
@@ -822,11 +854,11 @@ module.exports = {
                     console.log({ userPermissions });
                     if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL")) {
                         await rm.setNewChannelReminder(bot, authorID, channelID, currentTimestamp,
-                            currentTimestamp + duration, repeatMessage, reminderType, false, true, interval);
+                            currentTimestamp + duration, repeatMessage, reminderType, false, true, intervalArgs);
                     }
                     else return message.reply(`You are **not authorized to send messages** to that channel...`);
                 }
-                duration = currentTimestamp + duration - fn.getNowFlooredToSecond();
+                duration = currentTimestamp + duration - fn.getCurrentUTCTimestampFlooredToSecond();
                 return message.reply(`Your **recurring reminder** has been set to trigger in **${fn.millisecondsToTimeString(duration)}** from now!`);
             }
         }

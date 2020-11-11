@@ -2,10 +2,11 @@
  * File of all the important and universally reusable functions!
  */
 const Discord = require("discord.js");
-const mongoose = require('mongoose');
-const Reminder = require('../djs-bot/database/schemas/reminder');
-const User = require('../djs-bot/database/schemas/user');
-const Guild = require('../djs-bot/database/schemas/guildsettings');
+const mongoose = require("mongoose");
+const Reminder = require("../djs-bot/database/schemas/reminder");
+const User = require("../djs-bot/database/schemas/user");
+const Guild = require("../djs-bot/database/schemas/guildsettings");
+const Dst = require("../djs-bot/database/schemas/dst");
 require("dotenv").config();
 
 const DEFAULT_PREFIX = '?';
@@ -49,20 +50,35 @@ module.exports = {
                 let confirmationMessage = confirmation.content;
                 if (confirmationMessage.startsWith(PREFIX) && confirmationMessage !== PREFIX) {
                     this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                    message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Command Entered:__**\n${confirmationMessage}`);
+                    message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${PREFIX}\n**__Command Entered:__**\n${confirmationMessage}`);
                     return null;
                 }
                 confirmationMessage = confirmationMessage ? confirmationMessage.toLowerCase() : false;
                 if (confirmationMessage === "yes" || confirmationMessage === "y" || confirmationMessage === "1") {
+                    if (message.channel.type !== 'dm') {
+                        const userSettings = await User.findOne({ discordID: message.author.id }, { _id: 0, deleteRepliesDuringCommand: 1 });
+                        if (userSettings) {
+                            if (userSettings.deleteRepliesDuringCommand) {
+                                confirmation.delete();
+                            }
+                        }
+                    }
                     this.sendMessageThenDelete(message, "Confirmed!", deleteDelay);
                     console.log(`Confirmation Value (in function): true`);
-                    confirmation.delete()
                     return true;
                 }
-                else if (confirmationMessage === "no" || confirmationMessage === "n" || confirmationMessage === "0" || confirmationMessage === "stop") {
+                else if (confirmationMessage === "no" || confirmationMessage === "n" || confirmationMessage === "0"
+                    || confirmationMessage === "stop" || confirmationMessage === "2") {
+                    if (message.channel.type !== 'dm') {
+                        const userSettings = await User.findOne({ discordID: message.author.id }, { _id: 0, deleteRepliesDuringCommand: 1 });
+                        if (userSettings) {
+                            if (userSettings.deleteRepliesDuringCommand) {
+                                confirmation.delete();
+                            }
+                        }
+                    }
                     console.log("Ending (confirmationMessage) promise...\nConfirmation Value (in function): false");
                     this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                    confirmation.delete()
                     return false;
                 }
                 else continue;
@@ -226,13 +242,18 @@ module.exports = {
                         confirm.delete();
                         console.log(`Message Sent (in function): ${reacted.first().content}`);
                         if (deleteUserMessage && message.channel.type !== 'dm') {
-                            reacted.first().delete({ timeout: userMessageDeleteDelay });
+                            const userSettings = await User.findOne({ discordID: message.author.id }, { _id: 0, deleteRepliesDuringCommand: 1 });
+                            if (userSettings) {
+                                if (userSettings.deleteRepliesDuringCommand) {
+                                    reacted.first().delete({ timeout: userMessageDeleteDelay });
+                                }
+                            }
                         }
                         const finalMessage = reacted.first().content;
                         if (!allowCommandCalls) {
                             if (finalMessage.startsWith(PREFIX) && finalMessage !== PREFIX) {
                                 this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                                message.reply(`For this command, any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${finalMessage}`);
+                                message.reply(`For this command, any **command calls** while writing a message will **stop** the collection process.\n**__Prefix:__** ${PREFIX}\n**__Command Entered:__**\n${finalMessage}`);
                                 return false;
                             }
                         }
@@ -275,15 +296,17 @@ module.exports = {
             else {
                 console.log(`Deleting ${Model.modelName} documents (${objectID}) and it's associated reminders...`);
                 await Model.deleteMany(query);
+                documents.forEach(async (document, i) => {
+                    if (documents[i]._id) {
+                        const reminders = await Reminder.deleteMany({ connectedDocument: documents[i]._id });
+                        if (reminders.deletedCount === 0) {
+                            console.log(`No reminders associated to ${documents[i]._id.toString()}`);
+                        }
+                        else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents[i]._id.toString()}`);
+                    }
+                });
+                return true;
             }
-            documents.forEach(async (document, i) => {
-                const reminders = await Reminder.deleteMany({ connectedDocument: documents[i]._id });
-                if (reminders.deletedCount === 0) {
-                    console.log(`No reminders associated to ${documents[i]._id.toString()}`);
-                }
-                else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents[i]._id.toString()}`);
-            });
-            return true;
         }
         catch (err) {
             console.error(err);
@@ -307,16 +330,19 @@ module.exports = {
             }
             else {
                 console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
-                await Model.deleteMany(query);
+                if (query) await Model.deleteMany(query);
+                documents.forEach(async (document, i) => {
+                    if (documents[i]._id) {
+                        const reminders = await Reminder.deleteMany({ connectedDocument: documents[i]._id });
+                        if (reminders.deletedCount === 0) {
+                            console.log(`No reminders associated to ${documents[i]._id.toString()}`);
+                        }
+                        else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents[i]._id.toString()}`);
+                    }
+                });
+                return true;
             }
-            documents.forEach(async (document, i) => {
-                const reminders = await Reminder.deleteMany({ connectedDocument: documents[i]._id });
-                if (reminders.deletedCount === 0) {
-                    console.log(`No reminders associated to ${documents[i]._id.toString()}`);
-                }
-                else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents[i]._id.toString()}`);
-            });
-            return true;
+
         }
         catch (err) {
             console.error(err);
@@ -334,23 +360,23 @@ module.exports = {
      */
     deleteOneByIDAndConnectedReminders: async function (Model, objectID) {
         try {
-            const documents = await Model.findByIdAndDelete(objectID);
-            console.log({ documents });
-            if (!documents) {
+            const document = await Model.findByIdAndDelete(objectID);
+            console.log({ document });
+            if (!document) {
                 console.log(`No ${Model.modelName} document (${objectID.toString()}) can be found...`);
                 return false;
             }
             else {
                 console.log(`Deleting ${Model.modelName} document (${objectID.toString()}) and it's associated reminders...`);
+                if (document._id) {
+                    const reminders = await Reminder.deleteMany({ connectedDocument: document._id });
+                    if (reminders.deletedCount === 0) {
+                        console.log(`No reminders associated to ${document._id.toString()}`);
+                    }
+                    else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${document._id.toString()}`);
+                }
+                return true;
             }
-
-            const reminders = await Reminder.deleteMany({ connectedDocument: documents._id });
-            if (reminders.deletedCount === 0) {
-                console.log(`No reminders associated to ${documents._id.toString()}`);
-            }
-            else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents._id.toString()}`);
-
-            return true;
         }
         catch (err) {
             console.error(err);
@@ -374,16 +400,14 @@ module.exports = {
             }
             else {
                 console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
+                const reminders = await Reminder.deleteMany({ connectedDocument: documents._id });
+                const deletedCount = reminders.deletedCount;
+                if (deletedCount === 0) {
+                    console.log(`No reminders associated to ${documents._id.toString()}`);
+                }
+                else console.log(`Deleted ${deletedCount} reminders associated to ${documents._id.toString()}`);
+                return true;
             }
-
-            const reminders = await Reminder.deleteMany({ connectedDocument: documents._id });
-            const deletedCount = reminders.deletedCount;
-            if (deletedCount === 0) {
-                console.log(`No reminders associated to ${documents._id.toString()}`);
-            }
-            else console.log(`Deleted ${deletedCount} reminders associated to ${documents._id.toString()}`);
-
-            return true;
         }
         catch (err) {
             console.error(err);
@@ -400,7 +424,7 @@ module.exports = {
         try {
             if (string && typeof string === "string") {
                 if (string.length > 0) {
-                    string = string.replace(/(.+)([\s\n]+)/, (match, word, spacing, offset, string) => {
+                    string = string.replace(/(.+?)([\s\n\/]+)/, (match, word, spacing, offset, string) => {
                         return `${word[0].toUpperCase()}${word.slice(1)}${spacing}`;
                     });
                     return string;
@@ -557,12 +581,14 @@ module.exports = {
                 lastTimestamp: null,
                 closeMessageCount: 0,
             };
+            var targetIndex;
             do {
-                targetIndex = await this.messageDataCollect(bot, message, PREFIX, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
-                    messageColour, delayTime, false, false, false, true, userMessageDeleteDelay);
                 var currentTimestamp;
-                if (!targetIndex) return false;
+                let targetObject = await this.messageDataCollect(bot, message, PREFIX, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
+                    messageColour, delayTime, false, true, false, false, userMessageDeleteDelay);
+                if (!targetObject) return false;
                 else currentTimestamp = Date.now();
+                targetIndex = targetObject.content;
                 const errorMessage = "**Please enter a number on the given list!**";
                 const timeout = 15000;
                 if (isNaN(targetIndex)) {
@@ -577,6 +603,14 @@ module.exports = {
                 else {
                     // Minus 1 to convert to back array index (was +1 for user understanding)
                     targetIndex = parseInt(targetIndex) - 1;
+                    if (message.channel.type !== 'dm') {
+                        const userSettings = await User.findOne({ discordID: message.author.id }, { _id: 0, deleteRepliesDuringCommand: 1 });
+                        if (userSettings) {
+                            if (userSettings.deleteRepliesDuringCommand) {
+                                targetObject.delete();
+                            }
+                        }
+                    }
                     break;
                 }
                 // Spam Prevention:
@@ -584,10 +618,10 @@ module.exports = {
                     const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
                     console.log({ messageSendDelay });
                     spamDetails.lastTimestamp = currentTimestamp || Date.now();
-                    if (messageSendDelay < 2500) {
+                    if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
                         spamDetails.closeMessageCount++;
                     }
-                    if (spamDetails.closeMessageCount >= 5) {
+                    if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
                         console.log("Exiting due to spam...");
                         message.reply("**Exiting... __Please don't spam!__**");
                         return false;
@@ -595,7 +629,7 @@ module.exports = {
                     if (spamDetails.closeMessageCount === 0) {
                         setTimeout(() => {
                             if (spamDetails) spamDetails.closeMessageCount = 0;
-                        }, 30000);
+                        }, this.REFRESH_MESSAGE_SPAM_DELAY);
                     }
                     console.log({ spamDetails })
                 }
@@ -692,9 +726,13 @@ module.exports = {
      * @param {Number} year CE Year: 0000-xxxx
      * @param {Number} targetMonth Month: 0-11, 0 = January, 1 = February,...
      * @param {Number} targetDayOfWeek Day of Week: 0-6, 0 = Sunday, 1 = Monday,...
-     * @param {Number} ordinalDayOfWeek First, Second, Third, Fourth...
+     * @param {Number} ordinalDayOfWeek First, Second, Third, Fourth... or "Last"
      */
     getUTCTimestampOfDayOfWeek: function (year, targetMonth, targetDayOfWeek, ordinalDayOfWeek) {
+        if (isNaN(ordinalDayOfWeek)) if (ordinalDayOfWeek.toLowerCase() === "last") {
+            ordinalDayOfWeek = this.getNumberOfDaysOfTheWeek(year, targetMonth, targetDayOfWeek);
+            if (ordinalDayOfWeek === false) return false;
+        }
         const WEEK_IN_MS = DAY_IN_MS * 7;
         const startOfMonth = new Date(year, targetMonth);
         let targetDate = startOfMonth.getTime();
@@ -711,17 +749,194 @@ module.exports = {
         return targetDate;
     },
 
-    getDaylightSavingTimeStartAndEndTimestampInMs: function (targetTimestamp) {
-        if (isNaN(targetTimestamp)) return false;
-        // Step 1: Convert the timestamp to since since Jan 1, xxxx (of the given timestamp's year!)
-        const targetDate = new Date(targetTimestamp);
-        const targetYear = targetDate.getUTCFullYear();
-        // Step 2: Find the timestamp of the second Sunday of March at 2:00AM
-        // And first Sunday of November at 2:00AM
-        let daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 2, 0, 2) + (2 * HOUR_IN_MS);
-        let daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 10, 0, 1) + (2 * HOUR_IN_MS);
-        daylightEndTimestamp += 2 * HOUR_IN_MS;
-        console.log({ targetDate, daylightStartTimestamp, daylightEndTimestamp });
+    getNumberOfDaysOfTheWeek: function (year, targetMonth, targetDayOfWeek) {
+        const daysInMonth = this.getNumberOfDaysInMonthArray(year);
+        const daysInTargetMonth = daysInMonth[targetMonth];
+        var firstDayOfWeekInMonth = new Date(this.getUTCTimestampOfDayOfWeek(year, targetMonth, targetDayOfWeek, 1)).getUTCDate();
+        var lastDayOfWeekInMonth = firstDayOfWeekInMonth;
+        var numberOfDaysOfWeekInMonth = 1;
+        if (firstDayOfWeekInMonth) {
+            while (true) {
+                if (lastDayOfWeekInMonth + 7 <= daysInTargetMonth) {
+                    numberOfDaysOfWeekInMonth++;
+                    lastDayOfWeekInMonth += 7;
+                }
+                else return numberOfDaysOfWeekInMonth;
+            }
+        }
+        else return false;
+    },
+
+    isSouthernHemisphereDSTTimezone: function (timezone) {
+        if (timezone) timezone = timezone.toLowerCase();
+        else return false;
+
+        if (timezone === 'aest' || timezone === 'aet' || timezone === 'acst' || timezone === 'nft'
+            || timezone === 'lhst' || timezone === 'chast' || timezone === 'nzst' || timezone === 'amt'
+            || timezone === 'brt' || timezone === 'clt' || timezone === 'east' || timezone === 'pyt'
+            || timezone === 'sst' || timezone === 'wst' || timezone === 'egt') {
+            return true;
+        }
+        else return false;
+    },
+
+    /**
+     * 
+     * @param {Number} targetYear 
+     * @param {String} timezone 
+     * For timezones which pour into different years, this function will only return the start time of this year only:
+     * i.e. targetYear = 2020 - startTime: Oct. 2020 - endTime: Apr. 2021
+     */
+    getDSTStartAndEndTimeUTC: function (currentTimestamp, timezone) {
+        if (isNaN(currentTimestamp)) return false;
+        if (timezone) timezone = timezone.toLowerCase();
+        else return false;
+
+        const targetYear = new Date(currentTimestamp).getUTCFullYear();
+        var daylightStartTimestamp, daylightEndTimestamp;
+
+        /**
+         * **NOTE:**
+         * For timezones which pour into different years,
+         * this function will only return the start time of this year only: 
+         * i.e. targetYear = 2020 - startTime: Oct. 2020 - endTime: Apr. 2021
+         */
+
+        // ==============
+        // LEGEND:
+        // * - Southern Hemisphere Regions
+        // ==============
+
+        // North America (USA and Canada):
+        // Start - Second Sunday of March at 2:00AM
+        // End - First Sunday of November at 2:00AM
+        if (timezone === 'akst' || timezone === 'ast' || timezone === 'cst' || timezone === 'est'
+            || timezone === 'hst' || timezone === 'mst' || timezone === 'nt' || timezone === 'nst'
+            || timezone === 'pst' || timezone === 'pmst') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 2, 0, 2) + HOUR_IN_MS * 2;
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 10, 0, 1) + HOUR_IN_MS * 2;
+        }
+
+        // Europe (+ West Greenland):
+        // Start - Last Sunday of March 1:00AM UTC
+        // End - Last Sunday of October 1:00AM UTC
+        else if (timezone === 'azot' || timezone === 'gmt' || timezone === 'wet' || timezone === 'cet'
+            || timezone === 'eet' || timezone === 'egt' || timezone === 'met' || timezone === 'wgt') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 2, 0, "last") + HOUR_IN_MS;
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 9, 0, "last") + HOUR_IN_MS;
+            daylightEndTimestamp += HOUR_IN_MS;
+        }
+
+        // Australia*:
+        // Start - First Sunday of October at 2:00AM
+        // End - First Sunday of April at 2:00AM
+        else if (timezone === 'aest' || timezone === 'aet' || timezone === 'acst' || timezone === 'nft'
+            || timezone === 'lhst') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 9, 0, 1) + HOUR_IN_MS * 2;
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear + 1, 3, 0, 1) + HOUR_IN_MS * 2;
+        }
+
+        // Brazil*:
+        // Start - Third Sunday of October 12:00AM
+        // End - Third Sunday of February 12:00AM
+        else if (timezone === 'amt' || timezone === 'brt') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 9, 0, 3);
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear + 1, 1, 0, 3);
+        }
+
+        // Cuba:
+        // Start - Second Sunday of March at 12:00AM
+        // End - First Sunday of November at 1:00AM
+        else if (timezone === 'cust' || timezone === 'cubat' || timezone === 'cubst' || timezone === 'cuba'
+            || timezone === 'cub' || timezone === 'cu') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 2, 0, 2);
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 10, 0, 1) + HOUR_IN_MS;
+        }
+
+        // New Zealand (and Chatham)*:
+        // Start - Last Sunday of September at 2:00AM
+        // End - First Sunday of April at 2:00AM
+        else if (timezone === 'chast' || timezone === 'nzst') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 8, 0, "last") + HOUR_IN_MS * 2;
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear + 1, 3, 0, 1) + HOUR_IN_MS * 2;
+        }
+
+        // Mongolia:
+        // Start - Fourth Friday of March at 2:00AM
+        // End - Last Friday of September at 12:00AM
+        else if (timezone === 'chot' || timezone === 'hovt' || timezone === 'ulat') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 2, 5, 4) + HOUR_IN_MS * 2;
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 8, 5, "last");
+        }
+
+        // Chile*:
+        // Start - First Sunday of September 12:00AM
+        // End - First Sunday of April 12:00AM
+        else if (timezone === 'clt') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 8, 0, 1);
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear + 1, 3, 0, 1);
+        }
+
+        // Easter Island (of Chile)*:
+        // Start - First Saturday of September 10:00PM
+        // End - First Saturday of April 10:00PM
+        else if (timezone === 'east') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 8, 0, 1) - HOUR_IN_MS * 2;
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear + 1, 3, 0, 1) - HOUR_IN_MS * 2;
+        }
+
+        // Israel:
+        // Start - Last Friday of March at 2:00AM
+        // End - Last Sunday of October at 2:00AM
+        else if (timezone === 'isrst' || timezone === 'isst') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 2, 5, "last") + HOUR_IN_MS * 2;
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 9, 0, "last") + HOUR_IN_MS * 2;
+        }
+
+        // Iran:
+        // Start - March 21-22 at 12:00AM (On the first day of Farvardin)
+        // End - September 21-22 at 12:00AM (On the last day Shahrivar)
+        else if (timezone === 'irst') {
+            const solarHijriDate = targetYear % 4 === 0 ? 21 : 22;
+            daylightStartTimestamp = new Date(targetYear, 2, solarHijriDate).getTime();
+            daylightEndTimestamp = new Date(targetYear, 9, solarHijriDate).getTime();
+        }
+
+        // Paraguay*:
+        // Start - First Sunday of September 12:00AM
+        // End - Fourth Sunday of March 12:00AM
+        else if (timezone === 'pyt') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 8, 0, 1);
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear + 1, 2, 0, 4);
+        }
+
+        // Samoa (and West Samoa)*:
+        // Start - Last Sunday of September 3:00AM
+        // End - First Sunday of April 4:00AM
+        else if (timezone === 'sst' || timezone === 'wst') {
+            daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 8, 0, "last") + HOUR_IN_MS * 3;
+            daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear + 1, 3, 0, 1) + HOUR_IN_MS * 4;
+        }
+
+        // // Uruguay*:
+        // // Start - Second Sunday of October 2:00AM
+        // // End - First Sunday of March 2:00AM
+        // else if (timezone === 'uyt') {
+        //     daylightStartTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear, 9, 0, 2) + HOUR_IN_MS * 2;
+        //     daylightEndTimestamp = this.getUTCTimestampOfDayOfWeek(targetYear + 1, 2, 0, 1) + HOUR_IN_MS * 2;
+        // }
+
+        else return false;
+
+        const isDST = currentTimestamp >= daylightStartTimestamp && currentTimestamp < daylightEndTimestamp;
+        let timezoneOffset = this.getTimezoneOffset(timezone);
+        if (isDST) timezoneOffset += this.getTimezoneDaylightOffset(timezone);
+
+        if (timezone !== 'azot' && timezone !== 'gmt' && timezone !== 'wet' && timezone !== 'cet'
+            && timezone !== 'eet' && timezone !== 'egt' && timezone !== 'met' && timezone !== 'wgt') {
+            daylightStartTimestamp -= timezoneOffset * HOUR_IN_MS;
+            daylightEndTimestamp -= timezoneOffset * HOUR_IN_MS;
+        }
         return [daylightStartTimestamp, daylightEndTimestamp];
     },
 
@@ -730,12 +945,22 @@ module.exports = {
      * @param {Number} targetTimestamp Timezone Adjusted Timestamp to be checked for falling within UTC Daylight Saving Time
      * @param {Boolean} userDaylightSavingSetting If the user opted for having Daylight Saving Time adjustments
      */
-    isDaylightSavingTime: function (targetTimestamp, userDaylightSavingSetting) {
+    isDaylightSavingTime: function (targetTimestamp, timezone, userDaylightSavingSetting) {
         console.log({ targetTimestamp });
         if (userDaylightSavingSetting === false)
             return false;
         else {
-            const daylightSavingTimeArray = this.getDaylightSavingTimeStartAndEndTimestampInMs(targetTimestamp);
+            // If it's the in Southern Hemisphere - the DST time frame
+            // will roll over into the next year, so two time periods
+            // would need to be checked:
+            if (this.isSouthernHemisphereDSTTimezone(timezone)) {
+                const daylightSavingTimeFirstArray = this.getDSTStartAndEndTimeUTC(targetTimestamp, timezone);
+                if (!daylightSavingTimeFirstArray) return false;
+                const [daylightFirstStartTimestamp, daylightFirstEndTimestamp] = daylightSavingTimeFirstArray;
+                if (targetTimestamp >= daylightFirstStartTimestamp && targetTimestamp < daylightFirstEndTimestamp)
+                    return true;
+            }
+            const daylightSavingTimeArray = this.getDSTStartAndEndTimeUTC(targetTimestamp, timezone);
             if (!daylightSavingTimeArray) return false;
             const [daylightStartTimestamp, daylightEndTimestamp] = daylightSavingTimeArray;
             if (targetTimestamp >= daylightStartTimestamp && targetTimestamp < daylightEndTimestamp)
@@ -748,7 +973,7 @@ module.exports = {
     getNthNumberIndex: function (array, startingIndex = 0, skipToNthIndex = 1) {
         if (skipToNthIndex <= 0 || startingIndex < 0 || startingIndex > array.length - 1) return -1;
         let skipCounter = 0;
-        for (i = startingIndex; i < array.length - 1; i++) {
+        for (i = startingIndex; i < array.length; i++) {
             if (!isNaN(array[i])) skipCounter++;
             if (skipCounter === skipToNthIndex) return i;
         }
@@ -757,7 +982,7 @@ module.exports = {
 
     getProperDateAndTimeArray: function (dateTimeArray, adjustedArgs, timezoneOffset, dayYearTimeOffset = 0) {
         const yearIncluded = !!(dateTimeArray[2 + dayYearTimeOffset]);
-        const dayIndex = this.getNthNumberIndex(adjustedArgs, 1 + dayYearTimeOffset);
+        const dayIndex = this.getNthNumberIndex(adjustedArgs, dayYearTimeOffset);
         const extractedDay = adjustedArgs[dayIndex];
         console.log({ dayIndex, extractedDay });
         if (dayIndex == -1) return false;
@@ -804,7 +1029,7 @@ module.exports = {
             }
         }
         else {
-            year = new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear();
+            year = new Date(Date.now() + timezoneOffset * HOUR_IN_MS).getUTCFullYear();
             if (day !== dateTimeArray[2]) {
                 const extractedTime = dateTimeArray[2].replace(day, "");
                 console.log({ extractedTime, day });
@@ -830,6 +1055,7 @@ module.exports = {
                 else if (dateTimeArray[4]) {
                     dateTimeArray[4] = `${extractedTime}${dateTimeArray[4]}`;
                 }
+                else dateTimeArray[4] = `${extractedTime}`;
             }
         }
         const timeArray = this.getProperTimeAndTimezoneArray(dateTimeArray, adjustedArgs);
@@ -840,11 +1066,14 @@ module.exports = {
                 allUndefined = false;
             }
         });
-        if (allUndefined) return false;
-        else {
-            const [hours, minutes, amPmString, timezoneString] = timeArray;
-            return [year, day, hours, minutes, amPmString, timezoneString];
+        var hours, minutes, amPmString, timezoneString;
+        if (allUndefined) {
+            hours = "12";
+            minutes = "00";
+            amPmString = "AM";
         }
+        else[hours, minutes, amPmString, timezoneString] = timeArray;
+        return [year, day, hours, minutes, amPmString, timezoneString];
     },
 
     // Currently only accepting abbreviations
@@ -860,7 +1089,6 @@ module.exports = {
         // In the form: 8:45
         const timezoneFormatRegex = /(?:(\-)|(?:\+))(\d{1}(?:\d{1})?)\:?(\d{2})/;
         const timezoneFormat = timezoneFormatRegex.exec(timezoneString);
-        console.log({ timezoneFormat });
         if (timezoneFormat) {
             const sign = timezoneFormat[1];
             const hours = parseInt(timezoneFormat[2]);
@@ -868,7 +1096,6 @@ module.exports = {
             const minutes = parseInt(timezoneFormat[3]);
             if (minutes >= 60) return null;
             const offset = hours + (minutes / 60);
-            console.log({ offset })
             if (offset < -12 || offset > 14) return null;
             if (sign) {
                 return -offset;
@@ -1026,6 +1253,15 @@ module.exports = {
                         break;
                     case "cdt": timezoneOffset = -5;
                         break;
+                    // Cuba Daylight Time
+                    case "cudt": timezoneOffset = -5;
+                        break;
+                    // Cuba Daylight Time
+                    case "cubdt": timezoneOffset = -5;
+                        break;
+                    // Cuba Daylight Time
+                    case "cubad": timezoneOffset = -5;
+                        break;
                     case "cest": timezoneOffset = 2;
                         break;
                     case "cet": timezoneOffset = 1;
@@ -1069,6 +1305,12 @@ module.exports = {
                         break;
                     // Cuba Standard Time
                     case "cuba": timezoneOffset = -5;
+                        break;
+                    // Cuba Standard Time
+                    case "cu": timezoneOffset = -5;
+                        break;
+                    // Cuba Standard Time
+                    case "cub": timezoneOffset = -5;
                         break;
                     // China Standard Time
                     case "ct": timezoneOffset = 8;
@@ -1233,9 +1475,6 @@ module.exports = {
                         break;
                     // Indian Standard Time
                     case "ist": timezoneOffset = 5.5;
-                        break;
-                    // Irish Standard Time
-                    case "irst": timezoneOffset = 1;
                         break;
                     // Israel Standard Time
                     case "isrst": timezoneOffset = 2;
@@ -1543,7 +1782,7 @@ module.exports = {
                         break;
                     case "wita": timezoneOffset = 8;
                         break;
-                    case "wst": timezoneOffset = 8;
+                    case "wst": timezoneOffset = 13;
                         break;
                     case "wt": timezoneOffset = 0;
                         break;
@@ -1569,7 +1808,6 @@ module.exports = {
                 }
                 break;
         }
-        console.log({ timezoneOffset });
         return timezoneOffset;
     },
 
@@ -1604,52 +1842,72 @@ module.exports = {
         return timeArray;
     },
 
+    daylightSavingTimezones: [
+        "acst", "aest", "aet", "akst", "amt", "ast", "azot",
+        "brt",
+        "cst", "cust", "cubst", "cubat", "cuba", "cu", "cub", "cet", "chast", "chot", "clt",
+        "east", "est", "eet", "egt", "gmt",
+        "hst", "hovt",
+        "isrst", "isst", "irst",
+        "lhst",
+        "mst", "met",
+        "nst", "nt", "nzst", "nft",
+        "pst", "pmst", "pyt",
+        "sst",
+        "ulat",
+        "wst", "wet",
+    ],
+
     getTimezoneDaylightOffset: function (timezoneString) {
         /**
-         * List of Potential Spring Forward Timezones:
-         * Australian Central,
-         * Australian Eastern,
-         * Alaska Standard Time,
-         * Amazon Time (Brazil),
-         * Atlantic Standard Time,
-         * Azores Standard Time,
-         * Brasília Time,
-         * British Summer Time?**,
-         * Central Standard Time (North America),
-         * Cuba Standard Time,
-         * Central European Time,
-         * Chatham Standard Time,
-         * Choibalsan Standard Time,
-         * Chile Standard Time,
-         * Colombia Time,
-         * Easter Island Standard Time,
-         * Eastern Standard Time (North America),
-         * Eastern European Time,
-         * Eastern Greenland Time,
-         * Falkland Islands Time,
-         * Hawaii–Aleutian Standard Time,
-         * Hovd Time (not used from 2017-present)**,
-         * Israel Daylight Time,
-         * Iran Standard Time,
-         * Lord Howe Standard Time** LHST: UTC-10:30-11 (NOT FULL HOUR),
-         * Mountain Standard Time (North America),
-         * Middle European Time,
-         * Newfoundland Daylight Time,
-         * New Zealand Standard Time,
-         * Pacific Standard Time (North America),
-         * Saint Pierre and Miquelon Standard Time,
-         * Paraguay Time,
-         * Samoa Time,
-         * Ulaanbaatar Standard Time,
-         * Uruguay Standard Time,
-         * West Africa Time,
-         * Western European Time,
-         * West Greenland Time,
-         */
+        * List of Potential Spring Forward Timezones:
+        * Australian Central,g
+        * Australian Eastern,g
+        * Alaska Standard Time,g
+        * Amazon Time (Brazil),g
+        * Atlantic Standard Time,g
+        * Azores Standard Time,g
+        * Brasília Time,g
+        * Central Standard Time (North America),g
+        * Cuba Standard Time,g
+        * Central European Time,g
+        * Chatham Standard Time,g
+        * Choibalsan Standard Time* (not used from 2017-present),g
+        * Chile Standard Time,g
+        * Colombia Time** (not used from 1993-present), REMOVED
+        * Easter Island Standard Time,g
+        * Eastern Standard Time (North America),g
+        * Eastern European Time,g
+        * Eastern Greenland Time,g
+        * Falkland Islands Time** (not used from 2010-present), REMOVED
+        * Greenwich Mean Time (GMT),g
+        * Hawaii–Aleutian Standard Time,g
+        * Hovd Time* (not used from 2017-present),g
+        * Israel Daylight Time,g
+        * Iran Standard Time,g
+        * Lord Howe Standard Time LHST: UTC-10:30-11 (NOT FULL HOUR),g
+        * Mountain Standard Time (North America),g
+        * Middle European Time,g
+        * Newfoundland Daylight Time,g
+        * New Zealand Standard Time,g
+        * Norfolk Island Standard Time,g
+        * Pacific Standard Time (North America),g
+        * Saint Pierre and Miquelon Standard Time,g
+        * Paraguay Time,g
+        * Samoa Time,g
+        * Ulaanbaatar Standard Time* (not used from 2017-present),g
+        * Uruguay Standard Time** (not used from 2015-present), REMOVED
+        * West Africa Time** (not used from 2017-present), REMOVED
+        * West Samoa Time,g
+        * Western European Time,g
+        * West Greenland Time,g
+        * 
+        * **NOTE:** Some European Timezones have stopped DST as of 2019 (Member State dependent)
+        */
         if (timezoneString) {
             timezoneString = timezoneString.toLowerCase();
-            const summerTimeTimezoneRegex = /(acst|aest|aet|akst|amt|ast|azot|brt|cst|cust|cubst|cubat|cuba|cet|chast|chot|clt|cot|east|est|eet|egt|fkt|hst|hovt|isrst|isst|irst|mst|met|nst|nt|nzst|pst|pmst|pyt|sst|ulat|uyt|wat|wet|wgt)/;
-            const halfHourSummerRegex = /(lhst)/;
+            const summerTimeTimezoneRegex = /\b(acst|aest|aet|akst|amt|ast|azot|brt|cst|cust|cubst|cubat|cuba|cu|cub|cet|chast|chot|clt|east|est|eet|egt|gmt|hst|hovt|isrst|isst|irst|mst|met|nst|nt|nzst|nft|pst|pmst|pyt|sst|ulat|wst|wet|wgt)\b/i;
+            const halfHourSummerRegex = /\b(lhst)\b/i;
             if (summerTimeTimezoneRegex.test(timezoneString)) {
                 return 1;
             }
@@ -1673,56 +1931,61 @@ module.exports = {
     },
     // For timezones, allow user to select from the basic timezones or enter their own (i.e. Newfoundland And Labrador)
     // Use select from list and have the last option open for manual entry!
-    // Have a truth value on for if Daylights Savings Time!!!
+    // Have a truth value on for if Daylights Saving Time!!!
 
     // Using Regular Expressions
-    // Assumes that the userTimezone is already daylight-savings adjusted
-    timeCommandHandlerToUTC: function (args, messageCreatedTimestamp, userTimezone = -4, userDaylightSavingSetting = true) {
+    // Assumes that the userTimezone is already daylight-saving adjusted
+    timeCommandHandlerToUTC: function (args, messageCreatedTimestamp, userTimezone = -4,
+        userDaylightSavingSetting = true, isRelativeToNow = true, forceRelativeTime = false,
+        isForInterval = false) {
         const startTimestamp = Date.now();
         if (!Array.isArray(args) && typeof args === 'string') {
             args = args.toLowerCase().split(/[\s\n]+/);
         }
 
         if (args[0].toLowerCase() === "now") {
-            return this.getUTCOffsetAdjustedTimestamp(messageCreatedTimestamp, userTimezone, userDaylightSavingSetting);
+            if (isRelativeToNow) return this.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * userTimezone;
+            else return this.floorToNearestThousand(messageCreatedTimestamp) + HOUR_IN_MS * userTimezone;
         }
 
         // Convert from space separated arguments to time arguments
         // Step 1: Combine any Dates/Times space separated
-        const adjustedArgs = args.join(" ").split(/[\.\s\/\,\-]/).filter(args => args != "");
+        let adjustedArgs = args.join(" ").split(/[\.\s\/\,\-]/).filter(args => args !== "");
         console.log({ args, adjustedArgs });
         const timeArgs = args.join("").toLowerCase();
         console.log({ timeArgs });
 
         // Relative Time: Past and Future
-        const relativeTimeAgoOrFromNow = /(in)?(\d+\.?\d*|\d*\.?\d+)(seconds?|secs?|minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?|yrs?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const relativeTimeAgoOrFromNow = /(in)?(\d*\.?\d+|\d+\.?\d*)(seconds?|secs?|minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?|yrs?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const relativeTimeTest = relativeTimeAgoOrFromNow.exec(timeArgs);
         console.log({ relativeTimeTest });
-        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:mon)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:weds?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|(?:every)?other|this(?:coming)?|(?:this)?coming|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:mon)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:weds?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const dayOfWeekTest = dayOfWeekRegex.exec(timeArgs);
         console.log({ dayOfWeekTest });
         // Absolute Time: Past and Future
-        const absoluteTimeRegex = /(\d{1,2})[\/\.\,\-](\d{1,2})(?:[\/\.\,\-](\d{1,4}))?(?:at)?(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?/;
+        const absoluteTimeRegex = /(\d{1,2})[\/\.\,\-](\d{1,2})(?:[\/\.\,\-](\d{1,4}))?(?:at)?(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))?(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?/;
         const absoluteTimeTest = absoluteTimeRegex.exec(timeArgs);
         console.log({ absoluteTimeTest });
         // Force the user to separate the date and year (if there is a year - this becomes an indicator for separation)
-        const monthTimeRegex = /((?:january)|(?:jan?)|(?:february)|(?:feb?)|f|(?:march)|(?:mar)|(?:april)|(?:apr?)|(?:may)|(?:june?)|(?:july?)|(?:august)|(?:aug?)|(?:september)|(?:sept?)|(?:october)|(?:oct)|(?:november)|(?:nov?)|(?:december)|(?:dec?))[\.\,]?(\d{1}(?:\d{1})?)(?:[\/\.\,\-](\d{1,4}))?(?:at)?(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?/;
+        const monthTimeRegex = /((?:january)|(?:jan?)|(?:february)|(?:feb?)|f|(?:march)|(?:mar)|(?:april)|(?:apr?)|(?:may)|(?:june?)|(?:july?)|(?:august)|(?:aug?)|(?:september)|(?:sept?)|(?:october)|(?:oct)|(?:november)|(?:nov?)|(?:december)|(?:dec?))[\.\,]?(\d{1}(?:\d{1})?)(?:[\/\.\,\-](\d{1,4}))?(?:at)?(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))?(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?/;
         const monthTimeTest = monthTimeRegex.exec(timeArgs);
         console.log({ monthTimeTest });
-        const yearDayHourMinuteRegex = /(in)?(?:((?:\d+\.?\d*|\d*\.?\d+)y))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)d))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)h))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)m))?\:?(?:((?:\d+\.?\d*|\d*\.?\d+)s))?(?<!\:+|^$)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at|in|with)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?/;
+        const yearDayHourMinuteRegex = /(in)?(?:((?:\d*\.?\d+|\d+\.?\d*)y))?\:?(?:((?:\d*\.?\d+|\d+\.?\d*)d))?\:?(?:((?:\d*\.?\d+|\d+\.?\d*)h))?\:?(?:((?:\d*\.?\d+|\d+\.?\d*)m))?\:?(?:((?:\d*\.?\d+|\d+\.?\d*)s))?(?<!\:+|^$)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at|in|with)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?/;
         const yearDayHourMinuteTest = this.adjustYearDayHourMinuteTest(yearDayHourMinuteRegex.exec(timeArgs), adjustedArgs);
         console.log({ yearDayHourMinuteTest });
 
         // 1 - Relative Time; 2 - Day Of Week;
         // 3 - Absolute Time; 4 - Month And Time;
         // 5 - Year-Day-Hour-Minute;
-        const decision = this.getTimeTestChoice(relativeTimeTest, dayOfWeekTest, absoluteTimeTest, monthTimeTest, yearDayHourMinuteTest);
+        const decision = this.getTimeTestChoice(relativeTimeTest, dayOfWeekTest, absoluteTimeTest, monthTimeTest, yearDayHourMinuteTest, forceRelativeTime);
         console.log({ decision });
         // 0 - All choices we're null or insufficient/not chosen.
         if (!decision) return false;
         else {
             const RELATIVE_ADJUSTMENT = Date.now() - startTimestamp;
-            if (decision === 1 || decision === 5) messageCreatedTimestamp = Date.now() + RELATIVE_ADJUSTMENT;
+            if (isRelativeToNow && (decision === 1 || decision === 5)) {
+                messageCreatedTimestamp = Date.now() + RELATIVE_ADJUSTMENT;
+            }
             var timestampOut, timezoneString;
             switch (decision) {
                 case 1:
@@ -1749,63 +2012,44 @@ module.exports = {
                             numberOfTimeScales = -numberOfTimeScales;
                         }
                         const timeScaleToMultiply = this.getTimeScaleToMultiplyInMs(timeScale);
-                        let timeDifference = numberOfTimeScales * timeScaleToMultiply;
 
-                        if (isLongTimeScale) {
-                            const timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
-                            let [year, month, day, hour, minute, second, millisecond] = timeArray;
-                            console.log({ year, month, day, hour, minute, second, millisecond });
-                            const militaryTimeString = argsHaveDefinedTime ? this.getMilitaryTimeStringFromProperTimeArray(properTimeArray) : "00:00";
-                            console.log({ militaryTimeString });
-                            const timeAdjustment = this.getTimePastMidnightInMs(militaryTimeString);
-                            console.log({ timeAdjustment });
-                            // For the case of Days, timeDifference is simply numberOfTimeScales * timeScaleToMultiply
-                            // But for the case of Months and Years, proper adjustments must be made.
-                            const isYearTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("year");
-                            const isMonthTimeScale = timeScaleToMultiply === this.getTimeScaleToMultiplyInMs("month");
-                            if (isYearTimeScale || isMonthTimeScale) {
-                                // Mutually Exclusive Conditions
-                                if (isYearTimeScale) {
-                                    year += numberOfTimeScales;
-                                }
-                                else {
-                                    month += numberOfTimeScales;
-                                    // The month auto-adjust to negative values of hours
-                                }
-                                if (argsHaveDefinedTime) {
-                                    const splitTimeAdjustment = this.getHoursMinutesSecondsMillisecondsArray(timeAdjustment);
-                                    console.log({ splitTimeAdjustment });
-                                    hour = splitTimeAdjustment[0];
-                                    minute = splitTimeAdjustment[1];
-                                    second = splitTimeAdjustment[2];
-                                    millisecond = splitTimeAdjustment[3];
-                                }
-                                console.log({ year, month, day, hour, minute, second, millisecond });
-                                timestampOut = new Date(year, month, day, hour, minute, second, millisecond).getTime();
-                                if (timestampOut < 0 && !argsHaveDefinedTime) {
-                                    timestampOut -= HOUR_IN_MS;
-                                }
-                                console.log({ timestampOut });
-                            }
-                            // Days and Weeks:
-                            else {
-                                if (argsHaveDefinedTime) {
-                                    timeDifference += DAY_IN_MS + timeAdjustment - this.getTimeSinceMidnightInMsUTC(messageCreatedTimestamp, userTimezone);
-                                }
-                            }
-                        }
+                        const timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
+                        let [year, month, day, hour, minute, second, millisecond] = timeArray;
+                        console.log({ year, month, day, hour, minute, second, millisecond });
+                        const militaryTimeString = argsHaveDefinedTime ? this.getMilitaryTimeStringFromProperTimeArray(properTimeArray) : "00:00";
+                        console.log({ militaryTimeString });
+                        const timeAdjustment = this.getTimePastMidnightInMsFromMilitaryTime(militaryTimeString);
+                        console.log({ timeAdjustment });
 
-                        console.log({ timestampOut, timeDifference, timeScaleToMultiply, numberOfTimeScales });
-                        if (timestampOut === undefined) {
-                            // Adjust output based on timezone
-                            timestampOut = messageCreatedTimestamp + timeDifference + HOUR_IN_MS * userTimezone;
+                        switch (timeScaleToMultiply) {
+                            case YEAR_IN_MS: year += numberOfTimeScales;
+                                break;
+                            case DAY_IN_MS: day += numberOfTimeScales;
+                                break;
+                            case HOUR_IN_MS: hour += numberOfTimeScales;
+                                break;
+                            case MINUTE_IN_MS: minute += numberOfTimeScales;
+                                break;
+                            case SECOND_IN_MS: second += numberOfTimeScales;
+                                break;
                         }
+                        if (argsHaveDefinedTime && isLongTimeScale) {
+                            const splitTimeAdjustment = this.getHoursMinutesSecondsMillisecondsArray(timeAdjustment);
+                            console.log({ splitTimeAdjustment });
+                            [hour, minute, second, millisecond] = splitTimeAdjustment;
+                        }
+                        console.log({ year, month, day, hour, minute, second, millisecond });
+                        timestampOut = new Date(year, month, day, hour, minute, second, millisecond).getTime();
+                        // if (timestampOut < 0 && !argsHaveDefinedTime) {
+                        //     timestampOut -= HOUR_IN_MS;
+                        // }
+                        console.log({ timestampOut });
                     }
                     break;
                 case 2:
                     if (dayOfWeekTest) {
                         console.log("Day of Week test...");
-                        const numberOfTimeScales = this.getRelativeDayTimeScale(dayOfWeekTest, userTimezone);
+                        const numberOfTimeScales = this.getRelativeDayTimeScale(dayOfWeekTest, userTimezone, isForInterval);
                         if (numberOfTimeScales === false) return false;
                         console.log({ numberOfTimeScales });
                         // const timeExpression = dayOfWeekTest.slice(5);
@@ -1816,10 +2060,8 @@ module.exports = {
                         const timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
                         let [year, month, day, hour, minute, seconds, milliseconds] = timeArray;
                         day += numberOfTimeScales;
-                        // const timezoneOffset = timezoneString ? this.getTimezoneOffset(timezoneString) : userTimezone;
                         // If no time arguments:
                         if (!this.getNumberOfDefinedElements(timeExpression)) {
-                            // hour += timezoneOffset;
                             timestampOut = new Date(year, month, day, hour, minute, seconds, milliseconds).getTime();
                         }
                         else {
@@ -1838,6 +2080,10 @@ module.exports = {
                 case 3:
                     if (absoluteTimeRegex) {
                         console.log("Absolute Time test...");
+                        if (adjustedArgs[0].toLowerCase() === "in") {
+                            adjustedArgs = adjustedArgs.slice(1, adjustedArgs.length);
+                        }
+                        console.log({ adjustedArgs });
                         const properDateTimeArray = this.getProperDateAndTimeArray(absoluteTimeTest, adjustedArgs, userTimezone, 1);
                         console.log({ properDateTimeArray });
                         if (!properDateTimeArray) return false;
@@ -1861,7 +2107,11 @@ module.exports = {
                     if (monthTimeTest) {
                         // If the first element is defined: (i.e. the month)
                         if (monthTimeTest[1]) {
-                            console.log("Relative Month and Absolute Time test...");
+                            console.log("Month in Text and Absolute Time test...");
+                            if (adjustedArgs[0].toLowerCase() === "in") {
+                                adjustedArgs = adjustedArgs.slice(1, adjustedArgs.length);
+                            }
+                            console.log({ adjustedArgs });
                             const properDateTimeArray = this.getProperDateAndTimeArray(monthTimeTest, adjustedArgs, userTimezone, 1);
                             console.log({ properDateTimeArray });
                             if (!properDateTimeArray) return false;
@@ -1893,26 +2143,32 @@ module.exports = {
                         const futurePastMultiple = futureTruePastFalse ? 1 : -1;
                         let timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
                         let [year, month, day, hour, minute, second,] = timeArray;
+                        var noEntries = true;
                         for (i = 2; i <= 6; i++) {
                             if (yearDayHourMinuteTest[i]) {
+                                noEntries = false;
                                 // Extract y-h-d-m-s
-                                const timeScale = /(\d+\.?\d*|\d*\.?\d+)(\w)/.exec(yearDayHourMinuteTest[i]);
+                                const timeScale = /(\d*\.?\d+|\d+\.?\d*)(\w)/.exec(yearDayHourMinuteTest[i]);
+                                console.log({ timeScale });
                                 if (timeScale) {
-                                    switch (timeScale[2]) {
-                                        case 'y': year += timeScale[1] * futurePastMultiple;
+                                    const numberOfPeriods = timeScale[1];
+                                    const period = timeScale[2];
+                                    switch (period) {
+                                        case 'y': year += numberOfPeriods * futurePastMultiple;
                                             break;
-                                        case 'd': day += timeScale[1] * futurePastMultiple;
+                                        case 'd': day += numberOfPeriods * futurePastMultiple;
                                             break;
-                                        case 'h': hour += timeScale[1] * futurePastMultiple;
+                                        case 'h': hour += numberOfPeriods * futurePastMultiple;
                                             break;
-                                        case 'm': minute += timeScale[1] * futurePastMultiple;
+                                        case 'm': minute += numberOfPeriods * futurePastMultiple;
                                             break;
-                                        case 's': second += timeScale[1] * futurePastMultiple;
+                                        case 's': second += numberOfPeriods * futurePastMultiple;
                                             break;
                                     }
                                 }
                             }
                         }
+                        if (noEntries) return false;
                         timestampOut = new Date(year, month, day, hour, minute, second).getTime();
                         timezoneString = yearDayHourMinuteTest[8];
                     }
@@ -1931,7 +2187,7 @@ module.exports = {
         return Math.floor(number / 1000) * 1000;
     },
 
-    getNowFlooredToSecond: function () {
+    getCurrentUTCTimestampFlooredToSecond: function () {
         return this.floorToNearestThousand(Date.now());
     },
 
@@ -1946,7 +2202,7 @@ module.exports = {
         year = parseInt(year);
         if (year < 0) return false;
         if (year <= 99) {
-            const currentMillennium = Math.floor((new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()) / 1000) * 1000;
+            const currentMillennium = Math.floor((new Date(Date.now() + timezoneOffset * HOUR_IN_MS).getUTCFullYear()) / 1000) * 1000;
             year += currentMillennium;
         }
         console.log({ year });
@@ -1967,7 +2223,8 @@ module.exports = {
      * @param {RegExpExecArray} yearDayHourMinuteTest 5
      * Will return 0 if all are null.
      */
-    getTimeTestChoice: function (relativeTimeTest, dayOfWeekTest, absoluteTimeTest, monthTimeTest, yearDayHourMinuteTest) {
+    getTimeTestChoice: function (relativeTimeTest, dayOfWeekTest, absoluteTimeTest,
+        monthTimeTest, yearDayHourMinuteTest, forceRelativeTime = false) {
         // Loop through each array, check if it has enough elements!
         let choice = 0;
         var relativeTimeElements, dayOfWeekElements, absoluteTimeElements, monthTimeElements;
@@ -1994,15 +2251,15 @@ module.exports = {
                 else choice = 2;
             }
         }
-        if (absoluteTimeTest) {
+        if (absoluteTimeTest && !forceRelativeTime) {
             absoluteTimeElements = this.getNumberOfDefinedElements(absoluteTimeTest)
-            if (absoluteTimeElements > 3) {
+            if (absoluteTimeElements >= 3) {
                 choice = 3;
             }
         }
-        if (monthTimeTest) {
+        if (monthTimeTest && !forceRelativeTime) {
             monthTimeElements = this.getNumberOfDefinedElements(monthTimeTest);
-            if (monthTimeElements > 3) {
+            if (monthTimeElements >= 3) {
                 if (absoluteTimeElements) {
                     if (monthTimeElements >= absoluteTimeElements) {
                         choice = 4;
@@ -2022,7 +2279,9 @@ module.exports = {
                     }
                 }
                 else if (dayOfWeekElements) {
-                    if (dayOfWeekElements < 4) {
+                    if (dayOfWeekElements < 4 && (yearDayHourMinuteTest[2]
+                        || yearDayHourMinuteTest[3] || yearDayHourMinuteTest[4]
+                        || yearDayHourMinuteTest[5] || yearDayHourMinuteTest[6])) {
                         choice = 5;
                     }
                 }
@@ -2088,6 +2347,18 @@ module.exports = {
         return dayOfYear;
     },
 
+    getDayFromStartOfMonthAndCreatedAt: function (timestamp, startTimestamp = false) {
+        const currentDate = new Date(timestamp);
+        if (startTimestamp) {
+            const startDate = new Date(startTimestamp);
+            if (startDate.getUTCFullYear() === currentDate.getUTCFullYear()
+                && startDate.getUTCMonth() === currentDate.getUTCMonth()) {
+                return currentDate.getUTCDate() + 1 - startDate.getUTCDate();
+            }
+        }
+        return currentDate.getUTCDate();
+    },
+
     getUTCMonthFromMonthString: function (monthString) {
         monthString = monthString.toLowerCase();
         var month;
@@ -2125,7 +2396,7 @@ module.exports = {
         return month;
     },
 
-    getRelativeDayTimeScale: function (relativeTimeExpressionArray, timezone) {
+    getRelativeDayTimeScale: function (relativeTimeExpressionArray, timezone, isForInterval = false) {
         var numberOfTimeScales;
         let relativeTime = /((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?))/.exec(relativeTimeExpressionArray[3]);
         relativeTime = relativeTime ? relativeTime[1] : undefined;
@@ -2150,11 +2421,11 @@ module.exports = {
         }
         else if (day) {
             let isThis = false;
-            let relativeDay = /((?:\d+)|(?:last|past|next|this(?:coming)?|following|previous|prior))/.exec(relativeTimeExpressionArray[2]);
+            let relativeDay = /((?:\d+)|(?:last|past|next|(every)?other|this(?:coming)?|(?:this)?coming|following|previous|prior))/.exec(relativeTimeExpressionArray[2]);
             let isDigit = /(?:\d+)/.test(relativeDay);
             if (!relativeDay) {
-                relativeDay = "this";
-                isThis = true;
+                if (isForInterval) relativeDay = "thiscoming";
+                else relativeDay = "this";
             }
             else relativeDay = relativeDay[1];
 
@@ -2177,7 +2448,10 @@ module.exports = {
             else if (/next|following/.test(relativeDay)) {
                 numberOfTimeScales = 1;
             }
-            else if (/thiscoming/.test(relativeDay)) {
+            else if (/(every)?other/.test(relativeDay)) {
+                numberOfTimeScales = 2;
+            }
+            else if (/thiscoming|coming/.test(relativeDay)) {
                 numberOfTimeScales = 0;
             }
             else if (/this/.test(relativeDay)) {
@@ -2212,7 +2486,7 @@ module.exports = {
             // Get how far the relative day of week is from the current day of the week
             let currentDate = new Date(Date.now() + timezone * HOUR_IN_MS);
             let currentDayOfWeek = currentDate.getUTCDay();
-            console.log({ currentDate, currentDayOfWeek, targetDayOfWeek });
+            console.log({ isThis, numberOfTimeScales, currentDate, currentDayOfWeek, targetDayOfWeek });
             const isPastDay = targetDayOfWeek < currentDayOfWeek;
 
             // Convention: Traverse Forward along the Week, until the 
@@ -2307,25 +2581,36 @@ module.exports = {
     },
 
     /**
-     * 
-     * @param {number} timestamp timestamp to adjust
-     * @param {number} userDefaultTimezone User Timezone UTC Offset
-     * @param {boolean} userDaylightSavingSetting 
-     * @param {number|string} timezone give timezone in string form or UTC integer offset form
+     * Includes the last day, thus two dates one week apart will return 7, and 0 days apart will return 0
+     * @param {Number} timestampA 
+     * @param {Number} timestampB 
      */
-    getUTCOffsetAdjustedTimestamp: function (timestamp, userDefaultTimezone, userDaylightSavingSetting, timezone = undefined) {
-        if (timestamp === undefined || timestamp === null) return undefined;
-        var timezoneOffset;
-        timezoneOffset = timezone ? this.getTimezoneOffset(timezone) : userDefaultTimezone;
-        console.log({ timestamp, timezoneOffset });
-        timestamp += (HOUR_IN_MS * timezoneOffset);
-        if (this.isDaylightSavingTime(timestamp, userDaylightSavingSetting)) {
-            const daylightSavingAdjustment = this.getTimezoneDaylightOffset(timezone);
-            console.log({ daylightSavingAdjustment });
-            timestamp += (HOUR_IN_MS * daylightSavingAdjustment);
-        }
-        return timestamp;
+    getDaysInBetweenTimestamps: function (timestampA, timestampB) {
+        const timeDifference = Math.abs(timestampB - timestampA);
+        const daysDifference = Math.floor(timeDifference / DAY_IN_MS);
+        return daysDifference;
     },
+
+    // /**
+    //  * 
+    //  * @param {number} timestamp timestamp to adjust
+    //  * @param {number} userDefaultTimezone User Timezone UTC Offset
+    //  * @param {boolean} userDaylightSavingSetting 
+    //  * @param {number|string} timezone give timezone in string form or UTC integer offset form
+    //  */
+    // getUTCOffsetAdjustedTimestamp: function (timestamp, userDefaultTimezone, userDaylightSavingSetting, timezone = undefined) {
+    //     if (timestamp === undefined || timestamp === null) return undefined;
+    //     var timezoneOffset;
+    //     timezoneOffset = timezone ? this.getTimezoneOffset(timezone) : userDefaultTimezone;
+    //     console.log({ timestamp, timezoneOffset });
+    //     timestamp += (timezoneOffset * HOUR_IN_MS);
+    //     if (this.isDaylightSavingTime(timestamp, userDaylightSavingSetting)) {
+    //         const daylightSavingAdjustment = this.getTimezoneDaylightOffset(timezone);
+    //         console.log({ daylightSavingAdjustment });
+    //         timestamp += (HOUR_IN_MS * daylightSavingAdjustment);
+    //     }
+    //     return timestamp;
+    // },
 
     militaryTimeHoursToStandardTimeHoursArray: function (hours) {
         hours = parseInt(hours);
@@ -2500,12 +2785,22 @@ module.exports = {
     },
 
     // Assuming the militaryTimeString is correctly formatted.
-    getTimePastMidnightInMs: function (militaryTimeString) {
+    getTimePastMidnightInMsFromMilitaryTime: function (militaryTimeString) {
         var timePastMidnight = 0;
         const timeArray = this.getMilitaryTimeHoursAndMinsArray(militaryTimeString);
         timePastMidnight += parseInt(timeArray[1]) * HOUR_IN_MS;
         timePastMidnight += parseInt(timeArray[2]) * MINUTE_IN_MS;
-        console.log({ militaryTimeString, timeArray, timePastMidnight });
+        // console.log({ militaryTimeString, timeArray, timePastMidnight });
+        return timePastMidnight;
+    },
+
+    getTimePastMidnightInMs: function (timestamp) {
+        const date = new Date(timestamp);
+        const hours = date.getUTCHours();
+        const minutes = date.getUTCMinutes();
+        const militaryTime = `${hours < 10 ? `0${hours}` : hours}:${minutes < 10 ? `0${minutes}` : minutes}`;
+        const timePastMidnight = this.getTimePastMidnightInMsFromMilitaryTime(militaryTime)
+            + date.getUTCSeconds() * SECOND_IN_MS + date.getUTCMilliseconds();
         return timePastMidnight;
     },
 
@@ -2849,20 +3144,52 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserEditString: async function (bot, message, PREFIX, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+    getUserEditString: async function (bot, message, PREFIX, field, instructionPrompt, type,
+        forceSkip = false, embedColour = this.defaultEmbedColour, characterLimit = 2000) {
         var collectedEdit, reset;
+        let spamDetails = {
+            lastTimestamp: null,
+            closeMessageCount: 0,
+        };
         let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n` : "\n"}`;
         editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**`;
         do {
+            var currentTimestamp;
             reset = false;
             collectedEdit = await this.messageDataCollect(bot, message, PREFIX, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
             if (collectedEdit === "stop") return false;
             else if (!collectedEdit) return "back";
+            else currentTimestamp = Date.now();
+
+            if (collectedEdit.length > characterLimit) {
+                message.reply(`**Your edit is too long.** (must be __less than ${characterLimit} characters__ long)`
+                    + `\n**__You sent:__** __Word Count - ${collectedEdit.length}__\n${collectedEdit}`);
+                reset = true;
+            }
             else if (collectedEdit === "back") {
                 const backToMainEdit = await this.getBackToMainMenuConfirmation(bot, message, PREFIX, forceSkip);
                 if (backToMainEdit === false) reset = true;
                 else if (backToMainEdit === null) return false;
                 else return collectedEdit;
+            }
+            // Spam Prevention:
+            if (spamDetails) {
+                const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
+                console.log({ messageSendDelay });
+                spamDetails.lastTimestamp = currentTimestamp || Date.now();
+                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                    spamDetails.closeMessageCount++;
+                }
+                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                    console.log("Exiting due to spam...");
+                    message.reply("**Exiting... __Please don't spam!__**");
+                    return false;
+                }
+                if (spamDetails.closeMessageCount === 0) {
+                    setTimeout(() => {
+                        if (spamDetails) spamDetails.closeMessageCount = 0;
+                    }, this.REFRESH_MESSAGE_SPAM_DELAY);
+                }
             }
             if (!reset) {
                 const confirmEdit = await this.getEditEndConfirmation(bot, message, PREFIX, field, collectedEdit, type, forceSkip);
@@ -2922,7 +3249,8 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserMultilineEditString: async function (bot, PREFIX, message, field, instructionPrompt, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
+    getUserMultilineEditString: async function (bot, PREFIX, message, field, instructionPrompt, type,
+        forceSkip = false, embedColour = this.defaultEmbedColour, characterLimit = 2000) {
         let spamDetails = {
             lastTimestamp: null,
             closeMessageCount: 0,
@@ -2936,25 +3264,27 @@ module.exports = {
         const originalEditMessagePrompt = editMessagePrompt;
         do {
             messageIndex++;
+            var currentTimestamp;
             collectedEdit = await this.messageDataCollect(bot, message, PREFIX, editMessagePrompt, `${this.toTitleCase(type)}: Edit`,
                 embedColour, 600000, false, false, false, true, 3000, false, `Character Count: ${userEdit.join('\n').length}`);
-            var currentTimestamp;
-            if (collectedEdit) currentTimestamp = Date.now();
-            else if (!collectedEdit || collectedEdit === "stop") {
+            if (!collectedEdit || collectedEdit === "stop") {
                 if (collectedEdit !== "stop") {
                     message.channel.send(`This was your **${field} edit!**:\n${userEdit.join('\n')}`);
                 }
                 return false;
             }
-            else if (collectedEdit.length + userEdit.join('\n').length > 6000) {
-                message.reply("Your edit was **too long** (*over 6000 characters*), so I had to **stop** collecting it.");
+            else currentTimestamp = Date.now();
+
+            if (collectedEdit.length + userEdit.join('\n').length > 6000) {
+                message.reply("**Your edit was too long** (*over 6000 characters*), so I had to **stop** collecting it.");
                 return false;
             }
             if (messageIndex === 1 || reset === true) {
                 if (collectedEdit === "1") {
-                    if (userEdit.join('\n').length > 2000) {
-                        message.reply(`Your edit is too long (must be __less than 2000 characters__ long)`
+                    if (userEdit.join('\n').length > characterLimit) {
+                        message.reply(`**Your edit is too long.** (must be __less than ${characterLimit} characters__ long)`
                             + `\nTry undoing some line entries by typing \`2\` or reset your edit by typing \`0\``);
+                        collectedEdit = null;
                     }
                     const endEditConfirmation = await this.getEditEndConfirmation(bot, message, PREFIX, field, userEdit.join('\n'), type, forceSkip);
                     if (endEditConfirmation === true) break;
@@ -2984,9 +3314,10 @@ module.exports = {
                 else if (backToMainEdit === null) return false;
             }
             else if (collectedEdit === "1") {
-                if (userEdit.join('\n').length > 2000) {
-                    message.reply(`Your edit is too long (must be __less than 2000 characters__ long)`
+                if (userEdit.join('\n').length > characterLimit) {
+                    message.reply(`**Your edit is too long.** (must be __less than ${characterLimit} characters__ long)`
                         + `\nTry undoing some line entries by typing \`2\` or reset your edit by typing \`0\``);
+                    collectedEdit = null;
                 }
                 const endEditConfirmation = await this.getEditEndConfirmation(bot, message, PREFIX, field, userEdit.join('\n'), type, forceSkip);
                 if (endEditConfirmation === true) break;
@@ -2998,7 +3329,7 @@ module.exports = {
                 }
                 else {
                     const resetWarningMessage = "Are you sure you want to __**reset**__ your current edit?\n*(All of your current edit will be lost...)*";
-                    const resetConfirmation = await getUserConfirmation(message, resetWarningMessage, false, `${this.toTitleCase(type)}: Edit ${field} Reset`);
+                    const resetConfirmation = await this.getUserConfirmation(bot, message, PREFIX, resetWarningMessage, false, `${this.toTitleCase(type)}: Edit ${field} Reset`);
                     if (resetConfirmation === true) {
                         editMessagePrompt = originalEditMessagePrompt;
                         userEdit = new Array();
@@ -3054,7 +3385,7 @@ module.exports = {
                 if (spamDetails.closeMessageCount === 0) {
                     setTimeout(() => {
                         if (spamDetails) spamDetails.closeMessageCount = 0;
-                    }, this.REFRESH_SPAM_DELAY);
+                    }, this.REFRESH_MESSAGE_SPAM_DELAY);
                 }
             }
         }
@@ -3073,18 +3404,26 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserEditNumber: async function (bot, message, PREFIX, field, maxNumber, type, numberMappingArray = false, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = '') {
+    getUserEditNumber: async function (bot, message, PREFIX, field, maxNumber, type,
+        numberMappingArray = false, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = '') {
         var collectedEdit;
+        let spamDetails = {
+            lastTimestamp: null,
+            closeMessageCount: 0,
+        };
         const numberErrorMessage = `**Please Enter a Number from 1-${maxNumber}**`;
         let editMessagePrompt = `**What will you change your *${field}* to?:**`
         editMessagePrompt += `\n${additionalInstructions === '' ? `***(Please enter a number from \`1-${maxNumber}\`)***` : additionalInstructions}`
             + `\n\nType \`back\` to go **back to the main edit menu**`;
         while (true) {
+            var currentTimestamp;
             collectedEdit = await this.messageDataCollect(bot, message, PREFIX, editMessagePrompt, `${this.toTitleCase(type)}: Edit`, embedColour, 600000);
             if (collectedEdit === "stop") return false;
             else if (!collectedEdit) return "back";
+            else currentTimestamp = Date.now();
+
             // Check if the given message is a number
-            else if (isNaN(collectedEdit)) {
+            if (isNaN(collectedEdit)) {
                 if (collectedEdit === "back") {
                     const backToMainEdit = await this.getBackToMainMenuConfirmation(bot, message, PREFIX, forceSkip);
                     if (backToMainEdit === true) return collectedEdit;
@@ -3105,6 +3444,25 @@ module.exports = {
                     let confirmEdit = await this.getEditEndConfirmation(bot, message, PREFIX, field, showEdit, type, forceSkip);
                     if (confirmEdit === true) return collectedEdit;
                     else if (confirmEdit === null) return false;
+                }
+            }
+            // Spam Prevention:
+            if (spamDetails) {
+                const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
+                console.log({ messageSendDelay });
+                spamDetails.lastTimestamp = currentTimestamp || Date.now();
+                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                    spamDetails.closeMessageCount++;
+                }
+                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                    console.log("Exiting due to spam...");
+                    message.reply("**Exiting... __Please don't spam!__**");
+                    return false;
+                }
+                if (spamDetails.closeMessageCount === 0) {
+                    setTimeout(() => {
+                        if (spamDetails) spamDetails.closeMessageCount = 0;
+                    }, this.REFRESH_MESSAGE_SPAM_DELAY);
                 }
             }
         }
@@ -3258,7 +3616,7 @@ module.exports = {
                 const filter = (reaction, user) => emojis.includes(reaction.emoji.name) && (authorID === user.id);
                 const collector = embed.createReactionCollector(filter);
 
-                collector.on('collect', async (reaction, user) => {
+                collector.on('collect', (reaction, user) => {
                     switch (reaction.emoji.name) {
                         case right:
                             if (currentPage < embedArray.length - 1) {
@@ -3279,7 +3637,7 @@ module.exports = {
                         case cancel:
                             collector.stop();
                             console.log("Stopped pagination");
-                            await embed.delete();
+                            embed.delete();
                             return;
                     }
                     embed.edit(embedArray[currentPage]);
@@ -3294,13 +3652,13 @@ module.exports = {
         try {
             if (!timezoneObject) return false;
             if (!timezoneObject.name && !timezoneObject.offset && timezoneObject.offset !== 0 && isNaN(timezoneObject.offset)
-                && !timezoneObject.daylightSavings && timezoneObject.daylightSavings !== false) {
+                && !timezoneObject.daylightSaving && timezoneObject.daylightSaving !== false) {
                 return false;
             }
-            const user = bot.users.cache.get(userID);
-            userDaylightSavingsSettings = timezoneObject.daylightSavings;
-            const daylightOffset = this.isDaylightSavingTime(Date.now() + timezoneObject.offset * HOUR_IN_MS, userDaylightSavingsSettings) ?
-                this.getTimezoneDaylightOffset(timezoneObject.name) : 0;
+            const user = await bot.users.fetch(userID);
+            const userDaylightSavingsSettings = timezoneObject.daylightSaving;
+            const daylightOffset = this.isDaylightSavingTime(Date.now() + timezoneObject.offset * HOUR_IN_MS,
+                timezoneObject.name, userDaylightSavingsSettings) ? this.getTimezoneDaylightOffset(timezoneObject.name) : 0;
             const mastermindServer = bot.guilds.cache.get('709165601993523233');
             const tier = mastermindServer ? mastermindServer.member(userID) ? 3 : 0 : 0; // User automatically becomes premium if they are in the mastermind group!
             console.log({ tier });
@@ -3311,9 +3669,9 @@ module.exports = {
                 avatar: user.avatar,
                 tier,
                 timezone: {
-                    name: timezoneObject.name,
+                    name: timezoneObject.name.toUpperCase(),
                     offset: timezoneObject.offset + daylightOffset,
-                    daylightSavings: userDaylightSavingsSettings,
+                    daylightSaving: userDaylightSavingsSettings,
                 },
                 habitCron: {
                     daily: 0,
@@ -3346,46 +3704,46 @@ module.exports = {
             message.reply("**This __timezone does not exist__... Try again!**");
             return false;
         }
-        let userDaylightSavingsSetting = await this.reactionDataCollect(bot, message, `Does ${userAddressPossessive} timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No\n❌ - Exit**`,
+        let userDaylightSavingSetting = await this.reactionDataCollect(bot, message, `Does ${userAddressPossessive} timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No\n❌ - Exit**`,
             ['⌚', '⛔', '❌'], "User Settings: Setup", this.userSettingsEmbedColour, 300000);
-        switch (userDaylightSavingsSetting) {
-            case '⌚': userDaylightSavingsSetting = true;
+        switch (userDaylightSavingSetting) {
+            case '⌚': userDaylightSavingSetting = true;
                 break;
-            case '⛔': userDaylightSavingsSetting = false;
+            case '⛔': userDaylightSavingSetting = false;
                 break;
             // For the ❌ - return...
-            default: userDaylightSavingsSetting = null;
+            default: userDaylightSavingSetting = null;
                 break;
         }
-        if (typeof userDaylightSavingsSetting === 'boolean') {
+        if (typeof userDaylightSavingSetting === 'boolean') {
             const confirmSettings = await this.getUserConfirmation(bot, message, PREFIX, `**__Are you sure ${userAddress} want${forSelf ? "" : "s"} the following settings?:__**`
                 + `\n⌚ - Timezone: **${userTimezone}**`
-                + `\n🌄 - Daylight Savings Time (DST)?: **${userDaylightSavingsSetting ? "Yes" : "No"}**`
+                + `\n🌄 - Daylight Saving Time (DST)?: **${userDaylightSavingSetting ? "Yes" : "No"}**`
                 + `\n\n(**${this.toTitleCase(userAddress)} can always change ${generalAddressPossessive} user settings** with \`${PREFIX}user edit\` OR \`${PREFIX}u e\` for short)`,
                 false, "User Settings: Confirmation", 180000);
             if (!confirmSettings) return;
             const timezone = {
-                name: userTimezone,
+                name: userTimezone.toUpperCase(),
                 offset: userTimezoneOffset,
-                daylightSavings: userDaylightSavingsSetting,
+                daylightSaving: userDaylightSavingSetting,
             };
             return timezone;
         }
     },
 
-    createGuildSettings: async function (guildID, timezone = "EST", daylightSavings = true) {
+    createGuildSettings: async function (guildID, timezone = "EST", daylightSaving = true) {
         try {
             const initialOffset = this.getTimezoneOffset(timezone);
-            const daylightOffset = this.isDaylightSavingTime(Date.now() + initialOffset * HOUR_IN_MS, daylightSavings) ?
-                this.getTimezoneDaylightOffset(timezone) : 0;
+            const daylightOffset = this.isDaylightSavingTime(Date.now() + initialOffset * HOUR_IN_MS,
+                timezone, daylightSaving) ? this.getTimezoneDaylightOffset(timezone) : 0;
             const guildConfig = new Guild({
                 _id: mongoose.Types.ObjectId(),
                 guildID,
                 prefix: DEFAULT_PREFIX,
                 timezone: {
-                    name: timezone,
+                    name: timezone.toUpperCase(),
                     offset: initialOffset + daylightOffset,
-                    daylightSavings,
+                    daylightSaving,
                 },
                 mastermind: {
                     roles: [],
@@ -3500,6 +3858,10 @@ module.exports = {
 
     getSingleEntry: async function (bot, message, PREFIX, instructionPrompt, title, forceSkip = false,
         embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
+        let spamDetails = {
+            lastTimestamp: null,
+            closeMessageCount: 0,
+        };
         let reset = false;
         var collectedEdit;
         instructionPrompt += !additionalInstructions ? "" : `\n\n${additionalInstructions}`;
@@ -3512,14 +3874,37 @@ module.exports = {
             }
         }
         do {
+            var currentTimestamp;
             reset = false;
             collectedEdit = await this.messageDataCollect(bot, message, PREFIX, instructionPrompt, title, embedColour, 600000);
             if (!collectedEdit || collectedEdit === "stop") return false;
+            else currentTimestamp = Date.now();
+
             if (hasInstructions) {
                 if (instructionKeywords.includes(collectedEdit)) {
                     return collectedEdit;
                 }
             }
+            // Spam Prevention:
+            if (spamDetails) {
+                const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
+                console.log({ messageSendDelay });
+                spamDetails.lastTimestamp = currentTimestamp || Date.now();
+                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
+                    spamDetails.closeMessageCount++;
+                }
+                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
+                    console.log("Exiting due to spam...");
+                    message.reply("**Exiting... __Please don't spam!__**");
+                    return false;
+                }
+                if (spamDetails.closeMessageCount === 0) {
+                    setTimeout(() => {
+                        if (spamDetails) spamDetails.closeMessageCount = 0;
+                    }, this.REFRESH_MESSAGE_SPAM_DELAY);
+                }
+            }
+
             if (!reset) {
                 const confirmEntry = await this.getUserConfirmation(bot, message, PREFIX, `**__Are you sure you want to enter:__**\n${collectedEdit}`, forceSkip, title);
                 if (confirmEntry === false) reset = true;
@@ -3536,11 +3921,11 @@ module.exports = {
             var entry;
             do {
                 entry = await this.getSingleEntry(bot, message, PREFIX, instructionPrompt, title,
-                    forceSkip, embedColour, additionalInstructions, additionalKeywords);
+                    forceSkip, embedColour, additionalInstructions, instructionKeywords);
                 if (!entry && entry !== "") return false;
-                else if (entry.length < characterLimit || instructionKeywords.includes(entry)) break;
+                else if (entry.length <= characterLimit || instructionKeywords.includes(entry)) break;
                 else message.reply(`**Please enter ${entryType ? entryType.toLowerCase() : "something"} less than ${characterLimit || 2000} characters**`
-                    + `\n**__You sent:__**\n${entry}`);
+                    + `\n**__You sent:__** __Word Count - ${entry.length}__\n${entry}`);
             }
             while (true)
             return entry;
@@ -3552,7 +3937,7 @@ module.exports = {
     },
 
     getMultilineEntry: async function (bot, PREFIX, message, instructionPrompt, title, forceSkip = false,
-        embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = [],
+        embedColour = this.defaultEmbedColour, characterLimit = 2000, additionalInstructions = "", instructionKeywords = [],
         startingArray = false) {
         let spamDetails = {
             lastTimestamp: null,
@@ -3576,18 +3961,19 @@ module.exports = {
         const originalPrompt = instructionPrompt;
         do {
             inputIndex++;
+            var currentTimestamp;
             collectedEntry = await this.messageDataCollect(bot, message, PREFIX, instructionPrompt, title, embedColour, 600000,
                 false, false, false, true, 3000, false, `Character Count: ${finalEntry.join('\n').length}`);
-            var currentTimestamp;
-            if (collectedEntry) currentTimestamp = Date.now();
-            else if (!collectedEntry || collectedEntry === "stop") {
+            if (!collectedEntry || collectedEntry === "stop") {
                 if (collectedEntry !== "stop") {
                     message.channel.send(`This was your **entry**:\n${finalEntry.join('\n')}`);
                 }
                 return false;
             }
-            else if (collectedEntry.length + finalEntry.join('\n').length > 6000) {
-                message.reply("Your entry was **too long** (*over 6000 characters*), so I had to **stop** collecting it.");
+            else currentTimestamp = Date.now();
+
+            if (collectedEntry.length + finalEntry.join('\n').length > 6000) {
+                message.reply("**Your entry was too long** (*over 6000 characters*), so I had to **stop** collecting it.");
                 return false;
             }
             if (hasInstructions) {
@@ -3597,9 +3983,10 @@ module.exports = {
             }
             if (inputIndex === 1 || reset === true) {
                 if (collectedEntry === "1") {
-                    if (finalEntry.join('\n').length > 2000) {
-                        message.reply(`Your entry is too long (must be __less than 2000 characters__ long)`
+                    if (finalEntry.join('\n').length > characterLimit) {
+                        message.reply(`**Your entry is too long** (must be __less than ${characterLimit} characters__ long)`
                             + `\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``);
+                        collectedEntry = null;
                     }
                     else {
                         const endConfirmation = await this.getUserConfirmation(bot, message, PREFIX, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
@@ -3615,9 +4002,10 @@ module.exports = {
                 else inputIndex = 0;
             }
             else if (collectedEntry === "1") {
-                if (finalEntry.join('\n').length > 2000) {
-                    message.reply(`Your entry is too long (must be __less than 2000 characters__ long)`
+                if (finalEntry.join('\n').length > characterLimit) {
+                    message.reply(`**Your entry is too long** (must be __less than ${characterLimit} characters__ long)`
                         + `\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``);
+                    collectedEntry = null;
                 }
                 else {
                     const endConfirmation = await this.getUserConfirmation(bot, message, PREFIX, `**__Are you sure you want to enter:__**\n${finalEntry.join('\n')}`, forceSkip, title, 180000);
@@ -3687,7 +4075,7 @@ module.exports = {
                 if (spamDetails.closeMessageCount === 0) {
                     setTimeout(() => {
                         if (spamDetails) spamDetails.closeMessageCount = 0;
-                    }, this.REFRESH_SPAM_DELAY);
+                    }, this.REFRESH_MESSAGE_SPAM_DELAY);
                 }
             }
         }
@@ -3744,13 +4132,13 @@ module.exports = {
             time = await this.messageDataCollect(bot, message, PREFIX, `${instructions}${timeExamples ? `\n\n${timeExamples}` : ""}`, title, embedColour, dataCollectDelay, false);
             if (!time || time === "stop") return false;
             timeArgs = time.toLowerCase().split(/[\s\n]+/);
-            let now = Date.now();
-            time = this.timeCommandHandlerToUTC(forceFutureTime && timeArgs[0] !== "in" && timeArgs[0] !== "now" ?
-                (["in"]).concat(timeArgs) : timeArgs, now, timezoneOffset, daylightSetting);
+            let now = this.getCurrentUTCTimestampFlooredToSecond();
+            time = this.timeCommandHandlerToUTC(((forceFutureTime && timeArgs[0] !== "in" && timeArgs[0] !== "now") ?
+                (["in"]).concat(timeArgs) : timeArgs), now, timezoneOffset, daylightSetting);
             if (time === false) this.sendReplyThenDelete(message, `Try** \`${PREFIX}date\` **for **help with entering dates and times**`, errorReplyDelay);
             else if (forceFutureTime) {
-                now = this.getNowFlooredToSecond();
-                if (now + HOUR_IN_MS * timezoneOffset > time) {
+                now = this.getCurrentUTCTimestampFlooredToSecond();
+                if (now + timezoneOffset * HOUR_IN_MS > time) {
                     this.sendReplyThenDelete(message, `Please enter a date/time in the **future**! Try** \`${PREFIX}date\` **for help`, errorReplyDelay);
                 }
                 else break;
@@ -3761,20 +4149,156 @@ module.exports = {
         return time;
     },
 
+    changeDSTOffset: async function (isDST, timezone) {
+        if (timezone) timezone = timezone.toUpperCase();
+        else return false;
+        const query = {
+            'timezone.name': timezone,
+            'timezone.daylightSaving': true,
+        };
+        const projection = { 'timezone.offset': 1 };
+        const allDSTGuilds = await Guild.find(query, projection);
+        const allDSTUsers = await User.find(query, projection);
+        if (allDSTUsers.length || allDSTGuilds.length) {
+            let { offset } = allDSTUsers[0] ? allDSTUsers[0].timezone :
+                allDSTGuilds[0] ? allDSTGuilds[0].timezone : false;
+            if (!offset && offset !== 0) return false;
+            let initialOffset = this.getTimezoneOffset(timezone);
+            console.log({ timezone, initialOffset, isDST });
+            offset = isDST ? (isNaN(timezone) ?
+                initialOffset + this.getTimezoneDaylightOffset(timezone)
+                : initialOffset++)
+                : initialOffset;
+            console.log({ offset });
+            await Dst.updateOne({ timezone }, { $set: { isDST } });
+            await User.updateMany(query, { $set: { 'timezone.offset': offset } });
+            await Guild.updateMany(query, { $set: { 'timezone.offset': offset } });
+            return true;
+        }
+        else return false;
+    },
+
+    scheduleOneDST: async function (dstSetting) {
+        let { isDST, timezone } = dstSetting;
+        let timezoneOffset = this.getTimezoneOffset(timezone)
+            + (isDST ? this.getTimezoneDaylightOffset(timezone) : 0);
+        let dstEndingYearOffset = 0;
+        let now = Date.now() + timezoneOffset * HOUR_IN_MS;
+        if (this.isSouthernHemisphereDSTTimezone(timezone)) {
+            dstEndingYearOffset = new Date(now).getUTCMonth() < 6 ? 1 : 0;
+        }
+        let daylightSavingTimeArray = this.getDSTStartAndEndTimeUTC(now, timezone);
+        if (!daylightSavingTimeArray) return false;
+        let [daylightStartTimestamp, daylightEndTimestamp] = daylightSavingTimeArray;
+
+        // To handle the case when the client is down for an extended period of time
+
+        // Mostly for Southern Hemisphere timezones: If it's past DST for this year
+        // Then it is not DST and the next start time is in the next year
+        if (now >= daylightEndTimestamp) {
+            isDST = false;
+            const currentYear = new Date(now);
+            const nextYear = new Date(currentYear.getUTCFullYear() - dstEndingYearOffset + 1, currentYear.getUTCMonth(),
+                currentYear.getUTCDate(), currentYear.getUTCHours(), currentYear.getUTCMinutes(), currentYear.getUTCSeconds(),
+                currentYear.getUTCMilliseconds());
+            daylightSavingTimeArray = this.getDSTStartAndEndTimeUTC(nextYear.getTime(), timezone); // Get start time for next year
+            if (!daylightSavingTimeArray) return false;
+            [daylightStartTimestamp, daylightEndTimestamp] = daylightSavingTimeArray;
+        }
+        else if (now >= daylightStartTimestamp && now < daylightEndTimestamp) {
+            isDST = true;
+        }
+
+        // Then update the dst object and reset the scheduling process
+        timezoneOffset = this.getTimezoneOffset(timezone) + (isDST ? this.getTimezoneDaylightOffset(timezone) : 0);
+        now = Date.now() + timezoneOffset * HOUR_IN_MS;
+        let timeToDST = isDST ? daylightEndTimestamp - now : daylightStartTimestamp - now;
+        console.log({ timezone, isDST, daylightStartTimestamp, daylightEndTimestamp });
+        // console.log(new Date(daylightStartTimestamp));
+        // console.log(new Date(daylightEndTimestamp));
+        console.log(`DST Start: ${this.timestampToDateString(daylightStartTimestamp + HOUR_IN_MS * timezoneOffset)}`);
+        console.log(`DST End: ${this.timestampToDateString(daylightEndTimestamp + HOUR_IN_MS * timezoneOffset)}`);
+        console.log(`Now: ${this.timestampToDateString(now)}`);
+        console.log(`Time to DST switch: ${this.millisecondsToTimeString(timeToDST)}`);
+        await Dst.updateOne({ timezone }, { $set: { isDST } });
+
+        await this.changeDSTOffset(isDST, timezone);
+        this.setLongTimeout(async () => {
+            dstSetting = await Dst.findOne({ timezone });
+            await this.scheduleOneDST(dstSetting);
+            return;
+        }, timeToDST);
+        return;
+    },
+
+    // Create another function called schedule all dst
+    // Then make this a scheduler for a single DST given the dstSettings object
+    rescheduleAllDST: async function () {
+        // Start by getting all of the users to get the time until their DST time
+        // Set a unique offset for each (make the loop outside)
+        let dstSettings = await Dst.find({});
+        if (!dstSettings.length) {
+            dstSettings = new Array();
+            const dstTimezones = this.daylightSavingTimezones;
+            dstTimezones.forEach(async timezone => {
+                const currentOffset = this.getTimezoneOffset(timezone);
+                const newSettings = new Dst({
+                    _id: mongoose.Types.ObjectId(),
+                    isDST: this.isDaylightSavingTime(Date.now() + HOUR_IN_MS * currentOffset, timezone, true),
+                    timezone: timezone.toLowerCase(),
+                });
+                dstSettings.push(newSettings);
+                await newSettings.save()
+                    .then(result => console.log(result))
+                    .catch(err => console.error(err));
+            });
+        }
+        dstSettings.forEach(async dstSettings => {
+            await this.scheduleOneDST(dstSettings);
+        });
+        return;
+    },
+
+    updateAllUsers: async function (bot) {
+        const allUsers = await User.find({});
+        if (allUsers) {
+            if (allUsers.length) {
+                allUsers.forEach(async user => {
+                    const currentUser = await bot.users.fetch(user.discordID, false);
+                    await User.updateOne({ discordID: user.discordID }, {
+                        $set:
+                        {
+                            avatar: currentUser.avatar,
+                            discordID: currentUser.id,
+                            discordTag: `${currentUser.username}#${currentUser.discriminator}`,
+                        }
+                    });
+                });
+            }
+        }
+        return;
+    },
+
     deleteManyByIdAndReminders: async function (Model, targetIDs) {
-        await Model.deleteMany({ _id: { $in: targetIDs } });
-        await Reminder.deleteMany({ connectedDocument: { $in: targetIDs } });
+        if (targetIDs) {
+            if (targetIDs.length) {
+                await Model.deleteMany({ _id: { $in: targetIDs } });
+                await Reminder.deleteMany({ connectedDocument: { $in: targetIDs } });
+            }
+        }
     },
 
     deleteUserEntriesAndReminders: async function (Model, userID) {
         const allUserGoalIDs = await Model.find({ userID }, { _id: 1 });
         await Model.deleteMany({ userID });
-        if (allUserGoalIDs.length) await Reminder.deleteMany({ connectedDocument: { $in: allUserGoalIDs } });
+        if (allUserGoalIDs) if (allUserGoalIDs.length) await Reminder.deleteMany({ connectedDocument: { $in: allUserGoalIDs } });
     },
 
     deleteOneByIdAndReminders: async function (Model, targetID) {
-        await Model.findByIdAndDelete(targetID);
-        await Reminder.deleteMany({ connectedDocument: targetID });
+        if (targetID) {
+            await Model.findByIdAndDelete(targetID);
+            await Reminder.deleteMany({ connectedDocument: targetID });
+        }
     },
 
 
@@ -3810,14 +4334,30 @@ module.exports = {
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
     daysOfWeek: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     fileFooterText: `🗑 to delete this window (not the entries)\n📎 to get all of this in a text file`,
-    timeExamples: `e.g. **now **|** 5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a**`,
+    timeExamples: `e.g. **now **|** 5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a`
+        + `\n**|** next friday at 3AM **|** March 22, 2027**`,
     futureTimeExamples: `e.g. **in 15 mins **|** next tuesday at 930p **|** 1 month from now 8pm\ntoday at 1:55P **|** July 5 at 9A **|** April 30, 2021 at 8:45am**`,
-    intervalExamples: `⏳ Any period longer than **1 minute** ⏳`
+    intervalExamplesOver1Minute: `⏳ Any period longer than **1 minute** ⏳`
         + `\n\n**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
+        + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)**`
+        + `\n- # Days of the Week **(mondays; tuesdays; wednesdays; thursdays; fridays; saturdays; sundays)** **`
+        + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2 years`
+        + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50h 20m 95s`
+        + `\n**|** friday **|** mon **|** 1 sat **|** 2 sun`
+        + `\n**|** tues at 6pm **|** wednesday at 4A **|** thurs at 12P PST**`,
+    intervalExamplesOver1Hour: `⏳ Any period longer than **1 hour** ⏳`
+        + `\n\n**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
+        + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)**`
+        + `\n- # Days of the Week **(mondays; tuesdays; wednesdays; thursdays; fridays; saturdays; sundays)** **`
+        + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2 years`
+        + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50h 20m 95s`
+        + `\n**|** friday **|** mon **|** 1 sat **|** 2 sun`
+        + `\n**|** tues at 6pm **|** wednesday at 4A **|** thurs at 12P PST**`,
+    durationExamples: `**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)** **`
-        + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years`
-        + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12.75m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50.5h 20m 95s**`,
-    confirmationInstructions: "✅ Accept: \'Y\' \'yes\' \'1\'\n❌ Decline: \'N\' \'no\' \'0\'",
+        + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2 years`
+        + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50h 20m 95s**`,
+    confirmationInstructions: "✅ Accept: \'Y\' \'yes\' \'1\'\n❌ Decline: \'N\' \'no\' \'0\' \'2\'",
     areasOfLifeEmojis: ['🥦', '🧠', '📚', '🙏', '🗣', '💼', '🎓', '💸', '🏠'],
     areasOfLife: ["Physical Health", "Mental/Mindset", "Personal Development", "Spiritual",
         "Social", "Career", "Education", "Finances", "Physical Environment"],
@@ -3834,6 +4374,10 @@ module.exports = {
             areasOfLifeList.push(`\`${i + 1}\` - **${areaOfLife}**`);
         });
         return areasOfLifeList;
+    },
+    getNumberOfDaysInMonthArray: function (year) {
+        const daysInMonth = [31, 28 + this.isLeapYear(year) ? 1 : 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        return daysInMonth;
     },
 
     fastEmbedColour: "#32CD32",
@@ -3856,8 +4400,13 @@ module.exports = {
     goalArchiveMaxTier1: 8,
     habitMaxTier1: 10,
     habitArchiveMaxTier1: 8,
+    reminderMaxTier1: 50,
+    repeatMaxTier1: 30,
 
-    REFRESH_SPAM_DELAY: 20000,
-    CLOSE_MESSAGE_DELAY: 2000,
-    CLOSE_MESSAGE_SPAM_NUMBER: 7,
+    REFRESH_COMMAND_SPAM_DELAY: 25000,
+    REFRESH_MESSAGE_SPAM_DELAY: 30000,
+    CLOSE_COMMAND_DELAY: 1800,
+    CLOSE_MESSAGE_DELAY: 2500,
+    CLOSE_COMMAND_SPAM_NUMBER: 8,
+    CLOSE_MESSAGE_SPAM_NUMBER: 5,
 };

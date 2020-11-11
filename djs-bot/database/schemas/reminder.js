@@ -33,7 +33,7 @@ const reminderSchema = mongoose.Schema({
         default: false,
     },
     interval: {
-        type: Number,
+        type: String,
         required: false,
     },
     type: {

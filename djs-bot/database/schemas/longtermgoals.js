@@ -27,35 +27,33 @@ const goalSchema = mongoose.Schema({
         required: true,
         default: false,
     },
-    goal: {
-        type: {
-            type: Number,
-            required: true,
-        },
-        description: {
-            type: String,
-            required: true,
-        },
-        reason: {
-            type: String,
-            required: false,
-        },
-        steps: {
-            type: String,
-            required: false,
-        },
-        checkpoints: {
-            type: String,
-            required: false, 
-        },
-        start: {
-            type: Number,
-            required: false,
-        },
-        end: {
-            type: Number,
-            required: false,
-        },
+    type: {
+        type: Number,
+        required: true,
+    },
+    description: {
+        type: String,
+        required: true,
+    },
+    reason: {
+        type: String,
+        required: false,
+    },
+    steps: {
+        type: String,
+        required: false,
+    },
+    checkpoints: {
+        type: String,
+        required: false,
+    },
+    start: {
+        type: Number,
+        required: false,
+    },
+    end: {
+        type: Number,
+        required: false,
     },
 });
 

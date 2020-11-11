@@ -10,6 +10,8 @@ const rm = require("../../utilities/reminder");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const timeExamples = fn.timeExamples;
+const futureTimeExamples = fn.futureTimeExamples;
 const goalEmbedColour = fn.goalsEmbedColour;
 const goalMax = fn.goalMaxTier1;
 const goalArchiveMax = fn.goalArchiveMaxTier1;
@@ -21,12 +23,12 @@ const areasOfLifeList = fn.getAreasOfLifeList().join('\n');
 // Function Declarations and Definitions
 
 function goalDocumentToString(goalDocument, showType = true) {
-    const { archived, completed, goal } = goalDocument;
-    const areaOfLife = showType ? `${areasOfLifeEmojis[goal.type] ? `${areasOfLifeEmojis[goal.type]} ` : ""}${areasOfLife[goal.type] ? `__${areasOfLife[goal.type]}__` : ""}` : false;
-    return (`${archived ? "\*\***ARCHIVED**\*\*\n" : ""}${areaOfLife ? areaOfLife : ""}${goal.description ? `\n🎯 - **Description:**\n${goal.description}` : ""}`
-        + `${goal.reason ? `\n💭 - **Reason:**\n${goal.reason}` : ""}${goal.checkpoints ? `\n🏁 - **Checkpoints:**\n${goal.checkpoints}` : ""}${goal.steps ? `\n👣 - **Steps:**\n${goal.steps}` : ""}`
-        + `${goal.start && !isNaN(goal.start) ? `\n**Start:** ${fn.timestampToDateString(goal.start, false, true, true)}` : ""}`
-        + `${goal.end && !isNaN(goal.end) ? `\n**Target Completion:** ${fn.timestampToDateString(goal.end, false, true, true)}` : ""}`
+    const { archived, completed, type, description, reason, steps, checkpoints, start, end } = goalDocument;
+    const areaOfLife = showType ? `${areasOfLifeEmojis[type] ? `${areasOfLifeEmojis[type]} ` : ""}${areasOfLife[type] ? `__${areasOfLife[type]}__` : ""}` : false;
+    return (`${archived ? "\*\***ARCHIVED**\*\*\n" : ""}${areaOfLife ? areaOfLife : ""}${description ? `\n🎯 - **Description:**\n${description}` : ""}`
+        + `${reason ? `\n💭 - **Reason:**\n${reason}` : ""}${checkpoints ? `\n🏁 - **Checkpoints:**\n${checkpoints}` : ""}${steps ? `\n👣 - **Steps:**\n${steps}` : ""}`
+        + `${start && !isNaN(start) ? `\n**Start:** ${fn.timestampToDateString(start, false, true, true)}` : ""}`
+        + `${end && !isNaN(end) ? `\n**Target Completion:** ${fn.timestampToDateString(end, false, true, true)}` : ""}`
         + `\n**Status:** ${completed ? "Completed" : "In Progess"}`);
 }
 
@@ -58,7 +60,7 @@ async function getOneGoalByRecency(userID, goalIndex, archived = undefined) {
 async function getOneGoalByStartTime(userID, goalIndex, archived = undefined) {
     const goal = await Goal
         .findOne({ userID, archived })
-        .sort({ 'goal.start': +1, })
+        .sort({ start: +1, })
         .skip(goalIndex)
         .catch(err => {
             console.log(err);
@@ -80,7 +82,7 @@ async function getGoalsByStartTime(userID, entryIndex, numberOfEntries = 1, arch
     try {
         const goals = await Goal
             .find({ userID, archived })
-            .sort({ 'goal.start': +1, })
+            .sort({ start: +1, })
             .limit(numberOfEntries)
             .skip(entryIndex);
         return goals;
@@ -96,7 +98,7 @@ async function getRecentGoalIndex(userID, archived) {
         var index;
         const entries = await Goal
             .find({ userID, archived })
-            .sort({ 'goal.start': +1, });
+            .sort({ start: +1, });
         if (entries.length) {
             let targetID = await Goal
                 .findOne({ userID, archived })
@@ -155,67 +157,66 @@ async function getRecentGoal(userID, isArchived, embedColour) {
     return goalEmbed;
 }
 
-function getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTimeUTC, timeScaleString, goalIndex, goalDescription) {
+function getGoalReminderString(commandUsed, timezoneOffset, startTimeUTC, timeScaleString, goalDescription) {
     return `The goal you've started on __${fn.timestampToDateString(startTimeUTC + HOUR_IN_MS * timezoneOffset, false, true, true)}__`
         + ` is set for completion **${timeScaleString ? timeScaleString.toLowerCase() : "soon"}!**:`
-        + `\n🎯 - ${goalDescription}\n\nType \`${PREFIX}${commandUsed} see ${goalIndex}\` to **see** the full details of this goal`
-        + `\nType \`${PREFIX}${commandUsed} edit ${goalIndex}\` to **edit** this goal and/or change the goal's set completion date`
-        + `\nType \`${PREFIX}${commandUsed} end ${goalIndex}\` to mark this goal as **completed**`;
+        + `\n🎯 - ${goalDescription}\n\nType \`?${commandUsed} see\` to **see** the full details of this goal`
+        + `\nType \`?${commandUsed} edit\` to **edit** this goal and/or change the goal's set completion date`
+        + `\nType \`?${commandUsed} end\` to mark this goal as **completed**`;
 }
 
-async function setGoalReminders(bot, userID, timezoneOffset, PREFIX, commandUsed, goalDocumentID,
-    goalDescription, totalGoalNumber, startTime, initialMessageTimestamp, endTime,) {
+async function setGoalReminders(bot, userID, timezoneOffset, commandUsed, goalDocumentID,
+    goalDescription, startTime, initialMessageTimestamp, endTime,) {
     const endDate = new Date(endTime);
-    const yearBefore = new Date(endDate.getUTCFullYear() - 1, endDate.getUTCMonth(),
-        endDate.getUTCDate(), endDate.getUTCHours(), endDate.getUTCMinutes()).getTime();
-    const semiAnnumBefore = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth() - 6,
-        endDate.getUTCDate(), endDate.getUTCHours(), endDate.getUTCMinutes()).getTime();
-    const monthBefore = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth() - 1,
-        endDate.getUTCDate(), endDate.getUTCHours(), endDate.getUTCMinutes()).getTime();
-    const weekBefore = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(),
-        endDate.getUTCDate() - 7, endDate.getUTCHours(), endDate.getUTCMinutes()).getTime();
-    const dayBefore = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(),
-        endDate.getUTCDate() - 1, endDate.getUTCHours(), endDate.getUTCMinutes()).getTime();
-    const goalIndex = await getGoalIndexByFunction(userID, goalDocumentID, totalGoalNumber, false, getOneGoalByStartTime);
+    const endYear = endDate.getUTCFullYear();
+    const endMonth = endDate.getUTCMonth();
+    const endDay = endDate.getUTCMonth();
+    const endHour = endDate.getUTCHours();
+    const endMinute = endDate.getUTCMinutes();
+    const yearBefore = new Date(endYear - 1, endMonth, endDay, endHour, endMinute).getTime();
+    const semiAnnumBefore = new Date(endYear, endMonth - 6, endDay, endHour, endMinute).getTime();
+    const monthBefore = new Date(endYear, endMonth - 1, endDay, endHour, endMinute).getTime();
+    const weekBefore = new Date(endYear, endMonth, endDay - 7, endHour, endMinute).getTime();
+    const dayBefore = new Date(endYear, endMonth, endDay - 1, endHour, endMinute).getTime();
     const type = "Goal";
     if (dayBefore >= initialMessageTimestamp) {
         await rm.setNewDMReminder(bot, userID, startTime, dayBefore,
-            getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "by tomorrow",
-                goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+            getGoalReminderString(commandUsed, timezoneOffset, startTime, "by tomorrow", goalDescription),
+            type, goalDocumentID, false, false, goalEmbedColour);
         if (weekBefore >= initialMessageTimestamp) {
             await rm.setNewDMReminder(bot, userID, startTime, weekBefore,
-                getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "by next week",
-                    goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+                getGoalReminderString(commandUsed, timezoneOffset, startTime, "by next week", goalDescription),
+                type, goalDocumentID, false, false, goalEmbedColour);
             if (monthBefore >= initialMessageTimestamp) {
                 await rm.setNewDMReminder(bot, userID, startTime, monthBefore,
-                    getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "by next month",
-                        goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+                    getGoalReminderString(commandUsed, timezoneOffset, startTime, "by next month", goalDescription),
+                    type, goalDocumentID, false, false, goalEmbedColour);
                 if (semiAnnumBefore >= initialMessageTimestamp) {
                     await rm.setNewDMReminder(bot, userID, startTime, semiAnnumBefore,
-                        getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "6 months from now",
-                            goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+                        getGoalReminderString(commandUsed, timezoneOffset, startTime, "6 months from now", goalDescription),
+                        type, goalDocumentID, false, false, goalEmbedColour);
                     if (yearBefore >= initialMessageTimestamp) {
                         await rm.setNewDMReminder(bot, userID, startTime, yearBefore,
-                            getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "by next year",
-                                goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+                            getGoalReminderString(commandUsed, timezoneOffset, startTime, "by next year", goalDescription),
+                            type, goalDocumentID, false, false, goalEmbedColour);
                     }
                 }
             }
         }
     }
     await rm.setNewDMReminder(bot, userID, startTime, yearBefore,
-        getGoalReminderString(PREFIX, commandUsed, timezoneOffset, startTime, "right now",
-            goalIndex, goalDescription), type, goalDocumentID, false, false, goalEmbedColour);
+        getGoalReminderString(commandUsed, timezoneOffset, startTime, "right now", goalDescription),
+        type, goalDocumentID, false, false, goalEmbedColour);
 }
 
 module.exports = {
     name: "goals",
     description: "Long-term goal setting handler",
     aliases: ["goal", "g"],
-    cooldown: 3,
+    cooldown: 1.5,
     args: true,
     run: async function run(bot, message, commandUsed, args, PREFIX,
-        timezoneOffset, daylightSavings, forceSkip) {
+        timezoneOffset, daylightSaving, forceSkip) {
         // Variable Declarations and Initializations
         // See - with markdown option!
         // Edit includes the ability to add
@@ -231,10 +232,10 @@ module.exports = {
         const goalCommand = args[0].toLowerCase();
         const goalActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${goalCommand} help\``;
         let goalType = args[1] ? args[1].toLowerCase() : false;
-        let totalGoalNumber = await Goal.find({ archived: false }).countDocuments();
-        let totalArchiveNumber = await Goal.find({ archived: true }).countDocuments();
+        let totalGoalNumber = await Goal.find({ userID: authorID, archived: false }).countDocuments();
+        let totalArchiveNumber = await Goal.find({ userID: authorID, archived: true }).countDocuments();
         const archiveRegex = /^(archive[ds]?|arch|ar?)$/i;
-        const isArchived = archiveRegex.test(goalType);
+        let isArchived = archiveRegex.test(goalType);
         const archiveShift = isArchived ? 1 : 0;
         console.log({ isArchived, archiveShift });
 
@@ -273,8 +274,8 @@ module.exports = {
 
                 const goalDescriptionString = `__**Goal:**__${goalDescription === "" ? "" : `\n${goalDescription}`}`;
                 let goalCheckpoints = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}`
-                    + `\n\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**`,
-                    `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
+                    + `\n\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**\n(Within 1000 characters)`,
+                    `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, 1000, additionalInstructions, additionalKeywords);
                 if (!goalCheckpoints.message && goalCheckpoints.message !== "") return;
                 else if (goalCheckpoints.returnVal === "reset") {
                     reset = true;
@@ -283,8 +284,9 @@ module.exports = {
                 else goalCheckpoints = goalCheckpoints.message;
 
                 const goalCheckpointsString = `__**Checkpoints:**__${goalCheckpoints === "" ? "" : `\n${goalCheckpoints}`}`;
-                let goalSteps = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**`,
-                    `Long-Term Goal: Creation - Actionable Steps`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
+                let goalSteps = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}`
+                    + `\n\n👣 **What are some __actionable steps__ for this goal?**\n(Within 1000 characters)`, `Long-Term Goal: Creation - Actionable Steps`,
+                    true, goalEmbedColour, 1000, additionalInstructions, additionalKeywords);
                 if (!goalSteps.message && goalSteps.message !== "") return;
                 else if (goalSteps.returnVal === "reset") {
                     reset = true;
@@ -294,8 +296,8 @@ module.exports = {
 
                 const goalStepsString = `__**Steps:**__${goalSteps === "" ? "" : `\n${goalSteps}`}`;
                 let goalReason = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}`
-                    + `\n\n💭 **__Why__ do you want to accomplish this goal?**`,
-                    `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, additionalInstructions, additionalKeywords);
+                    + `\n\n💭 **__Why__ do you want to accomplish this goal?**\n(Within 1000 characters)`, `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, 1000,
+                    additionalInstructions, additionalKeywords);
                 if (!goalReason.message && goalReason.message !== "") return;
                 else if (goalReason.returnVal === "reset") {
                     reset = true;
@@ -307,21 +309,23 @@ module.exports = {
                 for (i = 0; i < 2; i++) {
                     do {
                         const index = i;
-                        let goalsTimePrompt = `**Please enter the date and time when you __${time[i]}__ this goal:**\n(e.g. now, OR March 22, 2027)`;
-                        time[i] = await fn.getSingleEntry(bot, message, PREFIX, goalsTimePrompt, "Long-Term Goal: Creation - Set Time", forceSkip, goalEmbedColour,
+                        let goalsTimePrompt = `**Please enter the date and time when you __${time[i]}__ this goal:**\n${i === 0 ? timeExamples : futureTimeExamples}`;
+                        let timeInput = await fn.getSingleEntry(bot, message, PREFIX, goalsTimePrompt, "Long-Term Goal: Creation - Set Time", forceSkip, goalEmbedColour,
                             additionalInstructions, additionalKeywords);
-                        if (!time[i]) return;
-                        else if (time[i] === "reset") {
+                        if (!timeInput) return;
+                        else if (timeInput === "reset") {
                             reset = true;
                             break;
                         }
-                        time[i] = time[i].toLowerCase().split(/[\s\n]+/);
+                        timeInput = timeInput.toLowerCase().split(/[\s\n]+/);
                         const now = Date.now();
-                        time[i] = fn.timeCommandHandlerToUTC(time[i], now, timezoneOffset, daylightSavings);
+                        timeInput = fn.timeCommandHandlerToUTC(timeInput, now, timezoneOffset, daylightSaving);
                         i = index;
-                        if (!time[i] && time[i] !== 0) {
+                        if (!timeInput && timeInput !== 0) {
                             fn.sendReplyThenDelete(message, `**INVALID DATE/TIME**...`, 60000);
+                            continue;
                         }
+                        else time[i] = timeInput - HOUR_IN_MS * timezoneOffset;
                     }
                     while (!time[i])
                     if (reset) break;
@@ -335,15 +339,13 @@ module.exports = {
                         userID: authorID,
                         completed: false,
                         archived: false,
-                        goal: {
-                            start: time[0],
-                            end: time[1],
-                            type: goalType,
-                            description: goalDescription,
-                            checkpoints: goalCheckpoints,
-                            steps: goalSteps,
-                            reason: goalReason,
-                        },
+                        start: time[0],
+                        end: time[1],
+                        type: goalType,
+                        description: goalDescription,
+                        checkpoints: goalCheckpoints,
+                        steps: goalSteps,
+                        reason: goalReason,
                     });
                     await goalDocument.save()
                         .then(async result => {
@@ -357,8 +359,8 @@ module.exports = {
                     const confirmReminders = await fn.getUserConfirmation(bot, message, PREFIX, "__Would you like to get **reminders before this goal ends?:**__"
                         + "\n\n**1 year, 6 months, 1 month, 1 week, and 1 day before**", false, "Long-Term Goal: Reminders", 180000);
                     if (confirmReminders) {
-                        await setGoalReminders(bot, authorID, timezoneOffset, PREFIX, commandUsed, goalDocument._id,
-                            goalDescription, totalGoalNumber, time[0], message.createdAt, time[1]);
+                        await setGoalReminders(bot, authorID, timezoneOffset, commandUsed, goalDocument._id,
+                            goalDescription, time[0], message.createdAt, time[1]);
                     }
                 }
                 else {
@@ -366,27 +368,29 @@ module.exports = {
                     continue;
                 }
 
-                const connectHabits = await fn.getUserConfirmation(bot, message, PREFIX, "Would you like to **connect habits** to this goal? 🔗",
-                    false, "Long-Term Goal: Connect Habits", 180000);
-                if (connectHabits) {
-                    do {
-                        let habits = await Habit.find({ userID: authorID, archived: false, connectedGoal: undefined }, { _id: 1, description: 1, areaOfLife: 1 });
-                        let habitList = "";
-                        habits.forEach((habit, i) => {
-                            habitList += `\`${i + 1}\` - ${areasOfLifeEmojis[habit.areaOfLife]} **${areasOfLife[habit.areaOfLife]}**`
-                                + `\n${habit.description}\n`;
-                        });
+                let habits = await Habit.find({ userID: authorID, archived: false, connectedGoal: undefined }, { _id: 1, description: 1, areaOfLife: 1 });
+                if (habits) if (habits.length) {
+                    const connectHabits = await fn.getUserConfirmation(bot, message, PREFIX, "Would you like to **connect habits** to this goal? 🔗",
+                        false, "Long-Term Goal: Connect Habits", 180000);
+                    if (connectHabits) {
+                        do {
+                            let habitList = "";
+                            habits.forEach((habit, i) => {
+                                habitList += `\`${i + 1}\` - ${areasOfLifeEmojis[habit.areaOfLife]} **${areasOfLife[habit.areaOfLife]}**`
+                                    + `\n${habit.description}\n`;
+                            });
 
-                        let targetHabitIndex = await fn.userSelectFromList(bot, PREFIX, message, habitList, habits.length, "__**Which habit would you like to connect to this goal?:**__",
-                            `Long-Term Goal: Habit Connection Selection`, goalEmbedColour, 600000, 0);
-                        if (!targetHabitIndex) break;
-                        const targetHabit = habits[targetHabitIndex];
-                        await Habit.updateOne({ _id: targetHabit._id }, { $set: { connectedGoal: goalDocument._id } });
-                        const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Is there __another habit__ you would like to connect to this goal?** 🔗`,
-                            forceSkip, `Long-Term Goal: Another Habit Connection`);
-                        if (!confirmEnd) break;
+                            let targetHabitIndex = await fn.userSelectFromList(bot, PREFIX, message, habitList, habits.length, "__**Which habit would you like to connect to this goal?:**__",
+                                `Long-Term Goal: Habit Connection Selection`, goalEmbedColour, 600000, 0);
+                            if (!targetHabitIndex) break;
+                            const targetHabit = habits[targetHabitIndex];
+                            await Habit.updateOne({ _id: targetHabit._id }, { $set: { connectedGoal: goalDocument._id } });
+                            const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Is there __another habit__ you would like to connect to this goal?** 🔗`,
+                                forceSkip, `Long-Term Goal: Another Habit Connection`);
+                            if (!confirmEnd) break;
+                        }
+                        while (true)
                     }
-                    while (true)
                 }
                 const createAnother = await fn.getUserConfirmation(bot, message, PREFIX, "Would you like to create another **long-term goal?**",
                     false, "Long-Term Goal: Create Another", 180000);
@@ -452,6 +456,9 @@ module.exports = {
                     const targetIDs = await goalCollection.map(entry => entry._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Goals (${sortType})`);
                     await fn.deleteManyByIdAndReminders(Goal, targetIDs);
+                    if (targetIDs) if (targetIDs.length) {
+                        await Habit.updateMany({ connectedGoal: { $in: { targetIDs } } }, { $set: { connectedGoal: undefined, } });
+                    }
                     return;
                 }
                 if (deleteType === "many") {
@@ -512,6 +519,9 @@ module.exports = {
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Goals ${toDelete} (${sortType})`);
                         await fn.deleteManyByIdAndReminders(Goal, goalTargetIDs);
+                        if (goalTargetIDs) if (goalTargetIDs.length) {
+                            await Habit.updateMany({ connectedGoal: { $in: { goalTargetIDs } } }, { $set: { connectedGoal: undefined, } });
+                        }
                         return;
                     }
                     else return;
@@ -556,6 +566,9 @@ module.exports = {
                             const targetIDs = await goalCollection.map(entry => entry._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} goals past ${skipEntries} (${sortType})`);
                             await fn.deleteManyByIdAndReminders(Goal, targetIDs);
+                            if (targetIDs) if (targetIDs.length) {
+                                await Habit.updateMany({ connectedGoal: { $in: { targetIDs } } }, { $set: { connectedGoal: undefined, } });
+                            }
                             return;
                         }
 
@@ -586,6 +599,9 @@ module.exports = {
                         `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`, 600000);
                     if (deleteIsConfirmed) {
                         await fn.deleteOneByIdAndReminders(Goal, goalTargetID);
+                        if (goalTargetID) {
+                            await Habit.updateMany({ connectedGoal: goalTargetID }, { $set: { connectedGoal: undefined, } });
+                        }
                         return;
                     }
                 }
@@ -604,6 +620,7 @@ module.exports = {
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Goals`);
                     await fn.deleteUserEntriesAndReminders(Goal, authorID);
+                    await Habit.updateMany({ userID: authorID }, { $set: { connectedGoal: undefined, } });
                     return;
                 }
                 else return message.reply(goalActionHelpMessage);
@@ -632,6 +649,9 @@ module.exports = {
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Goal ${sortType}`);
                     await fn.deleteOneByIdAndReminders(Goal, goalTargetID);
+                    if (goalTargetID) {
+                        await Habit.updateMany({ connectedGoal: goalTargetID }, { $set: { connectedGoal: undefined, } });
+                    }
                     return;
                 }
             }
@@ -655,7 +675,8 @@ module.exports = {
                 else if (!totalArchiveNumber && isArchived) {
                     return message.reply(`**NO ARCHIVED GOALS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
                 }
-                else if (args[1 + archiveShift] ? args[1 + archiveShift].toLowerCase() : false === "number") {
+                else if ((args[1 + archiveShift] ? args[1 + archiveShift].toLowerCase() : false) === "number") {
+                    console.log(args[1 + archiveShift].toLowerCase());
                     if (isArchived) return message.reply(`You have **${totalArchiveNumber} archived goal entries** on record.`);
                     else return message.reply(`You have **${totalGoalNumber} goal entries** on record.`);
                 }
@@ -684,8 +705,20 @@ module.exports = {
                     return message.channel.send(await getRecentGoal(authorID, isArchived, goalEmbedColour));
                 }
                 else if (seeType === "all") {
-                    goalIndex = totalGoalNumber;
+                    if (isArchived) {
+                        if (totalArchiveNumber) {
+                            goalIndex = totalArchiveNumber;
+                        }
+                    }
+                    else {
+                        if (totalGoalNumber) {
+                            goalIndex = totalGoalNumber;
+                        }
+                    }
                     pastFunctionality = true;
+                    if (goalIndex === undefined) {
+                        return fn.sendErrorMessageAndUsage(message, goalActionHelpMessage, `**You have NO ${isArchived ? "ARCHIVED " : ""}GOALS**...`);
+                    }
                 }
                 else if (isNumberArg) {
                     goalIndex = parseInt(args[1 + archiveShift]);
@@ -715,8 +748,8 @@ module.exports = {
                         if (isNaN(args[2 + archiveShift])) return message.reply(goalActionHelpMessage);
                         if (parseInt(args[2 + archiveShift]) <= 0) return message.reply(goalActionHelpMessage);
                         const confirmSeeMessage = `Are you sure you want to **see ${args[2 + archiveShift]} goals?**`;
-                        let confirmSeeAll = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeeMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${args[2 + archiveShift]} Goals (${sortType})`);
-                        if (!confirmSeeAll) return;
+                        let confirmSeeGoals = await fn.getUserConfirmation(bot, message, PREFIX, confirmSeeMessage, forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${args[2 + archiveShift]} Goals (${sortType})`);
+                        if (!confirmSeeGoals) return;
                     }
                     else {
                         // If the next argument is undefined, implied "see all" command call unless "all" was not called:
@@ -856,6 +889,7 @@ module.exports = {
                 const goalTargetID = goalDocument._id;
                 var showGoal, continueEdit;
                 do {
+                    const initialEditTimestamp = Date.now();
                     const checkGoal = await getOneGoalByObjectID(goalTargetID);
                     if (!checkGoal) return;
                     continueEdit = false;
@@ -869,81 +903,78 @@ module.exports = {
                     if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
                     var userEdit, goalEditMessagePrompt = "";
                     const fieldToEdit = goalFields[fieldToEditIndex];
-                    const type = `Long-Term Goal${isArchived ? " Archive" : ""}`;
-                    let { goal, completed, archived } = goalDocument;
+                    const titleType = `Long-Term Goal${isArchived ? " Archive" : ""}`;
+                    let { goal, completed, archived, type, description, reason, steps, checkpoints, start, end } = goalDocument;
                     switch (fieldToEditIndex) {
                         case 0:
-                            goalEditMessagePrompt = "\n__**Please enter the date/time ⌚ of when you started this goal:**__";
-                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
+                            goalEditMessagePrompt = `\n__**Please enter the date/time of when you started this goal:**__ ⌚\n${timeExamples}`;
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour);
                             break;
                         case 1:
-                            goalEditMessagePrompt = "\n__**Please enter the date/time ⌚ of when you ended or intend to end this goal:**__";
-                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
+                            goalEditMessagePrompt = `\n__**Please enter the date/time of when you ended or intend to end this goal:**__ ⌚\n${timeExamples}`;
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour);
                             break;
                         case 2:
                             goalEditMessagePrompt = `\n**__Which area of life does your long-term goal fall under?__ 🌱**\n${areasOfLifeList}`;
-                            userEdit = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, areasOfLife.length, type, areasOfLifeCombinedEmoji, forceSkip, goalEmbedColour, goalEditMessagePrompt);
-                            if (!userEdit) return;
+                            userEdit = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, areasOfLife.length, titleType, areasOfLifeCombinedEmoji, forceSkip, goalEmbedColour, goalEditMessagePrompt);
+                            if (!userEdit && userEdit !== 0) return;
                             else if (userEdit === "back") break;
-                            userEdit--;
-                            goal.type = userEdit;
+                            else {
+                                userEdit--; // Minus 1 for array offset
+                                type = userEdit;
+                            }
                             break;
                         case 3:
-                            goalEditMessagePrompt = "\n🎯 **What is your __long-term goal__?**";
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
-                            goal.description = userEdit;
+                            goalEditMessagePrompt = "\n🎯 **What is your __long-term goal__?**\n(Within 250 characters)";
+                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 250);
+                            description = userEdit;
                             break;
                         case 4:
-                            goalEditMessagePrompt = "\n💭 **__Why__ do you want to accomplish this goal?**";
-                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
-                            goal.reason = userEdit;
+                            goalEditMessagePrompt = "\n💭 **__Why__ do you want to accomplish this goal?**\n(Within 1000 characters)";
+                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 1000);
+                            reason = userEdit;
                             break;
                         case 5:
-                            goalEditMessagePrompt = "\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**";
-                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
-                            goal.checkpoints = userEdit;
+                            goalEditMessagePrompt = "\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**\n(Within 1000 characters)";
+                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 1000);
+                            checkpoints = userEdit;
                             break;
                         case 6:
-                            goalEditMessagePrompt = "\n👣 **What are some __actionable steps__ for this goal?**";
-                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, goalEditMessagePrompt, type, forceSkip, goalEmbedColour);
-                            goal.steps = userEdit;
+                            goalEditMessagePrompt = "\n👣 **What are some __actionable steps__ for this goal?**\n(Within 1000 characters)";
+                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 1000);
+                            steps = userEdit;
                             break;
                         case 7:
                             goalEditMessagePrompt = `\n**__Currently:__ ${completed ? "Completed" : "In Progress"}\n\n✅ - Completed\n\n🏃‍♂️ - In Progress**`;
-                            userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, ['✅', '🏃‍♂️'], type, forceSkip, goalEmbedColour);
+                            userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, ['✅', '🏃‍♂️'], titleType, forceSkip, goalEmbedColour);
                             break;
                         case 8:
                             goalEditMessagePrompt = `\n**__Currently:__ ${archived ? "Archived" : "NOT Archived"}\n\n📁 - Archive\n\n📜 - No Archive**`;
-                            userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, ['📁', '📜'], type, forceSkip, goalEmbedColour);
+                            userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, ['📁', '📜'], titleType, forceSkip, goalEmbedColour);
                             break;
                     }
                     console.log({ userEdit });
                     if (userEdit === false) return;
                     else if (userEdit === undefined) userEdit = "back";
                     else if (userEdit !== "back") {
-                        if (fieldToEditIndex === 0 || fieldToEditIndex === 1 || fieldToEditIndex === 7 || fieldToEditIndex === 8) {
-                            await Reminder.deleteMany({ connectedDocument: goalTargetID });
-                        }
                         // Parse User Edit
                         if (fieldToEditIndex === 0 || fieldToEditIndex === 1) {
                             userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                             console.log({ userEdit });
                             const now = Date.now();
-                            userEdit = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavings);
+                            userEdit = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSaving);
                             if (!userEdit) {
                                 fn.sendReplyThenDelete(message, `**INVALID TIME**... ${goalHelpMessage}`, 60000);
                                 continueEdit = true;
                             }
                             switch (fieldToEditIndex) {
-                                case 0: goal.start = userEdit;
+                                case 0: start = userEdit;
                                     break;
-                                case 1: goal.end = userEdit;
+                                case 1: end = userEdit;
                                     break
                                 default: continueEdit = true;
                                     break;
                             }
-                            await setGoalReminders(bot, authorID, timezoneOffset, PREFIX, commandUsed,
-                                goalTargetID, goal.description, totalGoalNumber, goal.start, now, goal.end);
                         }
                         else if (fieldToEditIndex === 7) {
                             switch (userEdit) {
@@ -952,7 +983,9 @@ module.exports = {
                                 case '🏃‍♂️': userEdit = false;
                                     break;
                                 default: continueEdit = true;
+                                    break;
                             }
+                            completed = userEdit;
                         }
                         else if (fieldToEditIndex === 8) {
                             switch (userEdit) {
@@ -961,7 +994,10 @@ module.exports = {
                                 case '📜': userEdit = false;
                                     break;
                                 default: continueEdit = true;
+                                    break;
                             }
+                            archived = userEdit;
+                            isArchived = userEdit;
                         }
                     }
                     else continueEdit = true;
@@ -969,11 +1005,38 @@ module.exports = {
                     if (!continueEdit) {
                         try {
                             console.log(`Editing ${authorID}'s Goal ${goalIndex} (${sortType})`);
-                            if (fieldToEditIndex === 7) goalDocument = await Goal.findOneAndUpdate({ _id: goalTargetID }, { $set: { completed: userEdit } }, { new: true });
-                            else if (fieldToEditIndex === 8) goalDocument = await Goal.findOneAndUpdate({ _id: goalTargetID }, { $set: { archived: userEdit } }, { new: true });
-                            else goalDocument = await Goal.findOneAndUpdate({ _id: goalTargetID }, { $set: { goal } }, { new: true });
+                            goalDocument = await Goal.findOneAndUpdate({ _id: goalTargetID }, {
+                                $set:
+                                {
+                                    completed,
+                                    archived,
+                                    type,
+                                    description,
+                                    reason,
+                                    steps,
+                                    checkpoints,
+                                    start,
+                                    end,
+                                }
+                            }, { new: true });
                             console.log({ continueEdit });
                             if (goalDocument) {
+                                if (fieldToEditIndex === 0 || fieldToEditIndex === 1 || fieldToEditIndex === 3
+                                    || fieldToEditIndex === 7 || fieldToEditIndex === 8) {
+                                    if (goalTargetID) {
+                                        const removeOldReminders = await Reminder.deleteMany({ connectedDocument: goalTargetID });
+                                        if (removeOldReminders) if (removeOldReminders.deletedCount > 0) {
+                                            if (fieldToEditIndex === 0 || fieldToEditIndex === 1 || fieldToEditIndex === 3
+                                                || (fieldToEditIndex === 7 && completed === false)
+                                                || (fieldToEditIndex === 8 && archived === false)) {
+                                                await setGoalReminders(bot, authorID, timezoneOffset, commandUsed, goalDocument._id,
+                                                    goalDocument.description, goalDocument.start - HOUR_IN_MS * timezoneOffset,
+                                                    initialEditTimestamp, goalDocument.end - HOUR_IN_MS * timezoneOffset);
+                                            }
+                                        }
+                                    }
+
+                                }
                                 goalIndex = indexByRecency ?
                                     await getGoalIndexByFunction(authorID, goalTargetID, isArchived ? totalArchiveNumber : totalGoalNumber, isArchived, getOneGoalByRecency)
                                     : await getGoalIndexByFunction(authorID, goalTargetID, isArchived ? totalArchiveNumber : totalGoalNumber, isArchived, getOneGoalByStartTime);
@@ -1015,7 +1078,7 @@ module.exports = {
 
 
         else if (goalCommand === "post" || goalCommand === "p") {
-            let goals = await Goal.find({ archived: false }).sort({ 'goal.start': +1 });
+            let goals = await Goal.find({ archived: false }).sort({ start: +1 });
             if (!goals) return message.reply(`**You don't have any goals**, try \`${PREFIX}${commandUsed} start\``);
             const targetChannel = await fn.getPostChannel(bot, PREFIX, message, `Long-Term Goal`, forceSkip, goalEmbedColour);
             if (!targetChannel) return;
@@ -1050,22 +1113,22 @@ module.exports = {
 
             do {
                 var habits;
-                if (indexByRecency) habits = await Goal.find({ archived: isArchived, completed: false }, { _id: 1, "goal.description": 1 }).sort({ _id: -1 });
-                else habits = await Goal.find({ archived: isArchived, completed: false }, { _id: 1, "goal.description": 1 }).sort({ "goal.start": +1 });
+                if (indexByRecency) habits = await Goal.find({ archived: isArchived, completed: false }, { _id: 1, description: 1 }).sort({ _id: -1 });
+                else habits = await Goal.find({ archived: isArchived, completed: false }, { _id: 1, description: 1 }).sort({ start: +1 });
                 if (!habits.length) return message.reply(`**No ${isArchived ? "archived " : ""}goals** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
                 let goalList = "";
-                habits.forEach((element, i) => {
-                    goalList += `\`${i + 1}\` - ${element.goal.description}\n`;
+                habits.forEach((goal, i) => {
+                    goalList += `\`${i + 1}\` - ${goal.description}\n`;
                 });
 
                 let targetGoalIndex = await fn.userSelectFromList(bot, PREFIX, message, goalList, habits.length, "__**Which goal would you like to end?:**__",
                     `Long-Term Goal${isArchived ? " Archive" : ""}: End Selection`, goalEmbedColour, 600000, 0);
                 if (!targetGoalIndex) return;
                 const targetGoal = habits[targetGoalIndex];
-                const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
+                const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.description}`,
                     forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: End Confirmation`);
-                if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { completed: true, "goal.end": fn.getNowFlooredToSecond() + HOUR_IN_MS * timezoneOffset } },
+                if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { completed: true, end: fn.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * timezoneOffset } },
                     (err, result) => {
                         if (err) return console.error(err);
                         console.log({ result });
@@ -1101,13 +1164,13 @@ module.exports = {
 
             do {
                 var habits;
-                if (indexByRecency) habits = await Goal.find({ archived: false }, { _id: 1, "goal.description": 1 }).sort({ _id: -1 });
-                else habits = await Goal.find({ archived: false }, { _id: 1, "goal.description": 1 }).sort({ "goal.start": +1 });
+                if (indexByRecency) habits = await Goal.find({ archived: false }, { _id: 1, description: 1 }).sort({ _id: -1 });
+                else habits = await Goal.find({ archived: false }, { _id: 1, description: 1 }).sort({ start: +1 });
                 if (!habits.length) return message.reply(`**No ${isArchived ? "archived " : ""}goals** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
                 let goalList = "";
-                habits.forEach((element, i) => {
-                    goalList += `\`${i + 1}\` - ${element.goal.description}\n`;
+                habits.forEach((goal, i) => {
+                    goalList += `\`${i + 1}\` - ${goal.description}\n`;
                 });
 
                 let targetGoalIndex = await fn.userSelectFromList(bot, PREFIX, message, goalList, habits.length, "__**Which goal would you like to archive?:**__",
@@ -1116,7 +1179,7 @@ module.exports = {
                 const targetGoal = habits[targetGoalIndex];
                 const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to archive this goal?**`
                     + `\n(it will not be deleted, but won't show up in your \`${PREFIX}${commandUsed} post\`\nand you won't get reminders for it anymore)`
-                    + `\n\n🎯 - __**Description:**__\n${targetGoal.goal.description}`,
+                    + `\n\n🎯 - __**Description:**__\n${targetGoal.description}`,
                     forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Confirmation`);
                 if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { archived: true } }, (err, result) => {
                     if (err) return console.error(err);

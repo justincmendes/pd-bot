@@ -30,7 +30,7 @@ module.exports = {
     name: "prefix",
     description: "See and/or change guild prefix (can change only if owner)",
     aliases: prefixAliases,
-    cooldown: 5,
+    cooldown: 3.5,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavings, forceSkip) {

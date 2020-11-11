@@ -17,7 +17,7 @@ module.exports = {
     description: "Users that like pestering accountability!",
     aliases: ["pest", "accountable", "accountability", "pestering",
         "a", "acc", "account"],
-    cooldown: 3.5,
+    cooldown: 2.5,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavings, forceSkip) {
@@ -47,13 +47,13 @@ module.exports = {
                 if (targetServerIndex === false) return;
                 else {
                     guildID = mutualServers[targetServerIndex];
-                    guild = bot.guilds.cache.get(guildID);
+                    guild = bot.guilds.fetch(guildID);
                     guildName = guild.name;
                 }
             }
             else {
                 guildID = message.guild.id;
-                guild = bot.guilds.cache.get(guildID);
+                guild = bot.guilds.fetch(guildID);
                 guildName = message.guild.name;
             }
         }
@@ -102,7 +102,7 @@ module.exports = {
                 const isOneUser = userArray.length === 1;
                 if (isOneUser) {
                     let userProfile = fn.getMessageEmbed(userArray[0], title, pesterEmbedColour)
-                        .setThumbnail(bot.users.cache.get(findUsers[0].discordID).displayAvatarURL({ dynamic: true }));
+                        .setThumbnail(bot.users.fetch(findUsers[0].discordID).displayAvatarURL({ dynamic: true }));
                     message.channel.send(userProfile);
                 }
                 else {
@@ -119,7 +119,7 @@ module.exports = {
                 let userProfile = `${inGuild ? `<@!${user.discordID}>` : `__**${authorUsername}**__`} - `
                     + `${user.likesPesteringAccountability ? "**likes** pestering accountability" : "**does NOT like** pestering accountability"}`;
                 userProfile = fn.getMessageEmbed(userProfile, `Pestering Accountability: ${authorUsername}`, pesterEmbedColour)
-                    .setThumbnail(bot.users.cache.get(authorID).displayAvatarURL({ dynamic: true }));
+                    .setThumbnail(bot.users.fetch(authorID).displayAvatarURL({ dynamic: true }));
                 return message.channel.send(userProfile);
             }
             else return message.channel.send(`Could not find any users from \"**${args}**\" (${pesterHelpMessage})`);

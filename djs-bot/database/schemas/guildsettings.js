@@ -25,7 +25,7 @@ const guildSettingsSchema = mongoose.Schema({
             required: true,
             default: -5,
         },
-        daylightSavings: {
+        daylightSaving: {
             type: Boolean,
             required: true,
             default: true,
@@ -61,7 +61,7 @@ const guildSettingsSchema = mongoose.Schema({
             default: false,
         },
         quoteInterval: {
-            type: Number,
+            type: String,
             required: false,
         },
         nextQuote: {

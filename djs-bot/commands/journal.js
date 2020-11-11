@@ -10,9 +10,10 @@ const rm = require("../../utilities/reminder");
 const prompts = require("../../utilities/prompts.json").prompts;
 require("dotenv").config();
 
+const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const timeExamples = fn.timeExamples;
 const journalEmbedColour = fn.journalEmbedColour;
 const journalMax = fn.journalMaxTier1;
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
 
 // Function Declarations and Definitions
 function getJournalTemplate(args, withMarkdown = true, journalEmbedColour = fn.journalEmbedColour) {
@@ -70,7 +71,7 @@ async function getGeneratedPromptAndAnswer(bot, message, PREFIX, prompts) {
                 console.log({ currentPrompt });
             }
         }
-        const user = bot.users.cache.get(currentPrompt.userID);
+        const user = bot.users.fetch(currentPrompt.userID);
         let entry = await fn.getMultilineEntry(bot, PREFIX, message, `**__${currentPrompt || ""}__**${user ? `\n\nBy: __**${user.username}**__` : ""}`,
             "Journal: Prompt and Answer", true, journalEmbedColour, newPromptInstructions, newPromptKeywords, newPrompt ? "" : entry.array);
         if (!entry) return false;
@@ -223,10 +224,10 @@ module.exports = {
     name: "journal",
     description: "Daily Journaling (with Weekly journal template)",
     aliases: ["j", "jour", "journ", "scribe", "scribing", "write", "w"],
-    cooldown: 3.5,
+    cooldown: 1.5,
     args: true,
     run: async function run(bot, message, commandUsed, args, PREFIX,
-        timezoneOffset, daylightSavings, forceSkip) {
+        timezoneOffset, daylightSaving, forceSkip) {
         // At the end of every week/Weekly habit cron time, or when they submit their weekly journal reflection, send them a textfile of their weeks entries (press the paperclip)
         // create, see, edit, end, templates <= return both the weekly reflection/weekly goals and daily journal template!
 
@@ -243,7 +244,7 @@ module.exports = {
         const authorID = message.author.id;
         const authorUsername = message.author.username;
         const userSettings = await User.findOne({ discordID: authorID });
-        const { premium: tier } = userSettings;
+        const { tier } = userSettings;
         const journalInProgress = await Journal.findOne({ template: 1, userID: authorID, "entry.amazing": undefined, "entry.betterDay": undefined });
         const totalJournalNumber = await Journal.find({ userID: authorID }).countDocuments();
         console.log({ journalInProgress, totalJournalNumber });
@@ -268,15 +269,15 @@ module.exports = {
                 }
             }
 
-            if (journalInProgress) return message.reply(`**You already have a journal entry in progress!** Try** \`${PREFIX}${commandUsed} end\` **to **complete** your journal entry`);
-
             const templateType = await fn.reactionDataCollect(bot, message, `📜 - **Daily (2-part) Journal Template** (*5-Minute Journal*)`
                 + `\n🗣 - **Prompt/Question & Answer** (Enter a prompt or get a generated prompt)`
                 + `\n✍ - \"**Freehand**\" (No template or prompt)\n❌ - **Exit**`, ['📜', '🗣', '✍', '❌'], "Journal: Template", journalEmbedColour);
             switch (templateType) {
                 case '📜': {
-                    let gratitudes = await fn.getMultilineEntry(bot, PREFIX, message, "What are **3** things you are **truly __grateful__** for? 🙏\n(big or small)",
-                        "Journal: Gratitudes", true, journalEmbedColour);
+                    if (journalInProgress) return message.reply(`**You already have a journal entry in progress!** Try** \`${PREFIX}${commandUsed} end\` **to **complete** your journal entry`);
+
+                    let gratitudes = await fn.getMultilineEntry(bot, PREFIX, message, "What are **3** things you are **truly __grateful__** for? 🙏\n(big or small)"
+                        + "\n(Within 1000 characters)", "Journal: Gratitudes", true, journalEmbedColour, 1000);
                     gratitudes = gratitudes.message;
                     console.log({ gratitudes });
                     if (!gratitudes && gratitudes !== '') return;
@@ -287,8 +288,8 @@ module.exports = {
                     // console.log({ improvements });
                     // if (!improvements && improvements !== '') return;
 
-                    let actions = await fn.getMultilineEntry(bot, PREFIX, message, "What are **3 __actions or mindset shifts__** that would make **today great**? 🧠‍",
-                        "Journal: Actions", true, journalEmbedColour);
+                    let actions = await fn.getMultilineEntry(bot, PREFIX, message, "What are **3 __actions or mindset shifts__** that would make **today great**? 🧠‍"
+                        + "\n(Within 1000 characters)", "Journal: Actions", true, journalEmbedColour, 1000);
                     actions = actions.message;
                     console.log({ actions });
                     if (!actions && actions !== '') return;
@@ -301,7 +302,7 @@ module.exports = {
                     journalDocument = new Journal({
                         _id: mongoose.Types.ObjectId(),
                         userID: authorID,
-                        createdAt: fn.getNowFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
+                        createdAt: fn.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
                         template: 1,
                         entry: {
                             gratitudes,
@@ -321,19 +322,19 @@ module.exports = {
                         + "\n(Ideally for the end of the day, before bed)", false, "Journal: End of Day - Completion Reminder", 180000);
                     if (!confirmEndReminder) return;
 
-                    let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavings,
+                    let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSaving,
                         "**When** would you like to **finish your journal entry?**",
-                        "Journal: End of Day - Reflection Time", forceSkip, journalEmbedColour);
+                        "Journal: End of Day - Reflection Time", true, journalEmbedColour);
                     if (!endTime) return;
                     endTime -= HOUR_IN_MS * timezoneOffset;
 
                     const reminderMessage = `**__Time to complete your journal entry for today!__**`
                         + `\n\nType** \`?${commandUsed} end\` **- to write your **end of day reflection journal**`;
-                    const now = fn.getNowFlooredToSecond();
+                    const now = fn.getCurrentUTCTimestampFlooredToSecond();
                     await rm.setNewDMReminder(bot, authorID, now, endTime, reminderMessage,
                         "Journal", journalDocument._id, false, false, journalEmbedColour);
                     console.log("Journal end reminder set.");
-                    message.reply(`Journal end reminder set for **${fn.millisecondsToTimeString(endTime - fn.getNowFlooredToSecond())}** from now!`);
+                    message.reply(`Journal end reminder set for **${fn.millisecondsToTimeString(endTime - fn.getCurrentUTCTimestampFlooredToSecond())}** from now!`);
                     return;
                 }
                 // If allowing community prompts (with verification system) - adjust code below
@@ -342,8 +343,8 @@ module.exports = {
                         + "\n\n⚙ - **Generate Prompts**\n🖋 - **Create Prompt**\n❌ - **Exit**", ['⚙', '🖋', '❌'], "Journal: Prompt", journalEmbedColour);
                     // 🗣 - **Get Prompts** from the **Community**\n
                     if (promptType === '🖋') {
-                        const userPrompt = await fn.getSingleEntry(bot, message, PREFIX, `**Enter a __question or prompt__ you'd like to explore and answer:**`,
-                            "Journal: Create Prompt", forceSkip, journalEmbedColour);
+                        const userPrompt = await fn.getSingleEntryWithCharacterLimit(bot, message, PREFIX, `**Enter a __question or prompt__ you'd like to explore and answer:**`
+                            + "\n(Within 1000 characters)", "Journal: Create Prompt", 1000, "a prompt", forceSkip, journalEmbedColour);
                         if (!userPrompt) return;
                         let journalEntry = await fn.getMultilineEntry(bot, PREFIX, message, userPrompt, "Journal: Prompt and Answer", forceSkip, journalEmbedColour);
                         if (!journalEntry) return;
@@ -351,7 +352,7 @@ module.exports = {
                         journalDocument = new Journal({
                             _id: mongoose.Types.ObjectId(),
                             userID: authorID,
-                            createdAt: fn.getNowFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
+                            createdAt: fn.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
                             template: 2,
                             entry: {
                                 message: journalEntry,
@@ -380,7 +381,7 @@ module.exports = {
                         journalDocument = new Journal({
                             _id: mongoose.Types.ObjectId(),
                             userID: authorID,
-                            createdAt: fn.getNowFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
+                            createdAt: fn.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
                             template: 2,
                             entry: {
                                 message: entry,
@@ -404,7 +405,7 @@ module.exports = {
                     journalDocument = new Journal({
                         _id: mongoose.Types.ObjectId(),
                         userID: authorID,
-                        createdAt: fn.getNowFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
+                        createdAt: fn.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
                         template: 3,
                         entry: { message: journalEntry, },
                     });
@@ -424,7 +425,8 @@ module.exports = {
 
         else if (journalCommand === "end" || journalCommand === "e") {
             if (!journalInProgress) return message.reply(`**No journals in progress...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
-            let amazing = await fn.getMultilineEntry(bot, PREFIX, message, "List **3 __amazing__** things that happened today ☘ (big or small)", "Journal: The Amazing 3", true, journalEmbedColour);
+            let amazing = await fn.getMultilineEntry(bot, PREFIX, message, "List **3 __amazing__** things that happened today ☘ (big or small)"
+                + "\n(Within 1500 Characters)", "Journal: The Amazing 3", true, journalEmbedColour, 1500);
             if (!amazing) return;
             else amazing = amazing.message;
             // let accomplishments = await fn.getMultilineEntry(bot, message, "List **3 __accomplishments__** today 🏆🥇 (big or small)", "Journal: Accomplishments", true, journalEmbedColour);
@@ -432,8 +434,8 @@ module.exports = {
             // else accomplishments = accomplishments.message;
             let betterDay = await fn.getMultilineEntry(bot, PREFIX, message, "**__How could you have made today better?__** 📈\n\ne.g. **__Retrospective Journal:__**"
                 + "\n👀 - **Critical Moment** of suboptimal behaviour/action.\n🧠 - The **rationalization/thought pattern** behind it."
-                + "\n🤔 - How you want to **think** next time! 💭\n\n[From *Metascript Method* - by Mark Queppet]", "Journal: Retrospective Better Day",
-                true, journalEmbedColour);
+                + "\n🤔 - How you want to **think** next time! 💭\n\n[From *Metascript Method* - by Mark Queppet]\n(Within 1500 Characters)",
+                "Journal: Retrospective Better Day", true, journalEmbedColour, 1500);
             if (!betterDay) return;
             else betterDay = betterDay.message;
 
@@ -443,8 +445,10 @@ module.exports = {
             if (finishedJournal) {
                 console.log(`Completing ${authorUsername}'s (${authorID}) journal entry!`);
                 message.reply("**Your journal entry was successfully completed!**");
-                await Reminder.deleteMany({ connectedDocument: journalInProgress._id });
-                console.log(`Removing Associated Reminders....`);
+                if (journalInProgress._id) {
+                    await Reminder.deleteMany({ connectedDocument: journalInProgress._id });
+                    console.log(`Removing Associated Reminders....`);
+                }
             }
             else return console.log(`There was an error completing ${authorUsername}'s (${authorID}) journal entry`);
             return;
@@ -924,7 +928,7 @@ module.exports = {
                         let { entry, createdAt } = journalDocument;
 
                         if (fieldToEditIndex === 0) {
-                            journalEditMessagePrompt = `**__Please enter the date and time when this journal entry was created:__**`;
+                            journalEditMessagePrompt = `**__Please enter the date and time when this journal entry was created:__** ⌚\n${timeExamples}`;
                             userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
                         }
                         else switch (template) {
@@ -1001,7 +1005,7 @@ module.exports = {
                                 userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                                 console.log({ userEdit });
                                 const now = Date.now();
-                                userEdit = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSavings);
+                                userEdit = fn.timeCommandHandlerToUTC(userEdit, now, timezoneOffset, daylightSaving);
                                 if (!userEdit) {
                                     fn.sendReplyThenDelete(message, `**INVALID TIME**... Try** \`${PREFIX}date\` **for help with **dates and times!**`, 60000);
                                     continueEdit = true;

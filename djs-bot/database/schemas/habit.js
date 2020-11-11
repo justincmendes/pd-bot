@@ -72,11 +72,13 @@ const habitSchema = mongoose.Schema({
         },
         isWeeklyType: {
             type: Boolean,
-            required: false,
+            required: true,
+            default: false,
         },
         cronPeriods: {
             type: Number,
-            required: false,
+            required: true,
+            default: 1,
         },
         // To automatically mark complete or incomplete on day!
         // For streaks - auto-mark completions
@@ -120,7 +122,17 @@ const habitSchema = mongoose.Schema({
 
 
     },
-    currentLog: {
+    currentStreak: {
+        type: Number,
+        required: true,
+        default: 0,
+    },
+    currentState: {
+        type: Number,
+        required: true,
+        default: 0,
+    },
+    longestStreak: {
         type: Number,
         required: true,
         default: 0,
@@ -142,10 +154,9 @@ const habitSchema = mongoose.Schema({
     },
     lastEdited: {
         type: Number,
-        required: true,
+        required: false,
         default: null,
-    }
-
+    },
 });
 
 // habitSchema.pre('remove', (next) => {

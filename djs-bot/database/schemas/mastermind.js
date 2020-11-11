@@ -68,6 +68,10 @@ const mastermindSchema = mongoose.Schema({
                 type: String,
                 required: false,
             },
+            connectedGoal: {
+                type: mongoose.Schema.Types.ObjectId,
+                required: false,
+            },
         }],
     },
 });

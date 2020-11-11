@@ -1,29 +1,35 @@
 const User = require("../database/schemas/user");
 const Reminder = require("../database/schemas/reminder");
+const Habit = require("../database/schemas/habit");
 const quotes = require("../../utilities/quotes.json").quotes;
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
+const hb = require("../../utilities/habit");
 require("dotenv").config();
 
-const userEmbedColour = fn.userSettingsEmbedColour;
-const quoteEmbedColour = fn.quoteEmbedColour;
 const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const futureTimeExamples = fn.futureTimeExamples;
+const timeExamples = fn.timeExamples;
+const intervalExamples = fn.intervalExamplesOver1Hour;
 const daysOfWeek = fn.daysOfWeek;
 const daysOfWeekList = daysOfWeek.map((day, i) => {
     return `\`${i + 1}\` - **${day}**`;
 }).join(`\n`);
+const userEmbedColour = fn.userSettingsEmbedColour;
+const quoteEmbedColour = fn.quoteEmbedColour;
 // Private Function Declarations
 
 function userDocumentToString(userSettings) {
-    const { timezone: { name, offset, daylightSavings }, likesPesteringAccountability: likesAccountability,
-        habitCron, getQuote, quoteInterval, nextQuote, tier, } = userSettings;
+    const { timezone: { name, offset, daylightSaving }, likesPesteringAccountability: likesAccountability,
+        habitCron, getQuote, quoteInterval, nextQuote, tier, deleteRepliesDuringCommand, } = userSettings;
     const output = `__**Timezone:**__ ${name}\n- **UTC Offset (in hours):** ${fn.hoursToUTCOffset(offset)}`
-        + `\n- **Daylight Savings Time:** ${daylightSavings ? "Yes" : "No"}`
+        + `\n- **Daylight Savings Time:** ${daylightSaving ? "Yes" : "No"}`
         + `\n\n__**Habit Reset Time:**__\n- **Daily:** ${fn.msToTimeFromMidnight(habitCron.daily)}`
         + `\n- **Weekly:** ${fn.getDayOfWeekToString(habitCron.weekly)}`
         + `\n\n__**Get Quotes:**__ ${getQuote ? "Yes" : "No"}`
         + `\n- **Next Quote:** ${getQuote ? nextQuote ? fn.timestampToDateString(nextQuote + (offset * HOUR_IN_MS)) : "N/A" : "N/A"}`
-        + `\n- **Quote Interval:** ${getQuote ? quoteInterval ? fn.millisecondsToTimeString(quoteInterval) : "N/A" : "N/A"}`
+        + `\n- **Quote Interval:** ${getQuote ? quoteInterval ? `Every ${quoteInterval}` : "N/A" : "N/A"}`
+        + `\n\n__**Delete Replies Sent During Commands:**__ ${deleteRepliesDuringCommand ? "Yes" : "No"}`
         + `\n\n__**Likes Pestering Accountability:**__ ${likesAccountability ? "YES!!!" : "No"}`
         + `\n\n__**Account Premium Level:**__ ${fn.getTierStarString(tier)}`;
     return output;
@@ -34,10 +40,10 @@ module.exports = {
     description: "User Settings/Preferences: Timezone, Habits, Reminders, etc.",
     aliases: ["setting", "set", "s", "preferences",
         "user", "u", "usersettings", "userconfig"],
-    cooldown: 3.5,
+    cooldown: 2.5,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
-        timezoneOffset, daylightSavings, forceSkip) {
+        timezoneOffset, daylightSaving, forceSkip) {
         const authorID = message.author.id;
         let userSettings = await User.findOne({ discordID: authorID });
         const authorUsername = message.author.username;
@@ -66,10 +72,11 @@ module.exports = {
             || settingCommand === "change" || settingCommand === "ch" || settingCommand === "c"
             || settingCommand === "setup" || settingCommand === "set" || settingCommand === "s") {
             do {
+                userSettings = await User.findOne({ discordID: authorID });
                 var userFields = userSettings.getQuote ? ["Timezone", "Daylight Savings Time", "Habit Daily Reset Time", "Habit Weekly Reset Time",
-                    "Get Quotes", "Next Quote", "Quote Interval", "Likes Pestering Accountability",]
+                    "Get Quotes", "Next Quote", "Quote Interval", "Delete Replies Sent During Commands", "Likes Pestering Accountability",]
                     : ["Timezone", "Daylight Savings Time", "Habit Daily Reset Time", "Habit Weekly Reset Time",
-                        "Get Quotes", "Likes Pestering Accountability",];
+                        "Get Quotes", "Delete Replies Sent During Commands", "Likes Pestering Accountability",];
                 const quoteAdjustment = userSettings.getQuote ? 0 : 2;
                 let fieldsList = "";
                 userFields.forEach((field, i) => {
@@ -86,6 +93,7 @@ module.exports = {
                 const fieldToEdit = userFields[fieldToEditIndex];
                 continueEdit = false;
                 var userEdit, userSettingsPrompt = "";
+                let { habitCron } = userSettings;
                 switch (fieldToEditIndex) {
                     case 0:
                         userSettingsPrompt = `Please enter your **__timezone__** as an **abbreviation** or **+/- UTC Offset**:`;
@@ -113,7 +121,7 @@ module.exports = {
                         break;
                     case 5:
                         if (userSettings.getQuote) {
-                            userSettingsPrompt = `__**When do you intend to start the next quote?**__`
+                            userSettingsPrompt = `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}`
                                 + "\n\nType `skip` to **start it now**"
                             userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
                         }
@@ -125,8 +133,7 @@ module.exports = {
                         break;
                     case 6:
                         if (userSettings.getQuote) {
-                            userSettingsPrompt = `How often do you want to receive an inspiration quote?`
-                                + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
+                            userSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
                             userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
                         }
                         else {
@@ -136,6 +143,12 @@ module.exports = {
                         }
                         break;
                     case 7 - quoteAdjustment:
+                        userSettingsPrompt = `Do you want me to delete your replies to my commands?\n(To keep servers/channels clean and/or hide your entries while typing in a server)`
+                            + `\n\n👍 - **Yes**\n\n👎 - **No**`;
+                        userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
+                            ['👍', '👎'], type, forceSkip, userEmbedColour);
+                        break;
+                    case 8 - quoteAdjustment:
                         userSettingsPrompt = `Are you into **pestering accountability** (💪) or not so much (🙅‍♀️)?`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
                             ['💪', '🙅‍♀️'], type, forceSkip, userEmbedColour);
@@ -150,20 +163,24 @@ module.exports = {
                                 let updatedTimezone = fn.getTimezoneOffset(userEdit);
                                 console.log({ updatedTimezone, continueEdit })
                                 if (updatedTimezone || updatedTimezone === 0) {
-                                    const daylightSetting = userSettings.timezone.daylightSavings
+                                    const daylightSetting = userSettings.timezone.daylightSaving
                                     if (daylightSetting) {
-                                        updatedTimezone += fn.isDaylightSavingTime(Date.now() + updatedTimezone * HOUR_IN_MS, true) ?
-                                            fn.getTimezoneDaylightOffset(userEdit) : 0;
+                                        updatedTimezone += fn.isDaylightSavingTime(
+                                            Date.now() + updatedTimezone * HOUR_IN_MS,
+                                            userEdit,
+                                            true
+                                        ) ? fn.getTimezoneDaylightOffset(userEdit) : 0;
                                     }
                                     userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
                                         $set: {
                                             timezone: {
                                                 name: userEdit,
                                                 offset: updatedTimezone,
-                                                daylightSavings: daylightSetting,
+                                                daylightSaving: daylightSetting,
                                             }
                                         }
                                     }, { new: true });
+                                    timezoneDifference = updatedTimezone;
                                 }
                                 else {
                                     fn.sendReplyThenDelete(message, "**This timezone does not exist...**", 60000);
@@ -171,7 +188,7 @@ module.exports = {
                                 }
                                 console.log({ continueEdit });
                                 timezoneOffset = updatedTimezone;
-                                daylightSavings = userEdit;
+                                daylightSaving = userEdit;
                             }
                             break;
                         case 1:
@@ -188,23 +205,24 @@ module.exports = {
                                     const originalTimezone = userSettings.timezone.name;
                                     let updatedTimezoneOffset = fn.getTimezoneOffset(originalTimezone);
                                     if (userEdit === true) {
-                                        updatedTimezoneOffset += fn.isDaylightSavingTime(Date.now() + updatedTimezoneOffset * HOUR_IN_MS, true) ?
-                                            fn.getTimezoneDaylightOffset(originalTimezone) : 0;
+                                        updatedTimezoneOffset += fn.isDaylightSavingTime(Date.now() + updatedTimezoneOffset * HOUR_IN_MS,
+                                            originalTimezone, true) ? fn.getTimezoneDaylightOffset(originalTimezone) : 0;
                                     }
                                     userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
                                         $set: {
                                             timezone: {
                                                 name: originalTimezone,
                                                 offset: updatedTimezoneOffset,
-                                                daylightSavings: userEdit,
+                                                daylightSaving: userEdit,
                                             }
                                         }
                                     }, { new: true });
-                                    console.log({ userSettings })
+                                    console.log({ userSettings });
+                                    timezoneDifference = updatedTimezoneOffset;
                                 }
                                 else continueEdit = true;
                                 timezoneOffset = updatedTimezoneOffset;
-                                daylightSavings = userEdit;
+                                daylightSaving = userEdit;
                             }
                             break;
                         case 2:
@@ -222,7 +240,7 @@ module.exports = {
                                 else {
                                     const startTimestamp = new Date(Date.now());
                                     let endTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "today" ? (["today"]).concat(timeArgs) : timeArgs,
-                                        startTimestamp.getTime(), timezoneOffset, daylightSavings);
+                                        startTimestamp.getTime(), timezoneOffset, daylightSaving);
                                     if (!endTime) {
                                         fn.sendReplyThenDelete(message, errorMessage, 30000);
                                         continueEdit = true;
@@ -237,29 +255,21 @@ module.exports = {
                                             userSettings.habitCron.daily : (endTime - todayMidnight) % DAY_IN_MS;
                                         console.log({ endTime, startTimestamp, todayMidnight, });
                                         console.log({ timeAfterMidnight });
-                                        userSettings = await User.findOneAndUpdate({ discordID: authorID },
-                                            {
-                                                $set: {
-                                                    habitCron: {
-                                                        daily: timeAfterMidnight,
-                                                        weekly: userSettings.habitCron.daily,
-                                                    }
-                                                }
-                                            }, { new: true });
+                                        habitCron = {
+                                            daily: timeAfterMidnight,
+                                            weekly: userSettings.habitCron.daily,
+                                        };
+                                        userSettings = await User.findOneAndUpdate({ discordID: authorID }, { $set: { habitCron } }, { new: true });
                                     }
                                 }
                             }
                             break;
                         case 3:
-                            userSettings = await User.findOneAndUpdate({ discordID: authorID },
-                                {
-                                    $set: {
-                                        habitCron: {
-                                            daily: userSettings.habitCron.daily,
-                                            weekly: userEdit,
-                                        }
-                                    }
-                                }, { new: true });
+                            habitCron = {
+                                daily: userSettings.habitCron.daily,
+                                weekly: userEdit,
+                            };
+                            userSettings = await User.findOneAndUpdate({ discordID: authorID }, { $set: { habitCron } }, { new: true });
                             break;
                         case 4:
                             {
@@ -276,8 +286,7 @@ module.exports = {
                                     var interval, firstQuote;
                                     let error = false;
                                     if (userEdit) {
-                                        userSettingsPrompt = `How often do you want to receive an inspiration quote?`
-                                            + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
+                                        userSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
                                         let intervalInput = await fn.getUserEditString(bot, message, PREFIX, "Quote Interval", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                         if (!intervalInput) return;
                                         else if (intervalInput === "back") {
@@ -285,17 +294,18 @@ module.exports = {
                                         }
                                         else {
                                             intervalInput = intervalInput.toLowerCase().split(/[\s\n]+/);
+                                            const timeArgs = intervalInput[0] === "in" ? intervalInput : ["in"].concat(intervalInput);
                                             let now = Date.now();
-                                            const endTime = fn.timeCommandHandlerToUTC(intervalInput[0] === "in" ? intervalInput
-                                                : ["in"].concat(intervalInput), now, timezoneOffset, daylightSavings)
-                                                - HOUR_IN_MS * timezoneOffset;
+                                            let endTime = fn.timeCommandHandlerToUTC(timeArgs, now, timezoneOffset,
+                                                daylightSaving, true, true, true);
                                             if (!endTime) {
                                                 error = true;
                                                 continueEdit = true;
                                                 interval = false;
                                             }
                                             else {
-                                                now = fn.getNowFlooredToSecond();
+                                                endTime -= HOUR_IN_MS * timezoneOffset;
+                                                now = fn.getCurrentUTCTimestampFlooredToSecond();
                                                 interval = endTime - now;
                                             }
                                             if (!interval) {
@@ -309,19 +319,21 @@ module.exports = {
                                                 continueEdit = true;
                                             }
                                             else {
-                                                userSettingsPrompt = `__**When do you intend to start the first quote?**__`
+                                                userSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚\n${futureTimeExamples}`
                                                     + "\n\nType `skip` to **start it now**"
                                                 let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                                 if (!quoteTrigger) return;
+                                                else if (quoteTrigger === "back") {
+                                                    continueEdit = true;
+                                                }
                                                 else {
                                                     const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
-                                                    currentTimestamp = fn.getNowFlooredToSecond();
+                                                    currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
                                                     if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                                     else {
                                                         quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
-                                                        firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
-                                                            : ["in"].concat(quoteTrigger), currentTimestamp,
-                                                            timezoneOffset, daylightSavings);
+                                                        const triggerArgs = quoteTrigger[0] === "in" ? quoteTrigger : ["in"].concat(quoteTrigger);
+                                                        firstQuote = fn.timeCommandHandlerToUTC(triggerArgs, currentTimestamp, timezoneOffset, daylightSaving);
                                                     }
                                                     if (firstQuote) {
                                                         firstQuote -= HOUR_IN_MS * timezoneOffset;
@@ -346,7 +358,7 @@ module.exports = {
                                     }
                                     else {
                                         console.log(`Deleting ${authorUsername}'s (${authorID}) recurring quotes`);
-                                        await Reminder.deleteOne({ userID: authorID, isDM: true, isRecurring: true, type: "Quote" })
+                                        await Reminder.deleteMany({ userID: authorID, isDM: true, isRecurring: true, type: "Quote" })
                                             .catch(err => {
                                                 console.error(err);
                                                 console.log("Deletion of recurring quote has failed!");
@@ -358,7 +370,7 @@ module.exports = {
                                                 $set:
                                                 {
                                                     getQuote: userEdit,
-                                                    quoteInterval: interval,
+                                                    quoteInterval: intervalInput.join(' '),
                                                     nextQuote: firstQuote,
                                                 }
                                             }, { new: true });
@@ -371,13 +383,12 @@ module.exports = {
                             {
                                 let nextQuote;
                                 const isCurrent = userEdit === "skip" || userEdit === "now";
-                                currentTimestamp = fn.getNowFlooredToSecond();
+                                currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
                                 if (isCurrent) nextQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                 else {
                                     userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
-                                    nextQuote = fn.timeCommandHandlerToUTC(userEdit[0] === "in" ? userEdit
-                                        : (["in"].concat(userEdit)), currentTimestamp,
-                                        timezoneOffset, daylightSavings);
+                                    const timeArgs = userEdit[0] === "in" ? userEdit : ["in"].concat(userEdit);
+                                    nextQuote = fn.timeCommandHandlerToUTC(timeArgs, currentTimestamp, timezoneOffset, daylightSaving);
                                 }
                                 if (nextQuote) {
                                     nextQuote -= HOUR_IN_MS * timezoneOffset;
@@ -408,15 +419,16 @@ module.exports = {
                                 userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                                 console.log({ userEdit });
                                 let currentTimestamp = Date.now();
-                                let endInterval = fn.timeCommandHandlerToUTC(userEdit[0] === "in" ? userEdit
-                                    : (["in"].concat(userEdit)), currentTimestamp, timezoneOffset, daylightSavings);
+                                const intervalArgs = userEdit[0] === "in" ? userEdit : ["in"].concat(userEdit)
+                                let endInterval = fn.timeCommandHandlerToUTC(intervalArgs, currentTimestamp,
+                                    timezoneOffset, daylightSaving, true, true, true);
                                 if (!endInterval) {
                                     fn.sendReplyThenDelete(message, `**INVALID TIME**... ${settingHelpMessage}`, 60000);
                                     continueEdit = true;
                                 }
                                 else {
                                     endInterval -= HOUR_IN_MS * timezoneOffset;
-                                    currentTimestamp = fn.getNowFlooredToSecond();
+                                    currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
                                     const updatedInterval = endInterval - currentTimestamp;
                                     if (updatedInterval < HOUR_IN_MS) {
                                         fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
@@ -425,11 +437,14 @@ module.exports = {
                                     else {
                                         let { nextQuote } = userSettings;
                                         nextQuote += HOUR_IN_MS * timezoneOffset;
-                                        userSettingsPrompt = `__**When do you intend to start the first quote?**__`
-                                            + `${nextQuote ? !isNaN(nextQuote) ? `\n**Currently**: ${fn.timestampToDateString(nextQuote)}` : "" : ""}`
-                                            + "\n\nType `same` to **keep it the same**\nType `skip` to **start it now**";
+                                        userSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚`
+                                            + `${nextQuote ? !isNaN(nextQuote) ? `\n\n**Currently**: ${fn.timestampToDateString(nextQuote)}` : "" : ""}`
+                                            + `\n${futureTimeExamples}\n\nType \`same\` to **keep it the same**\nType \`skip\` to **start it now**`;
                                         let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
                                         if (!quoteTrigger) return;
+                                        else if (quoteTrigger === "back") {
+                                            continueEdit = true;
+                                        }
                                         else {
                                             var firstQuote;
                                             if (quoteTrigger === "same") {
@@ -441,9 +456,8 @@ module.exports = {
                                                 if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                                 else {
                                                     quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
-                                                    firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
-                                                        : (["in"].concat(quoteTrigger)), currentTimestamp,
-                                                        timezoneOffset, daylightSavings);
+                                                    const triggerArgs = quoteTrigger[0] === "in" ? quoteTrigger : ["in"].concat(quoteTrigger);
+                                                    firstQuote = fn.timeCommandHandlerToUTC(triggerArgs, currentTimestamp, timezoneOffset, daylightSaving);
                                                 }
                                             }
                                             if (firstQuote) {
@@ -453,7 +467,7 @@ module.exports = {
                                                         $set:
                                                         {
                                                             getQuote: true,
-                                                            quoteInterval: updatedInterval,
+                                                            quoteInterval: userEdit.join(' '),
                                                             nextQuote: firstQuote,
                                                         }
                                                     }, { new: true });
@@ -476,6 +490,23 @@ module.exports = {
                         case 7 - quoteAdjustment:
                             {
                                 switch (userEdit) {
+                                    case '👍': userEdit = true;
+                                        break;
+                                    case '👎': userEdit = false;
+                                        break;
+                                    default: userEdit = null;
+                                        break;
+                                }
+                                if (typeof userEdit === "boolean") {
+                                    userSettings = await User.findOneAndUpdate({ discordID: authorID },
+                                        { $set: { deleteRepliesDuringCommand: userEdit } }, { new: true })
+                                }
+                                else continueEdit = true;
+                            }
+                            break;
+                        case 8 - quoteAdjustment:
+                            {
+                                switch (userEdit) {
                                     case '💪': userEdit = true;
                                         break;
                                     case '🙅‍♀️': userEdit = false;
@@ -493,10 +524,68 @@ module.exports = {
                     }
                 }
                 else continueEdit = true;
+                if (fieldToEditIndex === 0 || fieldToEditIndex === 1) {
+                    const timezoneDifference = updatedTimezone - timezoneOffset;
+                    const confirmUpdateReminders = await fn.getUserConfirmation(bot, message, PREFIX,
+                        `**Would you like to adjust your reminders to this new timezone? (${userEdit}, ${updatedTimezone})**`
+                        + "\n\n(Your habits will automatically be adapted regardless of your choice here)",
+                        false, `${showUserSettings.title}: Reminder Adjustment Confirmation`);
+                    if (confirmUpdateReminders) {
+                        let userReminders = await Reminder.find({ userID: authorID });
+                        if (userReminders) if (userReminders.length) {
+                            userReminders.forEach(async reminder => {
+                                let { startTime, endTime } = reminder;
+                                startTime += timezoneDifference * HOUR_IN_MS;
+                                endTime += timezoneDifference * HOUR_IN_MS;
+                                const now = Date.now();
+                                reminder = await Reminder.updateOne({ _id: reminder._id }, {
+                                    $set: {
+                                        startTime, endTime, lastEdited: now,
+                                    }
+                                });
+                                await rm.sendReminderByObject(bot, reminder);
+                            });
+                        }
+                    }
+                    let userHabits = await Habit.find({ userID: authorID });
+                    if (userHabits) if (userHabits.length) {
+                        userHabits.forEach(async habit => {
+                            let { nextCron } = habit;
+                            nextCron += timezoneDifference * HOUR_IN_MS;
+                            const now = Date.now();
+                            await Habit.updateOne({ _id: habit._id }, {
+                                $set: {
+                                    nextCron, lastEdited: now,
+                                }
+                            });
+                        });
+                        await hb.habitCronUser(authorID);
+                    }
+                }
+                else if (fieldToEditIndex === 2 || fieldToEditIndex === 3) {
+                    let userHabits = await Habit.find({ userID: authorID });
+                    if (userHabits) if (userHabits.length) {
+                        userHabits.forEach(async habit => {
+                            let { nextCron, settings } = habit;
+                            let { isWeeklyType, cronPeriods } = settings;
+                            const now = Date.now();
+                            do {
+                                nextCron = await hb.getNextCronTimeUTC(timezoneOffset, habitCron, isWeeklyType, cronPeriods, nextCron);
+                            }
+                            while (nextCron < now)
+                            await Habit.updateOne({ _id: habit._id }, {
+                                $set: {
+                                    nextCron, lastEdited: now,
+                                }
+                            });
+                        });
+                        await hb.habitCronUser(authorID);
+                    }
+                }
                 if (!continueEdit) {
-                    if ((fieldToEditIndex === 4 && userEdit) || fieldToEditIndex === 5 || fieldToEditIndex === 6) {
-                        const now = fn.getNowFlooredToSecond();
-                        await Reminder.deleteMany({ userID: authorID, type: "Quote", isDM: true, });
+                    if ((fieldToEditIndex === 4 && userEdit === true) || fieldToEditIndex === 5 || fieldToEditIndex === 6) {
+                        const now = fn.getCurrentUTCTimestampFlooredToSecond();
+                        await Reminder.deleteMany({ userID: authorID, type: "Quote", isDM: true, isRecurring: true, });
                         var quoteIndex, currentQuote;
                         while (!currentQuote) {
                             quoteIndex = Math.round(Math.random() * quotes.length);

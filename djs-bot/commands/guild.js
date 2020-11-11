@@ -8,12 +8,15 @@ const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 require("dotenv").config();
 
-const guildEmbedColour = fn.guildSettingsEmbedColour;
+const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const futureTimeExamples = fn.futureTimeExamples;
+const timeExamples = fn.timeExamples;
+const intervalExamples = fn.intervalExamplesOver1Hour;
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const daysOfWeekList = daysOfWeek.map((day, i) => {
     return `\`${i + 1}\` - **${day}**`;
 }).join(`\n`);
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const guildEmbedColour = fn.guildSettingsEmbedColour;
 
 // Private Function Declarations
 /**
@@ -23,7 +26,7 @@ const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
  * @param {Boolean} inGuild 
  */
 function guildDocumentToString(bot, guildSettings, inGuild) {
-    const { timezone: { name, offset, daylightSavings }, mastermind, quote, prefix, guildID } = guildSettings;
+    const { timezone: { name, offset, daylightSaving }, mastermind, quote, prefix, guildID } = guildSettings;
     const guild = bot.guilds.cache.get(guildID);
     let quoteRoles = new Array(),
         mastermindRoles = new Array;
@@ -46,14 +49,14 @@ function guildDocumentToString(bot, guildSettings, inGuild) {
     console.log({ quoteRoles, mastermindRoles })
     const output = `__**Prefix:**__ ${prefix}`
         + `\n\n__**General Timezone:**__ ${name}\n- **UTC Offset (in hours):** ${fn.hoursToUTCOffset(offset)}`
-        + `\n- **Daylight Savings Time:** ${daylightSavings ? "Yes" : "No"}`
+        + `\n- **Daylight Savings Time:** ${daylightSaving ? "Yes" : "No"}`
         + `\n\n__**Mastermind:**__\n- **Reset Day:** ${dayOfWeek}`
         + `\n- **Facilitator Role**(**s**)**:**\n${mastermindRoles.length ? `${mastermindRoles.join('\n')}\n` : ""}`
         + `\n__**Quote:**__\n- **Get Quotes:** ${quote.getQuote ? "Yes" : "No"}`
-        + `\n- **Channel**:${quote.channel ? `<#${quote.channel}>` : ""}`
+        + `\n- **Channel:**${quote.channel ? ` <#${quote.channel}>` : ""}`
         + `\n- **Notify Role**(**s**)**:**\n${quoteRoles.length ? `${quoteRoles.join('\n')}\n` : ""}`
         + `- **Next Quote:** ${quote.getQuote ? quote.nextQuote ? fn.timestampToDateString(quote.nextQuote + (offset * HOUR_IN_MS)) : "N/A" : "N/A"}`
-        + `\n- **Quote Interval:** ${quote.getQuote ? quote.quoteInterval ? fn.millisecondsToTimeString(quote.quoteInterval) : "N/A" : "N/A"}`;
+        + `\n- **Quote Interval:** ${quote.getQuote ? quote.quoteInterval ? `Every ${quote.quoteInterval}` : "N/A" : "N/A"}`;
     return output;
 }
 
@@ -61,10 +64,10 @@ module.exports = {
     name: "guild",
     description: "Guild Settings/Preferences: Default Timezone, Mastermind Cron/Reset Timing and Roles, Reminders, etc.",
     aliases: ["servers", "server", "guilds", "config", "guildconfig", "guildsettings", "guildpreferences"],
-    cooldown: 3.5,
+    cooldown: 2.5,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
-        timezoneOffset, daylightSavings, forceSkip) {
+        timezoneOffset, daylightSaving, forceSkip) {
         // For now, cannot access guild though the dm
         // With the dm - show them the list of mutual guilds
         // and allow them to choose, then make that the guild to show and/or edit
@@ -184,7 +187,7 @@ module.exports = {
                         break;
                     case wantsQuote ? 8 : null:
                         if (wantsQuote) {
-                            guildSettingsPrompt = `__**When do you intend to start the next quote?**__`
+                            guildSettingsPrompt = `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}`
                                 + "\n\nType `skip` to **start it now**"
                             userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt, type, forceSkip, guildEmbedColour);
                         }
@@ -196,8 +199,7 @@ module.exports = {
                         break;
                     case wantsQuote ? 9 : null:
                         if (wantsQuote) {
-                            guildSettingsPrompt = `How often do you want to receive an inspiration quote?`
-                                + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
+                            guildSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
                             userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt, type, forceSkip, guildEmbedColour);
                         }
                         else {
@@ -216,7 +218,7 @@ module.exports = {
                         case 0:
                             {
                                 await changePrefix(bot, message, "", [userEdit],
-                                    PREFIX, timezoneOffset, daylightSavings, true);
+                                    PREFIX, timezoneOffset, daylightSaving, true);
                                 guildConfig = await Guild.findOne({ guildID });
                             }
                             break;
@@ -225,17 +227,17 @@ module.exports = {
                                 let updatedTimezone = fn.getTimezoneOffset(userEdit);
                                 console.log({ updatedTimezone, continueEdit })
                                 if (updatedTimezone || updatedTimezone === 0) {
-                                    const daylightSetting = guildConfig.timezone.daylightSavings
+                                    const daylightSetting = guildConfig.timezone.daylightSaving
                                     if (daylightSetting) {
-                                        updatedTimezone += fn.isDaylightSavingTime(Date.now() + updatedTimezone * HOUR_IN_MS, true) ?
-                                            fn.getTimezoneDaylightOffset(userEdit) : 0;
+                                        updatedTimezone += fn.isDaylightSavingTime(Date.now() + updatedTimezone * HOUR_IN_MS,
+                                            userEdit, true) ? fn.getTimezoneDaylightOffset(userEdit) : 0;
                                     }
                                     guildConfig = await Guild.findOneAndUpdate({ guildID }, {
                                         $set: {
                                             timezone: {
                                                 name: userEdit,
                                                 offset: updatedTimezone,
-                                                daylightSavings: daylightSetting,
+                                                daylightSaving: daylightSetting,
                                             }
                                         }
                                     }, { new: true });
@@ -261,7 +263,8 @@ module.exports = {
                                     const originalTimezone = guildConfig.timezone.name;
                                     let updatedTimezoneOffset = fn.getTimezoneOffset(originalTimezone);
                                     if (userEdit === true) {
-                                        updatedTimezoneOffset += fn.isDaylightSavingTime(Date.now() + updatedTimezoneOffset * HOUR_IN_MS, true) ?
+                                        updatedTimezoneOffset += fn.isDaylightSavingTime(Date.now() + updatedTimezoneOffset * HOUR_IN_MS,
+                                            originalTimezone, true) ?
                                             fn.getTimezoneDaylightOffset(originalTimezone) : 0;
                                     }
                                     guildConfig = await Guild.findOneAndUpdate({ guildID }, {
@@ -269,7 +272,7 @@ module.exports = {
                                             timezone: {
                                                 name: originalTimezone,
                                                 offset: updatedTimezoneOffset,
-                                                daylightSavings: userEdit,
+                                                daylightSaving: userEdit,
                                             }
                                         }
                                     }, { new: true });
@@ -361,8 +364,7 @@ module.exports = {
                                             console.log({ roles });
                                             quote.roles = roles;
                                         }
-                                        guildSettingsPrompt = `How often do you want to receive an inspiration quote?`
-                                            + `\nEnter a **time interval** (i.e. 36 hours, 12h:5m:30s, 24 days, etc. - any interval __**> 1 hour**__)`;
+                                        guildSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
                                         let intervalInput = await fn.getUserEditString(bot, message, PREFIX, "Quote Interval", guildSettingsPrompt, type, forceSkip, guildEmbedColour);
                                         if (!intervalInput) return;
                                         else if (intervalInput === "back") {
@@ -371,8 +373,9 @@ module.exports = {
                                         }
                                         intervalInput = intervalInput.toLowerCase().split(/[\s\n]+/);
                                         let now = Date.now();
-                                        let endTime = fn.timeCommandHandlerToUTC(intervalInput[0] === "in" ? intervalInput
-                                            : ["in"].concat(intervalInput), now, timezoneOffset, daylightSavings);
+                                        const timeArgs = intervalInput[0] === "in" ? intervalInput : ["in"].concat(intervalInput);
+                                        let endTime = fn.timeCommandHandlerToUTC(timeArgs, now, timezoneOffset,
+                                            daylightSaving, true, true, true);
                                         if (!endTime) {
                                             error = true;
                                             continueEdit = true;
@@ -380,7 +383,7 @@ module.exports = {
                                         }
                                         else {
                                             endTime -= HOUR_IN_MS * timezoneOffset;
-                                            now = fn.getNowFlooredToSecond();
+                                            now = fn.getCurrentUTCTimestampFlooredToSecond();
                                             interval = endTime - now;
                                         }
                                         if (!interval) {
@@ -394,20 +397,22 @@ module.exports = {
                                             continueEdit = true;
                                         }
                                         else {
-                                            quote.quoteInterval = interval;
-                                            guildSettingsPrompt = `__**When do you intend to start the first quote?**__`
+                                            quote.quoteInterval = intervalInput.join(' ');
+                                            guildSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚\n${futureTimeExamples}`
                                                 + "\n\nType `skip` to **start it now**"
                                             let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", guildSettingsPrompt, type, forceSkip, guildEmbedColour);
                                             if (!quoteTrigger) return;
+                                            else if (quoteTrigger === "back") {
+                                                continueEdit = true;
+                                            }
                                             else {
                                                 const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
-                                                currentTimestamp = fn.getNowFlooredToSecond();
+                                                currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
                                                 if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                                 else {
                                                     quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
-                                                    firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
-                                                        : ["in"].concat(quoteTrigger), currentTimestamp,
-                                                        timezoneOffset, daylightSavings);
+                                                    const triggerArgs = quoteTrigger[0] === "in" ? quoteTrigger : ["in"].concat(quoteTrigger);
+                                                    firstQuote = fn.timeCommandHandlerToUTC(triggerArgs, currentTimestamp, timezoneOffset, daylightSaving);
                                                 }
                                                 if (firstQuote) {
                                                     firstQuote -= HOUR_IN_MS * timezoneOffset;
@@ -432,7 +437,7 @@ module.exports = {
                                     }
                                     else {
                                         console.log(`Deleting ${authorUsername}'s (${authorID}) recurring quotes`);
-                                        await Reminder.deleteOne({ isDM: false, isRecurring: true, type: "Quote", guildID })
+                                        await Reminder.deleteMany({ isDM: false, isRecurring: true, type: "Quote", guildID })
                                             .catch(err => {
                                                 console.error(err);
                                                 console.log("Deletion of recurring quote has failed!");
@@ -454,13 +459,12 @@ module.exports = {
                             {
                                 let nextQuote;
                                 const isCurrent = userEdit === "skip" || userEdit === "now";
-                                currentTimestamp = fn.getNowFlooredToSecond();
+                                currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
                                 if (isCurrent) nextQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                 else {
                                     userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
-                                    nextQuote = fn.timeCommandHandlerToUTC(userEdit[0] === "in" ? userEdit
-                                        : (["in"].concat(userEdit)), currentTimestamp,
-                                        timezoneOffset, daylightSavings);
+                                    const timeArgs = userEdit[0] === "in" ? userEdit : ["in"].concat(userEdit);
+                                    nextQuote = fn.timeCommandHandlerToUTC(timeArgs, currentTimestamp, timezoneOffset, daylightSaving);
                                 }
                                 if (nextQuote) {
                                     nextQuote -= HOUR_IN_MS * timezoneOffset;
@@ -486,28 +490,32 @@ module.exports = {
                                 userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
                                 console.log({ userEdit });
                                 let currentTimestamp = Date.now();
-                                let endInterval = fn.timeCommandHandlerToUTC(userEdit[0] === "in" ? userEdit
-                                    : (["in"].concat(userEdit)), currentTimestamp, timezoneOffset, daylightSavings);
+                                const timeArgs = userEdit[0] === "in" ? userEdit : ["in"].concat(userEdit);
+                                let endInterval = fn.timeCommandHandlerToUTC(timeArgs, currentTimestamp,
+                                    timezoneOffset, daylightSaving, true, true, true);
                                 if (!endInterval) {
                                     fn.sendReplyThenDelete(message, `**INVALID TIME**... ${settingHelpMessage}`, 60000);
                                     continueEdit = true;
                                 }
                                 else {
                                     endInterval -= HOUR_IN_MS * timezoneOffset;
-                                    currentTimestamp = fn.getNowFlooredToSecond();
+                                    currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
                                     const updatedInterval = endInterval - currentTimestamp;
                                     if (updatedInterval < HOUR_IN_MS) {
                                         fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
                                         continueEdit = true;
                                     }
                                     else {
-                                        quote.quoteInterval = updatedInterval;
+                                        quote.quoteInterval = userEdit.join(' ');
                                         quote.nextQuote += HOUR_IN_MS * timezoneOffset;
-                                        guildSettingsPrompt = `__**When do you intend to start the first quote?**__`
-                                            + `${quote.nextQuote ? !isNaN(quote.nextQuote) ? `\n**Currently**: ${fn.timestampToDateString(quote.nextQuote)}` : "" : ""}`
-                                            + "\n\nType `same` to **keep it the same**\nType `skip` to **start it now**"
+                                        guildSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚`
+                                            + `${quote.nextQuote ? !isNaN(quote.nextQuote) ? `\n\n**Currently**: ${fn.timestampToDateString(quote.nextQuote)}` : "" : ""}`
+                                            + `\n${futureTimeExamples}\n\nType \`same\` to **keep it the same**\nType \`skip\` to **start it now**`
                                         let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", guildSettingsPrompt, type, forceSkip, guildEmbedColour);
                                         if (!quoteTrigger) return;
+                                        else if (quoteTrigger === "back") {
+                                            continueEdit = true;
+                                        }
                                         else {
                                             var firstQuote;
                                             if (quoteTrigger === "same") {
@@ -515,13 +523,12 @@ module.exports = {
                                             }
                                             else {
                                                 const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
-                                                currentTimestamp = fn.getNowFlooredToSecond();
+                                                currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
                                                 if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
                                                 else {
                                                     quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
-                                                    firstQuote = fn.timeCommandHandlerToUTC(quoteTrigger[0] === "in" ? quoteTrigger
-                                                        : (["in"].concat(quoteTrigger)), currentTimestamp,
-                                                        timezoneOffset, daylightSavings);
+                                                    const triggerArgs = quoteTrigger[0] === "in" ? quoteTrigger : ["in"].concat(quoteTrigger);
+                                                    firstQuote = fn.timeCommandHandlerToUTC(triggerArgs, currentTimestamp, timezoneOffset, daylightSaving);
                                                 }
                                             }
                                             if (firstQuote) {
@@ -552,7 +559,7 @@ module.exports = {
                 if (!continueEdit) {
                     if (guildConfig.quote.getQuote) {
                         if (fieldToEditIndex >= 5 && fieldToEditIndex <= 9) {
-                            const now = fn.getNowFlooredToSecond();
+                            const now = fn.getCurrentUTCTimestampFlooredToSecond();
                             await Reminder.deleteMany({ type: "Quote", isDM: false, guildID });
                             let currentQuote = null;
                             var quoteIndex;

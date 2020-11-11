@@ -15,6 +15,6 @@ module.exports = {
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavings, forceSkip) {
-        message.channel.send(fn.getMessageEmbed("Timezone Instructions in progress!", "Timezone Instructions"));
+        message.channel.send(fn.getMessageEmbed("Timezone instructions in progress!", "Timezone Instructions"));
     }
 };

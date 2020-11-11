@@ -48,7 +48,7 @@ module.exports = {
      * @param {String | false} type Valid Types: "Reminder", "Habit", "Fast" (case sensitive)
      * @param {mongoose.ObjectId | String | Number} connectedDocumentID 
      * @param {Boolean} isRecurring 
-     * @param {Number} interval Ensure this is properly defined when the reminder is recurring
+     * @param {String} interval Ensure this is properly defined when the reminder is recurring
      * Will auto-delete the reminder instance in the database after sending the reminder
      */
     setNewDMReminder: async function (bot, userID, startTimestamp, endTimestamp, reminderMessage, type,
@@ -60,7 +60,6 @@ module.exports = {
         }
         else type = "Reminder";
         if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = undefined;
-        if (isNaN(interval)) isRecurring = false;
         embedColour = isRecurring ? fn.repeatReminderEmbedColour : reminderEmbedColour;
         console.log({ connectedDocumentID, isRecurring, embedColour });
         const reminder = await this.putNewReminderInDatabase(userID, userID, startTimestamp, endTimestamp, reminderMessage,
@@ -80,7 +79,7 @@ module.exports = {
      * @param {String | false} type Valid Types: "Reminder", "Habit", "Fast" (case sensitive)
      * @param {mongoose.ObjectId | String | Number} connectedDocumentID 
      * @param {Boolean} isRecurring 
-     * @param {Number} interval Ensure that if the interval isRecurring, the interval is a number
+     * @param {String} interval Ensure that if the interval isRecurring, the interval is a number
      * Will auto-delete the reminder instance in the database after sending the reminder
      */
     setNewChannelReminder: async function (bot, userID, channelToSend, startTimestamp, endTimestamp, reminderMessage,
@@ -92,7 +91,6 @@ module.exports = {
         }
         else type = "Reminder";
         if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = undefined;
-        if (isNaN(interval)) isRecurring = false;
         const guildID = bot.channels.cache.get(channelToSend).guild.id;
         console.log({ connectedDocumentID, guildID });
         const reminder = await this.putNewReminderInDatabase(userID, channelToSend, startTimestamp, endTimestamp, reminderMessage,
@@ -110,9 +108,11 @@ module.exports = {
         //     connectedDocument, interval, guildID, lastUpdateTime
         // });
         // const originalMessage = message;
-        const currentTimestamp = fn.getNowFlooredToSecond();
+        const userSettings = await User.findOne({ discordID: userID }, { _id: 1, timezone: 1 });
+        const { offset } = userSettings.timezone;
+        const currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
         const reminderDelay = endTime - currentTimestamp;
-        const duration = isRecurring ? interval : endTime - startTime;
+        const duration = endTime - startTime;
         const user = bot.users.cache.get(userID);
         const channelObject = isDM ? user : bot.channels.cache.get(channel);
         if (channelObject) {
@@ -169,37 +169,20 @@ module.exports = {
                 // Trigger it once right away then follow the intervals.
                 try {
                     fn.setLongTimeout(async () => {
-                        await this.updateRecurringReminderByObjectID(reminderID, lastUpdateTime)
-                            .then(async (complete) => {
-                                console.log({ complete });
-                                if (complete) {
-                                    console.log("Updated Recurring Reminder in Database!");
-                                    if (bot.channels.cache.get(channel) || bot.users.cache.get(userID)) {
-                                        channelObject.send(message);
-                                    }
-                                    else this.deleteOneReminderByObjectID(reminderID);
-                                    startTime = endTime;
-                                    endTime += interval;
-                                    const recurringReminder = fn.setLongInterval(async () => {
-                                        await this.updateRecurringReminderByObjectID(reminderID, lastUpdateTime)
-                                            .then((update) => {
-                                                console.log({ update });
-                                                if (update) {
-                                                    startTime += interval;
-                                                    endTime += interval;
-                                                    console.log("Updated Recurring Reminder in Database!");
-                                                    if (bot.channels.cache.get(channel) || bot.users.cache.get(userID)) {
-                                                        channelObject.send(message);
-                                                    }
-                                                    else this.deleteOneReminderByObjectID(reminderID);
-                                                }
-                                                else clearInterval(recurringReminder);
-                                            })
-                                            .catch(err => console.error(err));
-                                    }, interval);
-                                }
-                            })
-                            .catch(err => console.error(err));
+                        const updatedReminderObject = await this.updateRecurringReminderByObjectID(reminderID, lastUpdateTime);
+                        if (updatedReminderObject) {
+                            console.log({ updatedReminderObject });
+                            console.log("Updated Recurring Reminder in Database!");
+                            if (bot.channels.cache.get(channel) || bot.users.cache.get(userID)) {
+                                channelObject.send(message);
+                            }
+                            else {
+                                await this.deleteOneReminderByObjectID(reminderID);
+                                return;
+                            }
+                            await this.sendReminderByObject(bot, updatedReminderObject, embedColour);
+                        }
+                        return;
                     }, reminderDelay);
                 }
                 catch (err) {
@@ -379,14 +362,30 @@ module.exports = {
                 const noEdit = reminder.lastEdited === lastUpdateTime;
                 console.log({ noEdit });
                 if (noEdit) if (reminder.isRecurring) {
-                    const endTime = reminder.endTime;
-                    const interval = reminder.interval;
+                    const userSettings = await User.findOne({ discordID: reminder.userID }, { _id: 0, timezone: 1 });
+                    const { offset, daylightSaving } = userSettings.timezone;
+                    const { endTime, interval } = reminder;
                     if (endTime && interval) {
-                        let newEndTime = endTime + interval;
-                        while (newEndTime <= Date.now()) {
-                            newEndTime += interval;
+                        let intervalArgs = interval.split(/[\s\n]+/);
+                        intervalArgs = intervalArgs[0].toLowerCase() !== "in" ? (["in"]).concat(intervalArgs) : intervalArgs;
+
+                        let onFirst = true;
+                        var newEndTime, intervalDuration;
+                        do {
+                            newEndTime = fn.timeCommandHandlerToUTC(intervalArgs, endTime,
+                                offset, daylightSaving, false, true, true);
+                            if (!newEndTime) return false;
+                            else {
+                                newEndTime -= HOUR_IN_MS * offset;
+                                if (onFirst) {
+                                    intervalDuration = newEndTime - endTime;
+                                    onFirst = false;
+                                }
+                            }
                         }
-                        const newStartTime = newEndTime - interval;
+                        while (newEndTime <= fn.getCurrentUTCTimestampFlooredToSecond())
+
+                        const newStartTime = intervalDuration ? newEndTime - intervalDuration : endTime;
                         let updateObject = {
                             startTime: newStartTime,
                             endTime: newEndTime
@@ -473,7 +472,7 @@ module.exports = {
         const { isDM, isRecurring, channel, startTime, endTime, message, type, interval, guildID } = reminderDocument;
         const reminderType = type === "Reminder" ? "" : `, ${type}`;
         const typeString = "**Type:**" + (isRecurring ? " Repeating" : " One-Time") + reminderType + (isDM ? ", DM" : ", Channel");
-        const intervalString = isRecurring ? `**Interval:** ${fn.millisecondsToTimeString(interval)}\n` : "";
+        const intervalString = isRecurring ? `**Interval:** Every ${interval}\n` : "";
         const channelName = isDM ? "" : `**Channel:** \#${bot.channels.cache.get(channel).name}\n`;
         const guildString = isDM ? "" : `**Guild:** ${bot.guilds.cache.get(guildID).name}\n`;
         console.log({ reminderDocument });
@@ -590,15 +589,16 @@ module.exports = {
             const userTimeInput = await fn.messageDataCollect(bot, message, PREFIX, reminderPrompt,
                 `${isRecurring ? "Repeat " : ""}Reminder: First Reminder`, isRecurring ? repeatEmbedColour : reminderEmbedColour);
             if (!userTimeInput || userTimeInput === "stop") return false;
-            startTimestamp = fn.getNowFlooredToSecond();
+            startTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
             if (userTimeInput === "skip" || userTimeInput.toLowerCase() === "now") firstEndTime = startTimestamp;
             else {
                 console.log({ error });
                 // Undo the timezoneOffset to get the end time in UTC
                 const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
                 firstEndTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs,
-                    startTimestamp, userTimezoneOffset, userDaylightSavingSetting) - HOUR_IN_MS * userTimezoneOffset;
+                    startTimestamp, userTimezoneOffset, userDaylightSavingSetting);
                 if (!firstEndTime) error = true;
+                else firstEndTime -= HOUR_IN_MS * userTimezoneOffset
                 console.log({ error });
             }
             console.log({ error });
@@ -606,7 +606,7 @@ module.exports = {
                 if (firstEndTime >= startTimestamp) {
                     const duration = firstEndTime - startTimestamp;
                     // const confirmReminder = await fn..getUserConfirmation(bot, message, PREFIX,
-                    //     `Are you sure you want to **start the first reminder** after **${fn..millisecondsToTimeString(duration)}**?`,
+                    //     `Are you sure you want to **start the first reminder** after **${fn.millisecondsToTimeString(duration)}**?`,
                     //     forceSkip, "Repeat Reminder: First Reminder Confirmation");
                     // if (confirmReminder) return duration;
                     return duration;
@@ -629,8 +629,8 @@ module.exports = {
         do {
             channel = await fn.messageDataCollect(bot, message, PREFIX, instructions, title, embedColour, dataCollectDelay, false);
             var currentTimestamp;
-            if (channel) currentTimestamp = Date.now();
-            else if (!channel || channel === "stop") return false;
+            if (!channel || channel === "stop") return false;
+            else if (channel) currentTimestamp = Date.now();
             else if (channel.startsWith(PREFIX) && channel !== PREFIX) {
                 message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**\n${channel}`);
                 return false;
@@ -667,7 +667,7 @@ module.exports = {
 
     getEditInterval: async function (bot, message, PREFIX, timezoneOffset, daylightSetting, field,
         instructionPrompt, type, embedColour = fn.defaultEmbedColour, errorReplyDelay = 60000,
-        intervalExamples = fn.intervalExamples) {
+        intervalExamples = fn.intervalExamplesOver1Minute) {
         do {
             let interval = await fn.getUserEditString(bot, message, PREFIX, field, `${instructionPrompt}\n\n${intervalExamples}`,
                 type, true, embedColour);
@@ -683,7 +683,7 @@ module.exports = {
     },
 
     getEditEndTime: async function (bot, message, PREFIX, reminderHelpMessage, timezoneOffset,
-        daylightSavingsSetting, forceSkip, isRecurring, reminderMessage, isDM, channelID = false, interval = false) {
+        daylightSavingsSetting, forceSkip, isRecurring, reminderMessage, isDM, channelID = false, intervalDuration = false) {
         let duration = await this.getUserFirstRecurringEndDuration(bot, message, PREFIX, reminderHelpMessage,
             timezoneOffset, daylightSavingsSetting, isRecurring);
         console.log({ duration })
@@ -691,11 +691,11 @@ module.exports = {
         duration = duration > 0 ? duration : 0;
         const channel = isDM ? "DM" : bot.channels.cache.get(channelID);
         const confirmCreationMessage = `Are you sure you want to set the following **${isRecurring ? "recurring" : "one-time"} reminder** to send`
-            + ` - **in ${channel.name ? channel.name : "DM"} after ${fn.millisecondsToTimeString(duration)}**${isRecurring ? ` (and repeat every **${fn.millisecondsToTimeString(interval)}**)` : ""}:\n\n${reminderMessage}`;
+            + ` - **in ${channel.name ? channel.name : "DM"} after ${fn.millisecondsToTimeString(duration)}**${isRecurring ? ` (and repeat every **${fn.millisecondsToTimeString(intervalDuration)}**)` : ""}:\n\n${reminderMessage}`;
         const confirmCreation = await fn.getUserConfirmation(bot, message, PREFIX, confirmCreationMessage, forceSkip, `${isRecurring ? "Recurring " : ""}Reminder: Confirm Creation`, 180000);
         if (!confirmCreation) return false;
         else {
-            const currentTimestamp = fn.getNowFlooredToSecond();
+            const currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
             console.log({ currentTimestamp });
             let userPermissions = channel !== "DM" ? channel.permissionsFor(authorID) : false;
             console.log({ userPermissions });
@@ -713,37 +713,39 @@ module.exports = {
     getInterval: async function (bot, message, PREFIX, timezoneOffset, daylightSetting,
         instructions = "__**Please enter the time you'd like in-between recurring reminders (interval):**__",
         title = "Interval", embedColour = fn.defaultEmbedColour, dataCollectDelay = 300000, errorReplyDelay = 60000,
-        intervalExamples = fn.intervalExamples,) {
+        intervalExamples = fn.intervalExamplesOver1Minute,) {
         do {
             let interval = await fn.messageDataCollect(bot, message, PREFIX, `${instructions}\n\n${intervalExamples}`,
                 title, embedColour, dataCollectDelay, false, false);
             if (!interval || interval === "stop") return false;
             const timeArgs = interval.toLowerCase().split(' ');
-            interval = this.getProcessedInterval(message, timeArgs, PREFIX, timezoneOffset, daylightSetting, errorReplyDelay);
+            interval = this.getProcessedInterval(message, timeArgs, PREFIX, timezoneOffset,
+                daylightSetting, errorReplyDelay);
             if (!interval) continue;
             else return interval;
         }
         while (true)
     },
 
-    getProcessedInterval: function (message, timeArgs, PREFIX, timezoneOffset, daylightSetting, errorReplyDelay,) {
+    getProcessedInterval: function (message, timeArgs, PREFIX, timezoneOffset, daylightSetting, errorReplyDelay) {
         let now = Date.now();
-        interval = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now, timezoneOffset, daylightSetting);
+        const adjustedTimeArgs = timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs
+        interval = fn.timeCommandHandlerToUTC(adjustedTimeArgs, now, timezoneOffset, daylightSetting, true, true, true);
         if (!interval) {
             fn.sendReplyThenDelete(message, `**INVALID Interval**...** \`${PREFIX}date\` **for **valid time inputs!**`, errorReplyDelay);
             return false;
         }
-        else now = fn.getNowFlooredToSecond();
+        else now = fn.getCurrentUTCTimestampFlooredToSecond();
         interval -= now + HOUR_IN_MS * timezoneOffset;
         if (interval <= 0) {
             fn.sendReplyThenDelete(message, `**INVALID Interval**... ${PREFIX}date for **valid time inputs!**`, errorReplyDelay);
             return false;
         }
-        else if (interval <= 60000) {
+        else if (interval < 60000) {
             fn.sendReplyThenDelete(message, `Intervals must be **__> 1 minute__**`, errorReplyDelay);
             return false;
         }
-        else return interval;
+        else return { args: timeArgs.join(' '), duration: interval };
     },
 
 };

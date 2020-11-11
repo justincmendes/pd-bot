@@ -48,7 +48,7 @@ function fastDocumentToDataArray(fastDocument, userTimezone = 0, calculateFastDu
             fastDuration = givenEndTimestamp - startTimestamp;
         }
         else {
-            let currentUTCTimestamp = fn.getNowFlooredToSecond();
+            let currentUTCTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
             fastDuration = currentUTCTimestamp + (userTimezone * HOUR_IN_MS) - startTimestamp;
         }
     }
@@ -465,70 +465,75 @@ async function getCurrentOrMostRecentFast(userID) {
  * @param {Discord.Client} bot 
  * @param {String} authorID 
  * @param {mongoose.ObjectId} fastDocumentID 
- * @param {Number} currentTimestamp In UTC timezone
- * @param {Number} startTimestamp In relative user timezone
- * @param {Number} endTimestamp Reminder End Time in relative user timezone
+ * @param {Number} startTimestamp In relative terms
+ * @param {Number} endTimestamp Reminder End Time in relative terms
  * @param {Number} sendHoursBeforeEnd 
  */
 function setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentID, startTimestamp, endTimestamp, sendHoursBeforeEnd = 1) {
     const intendedFastDuration = endTimestamp - startTimestamp;
     sendHoursBeforeEnd = intendedFastDuration > 0 ? (sendHoursBeforeEnd > 0 ? sendHoursBeforeEnd : 0) : 0;
-    const preEndMessage = `**At least __${sendHoursBeforeEnd}__ more hour(s) left of your __${fn.millisecondsToTimeString(intendedFastDuration)}__ fast!**\n(Started: __${fn.timestampToDateString(startTimestamp)}__)`
+    const preEndMessage = `**At least __${sendHoursBeforeEnd}__ more hour(s) left of your __`
+        + `${fn.millisecondsToTimeString(intendedFastDuration)}__ fast!**\n(Started: __${fn.timestampToDateString(startTimestamp)}__)`
         + `\nYou're at least **${(((intendedFastDuration - HOUR_IN_MS * sendHoursBeforeEnd) / intendedFastDuration) * 100).toFixed(2)}% finished!**\n\nFinish strong - I'm cheering you on 😁`;
-    rm.setNewDMReminder(bot, authorID, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * (userTimezoneOffset + sendHoursBeforeEnd),
-        preEndMessage, "Fast", fastDocumentID, false);
+    rm.setNewDMReminder(bot, authorID, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * (sendHoursBeforeEnd + userTimezoneOffset), preEndMessage, "Fast", fastDocumentID, false);
 }
+
 /**
  * 
  * @param {Discord.Client} bot 
  * @param {String} commandUsed 
  * @param {String} authorID 
  * @param {mongoose.ObjectId} fastDocumentID 
- * @param {Number} currentTimestamp In UTC timezone
- * @param {Number} startTimestamp In relative user timezone
- * @param {Number} endTimestamp Reminder End Time in relative user timezone
+ * @param {Number} startTimestamp In relative terms
+ * @param {Number} endTimestamp Reminder End Time in relative terms
  */
 function setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fastDocumentID, startTimestamp, endTimestamp) {
     const intendedFastDuration = endTimestamp - startTimestamp;
-    const endMessage = `**Your __${fn.millisecondsToTimeString(intendedFastDuration)}__ fast is done!** (Started: __${fn.timestampToDateString(startTimestamp)}__)`
+    const endMessage = `**Your __${fn.millisecondsToTimeString(intendedFastDuration)}__ fast is done!**`
+        + ` (Started: __${fn.timestampToDateString(startTimestamp)}__)`
         + `\nGreat job tracking and completing your fast!\nIf you want to **edit** your fast before ending, type \`?${commandUsed} edit current\``
         + `\nIf you want to **end** your fast, type \`?${commandUsed} end\``;
-    rm.setNewDMReminder(bot, authorID, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * userTimezoneOffset, endMessage, "Fast",
-        fastDocumentID, false);
+    rm.setNewDMReminder(bot, authorID, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * userTimezoneOffset, endMessage, "Fast", fastDocumentID, false);
 }
+
 /**
  * 
- * @param {*} message 
- * @param {*} fastTimeHelpMessage 
- * @param {*} userTimezoneOffset 
- * @param {*} userDaylightSavingSetting 
- * @param {*} forceSkip 
- * In relative terms (NOT UTC)
+ * @param {Discord.Client} bot 
+ * @param {Discord.Message} message 
+ * @param {String} PREFIX 
+ * @param {String} fastTimeHelpMessage 
+ * @param {Number} startTime In UTC / Exact Time
+ * @param {Number} userTimezoneOffset 
+ * @param {Boolean} userDaylightSavingSetting 
+ * @param {Boolean} forceSkip 
+ * In UTC / Exact Time
  */
-async function getUserReminderEndTime(bot, message, PREFIX, fastTimeHelpMessage, userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
+async function getUserReminderEndTime(bot, message, PREFIX, fastTimeHelpMessage, startTime,
+    userTimezoneOffset, userDaylightSavingSetting, forceSkip) {
     // Setup Reminder:
     let setReminder = true;
     var reminderEndTime;
     do {
-        const reminderPrompt = "__**How long do you intend to fast?**__\nI will DM you **when your fast is done and an hour before it's done**"
-            + "\n\nType `skip` to **start your fast without setting up an end of fast reminder**";
+        const reminderPrompt = `__**How long do you intend to fast?**__\n(**Relative to Start Time:** ${fn.timestampToDateString(startTime)})`
+            + "\n💬 - I will DM you **when your fast is done and an hour before it's done**"
+            + `\n\n${fn.durationExamples}\n\nType \`skip\` to **start your fast without setting up an end of fast reminder**`;
         const userTimeInput = await fn.messageDataCollect(bot, message, PREFIX, reminderPrompt, "Fast: Duration", fastEmbedColour);
         if (userTimeInput === "skip") return undefined;
         if (userTimeInput === "stop" || userTimeInput === false) return false;
         // Undo the timezoneOffset to get the end time in UTC
         const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
-        var intendedFastDuration;
-        let now = Date.now();
+        var intendedFastDuration, now;
+        now = fn.getCurrentUTCTimestampFlooredToSecond();
         reminderEndTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now,
             userTimezoneOffset, userDaylightSavingSetting);
         if (reminderEndTime || reminderEndTime === 0) {
+            now = fn.getCurrentUTCTimestampFlooredToSecond();
             reminderEndTime -= HOUR_IN_MS * userTimezoneOffset;
-            now = fn.getNowFlooredToSecond();
             intendedFastDuration = reminderEndTime - now;
         }
         else intendedFastDuration = false;
         console.log({ userTimeInput, now, reminderEndTime, intendedFastDuration });
-        if (reminderEndTime - HOUR_IN_MS * userTimezoneOffset > now && intendedFastDuration >= HOUR_IN_MS) setReminder = true;
+        if (intendedFastDuration >= HOUR_IN_MS && reminderEndTime > now) setReminder = true;
         else {
             setReminder = false;
             fn.sendReplyThenDelete(message, `**Please enter a proper time in the future __> 1 hour__!**...\n${fastTimeHelpMessage} for **valid time inputs!**`, 30000);
@@ -538,7 +543,9 @@ async function getUserReminderEndTime(bot, message, PREFIX, fastTimeHelpMessage,
             const confirmReminder = await fn.getUserConfirmation(bot, message, PREFIX,
                 `Are you sure you want to be reminded after **${fastDurationString}** of fasting?`,
                 forceSkip, "Fast: Reminder Confirmation");
-            if (confirmReminder) return reminderEndTime;
+            if (confirmReminder) {
+                return startTime + intendedFastDuration;
+            }
         }
     }
     while (true)
@@ -554,7 +561,7 @@ module.exports = {
     name: "fast",
     description: "Fully Functional Fasting Tracker (for Intermittent Fasting)",
     aliases: ["f", "if", "fasts", "fasting"],
-    cooldown: 3.5,
+    cooldown: 1.5,
     args: true,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavingSetting, forceSkip) {
@@ -567,13 +574,13 @@ module.exports = {
         const authorID = message.author.id;
         const authorUsername = message.author.username;
         const userSettings = await User.findOne({ discordID: authorID });
-        const { premium: tier } = userSettings;
+        const { tier } = userSettings;
         const fastCommand = args[0].toLowerCase();
-        const fastInProgress = Fast.find({
+        const fastInProgress = Fast.findOne({
             userID: authorID,
             endTime: null
         });
-        const fastIsInProgress = (await fastInProgress.countDocuments() > 0);
+        const fastIsInProgress = !!(fastInProgress);
         const totalFastNumber = await getTotalFasts(authorID);
         if (totalFastNumber === false) return;
         const fastFieldList = ["start", "end", "fastbreaker", "duration", "mood", "reflection"];
@@ -606,18 +613,21 @@ module.exports = {
             }
             if (fastIsInProgress >= 1) return message.reply(fastIsRunningMessage);
             else {
-                let startTimestamp = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavingSetting,
-                    `__**When did you start your fast?**__: Enter a Date/Time`, `Fast: Start Time`, false, fastEmbedColour, 300000, 60000, timeExamples);
-                if (!startTimestamp && startTimestamp !== 0) return;
+                let startTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavingSetting,
+                    `__**When did you start your fast?**__: Enter a Date/Time`, `Fast: Start Time`, false,
+                    fastEmbedColour, 300000, 60000, timeExamples);
+                if (!startTime && startTime !== 0) return;
+
                 // Setup Reminder:
-                const reminderEndTime = await getUserReminderEndTime(bot, message, PREFIX, `Try \`${PREFIX}date\``, timezoneOffset, daylightSavingSetting, forceSkip);
+                const reminderEndTime = await getUserReminderEndTime(bot, message, PREFIX, `Try \`${PREFIX}date\``,
+                    startTime, timezoneOffset, daylightSavingSetting, forceSkip);
                 if (reminderEndTime === false) return;
 
                 let newFast = new Fast({
                     _id: mongoose.Types.ObjectId(),
                     userID: authorID,
                     //using Date.now() gives the time in milliseconds since Jan 1, 1970 00:00:00
-                    startTime: startTimestamp,
+                    startTime,
 
                     //if the endTime or fastDuration is null that indicates that the fast is still going
                     endTime: null,
@@ -632,17 +642,17 @@ module.exports = {
                 if (reminderEndTimeExists) {
                     // First Reminder: 1 Hour Warning/Motivation
                     if (message.createdTimestamp + HOUR_IN_MS * timezoneOffset < reminderEndTime) {
-                        setFastEndHourReminder(bot, timezoneOffset, authorID, fastDocumentID, startTimestamp, reminderEndTime, 1);
+                        setFastEndHourReminder(bot, timezoneOffset, authorID, fastDocumentID, startTime, reminderEndTime, 1);
                     }
                     // Second Reminder: End Time
-                    setFastEndReminder(bot, timezoneOffset, commandUsed, authorID, fastDocumentID, startTimestamp, reminderEndTime);
+                    setFastEndReminder(bot, timezoneOffset, commandUsed, authorID, fastDocumentID, startTime, reminderEndTime);
                 }
                 await newFast.save()
                     .then(result => console.log(result))
                     .catch(err => console.log(err));
 
-                message.reply(`Your fast starting **${fn.timestampToDateString(startTimestamp, true, true, true)}${reminderEndTimeExists ? ` for ${fn.millisecondsToTimeString(reminderEndTime - startTimestamp)}, ` : " "}**`
-                    + `is being recorded!`);
+                message.reply(`Your fast starting on **${fn.timestampToDateString(startTime)}`
+                    + `${reminderEndTimeExists ? ` for ${fn.millisecondsToTimeString(reminderEndTime - startTime)}, ` : " "}**is being recorded!`);
             }
         }
 
@@ -672,121 +682,76 @@ module.exports = {
                 let endTimestamp = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavingSetting,
                     `__**When did you end your fast?**__: Enter a Date/Time`, `Fast: End Time`, false, fastEmbedColour, 300000, 60000, timeExamples);
                 if (!endTimestamp && endTimestamp !== 0) return;
-                const startTimestamp = currentFast.startTime;
-                console.log({ currentFast, startTimestamp, endTimestamp });
-                const validEndTime = fn.endTimeAfterStartTime(message, startTimestamp, endTimestamp, "Fast");
+                const { startTime } = currentFast;
+                console.log({ currentFast, startTime, endTimestamp });
+                const validEndTime = fn.endTimeAfterStartTime(message, startTime, endTimestamp, "Fast");
                 if (!validEndTime) {
                     return message.channel.send(`If you want to change the start time try \`${PREFIX}${commandUsed} edit recent\``);
                 }
                 const currentFastUserID = currentFast.userID;
-                const fastDurationTimestamp = endTimestamp - startTimestamp;
-                console.log({ currentFastUserID, startTimestamp, fastDurationTimestamp });
+                const fastDuration = endTimestamp - startTime;
+                console.log({ currentFastUserID, startTime, fastDuration });
                 // EVEN if the time is not now it will be handled accordingly
                 const quickEndMessage = `**✍ - Log additional information: Fast Breaker, Mood, Reflection**` +
-                    `\n**⌚ - Quickly log** your **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast now` +
+                    `\n**⌚ - Quickly log** your **${fn.millisecondsToTimeString(fastDuration)}** fast now` +
                     `\n**❌ - Exit**` +
                     `\n\n(You can always \`${PREFIX}${commandUsed} edit\`)`;
                 const quickEndEmojis = ["✍", "⌚", "❌"];
-                var endConfirmation = `Are you sure you want to **end** your **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast?`;
-                const fastBreakerPrompt = "**What did you break your fast with?** \n\nType `skip` to **skip** (will **continue**, but log it as blank)";
-                const moodValuePrompt = "**How did you feel during this past fast?\n\nEnter a number from 1-5 (1 = worst, 5 = best)**\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖";
-                var reflectionTextPrompt = "**Elaborate? For Example:\n🤔 - Why did you feel that way?\n💭 - What did you do that made it great? / What could you have done to make it better?**" +
-                    "\n\nType `1` when **done**\nType `skip` to **skip** (will **continue**, but log it as blank)\nType `reset` to **reset** your current reflection message\n\n";
-                const reflectionTextPromptOriginal = reflectionTextPrompt;
                 let quickEnd = await fn.reactionDataCollect(bot, message, quickEndMessage, quickEndEmojis, "Fast: Quick End?", fastEmbedColour, 180000)
-                    .catch(err => console.error(err));
-                var fastBreaker, moodValue, reflectionText;
+                if (!quickEnd) return;
+
+                let fastBreaker = null,
+                    mood = null,
+                    reflection = null;
                 if (quickEnd === `❌`) return;
                 else if (quickEnd === `✍`) {
                     // Send message and as for fastBreaker and upload a picture too
                     // which can be referenced later or sent to a server when DMs are handled!
-                    fastBreaker = await fn.messageDataCollect(bot, message, PREFIX, fastBreakerPrompt, "Fast: Fast Breaker", fastEmbedColour, 300000);
+                    const skipInstructions = "Type `skip` to **skip** (will **continue**, but log it as blank)";
+                    const skipKeyword = ["skip"];
+                    const fastBreakerPrompt = "**What did you break your fast with?**\n(Within 150 characters)";
+                    fastBreaker = await fn.getSingleEntryWithCharacterLimit(bot, message, PREFIX, fastBreakerPrompt, "Fast: Fast Breaker", 150,
+                        "a fast breaker", forceSkip, fastEmbedColour, skipInstructions, skipKeyword);
                     console.log({ fastBreaker });
-                    if (!fastBreaker || fastBreaker == "stop") return;
-                    else if (fastBreaker == "skip") fastBreaker = null;
+                    if (!fastBreaker) return;
+                    else if (fastBreaker === "skip") fastBreaker = null;
 
+                    const moodValuePrompt = "**How did you feel during this past fast?\n\nEnter a number from 1-5 (1 = worst, 5 = best)**"
+                        + "\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖";
+                    mood = await fn.userSelectFromList(bot, PREFIX, message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour);
+                    if (!mood && mood !== 0) return;
                     // +1 to convert the returned index back to natural numbers
-                    moodValue = await fn.userSelectFromList(bot, PREFIX, message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour);
-                    if (moodValue === false) return;
-                    else moodValue++;
-                    var reflectionText = "";
-                    let messageIndex = 0;
-                    let reset = false;
-                    do {
-                        let userReflection = await fn.messageDataCollect(bot, message, PREFIX, reflectionTextPrompt, "Fast: Reflection", fastEmbedColour, 900000);
-                        if (!userReflection) return;
-                        if (userReflection === "1") break;
-                        else if (userReflection === "reset") {
-                            let confirmReset = await fn.getUserConfirmation(bot, message, PREFIX, "Are you sure you want to **reset/clear** your current message?\nYour current reflection entry will be lost!",
-                                forceSkip, "Fast: Reset Reflection Confirmation");
-                            if (confirmReset === true) {
-                                reflectionTextPrompt = reflectionTextPromptOriginal;
-                                reflectionText = "";
-                                reset = true;
-                            }
-                        }
-                        else if (userReflection === "stop") return;
-                        else if (userReflection === "skip") {
-                            // Overwrite any previously collected data: Make sure the user wants to do that
-                            let confirmSkip = await fn.getUserConfirmation(bot, message, PREFIX, "Are you sure you want to **skip?**\nYour current reflection entry will be lost!",
-                                forceSkip, "Fast: Skip Reflection Confirmation");
-                            if (confirmSkip === true) {
-                                reflectionText = null;
-                                break;
-                            }
-                        }
-                        else {
-                            if (messageIndex === 0 || reset === true) {
-                                reflectionTextPrompt = reflectionTextPrompt + "**Current Reflection Message:**\n" + userReflection;
-                                reflectionText = userReflection;
-                                reset = false;
-                            }
-                            else {
-                                reflectionTextPrompt = `${reflectionTextPrompt}\n${userReflection}`;
-                                reflectionText = `${reflectionText}\n${userReflection}`;
-                            }
-                        }
-                        messageIndex++;
-                    }
-                    while (true)
-                }
-                else {
-                    // Skip adding values to the other fields, just end the fast
-                    fastBreaker = null;
-                    // moodResult = null;
-                    moodValue = null;
-                    reflectionText = null;
+                    else mood++;
+
+                    const reflectionTextPrompt = "**__Reflection Questions:__**\n🤔 - **Why did you feel that way?**\n💭 - **What did you do that made it great?"
+                        + " / What could you have done to make it better?**\n(Within 1000 characters)";
+                    reflection = await fn.getMultilineEntry(bot, PREFIX, message, reflectionTextPrompt, "Fast: Reflection",
+                        forceSkip, fastEmbedColour, 1000, skipInstructions, skipKeyword);
+                    if (!reflection && reflection.message !== "") return;
+                    else if (reflection.message === "skip") reflection = null;
+                    else reflection = reflection.message;
                 }
 
-                endConfirmation = endConfirmation + `\n\n**Fast Breaker:** ${fastBreaker}\n**Mood:** ${moodValue}\n**Reflection:** ${reflectionText}`;
+                const endConfirmation = `Are you sure you want to **end** your **${fn.millisecondsToTimeString(fastDuration)}** fast?`
+                    + `\n\n**Fast Breaker:** ${fastBreaker}\n**Mood:** ${mood}\n**Reflection:**\n${reflection}`;
                 //If the user declines or has made a mistake, stop.
                 const confirmation = await fn.getUserConfirmation(bot, message, PREFIX, endConfirmation, forceSkip)
                     .catch(err => console.error(err));
                 console.log(`Confirmation function call: ${confirmation}`);
                 if (!confirmation) return;
-                const fastData = [startTimestamp, endTimestamp, fastDurationTimestamp, fastBreaker, moodValue, reflectionText];
-                await Fast.findOneAndUpdate({
-                    userID: authorID,
-                    endTime: null
-                },
-                    {
-                        $set: {
-                            fastDuration: fastDurationTimestamp,
-                            endTime: endTimestamp,
-                            fastBreaker: fastBreaker,
-                            mood: moodValue,
-                            reflection: reflectionText
-                        }
-                    }, async (err, doc) => {
+
+                await Fast.findOneAndUpdate({ userID: authorID, endTime: null, },
+                    { $set: { fastDuration, endTime: endTimestamp, fastBreaker, mood, reflection } }, async (err, doc) => {
                         if (err) return console.error(`Failed to end fast:\n${err}`);
                         // Removing any lingering reminders
                         if (doc) {
-                            const removeReminders = await Reminder.deleteMany({ connectedDocument: doc._id });
-                            console.log({ removeReminders });
+                            if (doc._id) {
+                                const removeReminders = await Reminder.deleteMany({ userID: authorID, connectedDocument: doc._id });
+                                console.log({ removeReminders });
+                            }
                             // Posting the fast
-                            message.reply(`You have successfully logged your **${fn.millisecondsToTimeString(fastDurationTimestamp)}** fast!`);
-                            const confirmPostFastMessage = "Would you like to take a **picture** of your **fast breaker** *and/or* **send a message** to a server channel? (for accountability!)"
-                                + "\n\n(if ✅, I will list the servers you're in to find the channel you want to post to!)";
+                            message.reply(`You have successfully logged your **${fn.millisecondsToTimeString(fastDuration)}** fast!`);
+                            const confirmPostFastMessage = "Would you like to take a **picture** of your **fast breaker** *and/or* **send a message** to a server channel? (for accountability!)";;
                             let confirmPostFast = await fn.getUserConfirmation(bot, message, PREFIX, confirmPostFastMessage, forceSkip, "Send Message for Accountability?", 180000, 0);
                             if (!confirmPostFast) return;
                             else {
@@ -811,7 +776,7 @@ module.exports = {
 
             // If the user wants fast help, do not proceed to show them the fast.
             const seeCommands = ["past", "recent", "current", "all"];
-            var fastBreaker, reflectionText;
+            var fastBreaker, reflection;
 
             // MAKE THIS OPERATION INTO A FUNCTION!
             if (args[1] !== undefined) {
@@ -1344,7 +1309,8 @@ module.exports = {
                             break;
                         // No prompt for the fast breaker
                         case 2:
-                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
+                            fastEditMessagePrompt = "(Within 150 characters)";
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour, 150);
                             break;
                         case 3:
                             {
@@ -1354,9 +1320,9 @@ module.exports = {
                                 break;
                             }
                         case 4:
-                            fastEditMessagePrompt = "\n**__Reflection Questions:__\n🤔 - Why did you feel that way?"
-                                + "\n💭 - What did you do that made it great? / What could you have done to make it better?**";
-                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour);
+                            fastEditMessagePrompt = "\n**__Reflection Questions:__**\n🤔 - **Why did you feel that way?**"
+                                + "\n💭 - **What did you do that made it great? / What could you have done to make it better?**\n(Within 1000 characters)";
+                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour, 1000);
                             break;
                     }
                     if (userEdit === false) return;
@@ -1385,21 +1351,27 @@ module.exports = {
                                     var newDuration = false;
                                     var end = false;
                                     var endTimeIsDefined = false;
-                                    const connectedReminderQuery = { connectedDocument: fastTargetID };
-                                    let oldReminders = await Reminder.find(connectedReminderQuery).sort({ endTime: -1 });
+                                    const connectedReminderQuery = { userID: authorID, connectedDocument: fastTargetID };
+                                    var oldReminders;
+                                    if (fastTargetID) oldReminders = await Reminder.find(connectedReminderQuery).sort({ endTime: -1 });
                                     // Automatically update the end time if the start time is edited
                                     // If the end time is edited remove ambiguity of user intent
                                     // By prompting if they wish to end their fast or update their fast end time!
                                     if (fieldToEditIndex === 1) {
-                                        const changeRemindersMessage = "Do you want to **update your fast end reminders (⬆)** OR **just end your fast completely? (⏭)**"
-                                            + "\n\n**❌ - Exit**";
-                                        const endReaction = await fn.reactionDataCollect(bot, message, changeRemindersMessage, ['⬆', '⏭', '❌'], "Fast: Update End Reminders or End Fast",
+                                        const changeRemindersMessage = "⬆ - **Update your fast ending reminders**\n**⏭ - End this current fast**\n❌ - **Exit**";
+                                        const endReaction = await fn.reactionDataCollect(bot, message, changeRemindersMessage, ['⬆', '⏭', '❌'], "Fast: Update Ending Reminders or End Fast",
                                             fastEmbedColour, 60000);
-                                        endTimeIsDefined = true;
+                                        endTimeIsDefined = false;
                                         switch (endReaction) {
-                                            case '⬆': end = false;
+                                            case '⬆':
+                                                end = false;
+                                                changeReminders = true;
+                                                endTimeIsDefined = true;
                                                 break;
-                                            case '⏭': end = true;
+                                            case '⏭':
+                                                end = true;
+                                                changeReminders = false;
+                                                endTimeIsDefined = true;
                                                 break;
                                             case '❌':
                                                 end = false;
@@ -1407,17 +1379,16 @@ module.exports = {
                                                 endTimeIsDefined = false;
                                                 break;
                                         }
-                                        if (end) {
-                                            await Reminder.deleteMany(connectedReminderQuery);
-                                            changeReminders = false;
-                                        }
+                                        if (end) if (fastTargetID) await Reminder.deleteMany(connectedReminderQuery);
                                     }
                                     else if (fieldToEditIndex === 0) {
                                         const updateRemindersMessage = "Do you want to **update your intended fast duration?**";
-                                        newDuration = await fn.getUserConfirmation(bot, message, PREFIX, updateRemindersMessage, false, "Fast: Update Fast Duration");
-                                        if (!newDuration) {
-                                            if (!oldReminders.length) changeReminders = false;
+                                        const updateConfirmation = await fn.getUserConfirmation(bot, message, PREFIX, updateRemindersMessage, false, "Fast: Update Fast Duration");
+                                        if (!updateConfirmation) {
+                                            newDuration = false;
+                                            if (!oldReminders.length) end = true;
                                         }
+                                        else newDuration = true;
                                     }
 
                                     if (changeReminders) {
@@ -1432,21 +1403,21 @@ module.exports = {
                                             // oldReminders is sorted from greatest to least.
                                             reminderEndTime = startTimestamp + oldReminders[0].endTime - oldReminders[0].startTime;
                                             if (!reminderEndTime) changeReminders = false;
-                                            await Reminder.deleteMany(connectedReminderQuery);
                                         }
                                         else {
                                             reminderEndTime = await getUserReminderEndTime(bot, message, PREFIX,
                                                 `Try \`${fieldToEditIndex === 0 ? `${PREFIX}${commandUsed} start help` : `${PREFIX}${commandUsed} end help`}\``,
-                                                timezoneOffset, daylightSavingSetting, forceSkip);
+                                                startTimestamp, timezoneOffset, daylightSavingSetting, forceSkip);
                                             if (!reminderEndTime && reminderEndTime !== 0) changeReminders = false;
                                         }
                                         if (changeReminders) {
+                                            if (fastTargetID) await Reminder.deleteMany(connectedReminderQuery);
                                             console.log({
-                                                userTimezoneOffset: timezoneOffset, authorID, fastTargetID,
+                                                timezoneOffset, authorID, fastTargetID,
                                                 currentTimestamp, startTimestamp, reminderEndTime
                                             });
                                             // First Reminder: 1 Hour Warning/Motivation
-                                            if ((reminderEndTime + timezoneOffset * HOUR_IN_MS) > currentTimestamp) {
+                                            if (reminderEndTime > currentTimestamp) {
                                                 setFastEndHourReminder(bot, timezoneOffset, authorID, fastTargetID, startTimestamp, reminderEndTime, 1);
                                             }
                                             // Second Reminder: End Time
@@ -1458,7 +1429,6 @@ module.exports = {
                                 if (endTimeIsDefined) {
                                     const endTimestamp = fastData[1];
                                     fastData[2] = endTimestamp - startTimestamp;
-                                    end = true;
                                 }
                                 if (!end) {
                                     fastData[1] = null;

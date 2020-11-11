@@ -1,7 +1,7 @@
 module.exports = {
     name: "ping",
     description: "Ping command to show user the bot's response time!",
-    cooldown: 2,
+    cooldown: 1,
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavings, forceSkip) {
