@@ -369,10 +369,11 @@ module.exports = {
                         let intervalArgs = interval.split(/[\s\n]+/);
                         intervalArgs = intervalArgs[0].toLowerCase() !== "in" ? (["in"]).concat(intervalArgs) : intervalArgs;
 
-                        let onFirst = true;
-                        var newEndTime, intervalDuration;
+                        let onFirst = true,
+                            newEndTime = endTime;
+                        var intervalDuration;
                         do {
-                            newEndTime = fn.timeCommandHandlerToUTC(intervalArgs, endTime,
+                            newEndTime = fn.timeCommandHandlerToUTC(intervalArgs, newEndTime,
                                 offset, daylightSaving, false, true, true);
                             if (!newEndTime) return false;
                             else {
