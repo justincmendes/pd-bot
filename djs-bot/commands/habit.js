@@ -28,7 +28,7 @@ async function habitDocumentToString(habitDocument, showConnectedGoal = false,
         longestStreak, connectedGoal, settings, pastWeek, pastMonth, pastYear, nextCron } = habitDocument;
     const userSettings = await User.findOne({ discordID: userID }, { _id: 0, habitCron: 1, 'timezone.offset': 1, });
     const { habitCron, timezone } = userSettings;
-    const { offset: timezoneOffset } = timezone
+    const { offset: timezoneOffset } = timezone;
     console.log({ userSettings, timezoneOffset });
     const goalDocument = await Goal.findById(connectedGoal);
     let connectedGoalString = "";

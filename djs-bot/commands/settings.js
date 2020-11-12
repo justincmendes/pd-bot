@@ -257,9 +257,17 @@ module.exports = {
                                         console.log({ timeAfterMidnight });
                                         habitCron = {
                                             daily: timeAfterMidnight,
-                                            weekly: userSettings.habitCron.daily,
+                                            weekly: userSettings.habitCron.weekly,
                                         };
                                         userSettings = await User.findOneAndUpdate({ discordID: authorID }, { $set: { habitCron } }, { new: true });
+                                        // Prompt user if they want to adapt their logs to this new timestamp (i.e. bring the later logs back into the next day)
+                                        // If yes, bring the logs which are between midnight and the old cron time, and move them backwards
+                                        // Otherwise, if the new cron time is later, find all of the entries between the old cron time and the new cron time
+                                        // and bring the cron times in the other section backwards
+
+                                        // WITH Time collection
+                                        // Allow bot to make a new locked channel which will show the time based on the user settings - (ticking every 5 secs) then
+                                        // upon start up deletes all remaining timer channels if any - 3 per server/guild! (Allows for pomodoro!)
                                     }
                                 }
                             }
