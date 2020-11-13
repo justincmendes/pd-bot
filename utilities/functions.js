@@ -9,6 +9,7 @@ const Guild = require("../djs-bot/database/schemas/guildsettings");
 const Dst = require("../djs-bot/database/schemas/dst");
 require("dotenv").config();
 
+const CLIENT_ID = process.env.DASHBOARD_CLIENT_ID;
 const DEFAULT_PREFIX = '?';
 const TIMEOUT_MS = 375;
 // Timescale Constants
@@ -48,9 +49,12 @@ module.exports = {
                     delayTime, false, true, false, false, 0, null, confirmationInstructions, false);
                 if (!confirmation) return false;
                 let confirmationMessage = confirmation.content;
-                if (confirmationMessage.startsWith(PREFIX) && confirmationMessage !== PREFIX) {
+                const tag = `<@!${CLIENT_ID}>`;
+                const isTagged = confirmationMessage.startsWith(tag) && confirmationMessage !== tag;
+                const isPrefixed = confirmationMessage.startsWith(PREFIX) && confirmationMessage !== PREFIX;
+                if (isTagged || isPrefixed) {
                     this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                    message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${PREFIX}\n**__Command Entered:__**\n${confirmationMessage}`);
+                    message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${isPrefixed ? PREFIX : tag}\n**__Command Entered:__**\n${confirmationMessage}`);
                     return null;
                 }
                 confirmationMessage = confirmationMessage ? confirmationMessage.toLowerCase() : false;
@@ -251,9 +255,12 @@ module.exports = {
                         }
                         const finalMessage = reacted.first().content;
                         if (!allowCommandCalls) {
-                            if (finalMessage.startsWith(PREFIX) && finalMessage !== PREFIX) {
+                            const tag = `<@!${CLIENT_ID}>`;
+                            const isTagged = finalMessage.startsWith(tag) && finalMessage !== tag;
+                            const isPrefixed = finalMessage.startsWith(PREFIX) && finalMessage !== PREFIX;
+                            if (isTagged || isPrefixed) {
                                 this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                                message.reply(`For this command, any **command calls** while writing a message will **stop** the collection process.\n**__Prefix:__** ${PREFIX}\n**__Command Entered:__**\n${finalMessage}`);
+                                message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${isPrefixed ? PREFIX : tag}\n**__Command Entered:__**\n${finalMessage}`);
                                 return false;
                             }
                         }
