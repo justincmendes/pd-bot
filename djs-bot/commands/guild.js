@@ -8,7 +8,7 @@ const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 require("dotenv").config();
 
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const HOUR_IN_MS = fn.HOUR_IN_MS;
 const futureTimeExamples = fn.futureTimeExamples;
 const timeExamples = fn.timeExamples;
 const intervalExamples = fn.intervalExamplesOver1Hour;
@@ -436,12 +436,19 @@ module.exports = {
                                         // Get the first instance!
                                     }
                                     else {
-                                        console.log(`Deleting ${authorUsername}'s (${authorID}) recurring quotes`);
-                                        await Reminder.deleteMany({ isDM: false, isRecurring: true, type: "Quote", guildID })
-                                            .catch(err => {
-                                                console.error(err);
-                                                console.log("Deletion of recurring quote has failed!");
+                                        try {
+                                            console.log(`Deleting ${authorUsername}'s (${authorID}) recurring quotes`);
+                                            const reminderQuery = { isDM: false, isRecurring: true, title: "Quote", guildID };
+                                            const reminders = await Reminder.find(reminderQuery);
+                                            reminders.forEach(async reminder => {
+                                                await rm.cancelReminderById(reminder._id);
                                             });
+                                            await Reminder.deleteMany(reminderQuery);
+                                        }
+                                        catch (err) {
+                                            console.error(err);
+                                            console.log("Deletion of recurring quote has failed!");
+                                        }
                                     }
                                     if (!error) {
                                         guildConfig = await Guild.findOneAndUpdate({ guildID },
@@ -560,7 +567,14 @@ module.exports = {
                     if (guildConfig.quote.getQuote) {
                         if (fieldToEditIndex >= 5 && fieldToEditIndex <= 9) {
                             const now = fn.getCurrentUTCTimestampFlooredToSecond();
-                            await Reminder.deleteMany({ type: "Quote", isDM: false, guildID });
+                            
+                            const reminderQuery = { title: "Quote", isDM: false, guildID };
+                            const reminders = await Reminder.find(reminderQuery);
+                            reminders.forEach(async reminder => {
+                                await rm.cancelReminderById(reminder._id);
+                            });
+                            await Reminder.deleteMany(reminderQuery);
+
                             let currentQuote = null;
                             var quoteIndex;
                             while (!currentQuote) {
@@ -574,7 +588,7 @@ module.exports = {
                                 });
                             }
                             await rm.setNewChannelReminder(bot, authorID, guildConfig.quote.channel, now, guildConfig.quote.nextQuote,
-                                currentQuote, "Quote", guildConfig._id, true, guildConfig.quote.quoteInterval);
+                                currentQuote, "Quote", true, guildConfig._id, true, guildConfig.quote.quoteInterval, false, quoteEmbedColour);
                         }
                     }
                     const continueEditMessage = `Do you want to continue **editing your settings?**\n\n${guildDocumentToString(bot, guildConfig, inGuild)}`;

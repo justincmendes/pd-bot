@@ -9,12 +9,33 @@ const mongoose = require("mongoose");
 const fn = require("./functions");
 require("dotenv").config();
 
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const HOUR_IN_MS = fn.HOUR_IN_MS;
 const habitEmbedColour = fn.habitEmbedColour;
+const habits = new Discord.Collection();
 
 // Private Function Declarations
 
 module.exports = {
+    logDocumentToString: function (log) {
+        const state = this.getStateEmoji(log.state);
+        var messageString = log.message ? `\n**Message:** ${log.message}` : "";
+        var countString = "";
+        if (log.count) {
+            const count = log.count;
+            if (count.length) {
+                count.forEach((value, i) => {
+                    if (i === count.length - 1 && count.length > 1) {
+                        countString = `\~\~${countString}\~\~ ${value}`;
+                    }
+                    else countString += `${value} `;
+                });
+                countString = `\n**Count:** ${countString}`;
+            }
+        }
+        return (`${state} - ${fn.timestampToDateString(log.timestamp)}`
+            + messageString + countString);
+    },
+
     getNextDailyCronTimeUTC: function (timezoneOffset, dailyCron) {
         const now = Date.now() + timezoneOffset * HOUR_IN_MS;
         const currentDate = new Date(now);
@@ -102,10 +123,15 @@ module.exports = {
         // console.log(fn.millisecondsToTimeString(interval));
         // console.log(`Habit Cron: User ID - ${userID}.`);
         try {
-            fn.setLongTimeout(async () => {
-                const updatedHabit = await this.updateHabit(habit, offset, habitCron);
-                if (!updatedHabit) return false;
-                else {
+            if (!habits.has(userID)) {
+                habits.set(userID, new Array());
+            }
+            const userHabits = habits.get(userID);
+            userHabits.push({
+                id: _id.toString(),
+                timeout: fn.setLongTimeout(async () => {
+                    const updatedHabit = await this.updateHabit(habit, offset, habitCron);
+                    if (!updatedHabit) return false;
                     let updatedOffset = offset;
                     let updatedHabitCron = habitCron;
                     const userSettings = await User.findOne({ discordID: userID }, { _id: 0, 'timezone.offset': 1, habitCron: 1 });
@@ -114,8 +140,8 @@ module.exports = {
                         updatedHabitCron = userSettings.habitCron;
                     }
                     await this.habitCron(updatedHabit, updatedOffset, updatedHabitCron);
-                }
-            }, cronDelay);
+                }, cronDelay)
+            });
             return true;
         }
         catch (err) {
@@ -161,13 +187,74 @@ module.exports = {
         let { habitCron } = userSettings;
         let offset = userSettings.timezone.offset;
 
-        let habits = await Habit.find({ userID, archived: false });
-        if (habits.length) {
-            habits.forEach(async habit => {
+        let userHabits = await Habit.find({ userID, archived: false });
+        if (userHabits.length) {
+            userHabits.forEach(async habit => {
                 await this.habitCron(habit, offset, habitCron);
             });
         }
         return;
+    },
+
+    updateHabit: async function (habit, timezoneOffset, habitCron) {
+        let { _id: habitID, } = habit;
+        let { userID, createdAt, settings, currentState, currentStreak, longestStreak,
+            pastWeek, pastMonth, pastYear, nextCron } = habit;
+        let { isCountType, countMetric, isWeeklyType, cronPeriods, autoLogType,
+            countGoalType, countGoal, integration } = settings;
+        let logs = await Log.find({ connectedDocument: habitID })
+            .sort({ timestamp: -1 });
+        // console.log({ logs })
+        pastWeek = this.getPastWeekStreak(logs, timezoneOffset, habitCron, createdAt);
+        pastMonth = this.getPastMonthStreak(logs, timezoneOffset, habitCron, createdAt);
+        pastYear = this.getPastYearStreak(logs, timezoneOffset, habitCron, createdAt);
+        // Streak
+        if (autoLogType === 1) {
+            currentState = 1; // Reset current state to ✅
+            const todaysLog = new Log({
+                _id: mongoose.Types.ObjectId(),
+                timestamp: fn.getCurrentUTCTimestampFlooredToSecond()
+                    + timezoneOffset * HOUR_IN_MS + 1000,
+                state: 1,
+                connectedDocument: habitID,
+            });
+            await todaysLog.save()
+                .catch(err => console.error(err));
+            logs.push(todaysLog);
+        }
+        // Count Goals and Regular Goals
+        // *NOTE: Count Goals logging will be handled in the commands
+        else currentState = 0;
+        if (logs.length) {
+            currentStreak = this.calculateCurrentStreak(logs, timezoneOffset, habitCron,
+                isWeeklyType, cronPeriods, nextCron);
+        }
+        else currentStreak = 0;
+        if (currentStreak > (longestStreak || 0)) {
+            longestStreak = currentStreak;
+        }
+        nextCron = this.getNextCronTimeUTC(timezoneOffset, habitCron,
+            isWeeklyType, cronPeriods, nextCron);
+        const updatedHabit = await Habit.findOneAndUpdate({ _id: habitID }, {
+            $set: {
+                currentState,
+                currentStreak,
+                longestStreak,
+                pastWeek,
+                pastMonth,
+                pastYear,
+                nextCron,
+            }
+        });
+        return updatedHabit;
+    },
+
+    /**
+     * @param {mongoose.Schema.Types.ObjectId | String} habitID
+     */
+    cancelHabitById: async function (habitID) {
+        const success = await fn.cancelCronById(habits, habitID);
+        return success;
     },
 
     resetAllHabitCrons: async function () {
@@ -404,82 +491,20 @@ module.exports = {
         return pastWeekStreak;
     },
 
-    getTodaysLog: function (sortedLogs, timezoneOffset, dailyCron) {
-        const currentDate = this.getCurrentDateByCronTime(timezoneOffset, habitCron);
-        const now = currentDate + dailyCron + 1000;
-        const nearestLog = sortedLogs.find(log => {
-            if (log.timestamp) {
-                const { timestamp } = log;
-                if (timestamp <= now) return log;
-            }
-        });
-        if (nearestLog) {
-            const logDate = new Date(nearestLog.timestamp);
-            if (currentDate.getDate() === logDate.getDate()) {
-                return nearestLog;
-            }
-        }
-        return null;
-    },
-
-    updateHabit: async function (habit, timezoneOffset, habitCron) {
-        let { _id: habitID, lastEdited: lastUpdateTime, } = habit;
-        const checkHabit = await Habit.findById(habitID);
-        const { lastEdited: checkLastUpdate } = checkHabit;
-        const noEdit = checkLastUpdate === lastUpdateTime;
-        console.log({ noEdit });
-        if (noEdit) {
-            let { userID, createdAt, settings, currentState, currentStreak, longestStreak,
-                pastWeek, pastMonth, pastYear, nextCron } = habit;
-            let { isCountType, countMetric, isWeeklyType, cronPeriods, autoLogType,
-                countGoalType, countGoal, integration } = settings;
-            let logs = await Log.find({ connectedDocument: habitID })
-                .sort({ timestamp: -1 });
-            // console.log({ logs })
-            pastWeek = this.getPastWeekStreak(logs, timezoneOffset, habitCron, createdAt);
-            pastMonth = this.getPastMonthStreak(logs, timezoneOffset, habitCron, createdAt);
-            pastYear = this.getPastYearStreak(logs, timezoneOffset, habitCron, createdAt);
-            // Streak
-            if (autoLogType === 1) {
-                currentState = 1; // Reset current state to ✅
-                const todaysLog = new Log({
-                    _id: mongoose.Types.ObjectId(),
-                    timestamp: fn.getCurrentUTCTimestampFlooredToSecond()
-                        + timezoneOffset * HOUR_IN_MS + 1000,
-                    state: 1,
-                    connectedDocument: habitID,
-                });
-                await todaysLog.save()
-                    .catch(err => console.error(err));
-                logs.push(todaysLog);
-            }
-            // Count Goals and Regular Goals
-            // *NOTE: Count Goals logging will handled in the commands
-            else currentState = 0;
-            if (logs.length) {
-                currentStreak = this.calculateCurrentStreak(logs, timezoneOffset, habitCron,
-                    isWeeklyType, cronPeriods, nextCron);
-            }
-            else currentStreak = 0;
-            if (currentStreak > (longestStreak || 0)) {
-                longestStreak = currentStreak;
-            }
-            nextCron = this.getNextCronTimeUTC(timezoneOffset, habitCron,
-                isWeeklyType, cronPeriods, nextCron);
-            const updatedHabit = await Habit.findOneAndUpdate({ _id: habitID }, {
-                $set: {
-                    currentState,
-                    currentStreak,
-                    longestStreak,
-                    pastWeek,
-                    pastMonth,
-                    pastYear,
-                    nextCron,
-                }
-            });
-            return updatedHabit;
-        }
-        return false;
+    getTodaysLog: function (presentToPastSortedLogs, timezoneOffset, dailyCron) {
+        const currentHabitDate = this.getCurrentDateByCronTime(timezoneOffset, dailyCron);
+        const nextHabitDate = new Date(
+            currentHabitDate.getUTCFullYear(),
+            currentHabitDate.getUTCMonth(),
+            currentHabitDate.getUTCDate() + 1
+        );
+        const nearestLog = presentToPastSortedLogs.find(
+            log => log.timestamp < nextHabitDate.getTime() + dailyCron
+                && log.timestamp >= currentHabitDate.getTime() + dailyCron
+        );
+        console.log({ nearestLog });
+        if (nearestLog) return nearestLog;
+        else return null;
     },
 
     getStateEmoji: function (state) {
@@ -495,26 +520,6 @@ module.exports = {
                 break;
         }
         return stateEmoji;
-    },
-
-    logDocumentToString: function (log) {
-        const state = this.getStateEmoji(log.state);
-        var messageString = log.message ? `\n**Message:** ${log.message}` : "";
-        var countString = "";
-        if (log.count) {
-            const count = log.count;
-            if (count.length) {
-                count.forEach((value, i) => {
-                    if (i === count.length - 1 && count.length > 1) {
-                        countString = `\~\~${countString}\~\~ ${value}`;
-                    }
-                    else countString += `${value} `;
-                });
-                countString = `\n**Count:** ${countString}`;
-            }
-        }
-        return (`${state} - ${fn.timestampToDateString(log.timestamp)}`
-            + messageString + countString);
     },
 
 };

@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 require("dotenv").config();
-const prefix = process.env.PREFIX;
 
 module.exports = {
     init: () => {
@@ -28,6 +27,5 @@ module.exports = {
         mongoose.connection.on('disconnected', () => {
             console.warn(`Mongoose connection lost`);
         });
-    }
-
+    },
 }

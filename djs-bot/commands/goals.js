@@ -7,9 +7,10 @@ const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
+const del = require("../../utilities/deletion");
 require("dotenv").config();
 
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const HOUR_IN_MS = fn.HOUR_IN_MS;
 const timeExamples = fn.timeExamples;
 const futureTimeExamples = fn.futureTimeExamples;
 const goalEmbedColour = fn.goalsEmbedColour;
@@ -182,23 +183,23 @@ async function setGoalReminders(bot, userID, timezoneOffset, commandUsed, goalDo
     if (dayBefore >= initialMessageTimestamp) {
         await rm.setNewDMReminder(bot, userID, startTime, dayBefore,
             getGoalReminderString(commandUsed, timezoneOffset, startTime, "by tomorrow", goalDescription),
-            type, goalDocumentID, false, false, goalEmbedColour);
+            type, true, goalDocumentID, false, false, false, goalEmbedColour);
         if (weekBefore >= initialMessageTimestamp) {
             await rm.setNewDMReminder(bot, userID, startTime, weekBefore,
                 getGoalReminderString(commandUsed, timezoneOffset, startTime, "by next week", goalDescription),
-                type, goalDocumentID, false, false, goalEmbedColour);
+                type, true, goalDocumentID, false, false, false, goalEmbedColour);
             if (monthBefore >= initialMessageTimestamp) {
                 await rm.setNewDMReminder(bot, userID, startTime, monthBefore,
                     getGoalReminderString(commandUsed, timezoneOffset, startTime, "by next month", goalDescription),
-                    type, goalDocumentID, false, false, goalEmbedColour);
+                    type, true, goalDocumentID, false, false, false, goalEmbedColour);
                 if (semiAnnumBefore >= initialMessageTimestamp) {
                     await rm.setNewDMReminder(bot, userID, startTime, semiAnnumBefore,
                         getGoalReminderString(commandUsed, timezoneOffset, startTime, "6 months from now", goalDescription),
-                        type, goalDocumentID, false, false, goalEmbedColour);
+                        type, true, goalDocumentID, false, false, false, goalEmbedColour);
                     if (yearBefore >= initialMessageTimestamp) {
                         await rm.setNewDMReminder(bot, userID, startTime, yearBefore,
                             getGoalReminderString(commandUsed, timezoneOffset, startTime, "by next year", goalDescription),
-                            type, goalDocumentID, false, false, goalEmbedColour);
+                            type, true, goalDocumentID, false, false, false, goalEmbedColour);
                     }
                 }
             }
@@ -206,7 +207,7 @@ async function setGoalReminders(bot, userID, timezoneOffset, commandUsed, goalDo
     }
     await rm.setNewDMReminder(bot, userID, startTime, yearBefore,
         getGoalReminderString(commandUsed, timezoneOffset, startTime, "right now", goalDescription),
-        type, goalDocumentID, false, false, goalEmbedColour);
+        type, true, goalDocumentID, false, false, false, goalEmbedColour);
 }
 
 module.exports = {
@@ -455,7 +456,10 @@ module.exports = {
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await goalCollection.map(entry => entry._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Goals (${sortType})`);
-                    await fn.deleteManyByIdAndReminders(Goal, targetIDs);
+                    targetIDs.forEach(async id => {
+                        await rm.cancelReminderById(id);
+                    });
+                    await del.deleteManyByIDAndConnectedReminders(Goal, targetIDs);
                     if (targetIDs) if (targetIDs.length) {
                         await Habit.updateMany({ connectedGoal: { $in: { targetIDs } } }, { $set: { connectedGoal: undefined, } });
                     }
@@ -518,7 +522,10 @@ module.exports = {
                         forceSkip, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goals ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Goals ${toDelete} (${sortType})`);
-                        await fn.deleteManyByIdAndReminders(Goal, goalTargetIDs);
+                        goalTargetIDs.forEach(async id => {
+                            await rm.cancelReminderById(id);
+                        });
+                        await del.deleteManyByIDAndConnectedReminders(Goal, goalTargetIDs);
                         if (goalTargetIDs) if (goalTargetIDs.length) {
                             await Habit.updateMany({ connectedGoal: { $in: { goalTargetIDs } } }, { $set: { connectedGoal: undefined, } });
                         }
@@ -565,7 +572,10 @@ module.exports = {
                             if (!multipleDeleteConfirmation) return;
                             const targetIDs = await goalCollection.map(entry => entry._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} goals past ${skipEntries} (${sortType})`);
-                            await fn.deleteManyByIdAndReminders(Goal, targetIDs);
+                            targetIDs.forEach(async id => {
+                                await rm.cancelReminderById(id);
+                            });
+                            await del.deleteManyByIDAndConnectedReminders(Goal, targetIDs);
                             if (targetIDs) if (targetIDs.length) {
                                 await Habit.updateMany({ connectedGoal: { $in: { targetIDs } } }, { $set: { connectedGoal: undefined, } });
                             }
@@ -598,7 +608,7 @@ module.exports = {
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalEmbed, deleteConfirmMessage, forceSkip,
                         `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`, 600000);
                     if (deleteIsConfirmed) {
-                        await fn.deleteOneByIdAndReminders(Goal, goalTargetID);
+                        await del.deleteOneByIDAndConnectedReminders(Goal, goalTargetID);
                         if (goalTargetID) {
                             await Habit.updateMany({ connectedGoal: goalTargetID }, { $set: { connectedGoal: undefined, } });
                         }
@@ -618,9 +628,11 @@ module.exports = {
                         + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
                     let finalConfirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, finalDeleteAllMessage, `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete ALL Goals FINAL Warning!`);
                     if (!finalConfirmDeleteAll) return;
+
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Goals`);
-                    await fn.deleteUserEntriesAndReminders(Goal, authorID);
-                    await Habit.updateMany({ userID: authorID }, { $set: { connectedGoal: undefined, } });
+                    const allQuery = { userID: authorID };
+                    await del.deleteManyByIDAndConnectedReminders(Goal, allQuery);
+                    await Habit.updateMany(allQuery, { $set: { connectedGoal: undefined, } });
                     return;
                 }
                 else return message.reply(goalActionHelpMessage);
@@ -648,7 +660,7 @@ module.exports = {
                     `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goal ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Goal ${sortType}`);
-                    await fn.deleteOneByIdAndReminders(Goal, goalTargetID);
+                    await del.deleteOneByIDAndConnectedReminders(Goal, goalTargetID);
                     if (goalTargetID) {
                         await Habit.updateMany({ connectedGoal: goalTargetID }, { $set: { connectedGoal: undefined, } });
                     }
@@ -1024,6 +1036,7 @@ module.exports = {
                                 if (fieldToEditIndex === 0 || fieldToEditIndex === 1 || fieldToEditIndex === 3
                                     || fieldToEditIndex === 7 || fieldToEditIndex === 8) {
                                     if (goalTargetID) {
+                                        await rm.cancelReminderByConnectedDocument(goalTargetID);
                                         const removeOldReminders = await Reminder.deleteMany({ connectedDocument: goalTargetID });
                                         if (removeOldReminders) if (removeOldReminders.deletedCount > 0) {
                                             if (fieldToEditIndex === 0 || fieldToEditIndex === 1 || fieldToEditIndex === 3
@@ -1124,15 +1137,18 @@ module.exports = {
 
                 let targetGoalIndex = await fn.userSelectFromList(bot, PREFIX, message, goalList, habits.length, "__**Which goal would you like to end?:**__",
                     `Long-Term Goal${isArchived ? " Archive" : ""}: End Selection`, goalEmbedColour, 600000, 0);
-                if (!targetGoalIndex) return;
+                if (!targetGoalIndex && targetGoalIndex !== 0) return;
                 const targetGoal = habits[targetGoalIndex];
                 const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.description}`,
                     forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: End Confirmation`);
                 if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { completed: true, end: fn.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * timezoneOffset } },
-                    (err, result) => {
+                    async (err, result) => {
                         if (err) return console.error(err);
                         console.log({ result });
-                        Reminder.deleteMany({ connectedDocument: targetGoal._id });
+                        if(targetGoal._id) {
+                            await rm.cancelReminderByConnectedDocument(targetGoal._id);
+                            await Reminder.deleteMany({ connectedDocument: targetGoal._id });
+                        }
                     });
                 else continue;
             }
@@ -1181,11 +1197,15 @@ module.exports = {
                     + `\n(it will not be deleted, but won't show up in your \`${PREFIX}${commandUsed} post\`\nand you won't get reminders for it anymore)`
                     + `\n\n🎯 - __**Description:**__\n${targetGoal.description}`,
                     forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Confirmation`);
-                if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { archived: true } }, (err, result) => {
-                    if (err) return console.error(err);
-                    console.log({ result });
-                    Reminder.deleteMany({ connectedDocument: targetGoal._id });
-                });
+                if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { archived: true } },
+                    async (err, result) => {
+                        if (err) return console.error(err);
+                        console.log({ result });
+                        if(targetGoal._id) {
+                            await rm.cancelReminderByConnectedDocument(targetGoal._id);
+                            await Reminder.deleteMany({ connectedDocument: targetGoal._id });
+                        }
+                    });
                 else continue;
             }
             while (true)

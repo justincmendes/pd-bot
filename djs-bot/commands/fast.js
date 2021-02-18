@@ -5,12 +5,13 @@ const User = require("../database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
+const del = require("../../utilities/deletion");
 const Reminder = require("../database/schemas/reminder");
 require("dotenv").config();
 
 const fastEmbedColour = fn.fastEmbedColour;
 const fastMax = fn.fastMaxTier1;
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const HOUR_IN_MS = fn.HOUR_IN_MS;
 const timeExamples = fn.timeExamples;
 
 // REDESIGNED:
@@ -475,7 +476,9 @@ function setFastEndHourReminder(bot, userTimezoneOffset, authorID, fastDocumentI
     const preEndMessage = `**At least __${sendHoursBeforeEnd}__ more hour(s) left of your __`
         + `${fn.millisecondsToTimeString(intendedFastDuration)}__ fast!**\n(Started: __${fn.timestampToDateString(startTimestamp)}__)`
         + `\nYou're at least **${(((intendedFastDuration - HOUR_IN_MS * sendHoursBeforeEnd) / intendedFastDuration) * 100).toFixed(2)}% finished!**\n\nFinish strong - I'm cheering you on 😁`;
-    rm.setNewDMReminder(bot, authorID, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * (sendHoursBeforeEnd + userTimezoneOffset), preEndMessage, "Fast", fastDocumentID, false);
+    rm.setNewDMReminder(bot, authorID, startTimestamp - HOUR_IN_MS * userTimezoneOffset,
+        endTimestamp - HOUR_IN_MS * (sendHoursBeforeEnd + userTimezoneOffset),
+        preEndMessage, "Fast", true, fastDocumentID, false, false, false, fastEmbedColour);
 }
 
 /**
@@ -493,7 +496,9 @@ function setFastEndReminder(bot, userTimezoneOffset, commandUsed, authorID, fast
         + ` (Started: __${fn.timestampToDateString(startTimestamp)}__)`
         + `\nGreat job tracking and completing your fast!\nIf you want to **edit** your fast before ending, type \`?${commandUsed} edit current\``
         + `\nIf you want to **end** your fast, type \`?${commandUsed} end\``;
-    rm.setNewDMReminder(bot, authorID, startTimestamp - HOUR_IN_MS * userTimezoneOffset, endTimestamp - HOUR_IN_MS * userTimezoneOffset, endMessage, "Fast", fastDocumentID, false);
+    rm.setNewDMReminder(bot, authorID, startTimestamp - HOUR_IN_MS * userTimezoneOffset,
+        endTimestamp - HOUR_IN_MS * userTimezoneOffset, endMessage,
+        "Fast", true, fastDocumentID, false, false, false, fastEmbedColour);
 }
 
 /**
@@ -614,7 +619,7 @@ module.exports = {
             if (fastIsInProgress >= 1) return message.reply(fastIsRunningMessage);
             else {
                 let startTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSavingSetting,
-                    `__**When did you start your fast?**__: Enter a Date/Time`, `Fast: Start Time`, false,
+                    `__**When did you start your fast?**__: Enter a Date/Time`, "Fast: Start Time", false,
                     fastEmbedColour, 300000, 60000, timeExamples);
                 if (!startTime && startTime !== 0) return;
 
@@ -743,9 +748,10 @@ module.exports = {
                 await Fast.findOneAndUpdate({ userID: authorID, endTime: null, },
                     { $set: { fastDuration, endTime: endTimestamp, fastBreaker, mood, reflection } }, async (err, doc) => {
                         if (err) return console.error(`Failed to end fast:\n${err}`);
-                        // Removing any lingering reminders
                         if (doc) {
                             if (doc._id) {
+                                // Removing any lingering reminders
+                                await rm.cancelReminderByConnectedDocument(doc._id);
                                 const removeReminders = await Reminder.deleteMany({ userID: authorID, connectedDocument: doc._id });
                                 console.log({ removeReminders });
                             }
@@ -764,19 +770,26 @@ module.exports = {
             }
         }
 
-
+        /**
+         * Cases:
+         * 1. see <ONE_ENTRY>
+         * 2. see all
+         * 3. see recent/current
+         * 4. see past <INDEX>
+         * 5. see many <MULTIPLE_ENTRIES_COMMA_SEPARATED>
+         * 6. see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
+         */
         else if (fastCommand === "see" || fastCommand === "view" || fastCommand === "find"
             || fastCommand === "look" || fastCommand === "lookup" || fastCommand === "show") {
             // Will add the ability to gather all of the user's data into a spreadsheet or note/JSON file!
             // **Handle users who do not yet have a fast!
             var fastSeeUsageMessage = fn.getReadOrDeleteUsageMessage(PREFIX, commandUsed, fastCommand, true, ["Fast", "Fasts"],
-                false, false, [`\n\`${PREFIX}${commandUsed} ${fastCommand} <number>\``]);
+                false, false, [`\n\`${PREFIX}${commandUsed} ${fastCommand} <number> <force?>\``]);
             fastSeeUsageMessage = fn.getMessageEmbed(fastSeeUsageMessage, `Fast: See Help`, fastEmbedColour);
             const fastSeeHelpMessage = `**INVALID USAGE**... Try \`${PREFIX}${commandUsed} ${fastCommand} help\``;
 
             // If the user wants fast help, do not proceed to show them the fast.
             const seeCommands = ["past", "recent", "current", "all"];
-            var fastBreaker, reflection;
 
             // MAKE THIS OPERATION INTO A FUNCTION!
             if (args[1] !== undefined) {
@@ -1018,7 +1031,10 @@ module.exports = {
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await fastCollection.map(fast => fast._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Fasts (${sortType})`);
-                    await fn.deleteManyByIDAndConnectedReminders(Fast, targetIDs);
+                    targetIDs.forEach(async id => {
+                        await rm.cancelReminderById(id);
+                    });
+                    await del.deleteManyByIDAndConnectedReminders(Fast, targetIDs);
                     return;
                 }
                 if (deleteType === "many") {
@@ -1085,7 +1101,10 @@ module.exports = {
                         const confirmDeleteMany = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, fastDataToStringArray, deleteConfirmMessage, forceSkip, `Fast: Delete Fasts ${toDelete} (${sortType})`, 600000);
                         if (confirmDeleteMany) {
                             console.log(`Deleting ${authorID}'s Fasts ${toDelete} (${sortType})`);
-                            await fn.deleteManyByIDAndConnectedReminders(Fast, fastTargetIDs);
+                            fastTargetIDs.forEach(async id => {
+                                await rm.cancelReminderById(id);
+                            });
+                            await del.deleteManyByIDAndConnectedReminders(Fast, fastTargetIDs);
                             return;
                         }
                         else return;
@@ -1131,7 +1150,10 @@ module.exports = {
                             if (!multipleDeleteConfirmation) return;
                             const targetIDs = await fastCollection.map(fast => fast._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} fast(s) past ${skipEntries} (${sortType})`);
-                            await fn.deleteManyByIDAndConnectedReminders(Fast, targetIDs);
+                            targetIDs.forEach(async id => {
+                                await rm.cancelReminderById(id);
+                            });
+                            await del.deleteManyByIDAndConnectedReminders(Fast, targetIDs);
                             return;
                         }
 
@@ -1164,7 +1186,8 @@ module.exports = {
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, fastEmbed, deleteConfirmMessage, forceSkip,
                         `Fast: Delete Recent Fast`, 600000);
                     if (deleteIsConfirmed) {
-                        await fn.deleteOneByIDAndConnectedReminders(Fast, fastTargetID);
+                        await rm.cancelReminderById(fastTargetID);
+                        await del.deleteOneByIDAndConnectedReminders(Fast, fastTargetID);
                         return;
                     }
                 }
@@ -1181,8 +1204,10 @@ module.exports = {
                         + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
                     let finalConfirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, finalDeleteAllMessage, false, "Fast: Delete ALL Fasts FINAL Warning!");
                     if (!finalConfirmDeleteAll) return;
+
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Fasts`);
-                    await fn.deleteManyAndConnectedReminders(Fast, { userID: authorID });
+                    const allQuery = { userID: authorID };
+                    await del.deleteManyByIDAndConnectedReminders(Fast, allQuery);
                     return;
                 }
                 else return message.reply(fastDeleteHelpMessage);
@@ -1211,7 +1236,8 @@ module.exports = {
                     `Fast: Delete Fast ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Fast ${sortType}`);
-                    await fn.deleteOneByIDAndConnectedReminders(Fast, fastTargetID);
+                    await rm.cancelReminderById(fastTargetID);
+                    await del.deleteOneByIDAndConnectedReminders(Fast, fastTargetID);
                     return;
                 }
             }
@@ -1379,7 +1405,10 @@ module.exports = {
                                                 endTimeIsDefined = false;
                                                 break;
                                         }
-                                        if (end) if (fastTargetID) await Reminder.deleteMany(connectedReminderQuery);
+                                        if (end) if (fastTargetID) {
+                                            await rm.cancelReminderByConnectedDocument(fastTargetID);
+                                            await Reminder.deleteMany(connectedReminderQuery);
+                                        }
                                     }
                                     else if (fieldToEditIndex === 0) {
                                         const updateRemindersMessage = "Do you want to **update your intended fast duration?**";
@@ -1411,7 +1440,10 @@ module.exports = {
                                             if (!reminderEndTime && reminderEndTime !== 0) changeReminders = false;
                                         }
                                         if (changeReminders) {
-                                            if (fastTargetID) await Reminder.deleteMany(connectedReminderQuery);
+                                            if (fastTargetID) {
+                                                await rm.cancelReminderByConnectedDocument(fastTargetID);
+                                                await Reminder.deleteMany(connectedReminderQuery);
+                                            }
                                             console.log({
                                                 timezoneOffset, authorID, fastTargetID,
                                                 currentTimestamp, startTimestamp, reminderEndTime

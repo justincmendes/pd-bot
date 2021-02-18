@@ -7,10 +7,11 @@ const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
+const del = require("../../utilities/deletion");
 const prompts = require("../../utilities/prompts.json").prompts;
 require("dotenv").config();
 
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const HOUR_IN_MS = fn.HOUR_IN_MS;
 const timeExamples = fn.timeExamples;
 const journalEmbedColour = fn.journalEmbedColour;
 const journalMax = fn.journalMaxTier1;
@@ -332,7 +333,7 @@ module.exports = {
                         + `\n\nType** \`?${commandUsed} end\` **- to write your **end of day reflection journal**`;
                     const now = fn.getCurrentUTCTimestampFlooredToSecond();
                     await rm.setNewDMReminder(bot, authorID, now, endTime, reminderMessage,
-                        "Journal", journalDocument._id, false, false, journalEmbedColour);
+                        "Journal", true, journalDocument._id, false, false, false, journalEmbedColour);
                     console.log("Journal end reminder set.");
                     message.reply(`Journal end reminder set for **${fn.millisecondsToTimeString(endTime - fn.getCurrentUTCTimestampFlooredToSecond())}** from now!`);
                     return;
@@ -446,6 +447,7 @@ module.exports = {
                 console.log(`Completing ${authorUsername}'s (${authorID}) journal entry!`);
                 message.reply("**Your journal entry was successfully completed!**");
                 if (journalInProgress._id) {
+                    await rm.cancelRemindersByConnectedDocument(journalInProgress._id);
                     await Reminder.deleteMany({ connectedDocument: journalInProgress._id });
                     console.log(`Removing Associated Reminders....`);
                 }
@@ -502,7 +504,7 @@ module.exports = {
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await journalCollection.map(entry => entry._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Entries (${sortType})`);
-                    await Journal.deleteMany({ _id: { $in: targetIDs } });
+                    await del.deleteManyByIDAndConnectedReminders(Journal, targetIDs);
                     return;
                 }
                 if (deleteType === "many") {
@@ -562,7 +564,7 @@ module.exports = {
                         forceSkip, `Journal: Delete Entries ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Entries ${toDelete} (${sortType})`);
-                        await Journal.deleteMany({ _id: { $in: journalTargetIDs } });
+                        await del.deleteManyByIDAndConnectedReminders(Journal, journalTargetIDs);
                         return;
                     }
                     else return;
@@ -608,7 +610,7 @@ module.exports = {
                             console.log({ multipleDeleteConfirmation });
                             const targetIDs = await journalCollection.map(entry => entry._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} entries past ${skipEntries} (${sortType})`);
-                            await Journal.deleteMany({ _id: { $in: targetIDs } });
+                            await del.deleteManyByIDAndConnectedReminders(Journal, targetIDs);
                             return;
                         }
 
@@ -638,7 +640,7 @@ module.exports = {
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, journalEmbed, deleteConfirmMessage, forceSkip,
                         `Journal: Delete Recent Entry`, 600000);
                     if (deleteIsConfirmed) {
-                        await Journal.deleteOne({ _id: journalTargetID });
+                        await del.deleteOneByIDAndConnectedReminders(Journal, journalTargetID);
                         return;
                     }
                 }
@@ -656,7 +658,8 @@ module.exports = {
                     let finalConfirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, finalDeleteAllMessage, "Journal: Delete ALL Entries FINAL Warning!");
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Entries`);
-                    await Journal.deleteMany({ userID: authorID });
+                    const allQuery = { userID: authorID };
+                    await del.deleteManyByIDAndConnectedReminders(Journal, allQuery);
                     return;
                 }
                 else return message.reply(journalActionHelpMessage);
@@ -684,7 +687,7 @@ module.exports = {
                     `Journal: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Entry ${sortType}`);
-                    await Journal.deleteOne({ _id: journalTargetID });
+                    await del.deleteOneByIDAndConnectedReminders(Journal, journalTargetID);
                     return;
                 }
             }

@@ -6,10 +6,10 @@ const quotes = require("../../utilities/quotes.json").quotes;
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 const hb = require("../../utilities/habit");
-const { isLongTimeScale } = require("../../utilities/functions");
+const { authorize } = require("passport");
 require("dotenv").config();
 
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const HOUR_IN_MS = fn.HOUR_IN_MS;
 const futureTimeExamples = fn.futureTimeExamples;
 const timeExamples = fn.timeExamples;
 const intervalExamples = fn.intervalExamplesOver1Hour;
@@ -94,7 +94,12 @@ module.exports = {
                 const type = "Settings";
                 const fieldToEdit = userFields[fieldToEditIndex];
                 continueEdit = false;
-                var userEdit, userSettingsPrompt = "";
+                const originalTimezone = userSettings.timezone.name;
+                var userEdit,
+                    updatedTimezoneOffset = timezoneOffset,
+                    updatedDaylightSaving = daylightSaving,
+                    updatedTimezone = originalTimezone,
+                    userSettingsPrompt = "";
                 let { habitCron } = userSettings;
                 switch (fieldToEditIndex) {
                     case 0:
@@ -162,35 +167,22 @@ module.exports = {
                     switch (fieldToEditIndex) {
                         case 0:
                             {
-                                let updatedTimezone = fn.getTimezoneOffset(userEdit);
-                                console.log({ updatedTimezone, continueEdit })
-                                if (updatedTimezone || updatedTimezone === 0) {
-                                    const daylightSetting = userSettings.timezone.daylightSaving
-                                    if (daylightSetting) {
-                                        updatedTimezone += fn.isDaylightSavingTime(
-                                            Date.now() + updatedTimezone * HOUR_IN_MS,
-                                            userEdit,
+                                updatedTimezoneOffset = fn.getTimezoneOffset(userEdit);
+                                console.log({ updatedTimezoneOffset });
+                                if (updatedTimezoneOffset || updatedTimezoneOffset === 0) {
+                                    updatedTimezone = userEdit;
+                                    if (updatedDaylightSaving) {
+                                        updatedTimezoneOffset += fn.isDaylightSavingTime(
+                                            Date.now() + updatedTimezoneOffset * HOUR_IN_MS,
+                                            updatedTimezone,
                                             true
-                                        ) ? fn.getTimezoneDaylightOffset(userEdit) : 0;
+                                        ) ? fn.getTimezoneDaylightOffset(updatedTimezone) : 0;
                                     }
-                                    userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
-                                        $set: {
-                                            timezone: {
-                                                name: userEdit,
-                                                offset: updatedTimezone,
-                                                daylightSaving: daylightSetting,
-                                            }
-                                        }
-                                    }, { new: true });
-                                    timezoneDifference = updatedTimezone;
                                 }
                                 else {
                                     fn.sendReplyThenDelete(message, "**This timezone does not exist...**", 60000);
                                     continueEdit = true;
                                 }
-                                console.log({ continueEdit });
-                                timezoneOffset = updatedTimezone;
-                                daylightSaving = userEdit;
                             }
                             break;
                         case 1:
@@ -204,27 +196,14 @@ module.exports = {
                                         break;
                                 }
                                 if (typeof userEdit === "boolean") {
-                                    const originalTimezone = userSettings.timezone.name;
-                                    let updatedTimezoneOffset = fn.getTimezoneOffset(originalTimezone);
-                                    if (userEdit === true) {
+                                    updatedDaylightSaving = userEdit;
+                                    updatedTimezoneOffset = fn.getTimezoneOffset(originalTimezone);
+                                    if (updatedDaylightSaving === true) {
                                         updatedTimezoneOffset += fn.isDaylightSavingTime(Date.now() + updatedTimezoneOffset * HOUR_IN_MS,
                                             originalTimezone, true) ? fn.getTimezoneDaylightOffset(originalTimezone) : 0;
                                     }
-                                    userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
-                                        $set: {
-                                            timezone: {
-                                                name: originalTimezone,
-                                                offset: updatedTimezoneOffset,
-                                                daylightSaving: userEdit,
-                                            }
-                                        }
-                                    }, { new: true });
-                                    console.log({ userSettings });
-                                    timezoneDifference = updatedTimezoneOffset;
                                 }
                                 else continueEdit = true;
-                                timezoneOffset = updatedTimezoneOffset;
-                                daylightSaving = userEdit;
                             }
                             break;
                         case 2:
@@ -328,7 +307,11 @@ module.exports = {
                                                         let { habitCron: updatedHabitCron } = userSettings;
                                                         if (habits) if (habits.length) {
                                                             habits.forEach(async habit => {
-                                                                if (habit) await hb.updateHabit(habit, timezoneOffset, updatedHabitCron);
+                                                                if (habit) {
+                                                                    const updatedHabit = await hb.updateHabit(habit, timezoneOffset, updatedHabitCron);
+                                                                    await hb.cancelHabitById(habit._id);
+                                                                    await hb.habitCron(updatedHabit, timezoneOffset, updatedHabitCron);
+                                                                }
                                                             });
                                                         }
                                                     }
@@ -435,12 +418,19 @@ module.exports = {
                                         // Get the first instance!
                                     }
                                     else {
-                                        console.log(`Deleting ${authorUsername}'s (${authorID}) recurring quotes`);
-                                        await Reminder.deleteMany({ userID: authorID, isDM: true, isRecurring: true, type: "Quote" })
-                                            .catch(err => {
-                                                console.error(err);
-                                                console.log("Deletion of recurring quote has failed!");
+                                        try {
+                                            console.log(`Deleting ${authorUsername}'s (${authorID}) recurring quotes`);
+                                            const reminderQuery = { userID: authorID, isDM: true, isRecurring: true, title: "Quote" };
+                                            const reminders = await Reminder.find(reminderQuery);
+                                            reminders.forEach(async reminder => {
+                                                await rm.cancelReminderById(reminder._id);
                                             });
+                                            await Reminder.deleteMany(reminderQuery);
+                                        }
+                                        catch (err) {
+                                            console.error(err);
+                                            console.log("Deletion of recurring quote has failed!");
+                                        }
                                     }
                                     if (!error) {
                                         userSettings = await User.findOneAndUpdate({ discordID: authorID },
@@ -603,24 +593,39 @@ module.exports = {
                 }
                 else continueEdit = true;
                 if (fieldToEditIndex === 0 || fieldToEditIndex === 1) {
-                    const timezoneDifference = updatedTimezone - timezoneOffset;
-                    const confirmUpdateReminders = await fn.getUserConfirmation(bot, message, PREFIX,
-                        `**Would you like to adjust your reminders to this new timezone? (${userEdit}, ${updatedTimezone})**`
-                        + "\n\n(Your habits will automatically be adapted regardless of your choice here)",
+                    const timezoneDifference = updatedTimezoneOffset - timezoneOffset;
+                    let reminderQuery = {
+                        userID: authorID,
+                    };
+                    const confirmUpdateReminders = await fn.userSelectFromList(bot, PREFIX, message,
+                        "`1` - Adjust **ALL** of your reminders\n`2` - Adjust only your **DM** reminders"
+                        + "\n`3` - Adjust only your **server** reminders\n`4` - NONE", 4,
+                        "**__Would you like to adjust your reminders to this new timezone?__**"
+                        + `\n- From **${originalTimezone}, ${fn.hoursToUTCOffset(timezoneOffset)} - ${daylightSaving ? "NO DST" : "considering DST"}** -to-`
+                        + ` **${updatedTimezone}, ${fn.hoursToUTCOffset(updatedTimezoneOffset)} - ${updatedDaylightSaving ? "NO DST" : "considering DST"}**`
+                        + "\n(Type `4` to leave your reminders adjusted to your old timezone)"
+                        + "\n(Your habit reset time, if any, will automatically be adapted regardless of your choice here)",
                         false, `${showUserSettings.title}: Reminder Adjustment Confirmation`);
-                    if (confirmUpdateReminders) {
-                        let userReminders = await Reminder.find({ userID: authorID });
+                    if (!confirmUpdateReminders && confirmUpdateReminders !== 0) break;
+                    switch (confirmUpdateReminders) {
+                        case 1: reminderQuery.isDM = true;
+                            break;
+                        case 2: reminderQuery.isDM = false;
+                            break;
+                    }
+                    if (confirmUpdateReminders !== 3) {
+                        let userReminders = await Reminder.find(reminderQuery);
                         if (userReminders) if (userReminders.length) {
                             userReminders.forEach(async reminder => {
                                 let { startTime, endTime } = reminder;
                                 startTime += timezoneDifference * HOUR_IN_MS;
                                 endTime += timezoneDifference * HOUR_IN_MS;
-                                const now = Date.now();
                                 reminder = await Reminder.updateOne({ _id: reminder._id }, {
                                     $set: {
-                                        startTime, endTime, lastEdited: now,
+                                        startTime, endTime,
                                     }
                                 });
+                                await rm.cancelReminderById(reminder._id);
                                 await rm.sendReminderByObject(bot, reminder);
                             });
                         }
@@ -628,17 +633,33 @@ module.exports = {
                     let userHabits = await Habit.find({ userID: authorID });
                     if (userHabits) if (userHabits.length) {
                         userHabits.forEach(async habit => {
-                            let { nextCron } = habit;
-                            nextCron += timezoneDifference * HOUR_IN_MS;
-                            const now = Date.now();
+                            let { nextCron, settings } = habit;
+                            const { isWeeklyType, cronPeriods } = settings;
+                            nextCron = hb.getNextCronTimeUTC(updatedTimezoneOffset, habitCron, isWeeklyType, cronPeriods);
                             await Habit.updateOne({ _id: habit._id }, {
                                 $set: {
-                                    nextCron, lastEdited: now,
+                                    nextCron,
                                 }
                             });
                         });
+                        userHabits.forEach(async habit => {
+                            await hb.cancelHabitById(habit._id);
+                        });
                         await hb.habitCronUser(authorID);
                     }
+
+                    timezoneOffset = updatedTimezoneOffset;
+                    daylightSaving = updatedDaylightSaving;
+                    userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
+                        $set: {
+                            timezone: {
+                                name: updatedTimezone,
+                                offset: updatedTimezoneOffset,
+                                daylightSaving: updatedDaylightSaving,
+                            }
+                        }
+                    }, { new: true });
+                    console.log({ userSettings });
                 }
                 else if (fieldToEditIndex === 2 || fieldToEditIndex === 3) {
                     let userHabits = await Habit.find({ userID: authorID });
@@ -653,9 +674,12 @@ module.exports = {
                             while (nextCron < now)
                             await Habit.updateOne({ _id: habit._id }, {
                                 $set: {
-                                    nextCron, lastEdited: now,
+                                    nextCron,
                                 }
                             });
+                        });
+                        userHabits.forEach(async habit => {
+                            await hb.cancelHabitById(habit._id);
                         });
                         await hb.habitCronUser(authorID);
                     }
@@ -663,14 +687,22 @@ module.exports = {
                 if (!continueEdit) {
                     if ((fieldToEditIndex === 4 && userEdit === true) || fieldToEditIndex === 5 || fieldToEditIndex === 6) {
                         const now = fn.getCurrentUTCTimestampFlooredToSecond();
-                        await Reminder.deleteMany({ userID: authorID, type: "Quote", isDM: true, isRecurring: true, });
+
+                        const reminderQuery = { userID: authorID, title: "Quote", isDM: true, isRecurring: true, };
+                        const reminders = await Reminder.find(reminderQuery);
+                        reminders.forEach(async reminder => {
+                            await rm.cancelReminderById(reminder._id);
+                        });
+                        await Reminder.deleteMany(reminderQuery);
+
                         var quoteIndex, currentQuote;
                         while (!currentQuote) {
                             quoteIndex = Math.round(Math.random() * quotes.length);
                             currentQuote = quotes[quoteIndex].message;
                         }
                         await rm.setNewDMReminder(bot, authorID, now, userSettings.nextQuote,
-                            currentQuote, "Quote", false, true, userSettings.quoteInterval, quoteEmbedColour);
+                            currentQuote, "Quote", true, false, true, userSettings.quoteInterval,
+                            false, quoteEmbedColour);
                     }
                     const continueEditMessage = `Do you want to continue **editing your settings?**\n\n${userDocumentToString(userSettings)}`;
                     continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Settings: Continue Editing?`, 300000);

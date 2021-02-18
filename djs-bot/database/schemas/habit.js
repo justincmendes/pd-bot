@@ -119,8 +119,6 @@ const habitSchema = mongoose.Schema({
             },
             required: false,
         },
-
-
     },
     currentStreak: {
         type: Number,
@@ -151,11 +149,6 @@ const habitSchema = mongoose.Schema({
         type: Number,
         required: true,
         default: 0,
-    },
-    lastEdited: {
-        type: Number,
-        required: false,
-        default: null,
     },
 });
 

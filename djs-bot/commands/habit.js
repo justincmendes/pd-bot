@@ -8,10 +8,12 @@ const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 const hb = require("../../utilities/habit");
+const del = require("../../utilities/deletion");
 require("dotenv").config();
 
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs("hour");
+const HOUR_IN_MS = fn.HOUR_IN_MS;
 const timeExamples = fn.timeExamples;
+const streakHabitMax = fn.streakHabitMaxTier1;
 const habitMax = fn.habitMaxTier1;
 const habitArchiveMax = fn.habitArchiveMaxTier1;
 const habitEmbedColour = fn.habitEmbedColour;
@@ -19,6 +21,7 @@ const areasOfLifeEmojis = fn.areasOfLifeEmojis;
 const areasOfLife = fn.areasOfLife;
 const areasOfLifeCombinedEmoji = fn.getAreasOfLifeEmojiCombinedArray();
 const areasOfLifeList = fn.getAreasOfLifeList().join('\n');
+const checkMissedSkipList = "\n`1` - **Check** ✅\n`2` - **Missed** ❌\n`3` - **Skip** ⏭ (still counts as a check)";
 
 // Private Function Declarations
 async function habitDocumentToString(habitDocument, showConnectedGoal = false,
@@ -312,7 +315,7 @@ async function setHabitReminder(bot, commandUsed, userID, endTime, interval, hab
         + `\n\nType** \`?${commandUsed} log\` **- to **track your habit**`;
     const now = fn.getCurrentUTCTimestampFlooredToSecond();
     await rm.setNewDMReminder(bot, userID, now, endTime, reminderMessage,
-        "Habit", habitID, true, interval, habitEmbedColour);
+        "Habit", true, habitID, true, interval, false, habitEmbedColour);
 }
 
 module.exports = {
@@ -347,6 +350,7 @@ module.exports = {
         const habitCommand = args[0].toLowerCase();
         const habitActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${habitCommand} help\``;
         let habitType = args[1] ? args[1].toLowerCase() : false;
+        let totalStreakNumber = await Habit.find({ userID: authorID, archived: false, 'settings.autoLogType': 1 }).countDocuments();
         let totalHabitNumber = await Habit.find({ userID: authorID, archived: false }).countDocuments();
         let totalArchiveNumber = await Habit.find({ userID: authorID, archived: true }).countDocuments();
         const archiveRegex = /^(archive[ds]?|arch|ar?)$/i;
@@ -441,9 +445,11 @@ module.exports = {
                     countGoal, countGoalType, countMetric;
                 let goalTypeString = "";
                 if (advancedSettings === 1) {
-                    cronPeriods = await fn.getSingleEntry(bot, message, PREFIX,
-                        `**__After how many ${isWeeklyType ? "weeks" : "days"} do you want this habit's streak to reset?__**\n\n${cronSettings}\n\n(Enter a number, Default: 1)`,
-                        `Habit: Creation - Advanced Settings: Streak Reset ${isWeeklyType ? "Weeks" : "Days"}`, forceSkip, habitEmbedColour, additionalInstructions, additionalKeywords);
+                    cronPeriods = await fn.getNumberEntry(bot, message, PREFIX,
+                        `**__After how many ${isWeeklyType ? "weeks" : "days"} do you want this habit's streak to reset?__**`
+                        + `\n\n${cronSettings}\n\n(Enter a number greater than 0)`,
+                        `Habit: Creation - Advanced Settings: Streak Reset ${isWeeklyType ? "Weeks" : "Days"}`, forceSkip,
+                        false, false, 1, undefined, habitEmbedColour, additionalInstructions, additionalKeywords);
                     if (!cronPeriods && cronPeriods !== "") return;
                     else if (cronPeriods === "reset") {
                         reset = true;
@@ -474,22 +480,35 @@ module.exports = {
                         if (!countGoalType && countGoalType !== 0) return;
                         else countGoalType++;
                         goalTypeString = getGoalTypeString(countGoalType);
-                        countGoal = await fn.getSingleEntry(bot, message, PREFIX,
-                            `**What is your ${goalTypeString} for __${countMetric}?:__**\n\n(Enter a number, Default: N/A)`,
-                            `Habit: Creation - Advanced Settings: Count Goal`, forceSkip, habitEmbedColour, additionalInstructions, additionalKeywords);
-                        if (!countGoal && countGoal !== "") return;
+                        countGoal = await fn.getNumberEntry(bot, message, PREFIX,
+                            `**What is your ${goalTypeString} for __${countMetric}?:__**\n\n(Enter a number)`,
+                            `Habit: Creation - Advanced Settings: Count Goal`, forceSkip, true, true,
+                            undefined, undefined, habitEmbedColour, additionalInstructions, additionalKeywords);
+                        if (!countGoal && countGoal !== 0) return;
                         else if (countGoal === "reset") {
                             reset = true;
                             continue;
                         }
-                        else if (!isNaN(countGoal)) countGoal = parseFloat(countGoal);
-                        else countGoal = undefined;
                     }
-                    autoLogType = await fn.userSelectFromList(bot, PREFIX, message, "\n`1` - **No** ⛔\n`2` - **Yes, As a Streak** (Every Reset Time) 🔄"
-                        + `${countGoal && countGoal !== 0 ? `\n\`3\` - **Yes, Based on Count Goal** (When goal is reached after logging habit) 🔢` : ""}`,
-                        countGoal && countGoal !== 0 ? 3 : 2, `**__Do you want the habit to automatically log/complete?__**`
-                    + `\n(You can still manually log/edit your entries`, 'Habit: Creation - Auto-Complete', habitEmbedColour);
-                    if (!autoLogType && autoLogType !== 0) return;
+                    const hasCountGoal = countGoal && countGoal !== 0;
+                    var noMoreStreakHabitsAtTier;
+                    switch (tier) {
+                        case 1: noMoreStreakHabitsAtTier = totalStreakNumber >= streakHabitMax && tier === 1;
+                            break;
+                        case 3: noMoreStreakHabitsAtTier = false;
+                            break;
+                        default: noMoreStreakHabitsAtTier = true;
+                            break;
+                    }
+                    if (!hasCountGoal && noMoreStreakHabitsAtTier) autoLogType = 0;
+                    else {
+                        autoLogType = await fn.userSelectFromList(bot, PREFIX, message, `\n\`1\` - **No** ⛔${noMoreStreakHabitsAtTier ? "" : `\n\`2\` - **Yes, As a Streak** (Every Reset Time) 🔄`}`
+                            + `${hasCountGoal ? `\n\`3\` - **Yes, Based on Count Goal** (When goal is reached after logging habit) 🔢` : ""}`, (hasCountGoal ? 2 : 1) + (noMoreStreakHabitsAtTier ? 0 : 1),
+                            `**__Do you want the habit to automatically log/complete?__**\n(You can still manually log/edit your entries)`
+                            + `\n${noMoreStreakHabitsAtTier ? `P.S. You've reached your **maximum number of streak habits (${streakHabitMax}) for your tier level (${tier})**` : ""}`,
+                            'Habit: Creation - Auto-Complete', habitEmbedColour);
+                        if (!autoLogType && autoLogType !== 0) return;
+                    }
 
                 }
                 else {
@@ -684,7 +703,10 @@ module.exports = {
                     if (!multipleDeleteConfirmation) return;
                     const targetIDs = await habitCollection.map(entry => entry._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Habits (${sortType})`);
-                    await deleteManyByIdAndReminders(Habit, targetIDs);
+                    targetIDs.forEach(async id => {
+                        await hb.cancelHabitById(id);
+                    });
+                    await del.deleteManyByIDAndConnectedReminders(Habit, targetIDs);
                     return;
                 }
                 if (deleteType === "many") {
@@ -744,7 +766,10 @@ module.exports = {
                         forceSkip, `Habit${isArchived ? ` Archive` : ""}: Delete Habits ${toDelete} (${sortType})`, 600000);
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Habits ${toDelete} (${sortType})`);
-                        await deleteManyByIdAndReminders(Habit, habitTargetIDs);
+                        habitTargetIDs.forEach(async id => {
+                            await hb.cancelHabitById(id);
+                        });
+                        await del.deleteManyByIDAndConnectedReminders(Habit, habitTargetIDs);
                         return;
                     }
                     else return;
@@ -789,7 +814,10 @@ module.exports = {
                             if (!multipleDeleteConfirmation) return;
                             const targetIDs = await habitCollection.map(entry => entry._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} habits past ${skipEntries} (${sortType})`);
-                            await deleteManyByIdAndReminders(Habit, targetIDs);
+                            targetIDs.forEach(async id => {
+                                await hb.cancelHabitById(id);
+                            });
+                            await del.deleteManyByIDAndConnectedReminders(Habit, targetIDs);
                             return;
                         }
 
@@ -819,7 +847,8 @@ module.exports = {
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, habitEmbed, deleteConfirmMessage, forceSkip,
                         `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, 600000);
                     if (deleteIsConfirmed) {
-                        await deleteOneByIdAndReminders(Habit, habitTargetID);
+                        await hb.cancelHabitById(habitTargetID);
+                        await del.deleteOneByIDAndConnectedReminders(Habit, habitTargetID);
                         return;
                     }
                 }
@@ -836,8 +865,14 @@ module.exports = {
                         + `\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
                     let finalConfirmDeleteAll = await fn.getUserConfirmation(bot, message, PREFIX, finalDeleteAllMessage, `Habit${isArchived ? ` Archive` : ""}: Delete ALL Habits FINAL Warning!`);
                     if (!finalConfirmDeleteAll) return;
+
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Habits`);
-                    await fn.deleteUserEntriesAndReminders(Habit, authorID);
+                    const reminderQuery = { userID: authorID };
+                    const userHabits = await Reminder.find(reminderQuery);
+                    userHabits.forEach(async habit => {
+                        await hb.cancelHabitById(habit._id);
+                    });
+                    await del.deleteManyByIDAndConnectedReminders(Habit, reminderQuery);
                     return;
                 }
                 else return message.reply(habitActionHelpMessage);
@@ -865,7 +900,8 @@ module.exports = {
                     `Habit${isArchived ? ` Archive` : ""}: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Habit ${sortType}`);
-                    await deleteOneByIdAndReminders(Habit, habitTargetID);
+                    await hb.cancelHabitById(habitTargetID);
+                    await del.deleteOneByIDAndConnectedReminders(Habit, habitTargetID);
                     return;
                 }
             }
@@ -1161,7 +1197,7 @@ module.exports = {
                                     // State
                                     case 1:
                                         let currentStateEmoji = hb.getStateEmoji(currentState);
-                                        habitEditMessagePrompt = "\n`1` - **Check** ✅\n`2` - **Missed** ❌\n`3` - **Skip** ⏭ (still counts as a check)";
+                                        habitEditMessagePrompt = checkMissedSkipList;
                                         userEdit = await fn.userSelectFromList(bot, PREFIX, message, habitEditMessagePrompt, 3,
                                             `**Current State:** ${currentStateEmoji}`, `${type}: Log Field`, habitEmbedColour);
                                         break;
@@ -1259,9 +1295,21 @@ module.exports = {
                             break;
                         case 9:
                             habitEditMessagePrompt = `**__Do you want the habit to automatically log/complete?__**`;
-                            userEdit = await fn.userSelectFromList(bot, PREFIX, message, "\n`1` - **No** ⛔\n`2` - **Yes, As a Streak** (Every Reset Time) 🔄"
-                                + `${countGoal || countGoal === 0 ? `\n\`3\` - **Yes, Based on Count Goal** (When goal is reached after logging habit) 🔢` : ""}`,
-                                countGoal || countGoal === 0 ? 3 : 2, habitEditMessagePrompt, `${type}: Auto-Complete Type`, habitEmbedColour);
+                            const hasCountGoal = countGoal && countGoal !== 0;
+                            var noMoreStreakHabitsAtTier;
+                            switch (tier) {
+                                case 1: noMoreStreakHabitsAtTier = totalStreakNumber >= streakHabitMax && tier === 1;
+                                    break;
+                                case 3: noMoreStreakHabitsAtTier = false;
+                                    break;
+                                default: noMoreStreakHabitsAtTier = true;
+                                    break;
+                            }
+                            userEdit = await fn.userSelectFromList(bot, PREFIX, message, `\n\`1\` - **No** ⛔${noMoreStreakHabitsAtTier ? "" : `\n\`2\` - **Yes, As a Streak** (Every Reset Time) 🔄`}`
+                                + `${hasCountGoal ? `\n\`3\` - **Yes, Based on Count Goal** (When goal is reached after logging habit) 🔢` : ""}`, (hasCountGoal ? 2 : 1) + (noMoreStreakHabitsAtTier ? 0 : 1),
+                                `**__Do you want the habit to automatically log/complete?__**\n(You can still manually log/edit your entries)`
+                                + `\n${noMoreStreakHabitsAtTier ? `P.S. You've reached your **maximum number of streak habits (${streakHabitMax}) for your tier level (${tier})**` : ""}`,
+                                `${type}: Auto-Complete Type`, habitEmbedColour);
                             autoLogType = userEdit;
                             break;
                         case 10:
@@ -1449,6 +1497,7 @@ module.exports = {
                                 if (habitTargetID) {
                                     const currentHabitReminders = await Reminder.find({ connectedDocument: habitTargetID });
                                     if (currentHabitReminders) if (currentHabitReminders.length) {
+                                        await rm.cancelReminderByConnectedDocument(habitTargetID);
                                         await Reminder.deleteMany({ connectedDocument: habitTargetID });
                                         currentHabitReminders.forEach(async reminder => {
                                             await setHabitReminder(bot, commandUsed, userID, reminder.endTime, reminder.interval,
@@ -1457,7 +1506,6 @@ module.exports = {
                                     }
                                 }
                             }
-                            const currentTimestamp = Date.now();
                             console.log(`Editing ${authorID}'s Habit ${habitIndex} (${sortType})`);
                             habitDocument = await Habit.findOneAndUpdate({ _id: habitTargetID }, {
                                 $set:
@@ -1485,13 +1533,13 @@ module.exports = {
                                     pastWeek,
                                     pastMonth,
                                     pastYear,
-                                    lastEdited: currentTimestamp,
                                 }
                             }, { new: true });
                             console.log({ continueEdit });
                             if (habitDocument) {
                                 userSettings = await User.findOne({ discordID: authorID });
                                 let { habitCron } = userSettings;
+                                await hb.cancelHabitById(habitDocument._id);
                                 await hb.habitCron(habitDocument, timezoneOffset, habitCron);
 
                                 habitIndex = indexByRecency ?
@@ -1547,7 +1595,7 @@ module.exports = {
             const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
             const habitStringArray = await multipleHabitsToStringArray(message, habits, totalHabitNumber, 0, false, true);
             if (habitStringArray.length) habitStringArray[0] = `<@!${authorID}>\n${habitStringArray[0]}`;
-            const posts = fn.getEmbedArray(habitStringArray, `${member ? `${member.displayName}'s ` : ""} Habits`
+            const posts = fn.getEmbedArray(habitStringArray, `${member ? `${member.displayName}'s` : ""} Habits`
                 + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, false, habitEmbedColour);
             posts.forEach(async post => {
                 await fn.sendMessageToChannel(bot, post, targetChannel);
@@ -1564,7 +1612,7 @@ module.exports = {
                 + `\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**`
                 + "\n\n`<recent?>`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**"
                 + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**";
-            habitEditUsageMessage = fn.getMessageEmbed(habitEditUsageMessage, `Habit: End Help`, habitEmbedColour);
+            habitEditUsageMessage = fn.getMessageEmbed(habitEditUsageMessage, `Habit: Log Help`, habitEmbedColour);
             if (habitType === "help") return message.channel.send(habitEditUsageMessage);
 
             var indexByRecency = false;
@@ -1573,30 +1621,75 @@ module.exports = {
                     indexByRecency = true;
                 }
             }
+            var habitArray;
+            if (indexByRecency) habitArray = await Habit.find({ archived: isArchived, userID: authorID }).sort({ _id: -1 });
+            else habitArray = await Habit.find({ archived: isArchived, userID: authorID }).sort({ createdAt: +1 });
+            if (!habitArray.length) return message.reply(`**No ${isArchived ? "archived " : ""}habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
             do {
-                var habitArray;
-                if (indexByRecency) habitArray = await Habit.find({ archived: isArchived, completed: false }, { _id: 1, description: 1 }).sort({ _id: -1 });
-                else habitArray = await Habit.find({ archived: isArchived, completed: false }, { _id: 1, description: 1 }).sort({ createdAt: +1 });
-                if (!habitArray.length) return message.reply(`**No ${isArchived ? "archived " : ""}habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
-
                 let habitList = "";
                 habitArray.forEach((habit, i) => {
                     habitList += `\`${i + 1}\` - ${habit.description}\n`;
                 });
 
-                let targetGoalIndex = await fn.userSelectFromList(bot, PREFIX, message, habitList, habitArray.length, "__**Which habit would you like to end?:**__",
-                    `Habit${isArchived ? " Archive" : ""}: End Selection`, habitEmbedColour, 600000, 0);
-                if (!targetGoalIndex) return;
-                const targetGoal = habitArray[targetGoalIndex];
-                const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to mark this habit as complete?**\n🎯 - __**Description:**__\n${targetGoal.description}`,
-                    forceSkip, `Habit${isArchived ? " Archive" : ""}: End Confirmation`);
-                if (confirmEnd) await Habit.updateOne({ _id: targetGoal._id }, { $set: { completed: true, end: fn.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * timezoneOffset } },
-                    (err, result) => {
-                        if (err) return console.error(err);
-                        console.log({ result });
-                        Reminder.deleteMany({ connectedDocument: targetGoal._id });
-                    });
+                let targetHabitIndex = await fn.userSelectFromList(bot, PREFIX, message, habitList, habitArray.length, "__**Which habit would you like to log?:**__",
+                    `Habit${isArchived ? " Archive" : ""}: Select Habit To Log`, habitEmbedColour, 600000, 0);
+                if (!targetHabitIndex && targetHabitIndex !== 0) return;
+                const targetHabit = habitArray[targetHabitIndex];
+
+                let habitLog = await fn.userSelectFromList(bot, PREFIX, message, checkMissedSkipList, 3,
+                    `__**What is the status of your habit?:**__\n**Currently:** ${hb.getStateEmoji(targetHabit.currentState)}`,
+                    `Habit${isArchived ? " Archive" : ""}: Log`, habitEmbedColour, 600000, 0);
+                if (!habitLog && habitLog !== 0) return;
+                habitLog++;
+
+                const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX,
+                    `**__Are you sure you want to log this habit as:__ ${hb.getStateEmoji(habitLog)}?**`
+                    + `\n\n**Previously:** ${hb.getStateEmoji(targetHabit.currentState)}\n\n🎯 - __**Description:**__\n${targetHabit.description}`,
+                    forceSkip, `Habit${isArchived ? " Archive" : ""}: Confirm Log`);
+                if (confirmEnd) {
+                    // 1. Check if there has already been a log for today.
+                    // 2. If so, find it and edit it, otherwise create a new one with the desired log
+                    // If no logs
+                    const { habitCron } = userSettings;
+                    const currentLogs = await Log.find({ connectedDocument: targetHabit._id }).sort({ timestamp: -1 });
+                    const todaysLog = await hb.getTodaysLog(currentLogs, timezoneOffset, habitCron.daily);
+                    console.log({ todaysLog });
+                    if (todaysLog) {
+                        console.log("Includes logs");
+                        const recentLog = await Log.findOne({ connectedDocument: targetHabit._id })
+                            .sort({ _id: -1 });
+                        if (!recentLog) return;
+                        await Log.updateOne({ connectedDocument: recentLog.connectedDocument }, {
+                            $set: {
+                                timestamp: fn.getCurrentUTCTimestampFlooredToSecond()
+                                    + timezoneOffset * HOUR_IN_MS,
+                                state: habitLog,
+                            }
+                        });
+                    }
+                    else {
+                        console.log("No logs");
+                        const newLog = new Log({
+                            _id: mongoose.Types.ObjectId(),
+                            timestamp: fn.getCurrentUTCTimestampFlooredToSecond()
+                                + timezoneOffset * HOUR_IN_MS,
+                            state: habitLog,
+                            connectedDocument: targetHabit._id,
+                        });
+                        if (!newLog) return;
+                        await newLog.save()
+                            .then(result => console.log({ result }))
+                            .catch(err => {
+                                console.error(err);
+                                return;
+                            });
+                    }
+                    console.log({ targetHabit });
+                    await Habit.updateOne({ _id: targetHabit._id }, { $set: { currentState: habitLog } },
+                        err => { if (err) return console.error(err); });
+                    return;
+                }
                 else continue;
             }
             while (true)
@@ -1653,7 +1746,8 @@ module.exports = {
 
 
         // Set one or more reminders for a specific habit
-        else if (habitCommand === "reminder" || habitCommand === "remindme" || habitCommand === "remind" || habitCommand === "rem" || habitCommand === "r") {
+        else if (habitCommand === "reminder" || habitCommand === "remindme" || habitCommand === "remind"
+            || habitCommand === "rem" || habitCommand === "r") {
 
         }
 
@@ -1700,11 +1794,15 @@ module.exports = {
                     + `\n\n🎯 - __**Description:**__\n${targetHabit.description}`,
                     forceSkip, `Habit${isArchived ? " Archive" : ""}: Archive Confirmation`);
                 if (confirmEnd) {
-                    await Habit.updateOne({ _id: targetHabit._id }, { $set: { archived: true } }, (err, result) => {
-                        if (err) return console.error(err);
-                        console.log({ result });
-                        Reminder.deleteMany({ connectedDocument: targetHabit._id });
-                    });
+                    await Habit.updateOne({ _id: targetHabit._id }, { $set: { archived: true } },
+                        async (err, result) => {
+                            if (err) return console.error(err);
+                            console.log({ result });
+                            if(targetHabit._id) {
+                                await rm.cancelReminderByConnectedDocument(targetHabit._id);
+                                await Reminder.deleteMany({ connectedDocument: targetHabit._id });
+                            }
+                        });
                 }
                 else continue;
             }

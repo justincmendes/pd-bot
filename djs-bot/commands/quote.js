@@ -5,7 +5,7 @@ const rm = require("../../utilities/reminder");
 const quotes = require("../../utilities/quotes.json").quotes;
 require("dotenv").config();
 
-const HOUR_IN_MS = fn.getTimeScaleToMultiplyInMs('hour');
+const HOUR_IN_MS = fn.HOUR_IN_MS;
 const timeExamples = fn.timeExamples;
 const futureTimeExamples = fn.futureTimeExamples;
 const intervalExamples = fn.intervalExamplesOver1Hour;
@@ -182,12 +182,19 @@ module.exports = {
                                         // Get the first instance!
                                     }
                                     else {
-                                        console.log(`Deleting ${authorUsername}'s (${authorID}) recurring quotes`);
-                                        await Reminder.deleteMany({ userID: authorID, isDM: true, isRecurring: true, type: "Quote" })
-                                            .catch(err => {
-                                                console.error(err);
-                                                console.log("Deletion of recurring quote has failed!");
+                                        try {
+                                            console.log(`Deleting ${authorUsername}'s (${authorID}) recurring quotes`);
+                                            const reminderQuery = { userID: authorID, isDM: true, isRecurring: true, title: "Quote" };
+                                            const reminders = await Reminder.find(reminderQuery);
+                                            reminders.forEach(async reminder => {
+                                                await rm.cancelReminderById(reminder._id);
                                             });
+                                            await Reminder.deleteMany(reminderQuery);
+                                        }
+                                        catch (err) {
+                                            console.error(err);
+                                            console.log("Deletion of recurring quote has failed!");
+                                        }
                                     }
                                     if (!error) {
                                         quoteSettings = await User.findOneAndUpdate({ discordID: authorID },
@@ -318,14 +325,21 @@ module.exports = {
                 if (!continueEdit) {
                     if (userEdit) {
                         const currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
-                        await Reminder.deleteMany({ userID: authorID, type: "Quote", isDM: true, isRecurring: true, });
+
+                        const reminderQuery = { userID: authorID, title: "Quote", isDM: true, isRecurring: true, };
+                        const reminders = await Reminder.find(reminderQuery);
+                        reminders.forEach(async reminder => {
+                            await rm.cancelReminderById(reminder._id);
+                        });
+                        await Reminder.deleteMany(reminderQuery);
+
                         var quoteIndex, currentQuote;
                         while (!currentQuote) {
                             quoteIndex = Math.round(Math.random() * quotes.length);
                             currentQuote = quotes[quoteIndex].message;
                         }
                         await rm.setNewDMReminder(bot, authorID, currentTimestamp, quoteSettings.nextQuote,
-                            currentQuote, "Quote", false, true, quoteSettings.quoteInterval, quoteEmbedColour);
+                            currentQuote, "Quote", true, false, true, quoteSettings.quoteInterval, quoteEmbedColour);
                     }
                     const continueEditMessage = `Do you want to continue **editing your quote settings?**\n\n${quoteDocumentToString(quoteSettings, timezoneOffset)}`;
                     continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Quote: Continue Editing?`, 300000);

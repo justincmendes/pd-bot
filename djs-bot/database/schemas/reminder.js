@@ -27,6 +27,15 @@ const reminderSchema = mongoose.Schema({
         required: true,
         default: false,
     },
+    sendAsEmbed: {
+        type: Boolean,
+        required: true,
+        default: true,
+    },
+    embedColour: {
+        type: String,
+        required: false,
+    },
     isRecurring: {
         type: Boolean,
         required: true,
@@ -36,7 +45,11 @@ const reminderSchema = mongoose.Schema({
         type: String,
         required: false,
     },
-    type: {
+    remainingOccurrences: {
+        type: Number,
+        required: false,
+    },
+    title: {
         type: String,
         required: true,
     },
@@ -49,10 +62,6 @@ const reminderSchema = mongoose.Schema({
         type: String,
         required: false,
     },
-    lastEdited: {
-        type: Number,
-        required: false,
-    }
 });
 
 module.exports = mongoose.model("Reminder", reminderSchema, "reminders");

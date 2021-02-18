@@ -21,10 +21,40 @@ const WEEK_IN_MS = 6.048e+8;
 const MONTH_IN_MS = 2.628e+9;
 // const YEAR_IN_MS = DAY_IN_MS * 365;
 const YEAR_IN_MS = 3.154e+10;
+const MAX_32_BIT_SIGNED_INT = 2147483647;
+const spamRecords = new Discord.Collection();
 
 // Private Function Declarations
 
 module.exports = {
+    userIsSpamming: async function (message, messageTimestamp = Date.now(),
+        CLOSE_MESSAGE_DELAY = this.CLOSE_MESSAGE_DELAY,
+        CLOSE_MESSAGE_SPAM_NUMBER = this.CLOSE_MESSAGE_SPAM_NUMBER,
+        REFRESH_MESSAGE_SPAM_DELAY = this.REFRESH_MESSAGE_SPAM_DELAY) {
+        const spamDetails = spamRecords.get(message.author.id);
+        if (spamDetails) {
+            const messageSendDelay = messageTimestamp - spamDetails.lastTimestamp;
+            console.log({ messageSendDelay });
+            spamDetails.lastTimestamp = messageTimestamp;
+            if (messageSendDelay < CLOSE_MESSAGE_DELAY) {
+                spamDetails.closeMessageCount++;
+            }
+            if (spamDetails.closeMessageCount >= CLOSE_MESSAGE_SPAM_NUMBER) {
+                console.log("Exiting due to spam...");
+                message.reply("**Exiting... __Please don't spam!__**");
+                return true;
+            }
+        }
+        else {
+            spamRecords.set(message.author.id, {
+                lastTimestamp: null,
+                closeMessageCount: 0,
+            });
+            setTimeout(() => spamRecords.delete(message.author.id), REFRESH_MESSAGE_SPAM_DELAY);
+        }
+        return false;
+    },
+
     quickReact: async function (message, emoji, timeoutMultiplier = 1, TIMEOUT = TIMEOUT_MS) {
         try {
             if (message) {
@@ -281,149 +311,6 @@ module.exports = {
         return result;
     },
 
-    // START of Mongoose Functions
-
-    /**
-     * 
-     * @param {mongoose.Model} Model 
-     * @param {[mongoose.objectId]} objectID 
-     * Delete many by Object ID and each of the associated reminders.
-     * _id - field for ObjectId convention (Parent)
-     * connectedDocument - field for ObjectId reference to parent document (Child)
-     */
-    deleteManyByIDAndConnectedReminders: async function (Model, objectID) {
-        try {
-            const query = { _id: { $in: objectID } };
-            const documents = await Model.find(query);
-            console.log({ documents });
-            if (!documents) {
-                console.log(`No ${Model.modelName} documents (${objectID}) can be found...`);
-                return false;
-            }
-            else {
-                console.log(`Deleting ${Model.modelName} documents (${objectID}) and it's associated reminders...`);
-                await Model.deleteMany(query);
-                documents.forEach(async (document, i) => {
-                    if (documents[i]._id) {
-                        const reminders = await Reminder.deleteMany({ connectedDocument: documents[i]._id });
-                        if (reminders.deletedCount === 0) {
-                            console.log(`No reminders associated to ${documents[i]._id.toString()}`);
-                        }
-                        else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents[i]._id.toString()}`);
-                    }
-                });
-                return true;
-            }
-        }
-        catch (err) {
-            console.error(err);
-            return false;
-        }
-    },
-
-    /**
-     * 
-     * @param {mongoose.Model} Model 
-     * @param {import("mongoose").MongooseFilterQuery} query In the form of an object (i.e. - {colour: red, objectType: "Function", count: 5})
-     */
-    deleteManyAndConnectedReminders: async function (Model, query) {
-        try {
-            console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
-            const documents = await Model.find(query);
-            console.log({ documents });
-            if (!documents) {
-                console.log(`No ${Model.modelName} documents found with query: ${query}, can be found...`);
-                return false;
-            }
-            else {
-                console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
-                if (query) await Model.deleteMany(query);
-                documents.forEach(async (document, i) => {
-                    if (documents[i]._id) {
-                        const reminders = await Reminder.deleteMany({ connectedDocument: documents[i]._id });
-                        if (reminders.deletedCount === 0) {
-                            console.log(`No reminders associated to ${documents[i]._id.toString()}`);
-                        }
-                        else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${documents[i]._id.toString()}`);
-                    }
-                });
-                return true;
-            }
-
-        }
-        catch (err) {
-            console.error(err);
-            return false;
-        }
-    },
-
-    /**
-     * 
-     * @param {mongoose.Model} Model 
-     * @param {mongoose.objectId} objectID 
-     * Delete one by Object ID and each of the associated reminders. Assumed Convention:
-     * _id - field for ObjectId convention (Parent)
-     * connectedDocument - field for reference to parent document (Child: ObjectId)
-     */
-    deleteOneByIDAndConnectedReminders: async function (Model, objectID) {
-        try {
-            const document = await Model.findByIdAndDelete(objectID);
-            console.log({ document });
-            if (!document) {
-                console.log(`No ${Model.modelName} document (${objectID.toString()}) can be found...`);
-                return false;
-            }
-            else {
-                console.log(`Deleting ${Model.modelName} document (${objectID.toString()}) and it's associated reminders...`);
-                if (document._id) {
-                    const reminders = await Reminder.deleteMany({ connectedDocument: document._id });
-                    if (reminders.deletedCount === 0) {
-                        console.log(`No reminders associated to ${document._id.toString()}`);
-                    }
-                    else console.log(`Deleted ${reminders.deletedCount} reminders associated to ${document._id.toString()}`);
-                }
-                return true;
-            }
-        }
-        catch (err) {
-            console.error(err);
-            return false;
-        }
-    },
-
-    /**
-     * 
-     * @param {mongoose.Model} Model 
-     * @param {import("mongoose").MongooseFilterQuery} query In the form of an object (i.e. - {colour: red, objectType: "Function", count: 5})
-     */
-    deleteOneAndConnectedReminders: async function (Model, query) {
-        try {
-            console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
-            const documents = await Model.findOneAndDelete(query);
-            console.log({ documents });
-            if (!documents) {
-                console.log(`No ${Model.modelName} document found with query: ${query}, can be found...`);
-                return false;
-            }
-            else {
-                console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
-                const reminders = await Reminder.deleteMany({ connectedDocument: documents._id });
-                const deletedCount = reminders.deletedCount;
-                if (deletedCount === 0) {
-                    console.log(`No reminders associated to ${documents._id.toString()}`);
-                }
-                else console.log(`Deleted ${deletedCount} reminders associated to ${documents._id.toString()}`);
-                return true;
-            }
-        }
-        catch (err) {
-            console.error(err);
-            return false;
-        }
-    },
-
-    // END of Mongoose Functions
-
     /**
      * @param {String} string
      */
@@ -584,10 +471,6 @@ module.exports = {
     userSelectFromList: async function (bot, PREFIX, message, list, numberOfEntries, instructions, selectTitle,
         messageColour = this.defaultEmbedColour, delayTime = 120000, userMessageDeleteDelay = 0, messageAfterList = "") {
         try {
-            let spamDetails = {
-                lastTimestamp: null,
-                closeMessageCount: 0,
-            };
             var targetIndex;
             do {
                 var currentTimestamp;
@@ -620,26 +503,7 @@ module.exports = {
                     }
                     break;
                 }
-                // Spam Prevention:
-                if (spamDetails) {
-                    const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
-                    console.log({ messageSendDelay });
-                    spamDetails.lastTimestamp = currentTimestamp || Date.now();
-                    if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
-                        spamDetails.closeMessageCount++;
-                    }
-                    if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
-                        console.log("Exiting due to spam...");
-                        message.reply("**Exiting... __Please don't spam!__**");
-                        return false;
-                    }
-                    if (spamDetails.closeMessageCount === 0) {
-                        setTimeout(() => {
-                            if (spamDetails) spamDetails.closeMessageCount = 0;
-                        }, this.REFRESH_MESSAGE_SPAM_DELAY);
-                    }
-                    console.log({ spamDetails })
-                }
+                if (await this.userIsSpamming(message, currentTimestamp)) return false;
             }
             while (true);
             return targetIndex;
@@ -2031,6 +1895,10 @@ module.exports = {
                         switch (timeScaleToMultiply) {
                             case YEAR_IN_MS: year += numberOfTimeScales;
                                 break;
+                            case MONTH_IN_MS: month += numberOfTimeScales;
+                                break;
+                            case WEEK_IN_MS: day += 7 * numberOfTimeScales;
+                                break;
                             case DAY_IN_MS: day += numberOfTimeScales;
                                 break;
                             case HOUR_IN_MS: hour += numberOfTimeScales;
@@ -2756,6 +2624,9 @@ module.exports = {
                 if (/(mins?|minutes?)/.test(relativeTimeScale)) {
                     timeScaleToMultiply = MINUTE_IN_MS;
                 }
+                else if (/(months?)/.test(relativeTimeScale)) {
+                    timeScaleToMultiply = MONTH_IN_MS;
+                }
                 break;
             case 'h':
                 if (/(hours?|hrs?)/.test(relativeTimeScale)) {
@@ -2772,13 +2643,8 @@ module.exports = {
                     timeScaleToMultiply = WEEK_IN_MS;
                 }
                 break;
-            case 'm':
-                if (/(months?)/.test(relativeTimeScale)) {
-                    timeScaleToMultiply = MONTH_IN_MS;
-                }
-                break;
             case 'y':
-                if (/(years?)/.test(relativeTimeScale)) {
+                if (/(years?|yrs?)/.test(relativeTimeScale)) {
                     timeScaleToMultiply = YEAR_IN_MS;
                 }
                 break;
@@ -2787,7 +2653,7 @@ module.exports = {
     },
 
     isLongTimeScale: function (relativeTimeScale) {
-        const longTimeScalesRegex = /(days?|weeks?|months?|years?)/;
+        const longTimeScalesRegex = /(days?|weeks?|months?|years?|yrs?)/;
         return longTimeScalesRegex.test(relativeTimeScale);
     },
 
@@ -3079,8 +2945,8 @@ module.exports = {
         if (Array.isArray(goalArray)) {
             if (goalArray.length) {
                 if (goalArray.every(goal => typeof goal === 'object')) {
-                    type = this.toTitleCase(type);
-                    if (type) type += " "; // To add a space at the end
+                    if (type) type = `${this.toTitleCase(type)} `; // To add a space at the end
+                    else type = "";
                     let goalStringArray = new Array();
                     goalArray.forEach((goal, i) => {
                         const goalNumber = showNumber ? (emphasizeNumber ? ` \`${i + 1}\`` : ` ${i + 1}`) : "";
@@ -3154,10 +3020,6 @@ module.exports = {
     getUserEditString: async function (bot, message, PREFIX, field, instructionPrompt, type,
         forceSkip = false, embedColour = this.defaultEmbedColour, characterLimit = 2000) {
         var collectedEdit, reset;
-        let spamDetails = {
-            lastTimestamp: null,
-            closeMessageCount: 0,
-        };
         let editMessagePrompt = `**What will you change your *${field}* to?:**${instructionPrompt ? `\n${instructionPrompt}\n` : "\n"}`;
         editMessagePrompt = editMessagePrompt + `\nType \`back\` to go **back to the main edit menu**`;
         do {
@@ -3179,25 +3041,7 @@ module.exports = {
                 else if (backToMainEdit === null) return false;
                 else return collectedEdit;
             }
-            // Spam Prevention:
-            if (spamDetails) {
-                const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
-                console.log({ messageSendDelay });
-                spamDetails.lastTimestamp = currentTimestamp || Date.now();
-                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
-                    spamDetails.closeMessageCount++;
-                }
-                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
-                    console.log("Exiting due to spam...");
-                    message.reply("**Exiting... __Please don't spam!__**");
-                    return false;
-                }
-                if (spamDetails.closeMessageCount === 0) {
-                    setTimeout(() => {
-                        if (spamDetails) spamDetails.closeMessageCount = 0;
-                    }, this.REFRESH_MESSAGE_SPAM_DELAY);
-                }
-            }
+            if (await this.userIsSpamming(message, currentTimestamp)) return false;
             if (!reset) {
                 const confirmEdit = await this.getEditEndConfirmation(bot, message, PREFIX, field, collectedEdit, type, forceSkip);
                 if (confirmEdit === false) reset = true;
@@ -3258,10 +3102,6 @@ module.exports = {
      */
     getUserMultilineEditString: async function (bot, PREFIX, message, field, instructionPrompt, type,
         forceSkip = false, embedColour = this.defaultEmbedColour, characterLimit = 2000) {
-        let spamDetails = {
-            lastTimestamp: null,
-            closeMessageCount: 0,
-        };
         let messageIndex = 0;
         let reset = false;
         var collectedEdit, userEdit = new Array();
@@ -3375,24 +3215,10 @@ module.exports = {
                 editMessagePrompt = editMessagePrompt + collectedEdit + "\n";
                 userEdit.push(collectedEdit);
             }
-            // Spam Prevention:
-            if (spamDetails && collectedEdit !== "0" && collectedEdit !== "1"
+            if (collectedEdit !== "0" && collectedEdit !== "1"
                 && collectedEdit !== "2" && collectedEdit !== "stop") {
-                const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
-                console.log({ messageSendDelay });
-                spamDetails.lastTimestamp = currentTimestamp || Date.now();
-                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
-                    spamDetails.closeMessageCount++;
-                }
-                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
-                    console.log("Exiting due to spam...");
-                    message.reply("**Exiting... __Please don't spam!__**");
+                if (await this.userIsSpamming(message, currentTimestamp)) {
                     return false;
-                }
-                if (spamDetails.closeMessageCount === 0) {
-                    setTimeout(() => {
-                        if (spamDetails) spamDetails.closeMessageCount = 0;
-                    }, this.REFRESH_MESSAGE_SPAM_DELAY);
                 }
             }
         }
@@ -3414,13 +3240,9 @@ module.exports = {
     getUserEditNumber: async function (bot, message, PREFIX, field, maxNumber, type,
         numberMappingArray = false, forceSkip = false, embedColour = this.defaultEmbedColour, additionalInstructions = '') {
         var collectedEdit;
-        let spamDetails = {
-            lastTimestamp: null,
-            closeMessageCount: 0,
-        };
-        const numberErrorMessage = `**Please Enter a Number from 1-${maxNumber}**`;
+        const numberErrorMessage = `**Please Enter a Number from \`1\`-\`${maxNumber}\`**`;
         let editMessagePrompt = `**What will you change your *${field}* to?:**`
-        editMessagePrompt += `\n${additionalInstructions === '' ? `***(Please enter a number from \`1-${maxNumber}\`)***` : additionalInstructions}`
+        editMessagePrompt += `\n${additionalInstructions === '' ? `(*${numberErrorMessage}*)` : additionalInstructions}`
             + `\n\nType \`back\` to go **back to the main edit menu**`;
         while (true) {
             var currentTimestamp;
@@ -3453,25 +3275,7 @@ module.exports = {
                     else if (confirmEdit === null) return false;
                 }
             }
-            // Spam Prevention:
-            if (spamDetails) {
-                const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
-                console.log({ messageSendDelay });
-                spamDetails.lastTimestamp = currentTimestamp || Date.now();
-                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
-                    spamDetails.closeMessageCount++;
-                }
-                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
-                    console.log("Exiting due to spam...");
-                    message.reply("**Exiting... __Please don't spam!__**");
-                    return false;
-                }
-                if (spamDetails.closeMessageCount === 0) {
-                    setTimeout(() => {
-                        if (spamDetails) spamDetails.closeMessageCount = 0;
-                    }, this.REFRESH_MESSAGE_SPAM_DELAY);
-                }
-            }
+            if (await this.userIsSpamming(message, currentTimestamp)) return false;
         }
     },
 
@@ -3646,6 +3450,8 @@ module.exports = {
                             console.log("Stopped pagination");
                             embed.delete();
                             return;
+                        // When sending the file, have a flag and ensure that the user only
+                        // gets the file sent to them once.
                     }
                     embed.edit(embedArray[currentPage]);
                     if (channel.type !== 'dm') reaction.users.remove(user);
@@ -3826,7 +3632,6 @@ module.exports = {
         return targetIDs;
     },
 
-
     getPostChannel: async function (bot, PREFIX, message, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
         // Check all of the servers the bot is in
         let botServers = await bot.guilds.cache.map(guild => guild.id);
@@ -3863,14 +3668,68 @@ module.exports = {
         return channelList[targetChannelIndex];
     },
 
+    getNumberEntry: async function (bot, message, PREFIX, instructionPrompt, title, forceSkip = false,
+        allowNegatives = false, allowDecimals = false, minimumValue = undefined, maximumValue = undefined,
+        embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
+        try {
+            const minimumIsDefined = (minimumValue || minimumValue === 0) && !isNaN(minimumValue);
+            const maximumIsDefined = (maximumValue || maximumValue === 0) && !isNaN(maximumValue);
+            let boundaryMessage = ".";
+            if (minimumIsDefined && maximumIsDefined) {
+                boundaryMessage = ` from **${minimumValue}** to **${maximumValue}**.`;
+            }
+            else if (minimumIsDefined) {
+                boundaryMessage = ` greater than or equal to **${minimumValue}**.`;
+            }
+            else if (maximumIsDefined) {
+                boundaryMessage = ` less than or equal to **${maximumValue}**.`;
+            }
+
+            const errorMessage = `Please enter a **${allowNegatives ? "" : "positive "}${allowDecimals ? "" : "whole "}number**`
+                + boundaryMessage;
+            var entry;
+
+            do {
+                entry = await this.getSingleEntry(bot, message, PREFIX, instructionPrompt, title,
+                    forceSkip, embedColour, additionalInstructions, instructionKeywords);
+                if (!entry && entry !== "") return false;
+                else if (!isNaN(entry)) {
+                    entry = allowDecimals ? parseFloat(entry) : parseInt(entry);
+                    if (!allowNegatives && entry < 0) {
+                        message.reply(`${errorMessage}\n**__You sent:__** ${entry}`);
+                        continue;
+                    }
+                    if (minimumIsDefined) {
+                        if (entry < minimumValue) {
+                            message.reply(`${errorMessage}\n**__You sent:__** ${entry}`);
+                            continue;
+                        }
+                    }
+                    if (maximumIsDefined) {
+                        if (entry > maximumValue) {
+                            message.reply(`${errorMessage}\n**__You sent:__** ${entry}`);
+                            continue;
+                        }
+                    }
+                    break;
+                }
+                else {
+                    message.reply(`${errorMessage}\n**__You sent:__** ${entry}`);
+                }
+            }
+            while (true)
+            return entry;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
     getSingleEntry: async function (bot, message, PREFIX, instructionPrompt, title, forceSkip = false,
         embedColour = this.defaultEmbedColour, additionalInstructions = "", instructionKeywords = []) {
-        let spamDetails = {
-            lastTimestamp: null,
-            closeMessageCount: 0,
-        };
         let reset = false;
-        var collectedEdit;
+        var collectedEntry;
         instructionPrompt += !additionalInstructions ? "" : `\n\n${additionalInstructions}`;
         var hasInstructions = false;
         if (instructionKeywords) {
@@ -3881,45 +3740,24 @@ module.exports = {
             }
         }
         do {
-            var currentTimestamp;
             reset = false;
-            collectedEdit = await this.messageDataCollect(bot, message, PREFIX, instructionPrompt, title, embedColour, 600000);
-            if (!collectedEdit || collectedEdit === "stop") return false;
-            else currentTimestamp = Date.now();
-
+            collectedEntry = await this.messageDataCollect(bot, message, PREFIX, instructionPrompt, title, embedColour, 600000);
+            if (!collectedEntry || collectedEntry === "stop" || await this.userIsSpamming(message)) {
+                return false;
+            }
             if (hasInstructions) {
-                if (instructionKeywords.includes(collectedEdit)) {
-                    return collectedEdit;
+                if (instructionKeywords.includes(collectedEntry)) {
+                    return collectedEntry;
                 }
             }
-            // Spam Prevention:
-            if (spamDetails) {
-                const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
-                console.log({ messageSendDelay });
-                spamDetails.lastTimestamp = currentTimestamp || Date.now();
-                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
-                    spamDetails.closeMessageCount++;
-                }
-                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
-                    console.log("Exiting due to spam...");
-                    message.reply("**Exiting... __Please don't spam!__**");
-                    return false;
-                }
-                if (spamDetails.closeMessageCount === 0) {
-                    setTimeout(() => {
-                        if (spamDetails) spamDetails.closeMessageCount = 0;
-                    }, this.REFRESH_MESSAGE_SPAM_DELAY);
-                }
-            }
-
             if (!reset) {
-                const confirmEntry = await this.getUserConfirmation(bot, message, PREFIX, `**__Are you sure you want to enter:__**\n${collectedEdit}`, forceSkip, title);
+                const confirmEntry = await this.getUserConfirmation(bot, message, PREFIX, `**__Are you sure you want to enter:__**\n${collectedEntry}`, forceSkip, title);
                 if (confirmEntry === false) reset = true;
                 else if (confirmEntry === null) return false;
             }
         }
         while (reset);
-        return collectedEdit;
+        return collectedEntry;
     },
 
     getSingleEntryWithCharacterLimit: async function (bot, message, PREFIX, instructionPrompt, title, characterLimit, entryType, forceSkip = false,
@@ -3931,8 +3769,10 @@ module.exports = {
                     forceSkip, embedColour, additionalInstructions, instructionKeywords);
                 if (!entry && entry !== "") return false;
                 else if (entry.length <= characterLimit || instructionKeywords.includes(entry)) break;
-                else message.reply(`**Please enter ${entryType ? entryType.toLowerCase() : "something"} less than ${characterLimit || 2000} characters**`
-                    + `\n**__You sent:__** __Word Count - ${entry.length}__\n${entry}`);
+                else {
+                    message.reply(`**Please enter ${entryType ? entryType.toLowerCase() : "something"} less than ${characterLimit || 2000} characters**`
+                        + `\n**__You sent:__** __Word Count - ${entry.length}__\n${entry}`);
+                }
             }
             while (true)
             return entry;
@@ -3946,10 +3786,6 @@ module.exports = {
     getMultilineEntry: async function (bot, PREFIX, message, instructionPrompt, title, forceSkip = false,
         embedColour = this.defaultEmbedColour, characterLimit = 2000, additionalInstructions = "", instructionKeywords = [],
         startingArray = false) {
-        let spamDetails = {
-            lastTimestamp: null,
-            closeMessageCount: 0,
-        };
         let inputIndex = 0;
         let reset = false;
         var collectedEntry, finalEntry = startingArray || new Array();
@@ -3978,7 +3814,6 @@ module.exports = {
                 return false;
             }
             else currentTimestamp = Date.now();
-
             if (collectedEntry.length + finalEntry.join('\n').length > 6000) {
                 message.reply("**Your entry was too long** (*over 6000 characters*), so I had to **stop** collecting it.");
                 return false;
@@ -4065,24 +3900,11 @@ module.exports = {
                 instructionPrompt = instructionPrompt + collectedEntry + "\n";
                 finalEntry.push(collectedEntry);
             }
-            // Spam Prevention:
-            if (spamDetails && collectedEntry !== "0" && collectedEntry !== "1"
+
+            if (collectedEntry !== "0" && collectedEntry !== "1"
                 && collectedEntry !== "2" && collectedEntry !== "stop") {
-                const messageSendDelay = (currentTimestamp || Date.now()) - (spamDetails.lastTimestamp || 0);
-                console.log({ messageSendDelay });
-                spamDetails.lastTimestamp = currentTimestamp || Date.now();
-                if (messageSendDelay < this.CLOSE_MESSAGE_DELAY) {
-                    spamDetails.closeMessageCount++;
-                }
-                if (spamDetails.closeMessageCount >= this.CLOSE_MESSAGE_SPAM_NUMBER) {
-                    console.log("Exiting due to spam...");
-                    message.reply("**Exiting... __Please don't spam!__**");
+                if (await this.userIsSpamming(message, currentTimestamp)) {
                     return false;
-                }
-                if (spamDetails.closeMessageCount === 0) {
-                    setTimeout(() => {
-                        if (spamDetails) spamDetails.closeMessageCount = 0;
-                    }, this.REFRESH_MESSAGE_SPAM_DELAY);
                 }
             }
         }
@@ -4112,7 +3934,6 @@ module.exports = {
 
     setLongTimeout(callback, delay) {
         var timeout;
-        const MAX_32_BIT_SIGNED_INT = 2147483647;
         if (delay > MAX_32_BIT_SIGNED_INT) {
             timeout = setTimeout(() => this.setLongTimeout(callback, (delay - MAX_32_BIT_SIGNED_INT)), MAX_32_BIT_SIGNED_INT);
         }
@@ -4122,7 +3943,6 @@ module.exports = {
 
     setLongInterval(callback, delay) {
         var interval;
-        const MAX_32_BIT_SIGNED_INT = 2147483647;
         if (delay > MAX_32_BIT_SIGNED_INT) {
             interval = this.setLongTimeout(callback, delay);
             const next = this.setLongTimeout(() => this.setLongInterval(callback, delay), delay);
@@ -4286,25 +4106,63 @@ module.exports = {
         return;
     },
 
-    deleteManyByIdAndReminders: async function (Model, targetIDs) {
-        if (targetIDs) {
-            if (targetIDs.length) {
-                await Model.deleteMany({ _id: { $in: targetIDs } });
-                await Reminder.deleteMany({ connectedDocument: { $in: targetIDs } });
+    /**
+    * @param {Discord.Collection} cronCollection
+    * @param {mongoose.Schema.Types.ObjectId | String} targetID
+    */
+    cancelCronById: async function (cronCollection, targetID) {
+        try {
+            if (targetID) {
+                targetID = targetID.toString();
+                var foundTarget = null;
+                cronCollection.each(async cronSubArray => {
+                    cronSubArray.forEach(async (cronObject, i) => {
+                        const targetObject = cronObject.id === targetID;
+                        if (targetObject) {
+                            console.log(`Cancelling Cron: _id = ${targetID}`);
+                            foundTarget = true;
+                            clearTimeout(cronObject.timeout);
+                            cronSubArray.splice(i, 1);
+                        }
+                    });
+                });
+                return foundTarget;
             }
+            else return false;
+        }
+        catch (err) {
+            console.log(err);
+            return false;
         }
     },
 
-    deleteUserEntriesAndReminders: async function (Model, userID) {
-        const allUserGoalIDs = await Model.find({ userID }, { _id: 1 });
-        await Model.deleteMany({ userID });
-        if (allUserGoalIDs) if (allUserGoalIDs.length) await Reminder.deleteMany({ connectedDocument: { $in: allUserGoalIDs } });
-    },
-
-    deleteOneByIdAndReminders: async function (Model, targetID) {
-        if (targetID) {
-            await Model.findByIdAndDelete(targetID);
-            await Reminder.deleteMany({ connectedDocument: targetID });
+    /**
+    * @param {Discord.Collection} cronCollection
+    * @param {mongoose.Schema.Types.ObjectId | String} connectedDocumentId
+    */
+    cancelCronByConnectedDocument: async function (cronCollection, connectedDocumentId) {
+        try {
+            if (connectedDocumentId) {
+                connectedDocumentId = connectedDocumentId.toString();
+                var foundOneReminder = null;
+                cronCollection.each(async cronSubArray => {
+                    cronSubArray.forEach(async cronObject => {
+                        const targetObject = cronObject.connectedId === connectedDocumentId;
+                        if (targetObject) {
+                            console.log(`Cancelling Reminder: connectedDocument = ${connectedDocumentId}, _id: = ${cronObject._id.toString()}`);
+                            foundOneReminder = true;
+                            clearTimeout(cronObject.timeout);
+                            cronSubArray.splice(i, 1);
+                        }
+                    });
+                });
+                return foundOneReminder;
+            }
+            else return false;
+        }
+        catch (err) {
+            console.log(err);
+            return false;
         }
     },
 
@@ -4337,12 +4195,11 @@ module.exports = {
 
 
     invalidPrefixes: ['\*', '\_', '\~', '\>', '\\', '\/', '\:', '\`', '\@'],
-    reminderTypes: ["Reminder", "Habit", "Fast", "Quote", "Goal", "Journal"],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
     daysOfWeek: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     fileFooterText: `🗑 to delete this window (not the entries)\n📎 to get all of this in a text file`,
     timeExamples: `e.g. **now **|** 5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a`
-        + `\n**|** next friday at 3AM **|** March 22, 2027**`,
+        + `\n**|** next friday at 3AM **|** March 22, 2027 **|** today 10PM**`,
     futureTimeExamples: `e.g. **in 15 mins **|** next tuesday at 930p **|** 1 month from now 8pm\ntoday at 1:55P **|** July 5 at 9A **|** April 30, 2021 at 8:45am**`,
     intervalExamplesOver1Minute: `⏳ Any period longer than **1 minute** ⏳`
         + `\n\n**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
@@ -4350,16 +4207,14 @@ module.exports = {
         + `\n- # Days of the Week **(mondays; tuesdays; wednesdays; thursdays; fridays; saturdays; sundays)** **`
         + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2 years`
         + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50h 20m 95s`
-        + `\n**|** friday **|** mon **|** 1 sat **|** 2 sun`
-        + `\n**|** tues at 6pm **|** wednesday at 4A **|** thurs at 12P PST**`,
+        + `\n**|** friday **|** mon **|** 1 sat **|** 2 sun **|** tues at 6pm **|** wednesday at 4A **|** thurs at 12P PST**`,
     intervalExamplesOver1Hour: `⏳ Any period longer than **1 hour** ⏳`
         + `\n\n**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)**`
         + `\n- # Days of the Week **(mondays; tuesdays; wednesdays; thursdays; fridays; saturdays; sundays)** **`
         + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2 years`
         + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50h 20m 95s`
-        + `\n**|** friday **|** mon **|** 1 sat **|** 2 sun`
-        + `\n**|** tues at 6pm **|** wednesday at 4A **|** thurs at 12P PST**`,
+        + `\n**|** friday **|** mon **|** 1 sat **|** 2 sun **|** tues at 6pm **|** wednesday at 4A **|** thurs at 12P PST**`,
     durationExamples: `**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)** **`
         + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2 years`
@@ -4387,6 +4242,8 @@ module.exports = {
         return daysInMonth;
     },
 
+    HOUR_IN_MS: HOUR_IN_MS,
+
     fastEmbedColour: "#32CD32",
     mastermindEmbedColour: "#FF6A00",
     journalEmbedColour: "#EE82EE",
@@ -4405,6 +4262,7 @@ module.exports = {
     journalMaxTier1: 14,
     goalMaxTier1: 10,
     goalArchiveMaxTier1: 8,
+    streakHabitMaxTier1: 1,
     habitMaxTier1: 10,
     habitArchiveMaxTier1: 8,
     reminderMaxTier1: 50,
