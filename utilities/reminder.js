@@ -262,7 +262,7 @@ module.exports = {
             console.log(`Successfully cancelled reminders connected to document ${connectedDocumentId}`);
         }
         else if(success === null) {
-            console.log(`Reminders connected to document ${reminderID} do not exist, or are already cancelled.`);
+            console.log(`Reminders connected to document ${connectedDocumentId} do not exist, or are already cancelled.`);
         }
         else {
             console.log(`Failed to cancel reminders connected to document ${connectedDocumentId}`);

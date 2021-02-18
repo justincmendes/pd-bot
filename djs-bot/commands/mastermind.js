@@ -170,11 +170,51 @@ async function getMastermindByCreatedAt(userID, entryIndex, numberOfEntries = 1)
 async function setMastermindWeeklyGoalReminder(bot, userID, reminderEndTime,
     weeklyGoals, mastermindCreatedTime, mastermindID, recurrances) {
     const reminderString = fn.goalArrayToString(weeklyGoals);
-    const titleString = "Mastermind: Weekly Goals"
-        + `${` (Week of ${fn.timestampToDateString(mastermindCreatedTime, false, true, true)})` || ""}`;
+    const weekOfString = fn.timestampToDateString(mastermindCreatedTime, false, true, true) ?
+        ` (Week of ${fn.timestampToDateString(mastermindCreatedTime, false, true, true)})`
+        : "";
+    const titleString = `Mastermind: Weekly Goals${weekOfString}`;
     await rm.setNewDMReminder(bot, userID, Date.now(), reminderEndTime,
         reminderString || "", titleString, true, mastermindID, true, "1 day",
         recurrances || undefined, mastermindEmbedColour);
+}
+
+async function getCurrentMastermindReminders(userID) {
+    try {
+        const userReminders = await Reminder.find({ userID });
+        var mastermindReminders = new Array();
+        if (userReminders) if (userReminders.length) {
+            userReminders.forEach(async reminder => {
+                if (reminder.title.startsWith("Mastermind: Weekly Goals")) {
+                    mastermindReminders.push(reminder);
+                }
+            });
+        }
+        return mastermindReminders;
+    }
+    catch (err) {
+        console.log(err);
+        return false;
+    }
+}
+
+async function deleteCurrentMastermindReminders(userID) {
+    try {
+        const mastermindReminders = await getCurrentMastermindReminders(userID);
+        var foundOneReminder = null;
+        if (mastermindReminders) if (mastermindReminders.length) {
+            foundOneReminder = true;
+            mastermindReminders.forEach(async reminder => {
+                await rm.cancelReminderById(reminder._id);
+                await Reminder.findByIdAndDelete(reminder._id);
+            });
+        }
+        return foundOneReminder;
+    }
+    catch (err) {
+        console.log(err);
+        return false;
+    }
 }
 
 module.exports = {
@@ -501,25 +541,36 @@ module.exports = {
                         "Mastermind Entry", mastermindEmbedColour));
                     if (userWantsTemplate) {
                         const goalsToReminderConfirmation = await fn.getUserConfirmation(bot, message, PREFIX,
-                            "Would you like to be **reminded** of your **Mastermind Weekly Goals** each day this upcoming week?**"
+                            "Would you like to be **reminded** of your **Mastermind Weekly Goals** each day this upcoming week?"
                             + "\n(If yes, you can choose if you want to be reminded of them for 7 days or more)", forceSkip,
                             "Mastermind: Weekly Goals Daily Reminder");
                         if (goalsToReminderConfirmation) {
                             let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSaving,
                                 "**When** do you want your **first weekly goal reminder?**"
-                                + "\n(Recommended: \`tomorrow at 12pm\` or \`tomorrow at 8am\`)",
+                                + "\n(Recommended: \`tomorrow at 12pm\` or \`tom at 8a\`)",
                                 "Mastermind: Weekly Goals Daily Reminder Time of Day", true, mastermindEmbedColour);
                             if (endTime) {
                                 endTime -= HOUR_IN_MS * timezoneOffset;
                                 var repetitions = await fn.getNumberEntry(bot, message, PREFIX,
                                     "**How many times** do you want to be **reminded?** (1 per day)"
-                                    + "\n\nEnter \`0\` if you want to continue being **reminded indefinitely.**"
-                                    + `\n(you can edit or delete this reminder through \`${PREFIX}repeat edit recent\` or \`${PREFIX}repeat delete recent\``,
+                                    + "\n\nEnter a whole number, or \`0\` if you want to continue being **reminded indefinitely.**"
+                                    + `\n(You can always use \`${PREFIX}repeat edit recent\` or \`${PREFIX}repeat delete recent\`)`
+                                    + "\n\n(Recommended: \`7\` or \`14\` - for a full week or two of goal reminders until next mastermind)",
                                     "Mastermind: Weekly Goals Daily Reminder Repetitions", true, false, false, 0, undefined,
                                     mastermindEmbedColour);
                                 if (repetitions || repetitions === 0) {
                                     if (repetitions === 0) repetitions = undefined;
-                                    await setMastermindWeeklyGoalReminder(bot, targetUser, endTime,
+                                    const mastermindReminders = await getCurrentMastermindReminders(authorID);
+                                    if (mastermindReminders) if (mastermindReminders.length) {
+                                        const confirmOverride = await fn.getUserConfirmation(bot, message, PREFIX,
+                                            "Do you want to **cancel** any **older Mastermind reminders** that are **currently ongoing**?"
+                                            + `(There are currently ${mastermindReminders.length} reminders ongoing)`,
+                                            forceSkip, "Mastermind: Weekly Goals Daily Reminder Override");
+                                        if (confirmOverride) {
+                                            await deleteCurrentMastermindReminders(authorID);
+                                        }
+                                    }
+                                    await setMastermindWeeklyGoalReminder(bot, authorID, endTime,
                                         mastermindDocument.journal.goals, mastermindDocument.createdAt,
                                         mastermindDocument._id, repetitions);
                                 }

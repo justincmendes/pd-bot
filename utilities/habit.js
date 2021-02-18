@@ -254,6 +254,15 @@ module.exports = {
      */
     cancelHabitById: async function (habitID) {
         const success = await fn.cancelCronById(habits, habitID);
+        if (success) {
+            console.log(`Successfully cancelled habit ${habitID}.`);
+        }
+        else if(success === null) {
+            console.log(`Habit ${habitID} does not exist, or is already cancelled.`);
+        }
+        else {
+            console.log(`Failed to cancel habit ${habitID}.`);
+        }
         return success;
     },
 

@@ -4149,7 +4149,7 @@ module.exports = {
                     cronSubArray.forEach(async cronObject => {
                         const targetObject = cronObject.connectedId === connectedDocumentId;
                         if (targetObject) {
-                            console.log(`Cancelling Reminder: connectedDocument = ${connectedDocumentId}, _id: = ${cronObject._id.toString()}`);
+                            console.log(`Cancelling Reminder: connectedDocument = ${connectedDocumentId}, _id: = ${cronObject.id.toString()}`);
                             foundOneReminder = true;
                             clearTimeout(cronObject.timeout);
                             cronSubArray.splice(i, 1);

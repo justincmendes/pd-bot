@@ -1145,7 +1145,7 @@ module.exports = {
                     async (err, result) => {
                         if (err) return console.error(err);
                         console.log({ result });
-                        if(targetGoal._id) {
+                        if (targetGoal._id) {
                             await rm.cancelReminderByConnectedDocument(targetGoal._id);
                             await Reminder.deleteMany({ connectedDocument: targetGoal._id });
                         }
@@ -1153,6 +1153,12 @@ module.exports = {
                 else continue;
             }
             while (true)
+        }
+
+
+        else if (goalCommand === "reminder" || goalCommand === "remind" || goalCommand === "rem"
+            || goalCommand === "re" || goalCommand === "r") {
+                
         }
 
 
@@ -1201,7 +1207,7 @@ module.exports = {
                     async (err, result) => {
                         if (err) return console.error(err);
                         console.log({ result });
-                        if(targetGoal._id) {
+                        if (targetGoal._id) {
                             await rm.cancelReminderByConnectedDocument(targetGoal._id);
                             await Reminder.deleteMany({ connectedDocument: targetGoal._id });
                         }
