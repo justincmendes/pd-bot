@@ -564,7 +564,7 @@ module.exports = {
                                     if (mastermindReminders) if (mastermindReminders.length) {
                                         const confirmOverride = await fn.getUserConfirmation(bot, message, PREFIX,
                                             "Do you want to **cancel** any **older Mastermind reminders** that are **currently ongoing**?"
-                                            + `(There are currently ${mastermindReminders.length} reminders ongoing)`,
+                                            + `\n(There are currently **${mastermindReminders.length} reminder(s)** ongoing)`,
                                             forceSkip, "Mastermind: Weekly Goals Daily Reminder Override");
                                         if (confirmOverride) {
                                             await deleteCurrentMastermindReminders(authorID);
@@ -1246,7 +1246,7 @@ module.exports = {
                                         const reminderCancelled = await rm.cancelReminderByConnectedDocument(mastermindDocument._id);
                                         const mastermindReminders = await Reminder.find({ isRecurring: true, connectedDocument: mastermindDocument._id });
                                         mastermindReminders.forEach(async reminder => {
-                                            await Reminder.findByIdAndDelete(reminder_id);
+                                            await Reminder.findByIdAndDelete(reminder._id);
                                             // Restart the reminders with the new goals
                                             await setMastermindWeeklyGoalReminder(bot, authorID, reminder.endTime,
                                                 journal.goals, mastermindDocument.createdAt, mastermindDocument._id,
