@@ -30,7 +30,7 @@ const reminderSchema = mongoose.Schema({
     sendAsEmbed: {
         type: Boolean,
         required: true,
-        default: true,
+        default: false,
     },
     embedColour: {
         type: String,

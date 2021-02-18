@@ -169,7 +169,7 @@ async function getMastermindByCreatedAt(userID, entryIndex, numberOfEntries = 1)
 
 async function setMastermindWeeklyGoalReminder(bot, userID, reminderEndTime,
     weeklyGoals, mastermindCreatedTime, mastermindID, recurrances) {
-    const reminderString = fn.goalArrayToString(weeklyGoals);
+    const reminderString = fn.goalArrayToString(weeklyGoals, "Weekly", true, true, false);
     const weekOfString = fn.timestampToDateString(mastermindCreatedTime, false, true, true) ?
         ` (Week of ${fn.timestampToDateString(mastermindCreatedTime, false, true, true)})`
         : "";
@@ -179,8 +179,7 @@ async function setMastermindWeeklyGoalReminder(bot, userID, reminderEndTime,
         recurrances || undefined, mastermindEmbedColour);
 }
 
-async function setUserMastermindReminder(bot, message, PREFIX, timezoneOffset, daylightSaving,
-    mastermindDocument) {
+async function setUserMastermindReminder(bot, message, PREFIX, timezoneOffset, daylightSaving, mastermindDocument) {
     let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSaving,
         "**When** do you want your **first weekly goal reminder?**"
         + "\n(Recommended: \`tomorrow at 12pm\` or \`tom at 8a\`)",
@@ -673,8 +672,7 @@ module.exports = {
         }
 
 
-        else if (mastermindCommand === "delete" || mastermindCommand === "remove" || mastermindCommand === "del" || mastermindCommand === "d"
-            || mastermindCommand === "rem" || mastermindCommand === "r") {
+        else if (mastermindCommand === "delete" || mastermindCommand === "remove" || mastermindCommand === "del" || mastermindCommand === "d") {
             /**
              * 1. Format - delete 1/55/recent <recent>, delete many 1,2,3,recent <recent>, delete past #, delete # past #,
              * Similar to reminders/fasts
@@ -1334,9 +1332,42 @@ module.exports = {
 
         else if (mastermindCommand === "reminder" || mastermindCommand === "remind"
             || mastermindCommand === "rem" || mastermindCommand === "re" || mastermindCommand === "r") {
-            const userMasterminds = await Mastermind.find({ userID: authorID });
+            const userMasterminds = await Mastermind.find({ userID: authorID })
+                .sort({ _id: -1 });
             if (userMasterminds) if (userMasterminds.length) {
-
+                var reset
+                do {
+                    reset = false;
+                    var mastermindList = "";
+                    userMasterminds.forEach((mastermind, i) => {
+                        mastermindList += `\`${i + 1}\` - **__${fn.timestampToDateString(mastermind.createdAt, true, true, true)}__**`
+                            + `\n${fn.goalArrayToString(mastermind.journal.goals, "Weekly", false, true, false)}`;
+                        if (i !== userMasterminds.length - 1) {
+                            mastermindList += '\n\n';
+                        }
+                    });
+                    const targetMastermindIndex = await fn.userSelectFromList(bot, PREFIX, message,
+                        mastermindList, userMasterminds.length, "**Enter the number corresponding to the mastermind entry you want weekly goal reminders for:**",
+                        "Mastermind: Weekly Goal Reminder", mastermindEmbedColour, 600000);
+                    if (!targetMastermindIndex && targetMastermindIndex !== 0) return;
+                    else {
+                        const targetMastermind = userMasterminds[targetMastermindIndex]
+                        const confirmSelection = await fn.getUserConfirmation(bot, message, PREFIX,
+                            "Are you sure you want reminders for the mastermind created on "
+                            + `**__${fn.timestampToDateString(targetMastermind.createdAt, true, true, true)}__**?`
+                            + `\n${fn.goalArrayToString(targetMastermind.journal.goals, "Weekly", false, true, false)}`
+                            + "\n\n**(If yes, you can adjust when you want the reminder to start and how many times you want it)**",
+                            forceSkip, "Mastermind: Weekly Goal Reminder Confirmation", 180000);
+                        if (confirmSelection === false) break;
+                        else if (confirmSelection === null) return;
+                        else {
+                            const setReminder = await setUserMastermindReminder(bot, message, PREFIX, timezoneOffset, daylightSaving, targetMastermind);
+                            if (!setReminder) return;
+                        }
+                    }
+                }
+                while (reset)
+                return;
             }
             return message.reply(`**No mastermind entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
         }

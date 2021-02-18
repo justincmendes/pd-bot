@@ -493,15 +493,15 @@ module.exports = {
                 else {
                     // Minus 1 to convert to back array index (was +1 for user understanding)
                     targetIndex = parseInt(targetIndex) - 1;
-                    if (message.channel.type !== 'dm') {
-                        const userSettings = await User.findOne({ discordID: message.author.id }, { _id: 0, deleteRepliesDuringCommand: 1 });
-                        if (userSettings) {
-                            if (userSettings.deleteRepliesDuringCommand) {
-                                targetObject.delete();
-                            }
+                    break;
+                }
+                if (message.channel.type !== 'dm') {
+                    const userSettings = await User.findOne({ discordID: message.author.id }, { _id: 0, deleteRepliesDuringCommand: 1 });
+                    if (userSettings) {
+                        if (userSettings.deleteRepliesDuringCommand) {
+                            targetObject.delete();
                         }
                     }
-                    break;
                 }
                 if (await this.userIsSpamming(message, currentTimestamp)) return false;
             }
