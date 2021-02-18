@@ -382,12 +382,12 @@ module.exports = {
                             });
 
                             let targetHabitIndex = await fn.userSelectFromList(bot, PREFIX, message, habitList, habits.length, "__**Which habit would you like to connect to this goal?:**__",
-                                `Long-Term Goal: Habit Connection Selection`, goalEmbedColour, 600000, 0);
+                                "Long-Term Goal: Habit Connection Selection", goalEmbedColour, 600000, 0);
                             if (!targetHabitIndex) break;
                             const targetHabit = habits[targetHabitIndex];
                             await Habit.updateOne({ _id: targetHabit._id }, { $set: { connectedGoal: goalDocument._id } });
                             const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Is there __another habit__ you would like to connect to this goal?** 🔗`,
-                                forceSkip, `Long-Term Goal: Another Habit Connection`);
+                                forceSkip, "Long-Term Goal: Another Habit Connection");
                             if (!confirmEnd) break;
                         }
                         while (true)
@@ -894,10 +894,6 @@ module.exports = {
                 }
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
                 var goalFields = ["Start Time", "End Time", "Area of Life", "Description", "Reason", "Checkpoints", "Actionable Steps", "Completed", "Archived"];
-                let fieldsList = "";
-                goalFields.forEach((field, i) => {
-                    fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
-                });
                 const goalTargetID = goalDocument._id;
                 var showGoal, continueEdit;
                 do {
@@ -907,16 +903,21 @@ module.exports = {
                     continueEdit = false;
                     showGoal = goalDocumentToString(goalDocument);
                     // Field the user wants to edit
-                    const fieldToEditInstructions = "**Which field do you want to edit?:**";
+                    const fieldToEditInstructions = "**Which field do you want to edit?**";
                     const fieldToEditAdditionalMessage = `__**Goal ${goalIndex} (${sortType}):**__ ${showGoal}`;
                     const fieldToEditTitle = `Long-Term Goal${isArchived ? " Archive" : ""}: Edit Field`;
-                    let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, goalFields.length, fieldToEditInstructions,
-                        fieldToEditTitle, goalEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
-                    if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
+                    var fieldToEdit, fieldToEditIndex;
+                    const selectedField = await fn.getUserSelectedObject(bot, message, PREFIX,
+                        fieldToEditInstructions, fieldToEditTitle, goalFields, "", false,
+                        goalEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                    if (!selectedField) return;
+                    else {
+                        fieldToEdit = selectedField.object;
+                        fieldToEditIndex = selectedField.index;
+                    }
                     var userEdit, goalEditMessagePrompt = "";
-                    const fieldToEdit = goalFields[fieldToEditIndex];
                     const titleType = `Long-Term Goal${isArchived ? " Archive" : ""}`;
-                    let { goal, completed, archived, type, description, reason, steps, checkpoints, start, end } = goalDocument;
+                    let { completed, archived, type, description, reason, steps, checkpoints, start, end } = goalDocument;
                     switch (fieldToEditIndex) {
                         case 0:
                             goalEditMessagePrompt = `\n__**Please enter the date/time of when you started this goal:**__ ⌚\n${timeExamples}`;
@@ -1130,15 +1131,13 @@ module.exports = {
                 else habits = await Goal.find({ archived: isArchived, completed: false }, { _id: 1, description: 1 }).sort({ start: +1 });
                 if (!habits.length) return message.reply(`**No ${isArchived ? "archived " : ""}goals** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
-                let goalList = "";
-                habits.forEach((goal, i) => {
-                    goalList += `\`${i + 1}\` - ${goal.description}\n`;
-                });
+                let targetGoal = await fn.getUserSelectedObject(bot, message, PREFIX, 
+                    "__**Which goal would you like to end?:**__",
+                    `Long-Term Goal${isArchived ? " Archive" : ""}: End Selection`,
+                    habits, "description", false, goalEmbedColour, 600000);
+                if(!targetGoal) return;
+                else targetGoal = targetGoal.object;
 
-                let targetGoalIndex = await fn.userSelectFromList(bot, PREFIX, message, goalList, habits.length, "__**Which goal would you like to end?:**__",
-                    `Long-Term Goal${isArchived ? " Archive" : ""}: End Selection`, goalEmbedColour, 600000, 0);
-                if (!targetGoalIndex && targetGoalIndex !== 0) return;
-                const targetGoal = habits[targetGoalIndex];
                 const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.description}`,
                     forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: End Confirmation`);
                 if (confirmEnd) await Goal.updateOne({ _id: targetGoal._id }, { $set: { completed: true, end: fn.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * timezoneOffset } },
@@ -1158,7 +1157,7 @@ module.exports = {
 
         else if (goalCommand === "reminder" || goalCommand === "remind" || goalCommand === "rem"
             || goalCommand === "re" || goalCommand === "r") {
-                
+
         }
 
 
@@ -1190,15 +1189,13 @@ module.exports = {
                 else habits = await Goal.find({ archived: false }, { _id: 1, description: 1 }).sort({ start: +1 });
                 if (!habits.length) return message.reply(`**No ${isArchived ? "archived " : ""}goals** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
-                let goalList = "";
-                habits.forEach((goal, i) => {
-                    goalList += `\`${i + 1}\` - ${goal.description}\n`;
-                });
+                let targetGoal = await fn.getUserSelectedObject(bot, message, PREFIX, 
+                    "__**Which goal would you like to archive?:**__",
+                    `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Selection`,
+                    habits, "description", false, goalEmbedColour, 600000);
+                if(!targetGoal) return;
+                else targetGoal = targetGoal.object;
 
-                let targetGoalIndex = await fn.userSelectFromList(bot, PREFIX, message, goalList, habits.length, "__**Which goal would you like to archive?:**__",
-                    `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Selection`, goalEmbedColour, 600000, 0);
-                if (!targetGoalIndex && targetGoalIndex !== 0) return;
-                const targetGoal = habits[targetGoalIndex];
                 const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to archive this goal?**`
                     + `\n(it will not be deleted, but won't show up in your \`${PREFIX}${commandUsed} post\`\nand you won't get reminders for it anymore)`
                     + `\n\n🎯 - __**Description:**__\n${targetGoal.description}`,

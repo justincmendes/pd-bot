@@ -80,19 +80,21 @@ module.exports = {
                     : ["Timezone", "Daylight Savings Time", "Habit Daily Reset Time", "Habit Weekly Reset Time",
                         "Get Quotes", "Delete Replies Sent During Commands", "Likes Pestering Accountability",];
                 const quoteAdjustment = userSettings.getQuote ? 0 : 2;
-                let fieldsList = "";
-                userFields.forEach((field, i) => {
-                    fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
-                });
                 var continueEdit;
-                const fieldToEditInstructions = "**Which field do you want to edit?:**";
+                const fieldToEditInstructions = "**Which field do you want to edit?**";
                 const fieldToEditAdditionalMessage = userDocumentToString(userSettings);
                 const fieldToEditTitle = `${showUserSettings.title}: Edit Field`;
-                let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, userFields.length, fieldToEditInstructions,
-                    fieldToEditTitle, userEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
-                if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
+                var fieldToEdit, fieldToEditIndex;
+                const selectedField = await fn.getUserSelectedObject(bot, message, PREFIX,
+                    fieldToEditInstructions, fieldToEditTitle, userFields, "", false,
+                    userEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                if (!selectedField) return;
+                else {
+                    fieldToEdit = selectedField.object;
+                    fieldToEditIndex = selectedField.index;
+                }
+
                 const type = "Settings";
-                const fieldToEdit = userFields[fieldToEditIndex];
                 continueEdit = false;
                 const originalTimezone = userSettings.timezone.name;
                 var userEdit,

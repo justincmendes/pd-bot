@@ -907,10 +907,6 @@ module.exports = {
                             break;
                         default: return;
                     }
-                    let fieldsList = "";
-                    journalFields.forEach((field, i) => {
-                        fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
-                    });
                     const journalTargetID = journalDocument._id;
                     var showJournal, continueEdit;
                     do {
@@ -919,14 +915,20 @@ module.exports = {
                         continueEdit = false;
                         showJournal = journalDocumentToString(journalDocument);
                         // Field the user wants to edit
-                        const fieldToEditInstructions = "**Which field do you want to edit?:**";
+                        const fieldToEditInstructions = "**Which field do you want to edit?**";
                         const fieldToEditAdditionalMessage = `__**Journal ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showJournal}`;
                         const fieldToEditTitle = `Journal: Edit Field`;
-                        let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, journalFields.length, fieldToEditInstructions,
-                            fieldToEditTitle, journalEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
-                        if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
+                        var fieldToEdit, fieldToEditIndex;
+                        const selectedField = await fn.getUserSelectedObject(bot, message, PREFIX,
+                            fieldToEditInstructions, fieldToEditTitle, journalFields, "", false,
+                            journalEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                        if (!selectedField) return;
+                        else {
+                            fieldToEdit = selectedField.object;
+                            fieldToEditIndex = selectedField.index;
+                        }
+
                         var userEdit, journalEditMessagePrompt = "";
-                        const fieldToEdit = journalFields[fieldToEditIndex];
                         const type = "Journal";
                         let { entry, createdAt } = journalDocument;
 

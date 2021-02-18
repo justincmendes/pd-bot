@@ -474,7 +474,7 @@ module.exports = {
             var targetIndex;
             do {
                 var currentTimestamp;
-                let targetObject = await this.messageDataCollect(bot, message, PREFIX, `${instructions}\n${list}\n${messageAfterList}`, selectTitle,
+                let targetObject = await this.messageDataCollect(bot, message, PREFIX, `${instructions}\n${list}\n${messageAfterList || ""}`, selectTitle,
                     messageColour, delayTime, false, true, false, false, userMessageDeleteDelay);
                 if (!targetObject) return false;
                 else currentTimestamp = Date.now();
@@ -4166,6 +4166,113 @@ module.exports = {
         }
     },
 
+    getObjectIndexByString: function (object, indexString) {
+        // Apply the object dereferencing to each object, one by one
+        // Thus reduce is used to iterate through all of the desired
+        // properties to dereference the path found in indexString
+        // (accumulator, currentValue) => currentObject[at next desired property]
+        try {
+            if (!indexString) return object;
+            else return indexString.split('.').reduce((obj, index) => obj[index], object)
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
+    /**
+     * 
+     * @param {[Object]} objectArray 
+     * @param {String} propertyToDisplay Enter a string equivalent to the object property
+     * you wish to show, separated by periods (i.e. description for document.description
+     *  OR journal.goals for document.journal.goals). An empty string or falsey value means
+     *  that you wish to display the WHOLE "object" as is - often best for just display a list of
+     *  strings or numbers in an array.
+     * @param {boolean} doubleSpaceList Enter true if you want the list to be displayed
+     * with double spacing or enter false if you want single spacing. (Default: true)
+     * * @param {[String]} extraListElements If there are additional options to push to the end
+     *  of the selection string
+     */
+    getSelectionListOutput: function (objectArray, propertyToDisplay, doubleSpaceList = true,
+        boldElements = false, extraListElements = []) {
+        try {
+            var objectList = new Array();
+            objectArray.forEach((document, i) => {
+                const outputProperty = this.getObjectIndexByString(document, propertyToDisplay);
+                if (outputProperty) {
+                    objectList.push(
+                        `\`${i + 1}\` - ${boldElements ? "**" : ""}${outputProperty}${boldElements ? "**" : ""}`
+                    );
+                }
+            });
+            if (Array.isArray(extraListElements)) if (extraListElements.length) {
+                extraListElements.forEach((element, i) => {
+                    objectList.push(`\`${objectArray.length + i + 1}\` - ${element}`);
+                });
+            }
+            const objectListString = objectList.join(doubleSpaceList ? '\n\n' : '\n');
+            return {
+                array: objectList,
+                string: objectListString,
+            };
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
+    /**
+     * Returns the selected document and index
+     * @param {Discord.Client} bot 
+     * @param {Discord.Message} message 
+     * @param {String} PREFIX 
+     * @param {String} selectionInstructions 
+     * @param {String} selectionTitle 
+     * @param {[Object]} objectArray 
+     * @param {String} propertyToDisplay Enter a string equivalent to the object property
+     * you wish to show, separated by periods (i.e. description for document.description
+     *  OR journal.goals for document.journal.goals). An empty string or falsey value means
+     *  that you wish to display the WHOLE "object" as is - often best for just display a list of
+     *  strings or numbers in an array.
+     * @param {boolean} doubleSpaceList Enter true if you want the list to be displayed
+     * with double spacing or enter false if you want single spacing. (Default: false)
+     * @param {String | Number} embedColour 
+     * @param {Number} delayTime Enter the time delay for the user to select a document.
+     * (Default: 120000) 
+     * @param {Number} userMessageDeleteDelay Enter the delay for deleting the user's
+     * message after selection - if it is enabled in their settings. (Default: 0)
+     * @param {String} messageAfterList Default: null
+     * @param {[String]} extraListElements If there are additional options to push to the end
+     *  of the selection string
+     */
+    getUserSelectedObject: async function (bot, message, PREFIX,
+        selectionInstructions, selectionTitle, objectArray, propertyToDisplay,
+        doubleSpaceList = false, embedColour = this.defaultEmbedColour, delayTime = 120000,
+        userMessageDeleteDelay = 0, messageAfterList = null, extraListElements = []
+    ) {
+        if (objectArray) if (objectArray.length) {
+            const list = this.getSelectionListOutput(objectArray, propertyToDisplay,
+                doubleSpaceList, false, extraListElements);
+            const targetObjectIndex = await this.userSelectFromList(bot, PREFIX, message,
+                list.string + '\n', list.array.length, selectionInstructions, selectionTitle,
+                embedColour, delayTime, userMessageDeleteDelay, messageAfterList);
+            if (!targetObjectIndex && targetObjectIndex !== 0) return false;
+            else {
+                const userSelection = {
+                    index: targetObjectIndex,
+                    object: undefined,
+                };
+                if (targetObjectIndex < objectArray.length) {
+                    userSelection.object = objectArray[targetObjectIndex];
+                }
+                return userSelection;
+            }
+        }
+        return false;
+    },
+
 
     getTierMaxMessage: function (PREFIX, commandUsed, thresholdValue, type, tier, supportsArchive = false) {
         return `You've ${supportsArchive ? "archived" : "created"} the **__maximum number of ${supportsArchive ? "archived " : ""}${type[0].toLowerCase()} entries__** (**${thresholdValue}**) `
@@ -4197,6 +4304,7 @@ module.exports = {
     invalidPrefixes: ['\*', '\_', '\~', '\>', '\\', '\/', '\:', '\`', '\@'],
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
     daysOfWeek: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    reminderTypes: ["Reminder", "Fast", "Goal", "Habit", "Journal", "Quote", "Mastermind", "Task"],
     fileFooterText: `🗑 to delete this window (not the entries)\n📎 to get all of this in a text file`,
     timeExamples: `e.g. **now **|** 5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a`
         + `\n**|** next friday at 3AM **|** March 22, 2027 **|** today 10PM**`,
@@ -4255,6 +4363,7 @@ module.exports = {
     guildSettingsEmbedColour: "#964b00",
     pesterEmbedColour: "#FF4500",
     quoteEmbedColour: "#FF69B4",
+    taskEmbedColour: "#308014",
     defaultEmbedColour: "#ADD8E6",
 
     mastermindMaxTier1: 12,

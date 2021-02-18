@@ -46,19 +46,19 @@ module.exports = {
                 if (!quoteSettings) return message.reply(`Try \`${PREFIX}settings\` to setup your settings!`);
 
                 var quoteFields = quoteSettings.getQuote ? ["Get Quotes", "Next Quote", "Quote Interval"] : ["Get Quotes"];
-                let fieldsList = "";
-                quoteFields.forEach((field, i) => {
-                    fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
-                });
-                var continueEdit;
-                const fieldToEditInstructions = "**Which field do you want to edit?:**";
+                var continueEdit, fieldToEdit, fieldToEditIndex;
+                const fieldToEditInstructions = "**Which field do you want to edit?**";
                 const fieldToEditAdditionalMessage = quoteDocumentToString(quoteSettings, timezoneOffset);
                 const fieldToEditTitle = "Quote: Edit Field";
-                let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, quoteFields.length, fieldToEditInstructions,
-                    fieldToEditTitle, quoteEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
-                if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
+                const selectedField = await fn.getUserSelectedObject(bot, message, PREFIX,
+                    fieldToEditInstructions, fieldToEditTitle, quoteFields, "", false,
+                    quoteEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                if (!selectedField) return;
+                else {
+                    fieldToEdit = selectedField.object;
+                    fieldToEditIndex = selectedField.index;
+                }
                 const type = "Quote";
-                const fieldToEdit = quoteFields[fieldToEditIndex];
                 continueEdit = false;
                 var userEdit, quoteSettingsPrompt = "";
                 switch (fieldToEditIndex) {

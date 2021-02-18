@@ -9,6 +9,7 @@ const fn = require("./functions");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
+const reminderTypes = fn.reminderTypes;
 const repeatEmbedColour = fn.repeatReminderEmbedColour;
 const goalEmbedColour = fn.goalsEmbedColour;
 const reminderEmbedColour = fn.reminderEmbedColour;
@@ -56,7 +57,7 @@ module.exports = {
      */
     setNewDMReminder: async function (bot, userID, startTimestamp, endTimestamp, reminderMessage,
         title, sendAsEmbed = true, connectedDocumentID = undefined, isRecurring = false, interval = undefined,
-        remainingOccurrences = undefined, embedColour = reminderEmbedColour) {
+        remainingOccurrences = undefined, embedColour = undefined) {
         if (!remainingOccurrences && remainingOccurrences !== 0) remainingOccurrences = undefined;
         if (!interval) interval = undefined;
         if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = undefined;
@@ -83,7 +84,7 @@ module.exports = {
      */
     setNewChannelReminder: async function (bot, userID, channelToSend, startTimestamp, endTimestamp,
         reminderMessage, title, sendAsEmbed = false, connectedDocumentID = undefined, isRecurring = false,
-        interval = undefined, remainingOccurrences = undefined, embedColour = reminderEmbedColour) {
+        interval = undefined, remainingOccurrences = undefined, embedColour = undefined) {
         if (!remainingOccurrences && remainingOccurrences !== 0) remainingOccurrences = undefined;
         if (!interval) interval = undefined;
         if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = undefined;
@@ -110,7 +111,12 @@ module.exports = {
                 const channelID = channelObject.id;
                 const usernameAndDiscriminator = user ? `${user.username}#${user.discriminator}` : "someone";
                 const username = isDM ? user ? user.username : "someone" : bot.guilds.cache.get(channelObject.guild.id).member(userID).displayName;
+                var titleOut = title;
+                if (reminderTypes.includes(title) && isRecurring) {
+                    title = `Repeating ${title}`;
+                }
                 if (sendAsEmbed) {
+                    const originalEmbedColour = embedColour;
                     switch (title) {
                         case "Fast": embedColour = fastEmbedColour;
                             break;
@@ -124,17 +130,21 @@ module.exports = {
                             break;
                         case "Mastermind": embedColour = mastermindEmbedColour;
                             break;
+                        case "Repeating Reminder": embedColour = repeatEmbedColour;
                         default:
                             // Assuming the embedColour passed in is valid hex code****
-                            if (!embedColour && embedColour != 0) {
+                            if (!embedColour && embedColour !== 0) {
                                 if (isRecurring) embedColour = repeatEmbedColour;
                                 else embedColour = reminderEmbedColour;
                             }
                             break;
                     }
+                    if (embedColour !== originalEmbedColour) {
+                        await Reminder.findByIdAndUpdate(reminderID, { $set: { embedColour } });
+                    }
                     let reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`;
                     message = new Discord.MessageEmbed()
-                        .setTitle(title)
+                        .setTitle(titleOut)
                         .setDescription(message)
                         .setFooter(reminderFooter, user.displayAvatarURL())
                         .setColor(embedColour);
@@ -147,7 +157,7 @@ module.exports = {
                     if (!userPermissions.has("MENTION_EVERYONE")) {
                         message = message.replace(/\@(everyone|here)/g, `\@\u200b$1`);
                     }
-                    if (title !== "Quote") message += `\n\n\\\*\\\*__A **${fn.millisecondsToTimeString(duration)} ${title}** set by **${username}**__\\\*\\\*`;
+                    if (title !== "Quote") message += `\n\n\\\*\\\*__A **${fn.millisecondsToTimeString(duration)} ${titleOut}** set by **${username}**__\\\*\\\*`;
                 }
                 // var mentions;
                 // if (!isDM) {
@@ -184,8 +194,7 @@ module.exports = {
                                 console.log({ updatedReminderObject });
                                 console.log("Updated Recurring Reminder in Database!");
 
-                                const isLastReminder = updatedReminderObject.remainingOccurrences === 1
-                                    || updatedReminderObject.remainingOccurrences === 0
+                                const isLastReminder = updatedReminderObject.remainingOccurrences === 0
                                     || updatedReminderObject.remainingOccurrences < 0;
 
                                 if (bot.channels.cache.get(channel) || bot.users.cache.get(userID)) {
@@ -198,7 +207,8 @@ module.exports = {
                                         editedFooter += `\nThis is the last reminder!`;
                                     }
                                     else if (updatedReminderObject.remainingOccurrences) {
-                                        editedFooter += `\n${remainingOccurrences} more reminders left!`;
+                                        editedFooter += `\n${updatedReminderObject.remainingOccurrences} more reminder`
+                                            + `${updatedReminderObject.remainingOccurrences === 1 ? "" : "s"} left!`;
                                     }
                                     message = message.setFooter(editedFooter, footer.iconURL);
                                     channelObject.send(message);
@@ -206,7 +216,6 @@ module.exports = {
                                     if (!isLastReminder) return;
                                 }
                             }
-
                             await this.deleteOneReminderByObjectID(reminderID);
                             return;
                         }, reminderDelay),
@@ -244,7 +253,7 @@ module.exports = {
         if (success) {
             console.log(`Successfully cancelled reminder ${reminderID}.`);
         }
-        else if(success === null) {
+        else if (success === null) {
             console.log(`Reminder ${reminderID} does not exist, or is already cancelled.`);
         }
         else {
@@ -261,7 +270,7 @@ module.exports = {
         if (success) {
             console.log(`Successfully cancelled reminders connected to document ${connectedDocumentId}`);
         }
-        else if(success === null) {
+        else if (success === null) {
             console.log(`Reminders connected to document ${connectedDocumentId} do not exist, or are already cancelled.`);
         }
         else {

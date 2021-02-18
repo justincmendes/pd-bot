@@ -1271,10 +1271,7 @@ module.exports = {
             }
             else {
                 var fastFields = ["Start Time", "End Time", "Fast Breaker", "Mood", "Reflection"];
-                let fieldsList = "";
-                fastFields.forEach((fast, i) => {
-                    fieldsList = fieldsList + `\`${i + 1}\` - ${fast}\n`;
-                });
+
                 if (args[1].toLowerCase() === "recent" || args[1].toLowerCase() === "current") {
                     pastNumberOfEntriesIndex = await getCurrentOrRecentFastIndex(authorID);
                 }
@@ -1291,12 +1288,14 @@ module.exports = {
                         indexByRecency = true;
                     }
                 }
+
                 var fastView;
                 if (indexByRecency) fastView = await getOneFastByRecency(authorID, pastNumberOfEntriesIndex - 1);
                 else fastView = await getOneFastByStartTime(authorID, pastNumberOfEntriesIndex - 1);
                 if (!fastView) {
                     return fn.sendErrorMessageAndUsage(message, fastEditHelp, `**FAST ${pastNumberOfEntriesIndex} DOES NOT EXIST**...`);
                 }
+
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
                 const fastTargetID = fastView._id;
                 var fastData, showFast, continueEdit, isCurrent;
@@ -1315,14 +1314,18 @@ module.exports = {
                         showFast = fastDataArrayToString(fastData);
                     }
                     // Field the user wants to edit
-                    const fieldToEditInstructions = "**Which field do you want to edit?:**";
+                    const fieldToEditInstructions = "**Which field do you want to edit?**";
                     const fieldToEditAdditionalMessage = `__**Fast ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showFast}`;
                     const fieldToEditTitle = `Fast: Edit Field`;
-                    let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, fastFields.length, fieldToEditInstructions,
-                        fieldToEditTitle, fastEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
-                    if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
-                    var userEdit, fastEditMessagePrompt = "";
-                    const fieldToEdit = fastFields[fieldToEditIndex];
+                    var fieldToEdit, fieldToEditIndex;
+                    const selectedField = await fn.getUserSelectedObject(bot, message, PREFIX,
+                        fieldToEditInstructions, fieldToEditTitle, fastFields, "", false,
+                        fastEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                    if (!selectedField) return;
+                    else {
+                        fieldToEdit = selectedField.object;
+                        fieldToEditIndex = selectedField.index;
+                    }
                     const type = "Fast";
                     switch (fieldToEditIndex) {
                         case 0:

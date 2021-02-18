@@ -537,29 +537,30 @@ module.exports = {
                         const checkReminder = await rm.getOneReminderByObjectID(reminderTargetID);
                         if (!checkReminder) return;
                         let { channel, startTime, endTime, message: reminderMessage, isDM, isRecurring, interval,
-                            type, connectedDocument, guildID, remainingOccurrences } = reminderDocument;
+                            title, connectedDocument, guildID, remainingOccurrences } = reminderDocument;
 
                         var reminderFields = ["Type", "Send to (DM or Channel)", "Start Time", "End Time", "Message", "Repeat"];
                         if (isRecurring) reminderFields = reminderFields.concat(["Interval", "Remaining Repetitions"]);
-                        let fieldsList = "";
-                        reminderFields.forEach((field, i) => {
-                            fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
-                        });
 
                         continueEdit = false;
                         showReminder = rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
                         // Field the user wants to edit
-                        const fieldToEditInstructions = "**Which field do you want to edit?:**";
+                        const fieldToEditInstructions = "**Which field do you want to edit?**";
                         const fieldToEditAdditionalMessage = `__**Reminder ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showReminder}`;
                         const fieldToEditTitle = `Recurring Reminder: Edit Field`;
-                        let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, reminderFields.length, fieldToEditInstructions,
-                            fieldToEditTitle, repeatEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
-                        if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
+                        var fieldToEdit, fieldToEditIndex;
+                        const selectedField = await fn.getUserSelectedObject(bot, message, PREFIX,
+                            fieldToEditInstructions, fieldToEditTitle, reminderFields, "", false,
+                            repeatEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                        if (!selectedField) return;
+                        else {
+                            fieldToEdit = selectedField.object;
+                            fieldToEditIndex = selectedField.index;
+                        }
                         var userEdit, reminderEditMessagePrompt = "";
-                        const fieldToEdit = reminderFields[fieldToEditIndex];
                         switch (fieldToEditIndex) {
                             case 0:
-                                reminderEditMessagePrompt = `Please enter one of the following reminder types: **__${validTypes.join(', ')}__**`;
+                                reminderEditMessagePrompt = `\nPlease enter one of the following reminder types:\n**__${validTypes.join(', ')}__**`;
                                 userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, repeatEmbedColour);
                                 break;
                             case 1:
@@ -636,7 +637,7 @@ module.exports = {
                                                     + `\n\n*(This reminder will **lose** it's **connected document**, if any)*`,
                                                     forceSkip, "Recurring Reminder: Change Type Confirmation", 90000);
                                                 if (removeConnectedDocs) {
-                                                    type = userType;
+                                                    title = userType;
                                                     connectedDocument = undefined;
                                                 }
                                             }
@@ -688,7 +689,7 @@ module.exports = {
                                                 if (userEdit === true && isRecurring === false) {
                                                     isRecurring = userEdit;
                                                     interval = await rm.getEditInterval(bot, message, PREFIX, timezoneOffset, daylightSavingsSetting,
-                                                        reminderFields[6], `\n**Please enter the time you'd like in-between recurring reminders (interval):**`,
+                                                        "Interval", `\n**Please enter the time you'd like in-between recurring reminders (interval):**`,
                                                         reminderType, repeatEmbedColour);
                                                     if (!interval) {
                                                         continueEdit = true;
@@ -799,7 +800,7 @@ module.exports = {
                                     var newReminder;
                                     switch (fieldToEditIndex) {
                                         case 0:
-                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, { $set: { type, connectedDocument, } }, { new: true });
+                                            newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, { $set: { title, connectedDocument, } }, { new: true });
                                             break;
                                         case 1:
                                             newReminder = await Reminder.findOneAndUpdate({ _id: reminderTargetID }, { $set: { isDM, channel, guildID, } }, { new: true });

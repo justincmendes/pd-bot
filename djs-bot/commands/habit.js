@@ -409,17 +409,17 @@ module.exports = {
                 const goalDocuments = await Goal.find({ userID: authorID, archived: false, completed: false },
                     { _id: 1, description: 1 }).sort({ start: +1 });
                 var connectedGoal;
-                if (goalDocuments && goalDocuments.length > 1) {
-                    let goalList = "";
-                    goalDocuments.forEach((goal, i) => {
-                        goalList += `\`${i + 1}\` - **${goal.description}**\n`;
-                    });
-                    goalList += `${goalDocuments.length + 1} - **Skip/None**`;
-                    connectedGoal = await fn.userSelectFromList(bot, PREFIX, message, goalList, goalDocuments.length + 1,
-                        `${habitDescriptionString}\n\n**__Which goal is this habit connected to, if any?__** 🔗`, "Habit: Creation - Connected Goal", habitEmbedColour);
-                    if (!connectedGoal && connectedGoal !== 0) return;
-                    if (connectedGoal === goalList.length + 1) connectedGoal = undefined; // Assuming this is the skip option
-                    else connectedGoal = goalDocuments[connectedGoal] ? goalDocuments[connectedGoal]._id : undefined;
+                if (goalDocuments) if (goalDocuments.length) {
+                    const selectionInstructions = `${habitDescriptionString}\n\n**__Which goal is this habit connected to, if any?__** 🔗`;
+                    const selectionTitle = "Habit: Creation - Connected Goal";
+                    const selectedGoal = await fn.getUserSelectedObject(bot, message, PREFIX,
+                        selectionInstructions, selectionTitle, goalDocuments, "description", false,
+                        habitEmbedColour, 600000, 0, null, ["**Skip/None**"]);
+                    if (!selectedGoal) return;
+                    else {
+                        if (selectedGoal.index === goalDocuments.length + 1) connectedGoal = undefined; // Assuming this is the skip option
+                        else connectedGoal = selectedGoal.object ? selectedGoal.object._id : undefined;
+                    }
                 }
 
                 userSettings = await User.findOne({ discordID: authorID });
@@ -1138,10 +1138,7 @@ module.exports = {
                     if (isCountType) {
                         habitFields = habitFields.concat(["Count Metric", "Count Goal Type", "Count Goal"]);
                     }
-                    let fieldsList = "";
-                    habitFields.forEach((field, i) => {
-                        fieldsList = fieldsList + `\`${i + 1}\` - ${field}\n`;
-                    });
+
                     const habitTargetID = habitDocument._id;
                     var showHabit, continueEdit;
                     var targetLogIndex, targetLogField, targetCountIndex, logs;
@@ -1155,15 +1152,22 @@ module.exports = {
                     continueEdit = false;
                     showHabit = await habitDocumentToString(habitDocument, true, true, true, true);
                     const type = `Habit${isArchived ? " Archive" : ""}`;
+
                     // Field the user wants to edit
-                    const fieldToEditInstructions = "**Which field do you want to edit?:**";
+                    const fieldToEditInstructions = "**Which field do you want to edit?**";
                     const fieldToEditAdditionalMessage = `__**Habit ${habitIndex} (${sortType}):**__ ${showHabit}`;
                     const fieldToEditTitle = `${type}: Edit Field`;
-                    let fieldToEditIndex = await fn.userSelectFromList(bot, PREFIX, message, fieldsList, habitFields.length, fieldToEditInstructions,
-                        fieldToEditTitle, habitEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
-                    if (!fieldToEditIndex && fieldToEditIndex !== 0) return;
+                    var fieldToEdit, fieldToEditIndex;
+                    const selectedField = await fn.getUserSelectedObject(bot, message, PREFIX,
+                        fieldToEditInstructions, fieldToEditTitle, habitFields, "", false,
+                        habitEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                    if (!selectedField) return;
+                    else {
+                        fieldToEdit = selectedField.object;
+                        fieldToEditIndex = selectedField.index;
+                    }
+
                     var userEdit, habitEditMessagePrompt = "";
-                    const fieldToEdit = habitFields[fieldToEditIndex];
                     const goalTypeString = getGoalTypeString(countGoalType);
                     switch (fieldToEditIndex) {
                         case 0:
@@ -1180,14 +1184,14 @@ module.exports = {
                                 if (isCountType) {
                                     logFields.push("Count");
                                 }
-                                let logsFieldList = "";
-                                logFields.forEach((field, i) => {
-                                    logsFieldList += `\`${i + 1}\` - ${field}\n`;
-                                });
-                                targetLogField = await fn.userSelectFromList(bot, PREFIX, message, logsFieldList, logFields.length,
+
+                                const selectedLogField = await fn.getUserSelectedObject(bot, message, PREFIX,
                                     "**Please enter the number corresponding to the field you'd like to edit.**",
-                                    `${type}: Log Field`, habitEmbedColour, 600000, 0, hb.logDocumentToString(logs[targetLogIndex]));
-                                if (!targetLogField && targetLogField !== 0) return;
+                                    `${type}: Log Field`, logFields, null, false, habitEmbedColour, 600000, 0,
+                                    hb.logDocumentToString(logs[targetLogIndex]));
+                                if (!selectedLogField) return;
+                                else targetLogField = selectedLogField.index;
+
                                 switch (targetLogField) {
                                     // Created At (Timestamp)
                                     case 0:
@@ -1210,16 +1214,15 @@ module.exports = {
                                     case 3:
                                         if (isCountType) {
                                             // Let user select which count value they want to edit
-                                            var logsCountList = new Array();
-                                            logs[targetLogIndex].count.forEach((count, i) => {
-                                                logsCountList.push(`\`${i + 1}\` - ${count}`);
-                                            });
-                                            targetCountIndex = await fn.userSelectFromList(bot, PREFIX, message, logsCountList.join('\n'), logsCountList.length,
+                                            const selectedCount = await fn.getUserSelectedObject(bot, message, PREFIX,
                                                 "**Please enter the number corresponding to the count value you'd like to edit.**",
-                                                `${type}: Log Count Value Edit`, habitEmbedColour, 600000, 0, `\n${hb.logDocumentToString(logs[targetLogIndex])}`);
-                                            if (!targetCountIndex && targetCountIndex !== 0) return;
+                                                `${type}: Log Count Value Edit`, logs[targetLogIndex].count, null, false, habitEmbedColour,
+                                                600000, 0, `\n${hb.logDocumentToString(logs[targetLogIndex])}`);
+                                            if (!selectedCount) return;
+                                            else targetCountIndex = selectedCount.index;
+
                                             habitEditMessagePrompt = `__**Please enter the ${countMetric ? `"${countMetric}"` : "value"} you'd like to enter for this log:**__`
-                                                + `\n**Currently: ** ${logs[targetLogIndex].count[targetCountIndex] || "N/A"}`
+                                                + `\n**Currently: ** ${selectedCount.object || "N/A"}`
                                                 + `\n\nType \`delete\` to **delete this count entry**\nType \`add #\` where __**# = a number**__: To **add the number to the current count**`
                                                 + `\nType \`sub #\` where __**# = a number**__: To **subtract the number from the current count**`;
                                             userEdit = await fn.getUserEditString(bot, message, PREFIX, "Count", habitEditMessagePrompt, type, forceSkip, habitEmbedColour);
@@ -1277,7 +1280,7 @@ module.exports = {
                             goalList += `\`${outputArray.length + 1}\` - NONE`;
                             outputArray.push("NONE");
                             habitEditMessagePrompt = `\n**__Which goal is this habit connected to?__**\n${connectedGoalString}`
-                                + `${connectedGoal ? `\n(Enter \`${outputArray.length}\` to remove the connection)` : ""}\n\n${goalList}`;
+                                + `${connectedGoal ? `\n(Enter \`${outputArray.length + 1}\` to remove the connection)` : ""}\n\n${goalList}`;
                             userEdit = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, outputArray.length, type,
                                 outputArray, forceSkip, habitEmbedColour, habitEditMessagePrompt);
                             if (!userEdit && userEdit !== 0) return;
@@ -1627,15 +1630,10 @@ module.exports = {
             if (!habitArray.length) return message.reply(`**No ${isArchived ? "archived " : ""}habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
             do {
-                let habitList = "";
-                habitArray.forEach((habit, i) => {
-                    habitList += `\`${i + 1}\` - ${habit.description}\n`;
-                });
-
-                let targetHabitIndex = await fn.userSelectFromList(bot, PREFIX, message, habitList, habitArray.length, "__**Which habit would you like to log?:**__",
-                    `Habit${isArchived ? " Archive" : ""}: Select Habit To Log`, habitEmbedColour, 600000, 0);
-                if (!targetHabitIndex && targetHabitIndex !== 0) return;
-                const targetHabit = habitArray[targetHabitIndex];
+                let targetHabit = await fn.getUserSelectedObject(bot, message, PREFIX, "__**Which habit would you like to log?:**__",
+                    `Habit${isArchived ? " Archive" : ""}: Select Habit To Log`, habitArray, "description", true, habitEmbedColour, 600000);
+                if (!targetHabit) return;
+                else targetHabit = targetHabit.object;
 
                 let habitLog = await fn.userSelectFromList(bot, PREFIX, message, checkMissedSkipList, 3,
                     `__**What is the status of your habit?:**__\n**Currently:** ${hb.getStateEmoji(targetHabit.currentState)}`,
@@ -1779,15 +1777,13 @@ module.exports = {
                 else habitArray = await Habit.find({ archived: false }, { _id: 1, "habit.description": 1 }).sort({ "habit.createdAt": +1 });
                 if (!habitArray.length) return message.reply(`**No ${isArchived ? "archived " : ""}habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
-                let habitList = "";
-                habitArray.forEach((habit, i) => {
-                    habitList += `\`${i + 1}\` - ${habit.description}\n`;
-                });
+                var targetHabit;
+                const selectedHabit = await fn.getUserSelectedObject(bot, message, PREFIX,
+                    "__**Which habit would you like to archive?:**__", `Habit${isArchived ? " Archive" : ""}: Archive Selection`,
+                    habitArray, "description", false, habitEmbedColour, 600000, 0);
+                if (!selectedHabit) return;
+                else targetHabit = selectedHabit.object;
 
-                let targetHabitIndex = await fn.userSelectFromList(bot, PREFIX, message, habitList, habitArray.length, "__**Which habit would you like to archive?:**__",
-                    `Habit${isArchived ? " Archive" : ""}: Archive Selection`, habitEmbedColour, 600000, 0);
-                if (!targetHabitIndex && targetHabitIndex !== 0) return;
-                const targetHabit = habitArray[targetHabitIndex];
                 const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to archive this habit?**`
                     + `\n(it will not be deleted, but won't show up in your regular \`${PREFIX}${commandUsed} see\` \`${PREFIX}${commandUsed} post\` \`${PREFIX}${commandUsed} delete\` commands`
                     + `\nand you won't get reminders for it anymore)`
@@ -1798,7 +1794,7 @@ module.exports = {
                         async (err, result) => {
                             if (err) return console.error(err);
                             console.log({ result });
-                            if(targetHabit._id) {
+                            if (targetHabit._id) {
                                 await rm.cancelReminderByConnectedDocument(targetHabit._id);
                                 await Reminder.deleteMany({ connectedDocument: targetHabit._id });
                             }
