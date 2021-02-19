@@ -659,7 +659,7 @@ module.exports = {
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Entries`);
                     const allQuery = { userID: authorID };
-                    await del.deleteManyByIDAndConnectedReminders(Journal, allQuery);
+                    await del.deleteManyAndConnectedReminders(Journal, allQuery);
                     return;
                 }
                 else return message.reply(journalActionHelpMessage);

@@ -1207,7 +1207,7 @@ module.exports = {
 
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Fasts`);
                     const allQuery = { userID: authorID };
-                    await del.deleteManyByIDAndConnectedReminders(Fast, allQuery);
+                    await del.deleteManyAndConnectedReminders(Fast, allQuery);
                     return;
                 }
                 else return message.reply(fastDeleteHelpMessage);

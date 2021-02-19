@@ -308,7 +308,7 @@ module.exports = {
 
         // Variable Declarations and Initializations
         let mastermindUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\``
-            + "\n\n\`<ACTION>\`: **start/s; delete/d; edit; post/p; template/t**"
+            + "\n\n\`<ACTION>\`: **start/s; delete/d; edit; post/p; template/t; reminder;r**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         mastermindUsageMessage = fn.getMessageEmbed(mastermindUsageMessage, "Mastermind: Help", mastermindEmbedColour);
         const mastermindHelpMessage = `Try \`${PREFIX}${commandUsed} help\`...`;
@@ -876,7 +876,7 @@ module.exports = {
                     if (!finalConfirmDeleteAll) return;
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Entries`);
                     const allQuery = { userID: authorID };
-                    await del.deleteManyByIDAndConnectedReminders(Mastermind, allQuery);
+                    await del.deleteManyAndConnectedReminders(Mastermind, allQuery);
                     return;
                 }
                 else return message.reply(mastermindActionHelpMessage);
@@ -1330,12 +1330,12 @@ module.exports = {
         }
 
 
-        else if (mastermindCommand === "reminder" || mastermindCommand === "remind"
+        else if (mastermindCommand === "reminder" || mastermindCommand === "reminders" || mastermindCommand === "remind"
             || mastermindCommand === "rem" || mastermindCommand === "re" || mastermindCommand === "r") {
             const userMasterminds = await Mastermind.find({ userID: authorID })
                 .sort({ _id: -1 });
             if (userMasterminds) if (userMasterminds.length) {
-                var reset
+                var reset;
                 do {
                     reset = false;
                     var mastermindList = "";
@@ -1365,6 +1365,11 @@ module.exports = {
                             if (!setReminder) return;
                         }
                     }
+                    const setMoreReminders = await fn.getUserConfirmation(bot, message, PREFIX,
+                        "Would you like to set another mastermind weekly goal reminder?", false,
+                        "Mastermind: Weekly Goal Reminder Continue", 180000);
+                    if (!setMoreReminders) return;
+                    else reset = true;
                 }
                 while (reset)
                 return;

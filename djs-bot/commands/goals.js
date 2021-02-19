@@ -404,8 +404,7 @@ module.exports = {
         }
 
 
-        else if (goalCommand === "delete" || goalCommand === "remove" || goalCommand === "del" || goalCommand === "d"
-            || goalCommand === "rem" || goalCommand === "r") {
+        else if (goalCommand === "delete" || goalCommand === "remove" || goalCommand === "del" || goalCommand === "d") {
             /**
              * Allow them to delete any goals - archived or not
              */
@@ -631,7 +630,7 @@ module.exports = {
 
                     console.log(`Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Goals`);
                     const allQuery = { userID: authorID };
-                    await del.deleteManyByIDAndConnectedReminders(Goal, allQuery);
+                    await del.deleteManyAndConnectedReminders(Goal, allQuery);
                     await Habit.updateMany(allQuery, { $set: { connectedGoal: undefined, } });
                     return;
                 }
@@ -1131,11 +1130,11 @@ module.exports = {
                 else habits = await Goal.find({ archived: isArchived, completed: false }, { _id: 1, description: 1 }).sort({ start: +1 });
                 if (!habits.length) return message.reply(`**No ${isArchived ? "archived " : ""}goals** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
-                let targetGoal = await fn.getUserSelectedObject(bot, message, PREFIX, 
+                let targetGoal = await fn.getUserSelectedObject(bot, message, PREFIX,
                     "__**Which goal would you like to end?:**__",
                     `Long-Term Goal${isArchived ? " Archive" : ""}: End Selection`,
                     habits, "description", false, goalEmbedColour, 600000);
-                if(!targetGoal) return;
+                if (!targetGoal) return;
                 else targetGoal = targetGoal.object;
 
                 const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.description}`,
@@ -1155,9 +1154,49 @@ module.exports = {
         }
 
 
-        else if (goalCommand === "reminder" || goalCommand === "remind" || goalCommand === "rem"
-            || goalCommand === "re" || goalCommand === "r") {
-
+        else if (goalCommand === "reminder" || goalCommand === "reminders" || goalCommand === "remind"
+            || goalCommand === "rem" || goalCommand === "re" || goalCommand === "r") {
+            const userGoals = await Goal.find({ userID: authorID, archived: false })
+                .sort({ _id: +1 });
+            if (userGoals) if (userGoals.length) {
+                var reset;
+                do {
+                    reset = false;
+                    const selectedGoal = await fn.getUserSelectedObject(bot, message, PREFIX,
+                        "**Enter the number corresponding to the long-term goal you want reminders for:**"
+                        + "\n(1 year, 6 months, 1 month, 1 week, and 1 day before expected goal end time)",
+                        "Long-Term Goal: Goal Reminder", userGoals, "description", false, goalEmbedColour, 600000);
+                    if (!selectedGoal) return;
+                    else {
+                        const confirmSelection = await fn.getUserConfirmation(bot, message, PREFIX,
+                            `**Are you sure you want reminders for this long-term goal?**`
+                            + "\n(1 year, 6 months, 1 month, 1 week, and 1 day before expected goal end time)"
+                            + `\n\n${selectedGoal.object.description}`, forceSkip, "Long-Term Goal: Goal Reminder Confirmation", 180000);
+                        if (confirmSelection === false) break;
+                        else if (confirmSelection === null) return;
+                        else {
+                            if (selectedGoal.object._id) {
+                                const currentReminders = await Reminder.find({ connectedDocument: selectedGoal.object._id });
+                                if (currentReminders) if (currentReminders.length) {
+                                    await rm.cancelReminderByConnectedDocument(selectedGoal.object._id);
+                                    await Reminder.deleteMany({ connectedDocument: selectedGoal.object._id });
+                                }
+                            }
+                            await setGoalReminders(bot, authorID, timezoneOffset, commandUsed,
+                                selectedGoal.object._id, selectedGoal.object.description, selectedGoal.object.start - HOUR_IN_MS * timezoneOffset,
+                                message.createdTimestamp, selectedGoal.object.end - HOUR_IN_MS * timezoneOffset);
+                        }
+                    }
+                    const setMoreReminders = await fn.getUserConfirmation(bot, message, PREFIX,
+                        "Would you like to set another long-term goal reminder?", false,
+                        "Long-Term Goal: Goal Reminder Continue", 180000);
+                    if (!setMoreReminders) return;
+                    else reset = true;
+                }
+                while (reset)
+                return;
+            }
+            return message.reply(`**No long-term goals...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
         }
 
 
@@ -1189,11 +1228,11 @@ module.exports = {
                 else habits = await Goal.find({ archived: false }, { _id: 1, description: 1 }).sort({ start: +1 });
                 if (!habits.length) return message.reply(`**No ${isArchived ? "archived " : ""}goals** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
-                let targetGoal = await fn.getUserSelectedObject(bot, message, PREFIX, 
+                let targetGoal = await fn.getUserSelectedObject(bot, message, PREFIX,
                     "__**Which goal would you like to archive?:**__",
                     `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Selection`,
                     habits, "description", false, goalEmbedColour, 600000);
-                if(!targetGoal) return;
+                if (!targetGoal) return;
                 else targetGoal = targetGoal.object;
 
                 const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to archive this goal?**`

@@ -872,7 +872,7 @@ module.exports = {
                     userHabits.forEach(async habit => {
                         await hb.cancelHabitById(habit._id);
                     });
-                    await del.deleteManyByIDAndConnectedReminders(Habit, reminderQuery);
+                    await del.deleteManyAndConnectedReminders(Habit, reminderQuery);
                     return;
                 }
                 else return message.reply(habitActionHelpMessage);

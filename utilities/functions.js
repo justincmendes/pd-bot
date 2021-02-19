@@ -4146,7 +4146,7 @@ module.exports = {
                 connectedDocumentId = connectedDocumentId.toString();
                 var foundOneReminder = null;
                 cronCollection.each(async cronSubArray => {
-                    cronSubArray.forEach(async cronObject => {
+                    cronSubArray.forEach(async (cronObject, i) => {
                         const targetObject = cronObject.connectedId === connectedDocumentId;
                         if (targetObject) {
                             console.log(`Cancelling Reminder: connectedDocument = ${connectedDocumentId}, _id: = ${cronObject.id.toString()}`);
