@@ -226,7 +226,7 @@ module.exports = {
         const userSettings = await User.findOne({ discordID: authorID });
         const { tier } = userSettings;
         let goalUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
-            + "\n\n\`<ACTION>\`: **add; see; edit; end; archive; delete; post**"
+            + "\n\n\`<ACTION>\`: **add; see; edit; end; archive; delete; post; reminder**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         goalUsageMessage = fn.getMessageEmbed(goalUsageMessage, "Goals: Help", goalEmbedColour);
         const goalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
