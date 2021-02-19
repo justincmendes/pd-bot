@@ -21,13 +21,15 @@ const userEmbedColour = fn.userSettingsEmbedColour;
 const quoteEmbedColour = fn.quoteEmbedColour;
 // Private Function Declarations
 
-function userDocumentToString(userSettings) {
+async function userDocumentToString(bot, userSettings) {
     const { timezone: { name, offset, daylightSaving }, likesPesteringAccountability: likesAccountability,
-        habitCron, getQuote, quoteInterval, nextQuote, tier, deleteRepliesDuringCommand, } = userSettings;
+        habitCron, getQuote, quoteInterval, nextQuote, tier, deleteRepliesDuringCommand, voiceChannels,
+        discordID: userID, } = userSettings;
     const output = `__**Timezone:**__ ${name}\n- **UTC Offset (in hours):** ${fn.hoursToUTCOffset(offset)}`
         + `\n- **Daylight Savings Time:** ${daylightSaving ? "Yes" : "No"}`
         + `\n\n__**Habit Reset Time:**__\n- **Daily:** ${fn.msToTimeFromMidnight(habitCron.daily)}`
         + `\n- **Weekly:** ${fn.getDayOfWeekToString(habitCron.weekly)}`
+        + `\n\n__**Voice Channels Tracked:**__\n${await fn.voiceChannelArrayToString(bot, userID, voiceChannels)}`
         + `\n\n__**Get Quotes:**__ ${getQuote ? "Yes" : "No"}`
         + `\n- **Next Quote:** ${getQuote ? nextQuote ? fn.timestampToDateString(nextQuote + (offset * HOUR_IN_MS)) : "N/A" : "N/A"}`
         + `\n- **Quote Interval:** ${getQuote ? quoteInterval ? `Every ${quoteInterval}` : "N/A" : "N/A"}`
@@ -58,7 +60,7 @@ module.exports = {
         const settingHelpMessage = `Try ${PREFIX}${commandUsed} help - for more options (and how to edit)`;
         const username = message.channel.type === 'dm' ? authorUsername
             : bot.guilds.cache.get(message.guild.id).member(authorID).displayName;
-        const showUserSettings = fn.getMessageEmbed(userDocumentToString(userSettings),
+        const showUserSettings = fn.getMessageEmbed(await userDocumentToString(bot, userSettings),
             `${username}'s Settings`,
             userEmbedColour)
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
@@ -75,14 +77,20 @@ module.exports = {
             || settingCommand === "setup" || settingCommand === "set" || settingCommand === "s") {
             do {
                 userSettings = await User.findOne({ discordID: authorID });
+                let { tier } = userSettings;
                 var userFields = userSettings.getQuote ? ["Timezone", "Daylight Savings Time", "Habit Daily Reset Time", "Habit Weekly Reset Time",
-                    "Get Quotes", "Next Quote", "Quote Interval", "Delete Replies Sent During Commands", "Likes Pestering Accountability",]
+                    "Get Quotes", "Next Quote", "Quote Interval", "Delete Replies Sent During Commands", "Likes Pestering Accountability",
+                    "Tracked Voice Channels"]
                     : ["Timezone", "Daylight Savings Time", "Habit Daily Reset Time", "Habit Weekly Reset Time",
-                        "Get Quotes", "Delete Replies Sent During Commands", "Likes Pestering Accountability",];
+                        "Get Quotes", "Delete Replies Sent During Commands", "Likes Pestering Accountability",
+                        "Tracked Voice Channels"];
+                if (userSettings.voiceChannels) if (userSettings.voiceChannels.length) {
+                    userFields = userFields.concat(["Time Spent in Voice Channels"]);
+                }
                 const quoteAdjustment = userSettings.getQuote ? 0 : 2;
                 var continueEdit;
                 const fieldToEditInstructions = "**Which field do you want to edit?**";
-                const fieldToEditAdditionalMessage = userDocumentToString(userSettings);
+                const fieldToEditAdditionalMessage = await userDocumentToString(bot, userSettings);
                 const fieldToEditTitle = `${showUserSettings.title}: Edit Field`;
                 var fieldToEdit, fieldToEditIndex;
                 const selectedField = await fn.getUserSelectedObject(bot, message, PREFIX,
@@ -97,7 +105,7 @@ module.exports = {
                 const type = "Settings";
                 continueEdit = false;
                 const originalTimezone = userSettings.timezone.name;
-                var userEdit,
+                var userEdit, targetVcObject,
                     updatedTimezoneOffset = timezoneOffset,
                     updatedDaylightSaving = daylightSaving,
                     updatedTimezone = originalTimezone,
@@ -161,6 +169,62 @@ module.exports = {
                         userSettingsPrompt = `Are you into **pestering accountability** (💪) or not so much (🙅‍♀️)?`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
                             ['💪', '🙅‍♀️'], type, forceSkip, userEmbedColour);
+                        break;
+                    case 9 - quoteAdjustment:
+                        // Check if the user wants to remove a voice channel or add one.
+                        userSettingsPrompt = `\nDo you want to **add** (📊) another voice channel to track or **remove** (🗑️) a voice channel you are currently tracking your time in?`
+                            + `\n(**Cap at ${tier}**)\n\n**__Current tracked voice channels:__**\n${userSettings.voiceChannels.map(vcObject => {
+                                return `${bot.channels.cache.get(vcObject.id).name} (${bot.channels.cache.get(vcObject.id).guild.name})`;
+                            }).join('\n')}`;
+                        userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
+                            ['📊', '🗑️'], type, forceSkip, userEmbedColour);
+                        break;
+                    case 10 - quoteAdjustment:
+                        let vcList = "";
+                        userSettings.voiceChannels.forEach((vc, i) => {
+                            vcList += `\`${i + 1}\` - ${bot.channels.cache.get(vc.id).name} (${bot.channels.cache.get(vc.id).guild.name})`;
+                            if (i !== userSettings.voiceChannels.length) {
+                                vcList += '\n';
+                            }
+                        });
+                        const selectVoiceChannel = await fn.userSelectFromList(bot, message, PREFIX,
+                            vcList, userSettings.voiceChannels.length,
+                            "**Type the number corresponding to the voice channel you would like to edit the time tracked for:**\n",
+                            `${type}: Select Voice Channel`, userEmbedColour, 180000);
+                        if (!selectVoiceChannel && selectVoiceChannel !== 0) return;
+                        else {
+                            const targetVcObject = userSettings.voiceChannels[selectVoiceChannel];
+                            userSettingsPrompt = `\nWhat do you want to change the **time tracked** to?`
+                                + `\n\n**__Current time tracked:__** ${fn.millisecondsToTimeString(targetVcObject.timeTracked)}`
+                                + `\n\nType \`back\` to go **back to the main edit menu**`
+                                + `\n\n${fn.durationExamples}`;
+                            do {
+                                const userTimeInput = await fn.messageDataCollect(bot, message, PREFIX, userSettingsPrompt,
+                                    `${type}: Change Time Tracked`, userEmbedColour, 180000, false);
+                                if (userTimeInput === "back") break;
+                                if (userTimeInput === "stop" || !userTimeInput) return;
+                                const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
+                                let now = fn.getCurrentUTCTimestampFlooredToSecond();
+                                endTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now,
+                                    timezoneOffset, daylightSaving, true, true, false, true);
+                                if (endTime || endTime === 0) {
+                                    now = fn.getCurrentUTCTimestampFlooredToSecond();
+                                    endTime -= HOUR_IN_MS * timezoneOffset;
+                                    userEdit = endTime - now;
+                                    break;
+                                }
+                                else fn.sendReplyThenDelete(message, `**Please enter a proper time duration __> 1 hour__!**...\nTry \`${PREFIX}date\` for **valid time inputs!**`, 30000);
+                            }
+                            while (true)
+                            if (userEdit || userEdit === 0) {
+                                if (!isNaN(userEdit)) if (userEdit >= 0) {
+                                    targetVcObject.timeTracked = userEdit;
+                                    userSettings = await User.findByIdAndUpdate(userSettings._id, {
+                                        $set: { voiceChannels: userSettings.voiceChannels }
+                                    }, { new: true });
+                                }
+                            }
+                        }
                         break;
                 }
                 if (userEdit === false) return;
@@ -591,6 +655,77 @@ module.exports = {
                                 else continueEdit = true;
                             }
                             break;
+                        case 9 - quoteAdjustment:
+                            {
+                                switch (userEdit) {
+                                    case '📊': userEdit = true;
+                                        break;
+                                    case '🗑️': userEdit = false;
+                                        break;
+                                    default: userEdit = null;
+                                        break;
+                                }
+                                if (typeof userEdit === "boolean") {
+                                    // Add voice channel
+                                    if (userEdit) {
+                                        if (userSettings.voiceChannels) if (userSettings.voiceChannels.length >= tier) {
+                                            message.reply("**You cannot track another voice channel because you don't have any more spots!**"
+                                                + `\n(${tier} voice channels allowed in total)`);
+                                            continueEdit = true;
+                                            break;
+                                        }
+                                        // If in server, list out all voice channel names and user select from them,
+                                        // Or list all across all mutual servers
+                                        const targetVoiceChannel = await fn.getTargetChannel(bot, message, PREFIX,
+                                            `Add Voice Channel to Track Time Spent`, forceSkip, false, true, false, userEmbedColour,
+                                            userSettings.voiceChannels.map(vc => vc.id));
+                                        if (!targetVoiceChannel) return;
+                                        console.log({ targetVoiceChannel });
+                                        userSettings = await User.findByIdAndUpdate(userSettings._id, {
+                                            $push: {
+                                                voiceChannels: {
+                                                    id: targetVoiceChannel,
+                                                    timeTracked: 0,
+                                                    lastTrackedTimestamp: Date.now() + HOUR_IN_MS * timezoneOffset,
+                                                },
+                                            },
+                                        }, { new: true });
+                                    }
+
+                                    // Remove voice channel
+                                    else {
+                                        if (userSettings.voiceChannels) if (userSettings.voiceChannels.length === 0) {
+                                            message.reply("**You cannot remove a voice channel because you are not tracking any right now!**");
+                                            continueEdit = true;
+                                            break;
+                                        }
+                                        let vcList = "";
+                                        userSettings.voiceChannels.forEach((vc, i) => {
+                                            vcList += `\`${i + 1}\` - ${bot.channels.cache.get(vc.id).name}`;
+                                            if (i !== userSettings.voiceChannels.length) {
+                                                vcList += '\n';
+                                            }
+                                        });
+                                        const vcTargetIndex = await fn.userSelectFromList(bot, message, PREFIX,
+                                            vcList, userSettings.voiceChannels.length,
+                                            "**Type the number corresponding to the voice channel you would like to stop tracking:**\n",
+                                            `${type}: Voice Channel Removal`, userEmbedColour, 180000);
+                                        if (!vcTargetIndex && vcTargetIndex !== 0) return;
+                                        else {
+                                            const vcTarget = userSettings.voiceChannels[vcTargetIndex];
+                                            userSettings = await User.findByIdAndUpdate(userSettings._id, {
+                                                $pull: {
+                                                    voiceChannels: {
+                                                        id: vcTarget.id,
+                                                    },
+                                                },
+                                            }, { new: true });
+                                        }
+                                    }
+                                }
+                                else continueEdit = true;
+                            }
+                            break;
                     }
                 }
                 else continueEdit = true;
@@ -599,7 +734,7 @@ module.exports = {
                     let reminderQuery = {
                         userID: authorID,
                     };
-                    const confirmUpdateReminders = await fn.userSelectFromList(bot, PREFIX, message,
+                    const confirmUpdateReminders = await fn.userSelectFromList(bot, message, PREFIX,
                         "`1` - Adjust **ALL** of your reminders\n`2` - Adjust only your **DM** reminders"
                         + "\n`3` - Adjust only your **server** reminders\n`4` - NONE", 4,
                         "**__Would you like to adjust your reminders to this new timezone?__**"
@@ -706,7 +841,7 @@ module.exports = {
                             currentQuote, "Quote", true, false, true, userSettings.quoteInterval,
                             false, quoteEmbedColour);
                     }
-                    const continueEditMessage = `Do you want to continue **editing your settings?**\n\n${userDocumentToString(userSettings)}`;
+                    const continueEditMessage = `Do you want to continue **editing your settings?**\n\n${await userDocumentToString(bot, userSettings)}`;
                     continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Settings: Continue Editing?`, 300000);
                 }
             }

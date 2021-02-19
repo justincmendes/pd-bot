@@ -109,9 +109,9 @@ module.exports = {
         await Habit.updateOne({ _id }, { $set: { nextCron } });
         const now = Date.now();
         const cronDelay = nextCron - now;
+        console.log(fn.timestampToDateString(nextCron + offset * HOUR_IN_MS));
         console.log(`User Id: ${userID}\nHabit Description: ${habit.description}`
             + `\nHabit Cron Delay: ${fn.millisecondsToTimeString(cronDelay)}\n`);
-        console.log(fn.timestampToDateString(nextCron + offset * HOUR_IN_MS));
 
         // const nextCronTime = this.getNextCronTimeUTC(offset, habitCron,
         //     isWeeklyType, cronPeriods, nextCron);

@@ -73,7 +73,7 @@ async function getGeneratedPromptAndAnswer(bot, message, PREFIX, prompts) {
             }
         }
         const user = bot.users.fetch(currentPrompt.userID);
-        let entry = await fn.getMultilineEntry(bot, PREFIX, message, `**__${currentPrompt || ""}__**${user ? `\n\nBy: __**${user.username}**__` : ""}`,
+        let entry = await fn.getMultilineEntry(bot, message, PREFIX, `**__${currentPrompt || ""}__**${user ? `\n\nBy: __**${user.username}**__` : ""}`,
             "Journal: Prompt and Answer", true, journalEmbedColour, newPromptInstructions, newPromptKeywords, newPrompt ? "" : entry.array);
         if (!entry) return false;
         else if (entry.returnVal === 'n') {
@@ -277,7 +277,7 @@ module.exports = {
                 case '📜': {
                     if (journalInProgress) return message.reply(`**You already have a journal entry in progress!** Try** \`${PREFIX}${commandUsed} end\` **to **complete** your journal entry`);
 
-                    let gratitudes = await fn.getMultilineEntry(bot, PREFIX, message, "What are **3** things you are **truly __grateful__** for? 🙏\n(big or small)"
+                    let gratitudes = await fn.getMultilineEntry(bot, message, PREFIX, "What are **3** things you are **truly __grateful__** for? 🙏\n(big or small)"
                         + "\n(Within 1000 characters)", "Journal: Gratitudes", true, journalEmbedColour, 1000);
                     gratitudes = gratitudes.message;
                     console.log({ gratitudes });
@@ -289,7 +289,7 @@ module.exports = {
                     // console.log({ improvements });
                     // if (!improvements && improvements !== '') return;
 
-                    let actions = await fn.getMultilineEntry(bot, PREFIX, message, "What are **3 __actions or mindset shifts__** that would make **today great**? 🧠‍"
+                    let actions = await fn.getMultilineEntry(bot, message, PREFIX, "What are **3 __actions or mindset shifts__** that would make **today great**? 🧠‍"
                         + "\n(Within 1000 characters)", "Journal: Actions", true, journalEmbedColour, 1000);
                     actions = actions.message;
                     console.log({ actions });
@@ -347,7 +347,7 @@ module.exports = {
                         const userPrompt = await fn.getSingleEntryWithCharacterLimit(bot, message, PREFIX, `**Enter a __question or prompt__ you'd like to explore and answer:**`
                             + "\n(Within 1000 characters)", "Journal: Create Prompt", 1000, "a prompt", forceSkip, journalEmbedColour);
                         if (!userPrompt) return;
-                        let journalEntry = await fn.getMultilineEntry(bot, PREFIX, message, userPrompt, "Journal: Prompt and Answer", forceSkip, journalEmbedColour);
+                        let journalEntry = await fn.getMultilineEntry(bot, message, PREFIX, userPrompt, "Journal: Prompt and Answer", forceSkip, journalEmbedColour);
                         if (!journalEntry) return;
                         journalEntry = journalEntry.message;
                         journalDocument = new Journal({
@@ -400,7 +400,7 @@ module.exports = {
                 }
                     break;
                 case '✍': {
-                    let journalEntry = await fn.getMultilineEntry(bot, PREFIX, message, "\n**__Type in your journal entry:__**", "Journal: Freehand (No Template)", forceSkip, journalEmbedColour);
+                    let journalEntry = await fn.getMultilineEntry(bot, message, PREFIX, "\n**__Type in your journal entry:__**", "Journal: Freehand (No Template)", forceSkip, journalEmbedColour);
                     if (!journalEntry) return;
                     journalEntry = journalEntry.message;
                     journalDocument = new Journal({
@@ -426,14 +426,14 @@ module.exports = {
 
         else if (journalCommand === "end" || journalCommand === "e") {
             if (!journalInProgress) return message.reply(`**No journals in progress...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
-            let amazing = await fn.getMultilineEntry(bot, PREFIX, message, "List **3 __amazing__** things that happened today ☘ (big or small)"
+            let amazing = await fn.getMultilineEntry(bot, message, PREFIX, "List **3 __amazing__** things that happened today ☘ (big or small)"
                 + "\n(Within 1500 Characters)", "Journal: The Amazing 3", true, journalEmbedColour, 1500);
             if (!amazing) return;
             else amazing = amazing.message;
             // let accomplishments = await fn.getMultilineEntry(bot, message, "List **3 __accomplishments__** today 🏆🥇 (big or small)", "Journal: Accomplishments", true, journalEmbedColour);
             // if (!accomplishments);
             // else accomplishments = accomplishments.message;
-            let betterDay = await fn.getMultilineEntry(bot, PREFIX, message, "**__How could you have made today better?__** 📈\n\ne.g. **__Retrospective Journal:__**"
+            let betterDay = await fn.getMultilineEntry(bot, message, PREFIX, "**__How could you have made today better?__** 📈\n\ne.g. **__Retrospective Journal:__**"
                 + "\n👀 - **Critical Moment** of suboptimal behaviour/action.\n🧠 - The **rationalization/thought pattern** behind it."
                 + "\n🤔 - How you want to **think** next time! 💭\n\n[From *Metascript Method* - by Mark Queppet]\n(Within 1500 Characters)",
                 "Journal: Retrospective Better Day", true, journalEmbedColour, 1500);
@@ -941,25 +941,25 @@ module.exports = {
                                 switch (fieldToEditIndex) {
                                     case 1: {
                                         journalEditMessagePrompt = `\nWhat are **3** things you are **truly __grateful__** for? 🙏\n(big or small)`;
-                                        userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
                                         entry.gratitudes = userEdit;
                                     }
                                         break;
                                     case 2: {
                                         journalEditMessagePrompt = `\nWhat are **3 __actions or mindset shifts__** that would make **today great**? 🧠`;
-                                        userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
                                         entry.actions = userEdit;
                                     }
                                         break;
                                     case 3: {
                                         journalEditMessagePrompt = `\nComplete the affirmation:\n\n**__I am...__**`;
-                                        userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
                                         entry.affirmations = userEdit;
                                     }
                                         break;
                                     case 4: {
                                         journalEditMessagePrompt = `\nList **3 __amazing__** things that happened today ☘ (big or small)`;
-                                        userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
                                         entry.amazing = userEdit;
                                     }
                                         break;
@@ -967,7 +967,7 @@ module.exports = {
                                         journalEditMessagePrompt = `\n**__How could you have made today better?__** 📈\n\ne.g. **__Retrospective Journal:__**`
                                             + "\n**__CM__** - **Critical Moment** of suboptimal behaviour/action. 👀\n**__X__** - The **rationalization/thought pattern** behind it. 🧠"
                                             + "\n**__\\\$__** - How you want to **think** next time! 🤔💭\n\n[From *Metascript Method* - by Mark Queppet]";
-                                        userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
                                         entry.betterDay = userEdit;
                                     }
                                         break;
@@ -984,7 +984,7 @@ module.exports = {
                                         break;
                                     case 2: {
                                         journalEditMessagePrompt = `\n${entry.prompt || "**Enter your new answer to the prompt ✍:**"}`;
-                                        userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
                                         entry.message = userEdit;
                                     }
                                         break;
@@ -994,7 +994,7 @@ module.exports = {
                                 break;
                             case 3: {
                                 journalEditMessagePrompt = "\n**__Enter your new journal entry__**✍: ";
-                                userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
+                                userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, journalEditMessagePrompt, type, forceSkip, journalEmbedColour);
                                 entry.message = userEdit;
                                 break;
                             }
@@ -1096,7 +1096,8 @@ module.exports = {
                 if (indexByRecency) journal = await getOneJournalByRecency(authorID, journalIndex);
                 else journal = await getOneJournalByCreatedTime(authorID, journalIndex);
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
-                const targetChannel = await fn.getPostChannel(bot, PREFIX, message, `Journal ${sortType}`, forceSkip, journalEmbedColour);
+                const targetChannel = await fn.getTargetChannel(bot, message, PREFIX, `Journal ${sortType}`,
+                forceSkip, true, false, true, journalEmbedColour);
                 if (!targetChannel) return;
                 const member = bot.guilds.cache.get(guildID).member(authorID);
                 const posts = fn.getEmbedArray(journalDocumentToString(journal), `${member ? `${member.displayName}'s ` : ""}Journal Entry`

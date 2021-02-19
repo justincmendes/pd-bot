@@ -7,10 +7,12 @@ const Reminder = require("../djs-bot/database/schemas/reminder");
 const User = require("../djs-bot/database/schemas/user");
 const Guild = require("../djs-bot/database/schemas/guildsettings");
 const Dst = require("../djs-bot/database/schemas/dst");
+const Track = require("../djs-bot/database/schemas/track");
 require("dotenv").config();
 
 const CLIENT_ID = process.env.DASHBOARD_CLIENT_ID;
 const DEFAULT_PREFIX = '?';
+const TRACKING_INTERVAL = 5000;
 const TIMEOUT_MS = 375;
 // Timescale Constants
 const SECOND_IN_MS = 1000;
@@ -23,6 +25,7 @@ const MONTH_IN_MS = 2.628e+9;
 const YEAR_IN_MS = 3.154e+10;
 const MAX_32_BIT_SIGNED_INT = 2147483647;
 const spamRecords = new Discord.Collection();
+const tracking = new Discord.Collection();
 
 // Private Function Declarations
 
@@ -448,27 +451,35 @@ module.exports = {
         + "\n**\|** Jan 5, 2020 00:00 -5:00 **\|** Aug 31/20 12a PDT **\|** September 8, 2020 559 CDT**"
         + "\n\nRemember **Daylight Saving Time (DST)** when entering **abbreviated timezones**:\n**EST and EDT** for example, are **different** because of DST.",
 
-    userAndBotMutualServerIDs: async function (bot, userID, botServersIDs) {
+    userAndBotMutualServerIDs: async function (bot, userID) {
+        // Check all of the servers the bot is in
+        const botServersIDs = await this.getAllBotServers(bot);
         var botUserServers = new Array();
         for (i = 0; i < botServersIDs.length; i++) {
-            if (await bot.guilds.cache.get(botServersIDs[i]).member(userID)) {
+            const server = await bot.guilds.cache.get(botServersIDs[i]);
+            if(server) if (server.member(userID) && botServersIDs[i]) {
                 botUserServers.push(botServersIDs[i]);
             }
         }
         return botUserServers;
     },
 
+    getAllBotServers: async function (bot) {
+        const botServersIDs = await bot.guilds.cache.map(guild => guild.id);
+        return botServersIDs;
+    },
+
     listOfServerNames: async function (bot, serverIDs) {
         var serverListString = "";
         await serverIDs.forEach(async (server, serverIndex) => {
-            let serverName = await bot.guilds.cache.get(server).name;
+            const serverName = await bot.guilds.cache.get(server).name;
             serverListString = serverListString + `\`${serverIndex + 1}\` - **` + serverName + "**\n";
         });
         return serverListString;
     },
 
     // Note: This function displays values from 1 onwards but returns a properly indexed value (for arrays)
-    userSelectFromList: async function (bot, PREFIX, message, list, numberOfEntries, instructions, selectTitle,
+    userSelectFromList: async function (bot, message, PREFIX, list, numberOfEntries, instructions, selectTitle,
         messageColour = this.defaultEmbedColour, delayTime = 120000, userMessageDeleteDelay = 0, messageAfterList = "") {
         try {
             var targetIndex;
@@ -514,14 +525,20 @@ module.exports = {
         }
     },
 
-    listOfServerTextChannelsUserCanSendTo: async function (bot, userOriginalMessageObject, serverID) {
+    listOfServerChannels: async function (bot, userOriginalMessageObject, serverID,
+        allowTextChannels = true, allowVoiceChannels = false) {
         const channelList = await bot.guilds.cache.get(serverID).channels.cache.map(channel => {
             const userPermissions = channel.permissionsFor(userOriginalMessageObject.author);
             if (!userPermissions) return null;
-            else if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL") && channel.type === "text") {
-                return channel.id;
+            else if (userPermissions.has("VIEW_CHANNEL")) {
+                if (allowTextChannels && userPermissions.has("SEND_MESSAGES") && channel.type === "text") {
+                    return channel.id;
+                }
+                if (allowVoiceChannels && userPermissions.has("CONNECT") && channel.type === "voice") {
+                    return channel.id;
+                }
             }
-            else return null;
+            return null;
         }).filter(element => element !== null);
         return channelList;
     },
@@ -1808,7 +1825,7 @@ module.exports = {
     // Assumes that the userTimezone is already daylight-saving adjusted
     timeCommandHandlerToUTC: function (args, messageCreatedTimestamp, userTimezone = -4,
         userDaylightSavingSetting = true, isRelativeToNow = true, forceRelativeTime = false,
-        isForInterval = false) {
+        isForInterval = false, durationOnly = false) {
         const startTimestamp = Date.now();
         if (!Array.isArray(args) && typeof args === 'string') {
             args = args.toLowerCase().split(/[\s\n]+/);
@@ -1853,10 +1870,7 @@ module.exports = {
         // 0 - All choices we're null or insufficient/not chosen.
         if (!decision) return false;
         else {
-            const RELATIVE_ADJUSTMENT = Date.now() - startTimestamp;
-            if (isRelativeToNow && (decision === 1 || decision === 5)) {
-                messageCreatedTimestamp = Date.now() + RELATIVE_ADJUSTMENT;
-            }
+            if (durationOnly && decision !== 1 && decision !== 5) return false;
             var timestampOut, timezoneString;
             switch (decision) {
                 case 1:
@@ -1883,6 +1897,9 @@ module.exports = {
                             numberOfTimeScales = -numberOfTimeScales;
                         }
                         const timeScaleToMultiply = this.getTimeScaleToMultiplyInMs(timeScale);
+
+                        let RELATIVE_ADJUSTMENT = Date.now() - startTimestamp;
+                        if (isRelativeToNow) messageCreatedTimestamp = Date.now() + RELATIVE_ADJUSTMENT;
 
                         const timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
                         let [year, month, day, hour, minute, second, millisecond] = timeArray;
@@ -2016,6 +2033,10 @@ module.exports = {
                             else return false;
                         }
                         const futurePastMultiple = futureTruePastFalse ? 1 : -1;
+
+                        let RELATIVE_ADJUSTMENT = Date.now() - startTimestamp;
+                        if (isRelativeToNow) messageCreatedTimestamp = Date.now() + RELATIVE_ADJUSTMENT;
+
                         let timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
                         let [year, month, day, hour, minute, second,] = timeArray;
                         var noEntries = true;
@@ -3100,7 +3121,7 @@ module.exports = {
      * @param {Boolean} forceSkip 
      * @param {String} embedColour 
      */
-    getUserMultilineEditString: async function (bot, PREFIX, message, field, instructionPrompt, type,
+    getUserMultilineEditString: async function (bot, message, PREFIX, field, instructionPrompt, type,
         forceSkip = false, embedColour = this.defaultEmbedColour, characterLimit = 2000) {
         let messageIndex = 0;
         let reset = false;
@@ -3200,7 +3221,7 @@ module.exports = {
                         }
                         else {
                             console.log("Could not undo the last typed edit!");
-                            fn.sendMessageThenDelete(message, `**Sorry <@!${message.author.id}>, I could not undo the last typed edit!**`, 30000);
+                            this.sendMessageThenDelete(message, `**Sorry <@!${message.author.id}>, I could not undo the last typed edit!**`, 30000);
                             error = true;
                         }
                     }
@@ -3632,37 +3653,45 @@ module.exports = {
         return targetIDs;
     },
 
-    getPostChannel: async function (bot, PREFIX, message, type, forceSkip = false, embedColour = this.defaultEmbedColour) {
-        // Check all of the servers the bot is in
-        let botServers = await bot.guilds.cache.map(guild => guild.id);
-        console.log({ botServers });
-
+    getTargetChannel: async function (bot, message, PREFIX, type,
+        forceSkip = false, allowTextChannels = true, allowVoiceChannels = false,
+        forPosting = true, embedColour = this.defaultEmbedColour, excludedChannels = []) {
         // Find all the mutual servers with the user and bot
-        var botUserMutualServerIDs = await this.userAndBotMutualServerIDs(bot, message, botServers);
+        var botUserMutualServerIDs = await this.userAndBotMutualServerIDs(bot, message);
         var targetServerIndex, targetChannelIndex;
         var channelList, channelListDisplay;
         var confirmSendToChannel = false;
-        const channelSelectInstructions = "Type the number corresponding to the channel you want to post in:";
-        const serverSelectInstructions = "Type the number corresponding to the server you want to post in:";
-        const postToServerTitle = `${type}: Post to Server`;
-        const postToChannelTitle = `${type}: Post to Channel`;
+        const channelSelectInstructions = `Type the number corresponding to the channel you want`
+            + `${forPosting ? ` to post in:` : ""}`;
+        const serverSelectInstructions = `Type the number corresponding to the server you want`
+            + `${forPosting ? ` to post in:` : ""}`;
+        const postToServerTitle = `${type}:${forPosting ? ` Post to` : ""} Server`;
+        const postToChannelTitle = `${type}:${forPosting ? ` Post to` : ""} Channel`;
         var serverList = await this.listOfServerNames(bot, botUserMutualServerIDs);
-        targetServerIndex = await this.userSelectFromList(bot, PREFIX, message, serverList, botUserMutualServerIDs.length,
+        targetServerIndex = await this.userSelectFromList(bot, message, PREFIX, serverList, botUserMutualServerIDs.length,
             serverSelectInstructions, postToServerTitle, embedColour);
         if (targetServerIndex === false) return false;
-        channelList = await this.listOfServerTextChannelsUserCanSendTo(bot, message, botUserMutualServerIDs[targetServerIndex]);
+        channelList = await this.listOfServerChannels(bot, message, botUserMutualServerIDs[targetServerIndex],
+            allowTextChannels, allowVoiceChannels);
         if (channelList.length == 0) {
             this.sendReplyThenDelete(message, "This server has **no channels!** EXITING...");
             return false;
         }
+        else {
+            channelList = channelList.filter(channel => {
+                return !excludedChannels.includes(channel);
+            });
+        }
         channelListDisplay = await this.listOfChannelNames(bot, channelList);
         while (confirmSendToChannel === false) {
-            targetChannelIndex = await this.userSelectFromList(bot, PREFIX, message, channelListDisplay, channelList.length,
+            targetChannelIndex = await this.userSelectFromList(bot, message, PREFIX, channelListDisplay, channelList.length,
                 channelSelectInstructions, postToChannelTitle, embedColour, 300000);
             if (targetChannelIndex === false) return false;
             console.log({ targetChannelIndex });
             let targetChannelName = await bot.channels.cache.get(channelList[targetChannelIndex]).name;
-            confirmSendToChannel = await this.getUserConfirmation(bot, message, PREFIX, `Are you sure you want to send it to **#${targetChannelName}**?`, forceSkip);
+            confirmSendToChannel = await this.getUserConfirmation(bot, message, PREFIX,
+                `Are you sure you want ${forPosting ? `to send it to ` : ""}**${targetChannelName}**?`,
+                forceSkip);
             if (confirmSendToChannel === null) return false;
         }
         return channelList[targetChannelIndex];
@@ -3783,7 +3812,7 @@ module.exports = {
         }
     },
 
-    getMultilineEntry: async function (bot, PREFIX, message, instructionPrompt, title, forceSkip = false,
+    getMultilineEntry: async function (bot, message, PREFIX, instructionPrompt, title, forceSkip = false,
         embedColour = this.defaultEmbedColour, characterLimit = 2000, additionalInstructions = "", instructionKeywords = [],
         startingArray = false) {
         let inputIndex = 0;
@@ -4255,7 +4284,7 @@ module.exports = {
         if (objectArray) if (objectArray.length) {
             const list = this.getSelectionListOutput(objectArray, propertyToDisplay,
                 doubleSpaceList, false, extraListElements);
-            const targetObjectIndex = await this.userSelectFromList(bot, PREFIX, message,
+            const targetObjectIndex = await this.userSelectFromList(bot, message, PREFIX,
                 list.string + '\n', list.array.length, selectionInstructions, selectionTitle,
                 embedColour, delayTime, userMessageDeleteDelay, messageAfterList);
             if (!targetObjectIndex && targetObjectIndex !== 0) return false;
@@ -4272,6 +4301,211 @@ module.exports = {
         }
         return false;
     },
+
+    resetAllVoiceChannelTracking: async function (bot) {
+        const allTracking = await Track.find({});
+        if (allTracking) if (allTracking.length) {
+            allTracking.forEach(async trackObject => {
+                await this.updateVoiceChannelTimeTracked(
+                    bot, trackObject.userID, trackObject.voiceChannelID,
+                    trackObject.end - trackObject.start, true,
+                    trackObject.end);
+                await Track.deleteOne({ _id: trackObject._id });
+            });
+            console.log("Successfully removed all lingering voice channel tracking objects.");
+        }
+        // Check if the user is currently in a voice channel and setup tracking
+        const users = await User.find({});
+        if (users) if (users.length) {
+            users.forEach(async user => {
+                const mutualServers = await this.userAndBotMutualServerIDs(bot, user.discordID);
+                if (mutualServers) if (mutualServers.length) {
+                    mutualServers.forEach(async serverID => {
+                        const server = bot.guilds.cache.get(serverID);
+                        const serverMember = server.members.cache.get(user.discordID);
+                        if (serverMember.voice.channel) {
+                            await this.setupVoiceChannelTracking(
+                                bot, user.discordID, serverMember.voice.channel.id
+                            );
+                        }
+                    });
+                }
+            });
+            console.log("Successfully updated voice channel tracking for members in voice channels.");
+        }
+    },
+
+    voiceChannelArrayToString: async function (bot, userID, voiceChannels) {
+        var currentTracking = await Track.findOne({ userID });
+        if (currentTracking) {
+            const update = await this.updateVoiceChannelTimeTracked(
+                bot, userID, currentTracking.voiceChannelID,
+                this.getCurrentUTCTimestampFlooredToSecond() - currentTracking.start,
+                true
+            );
+            if (update) {
+                voiceChannels = update.voiceChannels;
+            }
+            currentTracking = await Track.findOneAndUpdate({ _id: currentTracking._id },
+                {
+                    $set: {
+                        start: this.getCurrentUTCTimestampFlooredToSecond(),
+                        end: this.getCurrentUTCTimestampFlooredToSecond(),
+                    },
+                }, { new: true });
+        }
+
+        const outputString = voiceChannels.map(vcObject => {
+            return `- **${bot.channels.cache.get(vcObject.id).name}** `
+                + `(${bot.channels.cache.get(vcObject.id).guild.name}): `
+                + `${this.millisecondsToTimeString(vcObject.timeTracked)}`
+                + `\n-- **Last Tracked:** ${this.timestampToDateString(vcObject.lastTrackedTimestamp)}`;
+        }).join('\n\n');
+        return outputString;
+    },
+
+    getMatchingVoiceChannelIndex: function (bot, voiceChannelArray, targetChannelID) {
+        var returnIndex = false;
+        if (voiceChannelArray) if (voiceChannelArray.length) {
+            voiceChannelArray.forEach((id, i) => {
+                if (targetChannelID === bot.channels.cache.get(id).id) {
+                    returnIndex = i;
+                }
+            });
+        }
+        return returnIndex;
+    },
+
+    getTargetVoiceChannelAndUserSettings: async function (bot, userID, voiceChannelID) {
+        const userSettings = await User.findOne({ discordID: userID });
+        if (userSettings) {
+            const { voiceChannels } = userSettings;
+            if (voiceChannels) if (voiceChannels.length) {
+                const targetVcIndex = this.getMatchingVoiceChannelIndex(
+                    bot, voiceChannels.map(vc => vc.id), voiceChannelID);
+                if (targetVcIndex || targetVcIndex === 0) {
+                    return {
+                        userSettings,
+                        voiceChannels: voiceChannels,
+                        voiceChannelIndex: targetVcIndex,
+                    };
+                }
+            }
+        }
+        return false;
+    },
+
+    updateVoiceChannelTimeTracked: async function (bot, userID, voiceChannelID,
+        durationChange, addDuration = true, lastTracked = undefined) {
+        try {
+            const vcInformation = await this.getTargetVoiceChannelAndUserSettings(
+                bot, userID, voiceChannelID
+            );
+            if (!vcInformation) return false;
+            else {
+                const { userSettings, voiceChannels, voiceChannelIndex } = vcInformation;
+                voiceChannels[voiceChannelIndex].timeTracked = addDuration ?
+                    voiceChannels[voiceChannelIndex].timeTracked + durationChange
+                    : durationChange;
+                if (voiceChannels[voiceChannelIndex].timeTracked < 0) {
+                    voiceChannels[voiceChannelIndex].timeTracked = 0;
+                }
+                voiceChannels[voiceChannelIndex].lastTrackedTimestamp = lastTracked || lastTracked === 0 ?
+                    lastTracked : this.getCurrentUTCTimestampFlooredToSecond() + userSettings.timezone.offset * HOUR_IN_MS;
+                const updatedUserSettings = await User.findByIdAndUpdate(userSettings.id, {
+                    $set: { voiceChannels: voiceChannels }
+                }, { new: true });
+                return {
+                    userSettings: updatedUserSettings,
+                    voiceChannels: voiceChannels,
+                };
+            }
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
+    setupVoiceChannelTracking: async function (bot, userID,
+        targetChannelID, targetVcAndUserSettings = undefined) {
+        try {
+            var vcInformation = targetVcAndUserSettings;
+            if (!targetVcAndUserSettings) {
+                vcInformation = await this.getTargetVoiceChannelAndUserSettings(
+                    bot, userID, targetChannelID
+                );
+            }
+            if (!vcInformation) return false;
+
+            var trackingDocument, targetVcIndex, userSettings;
+            userSettings = vcInformation.userSettings;
+            targetVcIndex = vcInformation.voiceChannelIndex;
+            trackingDocument = new Track({
+                _id: mongoose.Types.ObjectId(),
+                userID,
+                voiceChannelID: targetChannelID,
+                start: this.getCurrentUTCTimestampFlooredToSecond(),
+                end: this.getCurrentUTCTimestampFlooredToSecond(),
+            });
+            await trackingDocument.save()
+                .catch(err => console.error(err));
+            if (trackingDocument && (targetVcIndex || targetVcIndex === 0)) {
+                var interval = setInterval(async () => {
+                    trackingDocument.end = this.getCurrentUTCTimestampFlooredToSecond();
+                    await Track.updateOne({ _id: trackingDocument._id }, {
+                        $set: { end: trackingDocument.end, }
+                    });
+                    return;
+
+                    // If you want to continuously update the timeTracked in real time...
+                    // trackingDocument.start = trackingDocument.end;
+                    // trackingDocument.end = this.getCurrentUTCTimestampFlooredToSecond();
+                    // await Track.updateOne({ _id: trackingDocument._id }, {
+                    //     $set:
+                    //     {
+                    //         start: trackingDocument.start,
+                    //         end: trackingDocument.end,
+                    //     }
+                    // });
+                    // const updatedObject = await this.updateVoiceChannelTimeTracked(
+                    //     bot, userID, targetChannelID,
+                    //     trackingDocument.end - trackingDocument.start,
+                    // ); 
+                    // if (!updatedObject) clearInterval(interval);
+                    // else userSettings = updatedObject.userSettings;
+                    // return;
+                }, TRACKING_INTERVAL)
+                tracking.set(userID, interval);
+            }
+            return true;
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
+    voiceTrackingHasUser: function (userID) {
+        return tracking.has(userID);
+    },
+
+    voiceTrackingAddCollection: function (key, value) {
+        return tracking.set(key, value);
+    },
+
+    voiceTrackingClearInterval: function (userID) {
+        return clearInterval(tracking.get(userID));
+    },
+
+    voiceTrackingGetInterval: function (userID) {
+        return tracking.get(userID)
+    },
+
+    voiceTrackingDeleteCollection: function (userID) {
+        return tracking.delete(userID);
+    },
+
 
 
     getTierMaxMessage: function (PREFIX, commandUsed, thresholdValue, type, tier, supportsArchive = false) {

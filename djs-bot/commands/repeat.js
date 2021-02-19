@@ -577,7 +577,7 @@ module.exports = {
                                 break;
                             // Reminder Message does not need a prompt explanation
                             case 4:
-                                userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, repeatEmbedColour);
+                                userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, repeatEmbedColour);
                                 break;
                             case 5:
                                 reminderEditMessagePrompt = `Would you like to make this a **__repeating (⌚)__ OR __one-time (1️⃣)__ reminder?**`;
@@ -885,7 +885,7 @@ module.exports = {
             let { duration: intervalDuration, args: intervalArgs } = interval;
             console.log(fn.millisecondsToTimeString(intervalDuration));
 
-            let remainingOccurrences = await fn.userSelectFromList(bot, PREFIX, message,
+            let remainingOccurrences = await fn.userSelectFromList(bot, message, PREFIX,
                 "`1` - **Keep repeating** 🔁\n`2` - **Repeat a certain number of times** 🔢", 2,
                 "Would you like this reminder to repeat indefinitely or repeat a fixed number of times?",
                 "Recurring Reminder: Number of Occurrences", repeatEmbedColour, 300000);
@@ -908,7 +908,7 @@ module.exports = {
             if (!channel) return;
             const isDM = channel === "DM";
 
-            let repeatMessage = await fn.getMultilineEntry(bot, PREFIX, message,
+            let repeatMessage = await fn.getMultilineEntry(bot, message, PREFIX,
                 "__**Enter the message of this reminder**__:\n(Remember to @mention the roles/users you want to ping in the message!)",
                 "Recurring Reminder: Message", forceSkip, repeatEmbedColour, 2000);
             repeatMessage = repeatMessage.message;

@@ -391,12 +391,12 @@ module.exports = {
                 }
 
                 const habitDescriptionString = `__**Description:**__\n${habitDescription}`;
-                const habitAreaOfLife = await fn.userSelectFromList(bot, PREFIX, message, areasOfLifeList, areasOfLife.length,
+                const habitAreaOfLife = await fn.userSelectFromList(bot, message, PREFIX, areasOfLifeList, areasOfLife.length,
                     `${habitDescriptionString}\n\n**__Which area of life does your habit fall under?__** 🌱`, `Habit: Creation - Area of Life`, habitEmbedColour);
                 if (!habitAreaOfLife && habitAreaOfLife !== 0) return;
 
                 const habitTypeString = `__**Type:**__ ${areasOfLifeEmojis[habitAreaOfLife]} **${areasOfLife[habitAreaOfLife]}**\n${habitDescriptionString}`;
-                let habitReason = await fn.getMultilineEntry(bot, PREFIX, message, habitTypeString
+                let habitReason = await fn.getMultilineEntry(bot, message, PREFIX, habitTypeString
                     + "\n\n💭 **__Why__ do you want to incorporate this habit into your lifestyle?**\n(Within 1000 characters)",
                     "Habit: Creation - Reason", true, habitEmbedColour, 1000, additionalInstructions, additionalKeywords);
                 if (!habitReason.message && habitReason.message !== "") return;
@@ -427,14 +427,14 @@ module.exports = {
                 const cronSettings = `**Daily Streak Reset Time:** ${fn.msToTimeFromMidnight(habitCron.daily)}`
                     + `\n**Weekly Reset Day:** ${fn.getDayOfWeekToString(habitCron.weekly)}`;
 
-                let cronType = await fn.userSelectFromList(bot, PREFIX, message, "\n`1` - **Daily Reset** 🌇\n`2` - **Weekly Reset** 📅", 2,
+                let cronType = await fn.userSelectFromList(bot, message, PREFIX, "\n`1` - **Daily Reset** 🌇\n`2` - **Weekly Reset** 📅", 2,
                     "**__When do you want this habit's streaks to reset?__** ⌚\n(You can specify after how many reset days or weeks the streak should reset in the next window)"
                     + `\n\n${cronSettings}\n\nType** \`${PREFIX}user edit\` **later - to change the settings shown above`, "Habit: Creation - Streak Reset", habitEmbedColour);
                 if (!cronType && cronType !== 0) return;
                 let isWeeklyType = false;
                 if (cronType === 1) isWeeklyType = true;
 
-                const advancedSettings = await fn.userSelectFromList(bot, PREFIX, message, "\n`1` - **Default Settings**\n`2` - **Advanced Settings**", 2,
+                const advancedSettings = await fn.userSelectFromList(bot, message, PREFIX, "\n`1` - **Default Settings**\n`2` - **Advanced Settings**", 2,
                     `**__Would you like to use the default settings or change them?__** ⚙\n\n${cronSettings}`
                     + `\n**Habit Streak Reset Time:** Every ${isWeeklyType ? "Week" : "Day"}`
                     + `\n**Includes Value to Count:** No\n- **Auto-Complete Based on Count:** No\n- **Auto-Complete as Streak:** No`,
@@ -458,7 +458,7 @@ module.exports = {
                     else if (!isNaN(cronPeriods)) cronPeriods = parseInt(cronPeriods);
                     else cronPeriods = 1;
 
-                    isCountType = await fn.userSelectFromList(bot, PREFIX, message, "\n`1` - **Yes** ✅\n`2` - **No** ❌", 2,
+                    isCountType = await fn.userSelectFromList(bot, message, PREFIX, "\n`1` - **Yes** ✅\n`2` - **No** ❌", 2,
                         `**__Does this habit include a number value to track?__** 📈\n(e.g. number of pushups, minutes spent studying, etc.)`,
                         "Habit: Creation - Advanced Settings: Count Value", habitEmbedColour);
                     if (!isCountType && isCountType !== 0) return;
@@ -475,7 +475,7 @@ module.exports = {
                             continue;
                         }
 
-                        countGoalType = await fn.userSelectFromList(bot, PREFIX, message, "\n`1` - **Daily Goal** 🌇\n`2` - **Weekly Goal** 📅\n`3` - **Total/Cumulative Goal** 🔢",
+                        countGoalType = await fn.userSelectFromList(bot, message, PREFIX, "\n`1` - **Daily Goal** 🌇\n`2` - **Weekly Goal** 📅\n`3` - **Total/Cumulative Goal** 🔢",
                             3, `**What kind of goal do you have for __${countMetric}__?**`, "Habit: Creation - Advanced Settings: Count Goal Type", habitEmbedColour);
                         if (!countGoalType && countGoalType !== 0) return;
                         else countGoalType++;
@@ -502,7 +502,7 @@ module.exports = {
                     }
                     if (!hasCountGoal && noMoreStreakHabitsAtTier) autoLogType = 0;
                     else {
-                        autoLogType = await fn.userSelectFromList(bot, PREFIX, message, `\n\`1\` - **No** ⛔${noMoreStreakHabitsAtTier ? "" : `\n\`2\` - **Yes, As a Streak** (Every Reset Time) 🔄`}`
+                        autoLogType = await fn.userSelectFromList(bot, message, PREFIX, `\n\`1\` - **No** ⛔${noMoreStreakHabitsAtTier ? "" : `\n\`2\` - **Yes, As a Streak** (Every Reset Time) 🔄`}`
                             + `${hasCountGoal ? `\n\`3\` - **Yes, Based on Count Goal** (When goal is reached after logging habit) 🔢` : ""}`, (hasCountGoal ? 2 : 1) + (noMoreStreakHabitsAtTier ? 0 : 1),
                             `**__Do you want the habit to automatically log/complete?__**\n(You can still manually log/edit your entries)`
                             + `\n${noMoreStreakHabitsAtTier ? `P.S. You've reached your **maximum number of streak habits (${streakHabitMax}) for your tier level (${tier})**` : ""}`,
@@ -1176,7 +1176,7 @@ module.exports = {
                                 logs.forEach((log, i) => {
                                     logList += `\`${i + 1}\`\: ${hb.logDocumentToString(log)}\n`;
                                 });
-                                targetLogIndex = await fn.userSelectFromList(bot, PREFIX, message, `\n${logList}`, logs.length,
+                                targetLogIndex = await fn.userSelectFromList(bot, message, PREFIX, `\n${logList}`, logs.length,
                                     "**Please enter the number corresponding to the habit log you'd like to edit.**",
                                     `${type}: Log Field`, habitEmbedColour, 600000, 0);
                                 if (!targetLogIndex && targetLogIndex !== 0) return;
@@ -1202,7 +1202,7 @@ module.exports = {
                                     case 1:
                                         let currentStateEmoji = hb.getStateEmoji(currentState);
                                         habitEditMessagePrompt = checkMissedSkipList;
-                                        userEdit = await fn.userSelectFromList(bot, PREFIX, message, habitEditMessagePrompt, 3,
+                                        userEdit = await fn.userSelectFromList(bot, message, PREFIX, habitEditMessagePrompt, 3,
                                             `**Current State:** ${currentStateEmoji}`, `${type}: Log Field`, habitEmbedColour);
                                         break;
                                     // Reflection
@@ -1243,7 +1243,7 @@ module.exports = {
                             break;
                         case 3:
                             habitEditMessagePrompt = "\n💭 **__Why__ do you want to incorporate this habit into your lifestyle?**\n(Within 1000 characters)";
-                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, habitEditMessagePrompt, type, forceSkip, habitEmbedColour, 1000);
+                            userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, habitEditMessagePrompt, type, forceSkip, habitEmbedColour, 1000);
                             reason = userEdit;
                             break;
                         case 4:
@@ -1308,7 +1308,7 @@ module.exports = {
                                 default: noMoreStreakHabitsAtTier = true;
                                     break;
                             }
-                            userEdit = await fn.userSelectFromList(bot, PREFIX, message, `\n\`1\` - **No** ⛔${noMoreStreakHabitsAtTier ? "" : `\n\`2\` - **Yes, As a Streak** (Every Reset Time) 🔄`}`
+                            userEdit = await fn.userSelectFromList(bot, message, PREFIX, `\n\`1\` - **No** ⛔${noMoreStreakHabitsAtTier ? "" : `\n\`2\` - **Yes, As a Streak** (Every Reset Time) 🔄`}`
                                 + `${hasCountGoal ? `\n\`3\` - **Yes, Based on Count Goal** (When goal is reached after logging habit) 🔢` : ""}`, (hasCountGoal ? 2 : 1) + (noMoreStreakHabitsAtTier ? 0 : 1),
                                 `**__Do you want the habit to automatically log/complete?__**\n(You can still manually log/edit your entries)`
                                 + `\n${noMoreStreakHabitsAtTier ? `P.S. You've reached your **maximum number of streak habits (${streakHabitMax}) for your tier level (${tier})**` : ""}`,
@@ -1326,7 +1326,7 @@ module.exports = {
                             break;
                         case 12:
                             habitEditMessagePrompt = `**What kind of goal do you have for __${countMetric || "this count-based habit"}__?**`;
-                            userEdit = await fn.userSelectFromList(bot, PREFIX, message, "\n`1` - **Daily Goal** 🌇\n`2` - **Weekly Goal** 📅\n`3` - **Total/Cumulative Goal** 🔢",
+                            userEdit = await fn.userSelectFromList(bot, message, PREFIX, "\n`1` - **Daily Goal** 🌇\n`2` - **Weekly Goal** 📅\n`3` - **Total/Cumulative Goal** 🔢",
                                 3, habitEditMessagePrompt, `${type}: Count Goal Type`, habitEmbedColour);
                             if (!userEdit && userEdit !== 0) return;
                             else if (userEdit === "back") break;
@@ -1593,7 +1593,8 @@ module.exports = {
         else if (habitCommand === "post" || habitCommand === "p") {
             let habits = await Habit.find({ archived: false }).sort({ createdAt: +1 });
             if (!habits) return message.reply(`**You don't have any habits**, try \`${PREFIX}${commandUsed} start\``);
-            const targetChannel = await fn.getPostChannel(bot, PREFIX, message, `Habit`, forceSkip, habitEmbedColour);
+            const targetChannel = await fn.getTargetChannel(bot, message, PREFIX, `Habit`,
+                forceSkip, true, false, true, habitEmbedColour);
             if (!targetChannel) return;
             const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
             const habitStringArray = await multipleHabitsToStringArray(message, habits, totalHabitNumber, 0, false, true);
@@ -1635,7 +1636,7 @@ module.exports = {
                 if (!targetHabit) return;
                 else targetHabit = targetHabit.object;
 
-                let habitLog = await fn.userSelectFromList(bot, PREFIX, message, checkMissedSkipList, 3,
+                let habitLog = await fn.userSelectFromList(bot, message, PREFIX, checkMissedSkipList, 3,
                     `__**What is the status of your habit?:**__\n**Currently:** ${hb.getStateEmoji(targetHabit.currentState)}`,
                     `Habit${isArchived ? " Archive" : ""}: Log`, habitEmbedColour, 600000, 0);
                 if (!habitLog && habitLog !== 0) return;

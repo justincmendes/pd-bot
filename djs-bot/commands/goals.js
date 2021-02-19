@@ -260,7 +260,7 @@ module.exports = {
             const additionalKeywords = ["reset"];
             do {
                 reset = false;
-                const goalType = await fn.userSelectFromList(bot, PREFIX, message, areasOfLifeList, areasOfLife.length,
+                const goalType = await fn.userSelectFromList(bot, message, PREFIX, areasOfLifeList, areasOfLife.length,
                     `**__Which area of life does your long-term goal fall under?__** 🌱`, `Long-Term Goal: Creation - Area of Life`, goalEmbedColour);
                 if (!goalType && goalType !== 0) return;
 
@@ -274,7 +274,7 @@ module.exports = {
                 }
 
                 const goalDescriptionString = `__**Goal:**__${goalDescription === "" ? "" : `\n${goalDescription}`}`;
-                let goalCheckpoints = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}`
+                let goalCheckpoints = await fn.getMultilineEntry(bot, message, PREFIX, `${goalTypeString}\n${goalDescriptionString}`
                     + `\n\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**\n(Within 1000 characters)`,
                     `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, 1000, additionalInstructions, additionalKeywords);
                 if (!goalCheckpoints.message && goalCheckpoints.message !== "") return;
@@ -285,7 +285,7 @@ module.exports = {
                 else goalCheckpoints = goalCheckpoints.message;
 
                 const goalCheckpointsString = `__**Checkpoints:**__${goalCheckpoints === "" ? "" : `\n${goalCheckpoints}`}`;
-                let goalSteps = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}`
+                let goalSteps = await fn.getMultilineEntry(bot, message, PREFIX, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}`
                     + `\n\n👣 **What are some __actionable steps__ for this goal?**\n(Within 1000 characters)`, `Long-Term Goal: Creation - Actionable Steps`,
                     true, goalEmbedColour, 1000, additionalInstructions, additionalKeywords);
                 if (!goalSteps.message && goalSteps.message !== "") return;
@@ -296,7 +296,7 @@ module.exports = {
                 else goalSteps = goalSteps.message;
 
                 const goalStepsString = `__**Steps:**__${goalSteps === "" ? "" : `\n${goalSteps}`}`;
-                let goalReason = await fn.getMultilineEntry(bot, PREFIX, message, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}`
+                let goalReason = await fn.getMultilineEntry(bot, message, PREFIX, `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}`
                     + `\n\n💭 **__Why__ do you want to accomplish this goal?**\n(Within 1000 characters)`, `Long-Term Goal: Creation - Reason`, true, goalEmbedColour, 1000,
                     additionalInstructions, additionalKeywords);
                 if (!goalReason.message && goalReason.message !== "") return;
@@ -381,7 +381,7 @@ module.exports = {
                                     + `\n${habit.description}\n`;
                             });
 
-                            let targetHabitIndex = await fn.userSelectFromList(bot, PREFIX, message, habitList, habits.length, "__**Which habit would you like to connect to this goal?:**__",
+                            let targetHabitIndex = await fn.userSelectFromList(bot, message, PREFIX, habitList, habits.length, "__**Which habit would you like to connect to this goal?:**__",
                                 "Long-Term Goal: Habit Connection Selection", goalEmbedColour, 600000, 0);
                             if (!targetHabitIndex) break;
                             const targetHabit = habits[targetHabitIndex];
@@ -943,17 +943,17 @@ module.exports = {
                             break;
                         case 4:
                             goalEditMessagePrompt = "\n💭 **__Why__ do you want to accomplish this goal?**\n(Within 1000 characters)";
-                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 1000);
+                            userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 1000);
                             reason = userEdit;
                             break;
                         case 5:
                             goalEditMessagePrompt = "\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**\n(Within 1000 characters)";
-                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 1000);
+                            userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 1000);
                             checkpoints = userEdit;
                             break;
                         case 6:
                             goalEditMessagePrompt = "\n👣 **What are some __actionable steps__ for this goal?**\n(Within 1000 characters)";
-                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 1000);
+                            userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 1000);
                             steps = userEdit;
                             break;
                         case 7:
@@ -1093,7 +1093,8 @@ module.exports = {
         else if (goalCommand === "post" || goalCommand === "p") {
             let goals = await Goal.find({ archived: false }).sort({ start: +1 });
             if (!goals) return message.reply(`**You don't have any goals**, try \`${PREFIX}${commandUsed} start\``);
-            const targetChannel = await fn.getPostChannel(bot, PREFIX, message, `Long-Term Goal`, forceSkip, goalEmbedColour);
+            const targetChannel = await fn.getTargetChannel(bot, message, PREFIX, `Long-Term Goal`,
+                forceSkip, true, false, true, goalEmbedColour);
             if (!targetChannel) return;
             const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
             const goalStringArray = multipleGoalsToStringArray(message, goals, totalGoalNumber, 0);

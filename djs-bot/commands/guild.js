@@ -83,13 +83,11 @@ module.exports = {
         if (guildCommand === "help") return message.channel.send(guildUsageMessage);
         else {
             if (!inGuild) {
-                let botServers = await bot.guilds.cache.map(guild => guild.id);
-                console.log({ botServers });
-                const mutualServers = await fn.userAndBotMutualServerIDs(bot, authorID, botServers);
+                const mutualServers = await fn.userAndBotMutualServerIDs(bot, authorID);
                 const serverSelectInstructions = "Type the **number** corresponding to the **server** you want **settings** for:";
                 const postToServerTitle = "Guild Settings: Select Server";
                 const serverList = await fn.listOfServerNames(bot, mutualServers);
-                const targetServerIndex = await fn.userSelectFromList(bot, PREFIX, message, serverList, mutualServers.length,
+                const targetServerIndex = await fn.userSelectFromList(bot, message, PREFIX, serverList, mutualServers.length,
                     serverSelectInstructions, postToServerTitle, guildEmbedColour, 180000);
                 if (targetServerIndex === false) return;
                 else {

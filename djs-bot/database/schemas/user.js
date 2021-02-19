@@ -84,6 +84,20 @@ const userSettingsSchema = mongoose.Schema({
         required: true,
         default: false,
     },
+    voiceChannels: [{
+        id: {
+            type: String,
+            required: false,
+        },
+        timeTracked: {
+            type: Number,
+            required: false,
+        },
+        lastTrackedTimestamp: {
+            type: Number,
+            required: false,
+        }
+    }],
 });
 
 module.exports = mongoose.model("User", userSettingsSchema, "users");

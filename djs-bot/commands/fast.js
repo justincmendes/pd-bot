@@ -530,7 +530,7 @@ async function getUserReminderEndTime(bot, message, PREFIX, fastTimeHelpMessage,
         var intendedFastDuration, now;
         now = fn.getCurrentUTCTimestampFlooredToSecond();
         reminderEndTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now,
-            userTimezoneOffset, userDaylightSavingSetting);
+            userTimezoneOffset, userDaylightSavingSetting, true, true, false, false);
         if (reminderEndTime || reminderEndTime === 0) {
             now = fn.getCurrentUTCTimestampFlooredToSecond();
             reminderEndTime -= HOUR_IN_MS * userTimezoneOffset;
@@ -541,7 +541,7 @@ async function getUserReminderEndTime(bot, message, PREFIX, fastTimeHelpMessage,
         if (intendedFastDuration >= HOUR_IN_MS && reminderEndTime > now) setReminder = true;
         else {
             setReminder = false;
-            fn.sendReplyThenDelete(message, `**Please enter a proper time in the future __> 1 hour__!**...\n${fastTimeHelpMessage} for **valid time inputs!**`, 30000);
+            fn.sendReplyThenDelete(message, `**Please enter a proper time duration __> 1 hour__!**...\n${fastTimeHelpMessage} for **valid time inputs!**`, 30000);
         }
         if (setReminder) {
             const fastDurationString = fn.millisecondsToTimeString(intendedFastDuration);
@@ -723,14 +723,14 @@ module.exports = {
 
                     const moodValuePrompt = "**How did you feel during this past fast?\n\nEnter a number from 1-5 (1 = worst, 5 = best)**"
                         + "\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖";
-                    mood = await fn.userSelectFromList(bot, PREFIX, message, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour);
+                    mood = await fn.userSelectFromList(bot, message, PREFIX, "", 5, moodValuePrompt, "Fast: Mood Assessment", fastEmbedColour);
                     if (!mood && mood !== 0) return;
                     // +1 to convert the returned index back to natural numbers
                     else mood++;
 
                     const reflectionTextPrompt = "**__Reflection Questions:__**\n🤔 - **Why did you feel that way?**\n💭 - **What did you do that made it great?"
                         + " / What could you have done to make it better?**\n(Within 1000 characters)";
-                    reflection = await fn.getMultilineEntry(bot, PREFIX, message, reflectionTextPrompt, "Fast: Reflection",
+                    reflection = await fn.getMultilineEntry(bot, message, PREFIX, reflectionTextPrompt, "Fast: Reflection",
                         forceSkip, fastEmbedColour, 1000, skipInstructions, skipKeyword);
                     if (!reflection && reflection.message !== "") return;
                     else if (reflection.message === "skip") reflection = null;
@@ -1351,7 +1351,7 @@ module.exports = {
                         case 4:
                             fastEditMessagePrompt = "\n**__Reflection Questions:__**\n🤔 - **Why did you feel that way?**"
                                 + "\n💭 - **What did you do that made it great? / What could you have done to make it better?**\n(Within 1000 characters)";
-                            userEdit = await fn.getUserMultilineEditString(bot, PREFIX, message, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour, 1000);
+                            userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, fastEditMessagePrompt, type, forceSkip, fastEmbedColour, 1000);
                             break;
                     }
                     if (userEdit === false) return;
@@ -1604,7 +1604,8 @@ module.exports = {
                 const finalEndTimestamp = endTimestamp || Date.now();
                 const endTimeToDate = fn.timestampToDateString(finalEndTimestamp, false, true, true);
                 const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
-                let postChannel = await fn.getPostChannel(bot, PREFIX, message, "Fast", forceSkip, fastEmbedColour);
+                let postChannel = await fn.getTargetChannel(bot, message, PREFIX, "Fast", forceSkip,
+                    true, false, true, fastEmbedColour);
                 if (!postChannel) await showFastPost(bot, message, fastPost, mistakeMessage);
                 // Overwrite fastPost Title with one specific to user's nickname in respective server
                 fastPost.forEach(async (post, i) => {

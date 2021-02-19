@@ -31,6 +31,7 @@ const Guild = require("./database/schemas/guildsettings");
 const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
 const Habit = require("./database/schemas/habit");
+const Track = require("./database/schemas/track");
 bot.mongoose = require("../utilities/mongoose");
 
 const pdBotTag = `<@!${CLIENT_ID}>`;
@@ -73,8 +74,12 @@ bot.on("ready", async () => {
     await hb.resetAllHabitCrons();
     await rm.resetReminders(bot);
     await fn.updateAllUsers(bot);
+    await fn.resetAllVoiceChannelTracking(bot);
 
     // For Testing
+    // const result = await rm.cancelReminder("208829852583723008", "5f9647410dd2ff1eb497d05d");
+    // console.log({ result });
+
     // await hb.habitCron(await Habit.findById("5f9711afa1b3d3321c142504"), -5, { daily: 10800000, weekly: 0 });
     // console.log(fn.timestampToDateString(1605513600000));
     // console.log(fn.getCurrentUTCTimestampFlooredToSecond());
@@ -424,7 +429,12 @@ bot.on("guildCreate", async (guild) => {
 bot.on('guildDelete', async (guild) => {
     try {
         await Guild.deleteOne({ guildID: guild.id });
-        await Reminder.deleteMany({ guildID: guild.id });
+        const guildReminders = await Reminder.find({ guildID: guild.id });
+        guildReminders.forEach(async reminder => {
+            await rm.cancelReminderById(reminder._id);
+            await Reminder.findByIdAndDelete(reminder._id);
+        });
+        // await Reminder.deleteMany({ guildID: guild.id });
         console.log(`Removed from ${guild.name}(${guild.id})\nDeleting Guild Settings and Reminders...`);
     }
     catch (err) {
@@ -441,6 +451,65 @@ bot.on('guildMemberUpdate', async (member) => {
     }, { new: true });
     if (updateUser) {
         console.log({ updateUser });
+    }
+    return;
+});
+
+// Check if the new channelID joined is part of the list, 
+// if it is, then start the interval
+
+// Check if the new channelID is null (implies that they left), 
+// then update the tracked duration by the difference
+// and cancel the interval if there is any
+
+// Each interval update the tracked duration 
+// by the time per interval period
+
+bot.on('voiceStateUpdate', async (oldState, newState) => {
+    const userID = oldState.member.id;
+    const oldChannelID = oldState.channelID;
+    const newChannelID = newState.channelID;
+    console.log(`Old Channel ID: ${oldChannelID}`
+        + ` - New Channel ID: ${newChannelID}`);
+
+    if (!fn.voiceTrackingHasUser(userID)) {
+        const vcInformation = await fn.getTargetVoiceChannelAndUserSettings(
+            bot, userID, newChannelID
+        );
+        if (!vcInformation) return;
+        const setup = await fn.setupVoiceChannelTracking(bot, userID,
+            newChannelID, vcInformation);
+        if (!setup) return;
+    }
+    else if (oldChannelID !== newChannelID) {
+        // If they left the voice channel:
+        // Stop tracking and clear + delete interval.
+        const trackingDocument = await Track.findOne({
+            userID, voiceChannelID: oldChannelID
+        });
+        if (trackingDocument) {
+            await fn.updateVoiceChannelTimeTracked(bot, userID, oldChannelID,
+                fn.getCurrentUTCTimestampFlooredToSecond() - trackingDocument.start,
+                true,
+            );
+        }
+        fn.voiceTrackingClearInterval(userID);
+        fn.voiceTrackingDeleteCollection(userID);
+        await Track.deleteMany({ userID });
+
+        // If they transferred to a new channel:
+        // Delete old interval.
+        // Then check if this new channel also needs to be tracked
+        // and setup the tracking if so, otherwise delete interval and return
+        if (newChannelID) {
+            const vcInformation = await fn.getTargetVoiceChannelAndUserSettings(
+                bot, userID, newChannelID
+            );
+            if (!vcInformation) return;
+            const setup = await fn.setupVoiceChannelTracking(bot, userID,
+                newChannelID, vcInformation);
+            if (!setup) return;
+        }
     }
     return;
 });
