@@ -61,7 +61,7 @@ async function setUserTrackingReportReminder(bot, message, PREFIX, timezoneOffse
 module.exports = {
     name: "track",
     description: "Time spent in voice channels tracking!",
-    aliases: ["tracking", "tr", "voice", "vc", "voicechat",
+    aliases: ["tracking", "tr", "voice", "v", "vc", "voicechat",
         "voicechannel", "voicec", "voicech", "chat", "ch", "c"],
     cooldown: 2.5,
     args: false,

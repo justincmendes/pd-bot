@@ -4504,29 +4504,29 @@ module.exports = {
             if (!vcInformation) return false;
             else {
                 const { userSettings, voiceChannels, voiceChannelIndex } = vcInformation;
-                const targetVcObject = voiceChannels[voiceChannelIndex];
-                const originalTimeTracked = targetVcObject.timeTracked;
-                targetVcObject.timeTracked = addDuration ?
-                    targetVcObject.timeTracked + durationChange
+                const trackObject = voiceChannels[voiceChannelIndex];
+                const originalTimeTracked = trackObject.timeTracked;
+                trackObject.timeTracked = addDuration ?
+                    trackObject.timeTracked + durationChange
                     : durationChange;
-                if (targetVcObject.timeTracked < 0) {
-                    targetVcObject.timeTracked = 0;
+                if (trackObject.timeTracked < 0) {
+                    trackObject.timeTracked = 0;
                 }
-                console.log(`Original: ${parseInt(originalTimeTracked / DAY_IN_MS)}`);
-                console.log(`Updated: ${parseInt(targetVcObject.timeTracked / DAY_IN_MS)}`);
                 if (parseInt(originalTimeTracked / DAY_IN_MS) <
-                    parseInt(targetVcObject.timeTracked / DAY_IN_MS)
+                    parseInt(trackObject.timeTracked / DAY_IN_MS)
                     && durationChange > 0) {
-                    const { userID } = userSettings;
+                    const { discordID: userID } = userSettings;
                     const user = bot.users.cache.get(userID);
                     if (user) {
-                        user.send("Congratulations! You have spent at least "
-                            + `${parseInt(targetVcObject.timeTracked / DAY_IN_MS)}`
-                            + ` days in ${bot.channels.cache.get(targetVcObject.voiceChannelID).name}`
-                            + ` (${bot.channels.cache.get(targetVcObject.voiceChannelID).guild.name})`);
+                        const days = parseInt(trackObject.timeTracked / DAY_IN_MS);
+                        user.send("Congratulations! You have spent at least"
+                            + ` **__${days}day${days > 1 ? "s" : ""}__**`
+                            + `  in **${bot.channels.cache.get(trackObject.id).name}**`
+                            + ` (${bot.channels.cache.get(trackObject.id).guild.name})`
+                            + `\n⏳ - **__${this.millisecondsToTimeString(vcObject.timeTracked)}__**`);
                     }
                 }
-                targetVcObject.lastTrackedTimestamp = lastTracked || lastTracked === 0 ?
+                trackObject.lastTrackedTimestamp = lastTracked || lastTracked === 0 ?
                     lastTracked : this.getCurrentUTCTimestampFlooredToSecond() + userSettings.timezone.offset * HOUR_IN_MS;
                 const updatedUserSettings = await User.findByIdAndUpdate(userSettings.id, {
                     $set: { voiceChannels: voiceChannels }
