@@ -32,6 +32,7 @@ const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
 const Habit = require("./database/schemas/habit");
 const Track = require("./database/schemas/track");
+const { HOUR_IN_MS } = require("../utilities/functions");
 bot.mongoose = require("../utilities/mongoose");
 
 const pdBotTag = `<@!${CLIENT_ID}>`;
@@ -77,6 +78,8 @@ bot.on("ready", async () => {
     await fn.resetAllVoiceChannelTracking(bot);
 
     // For Testing
+    // console.log(fn.timestampToDateString(fn.getStartOfWeekTimestamp(Date.now() - 5 * HOUR_IN_MS, -5, true, false)));
+
     // const result = await rm.cancelReminder("208829852583723008", "5f9647410dd2ff1eb497d05d");
     // console.log({ result });
 

@@ -1740,13 +1740,13 @@ module.exports = {
 
         // Get the stats for the Past X Days
         else if (habitCommand === "past") {
-
+            
         }
 
 
         // Set one or more reminders for a specific habit
         else if (habitCommand === "reminder" || habitCommand === "remindme" || habitCommand === "remind"
-            || habitCommand === "rem" || habitCommand === "r") {
+            || habitCommand === "remindme" || habitCommand === "rem" || habitCommand === "r") {
 
         }
 

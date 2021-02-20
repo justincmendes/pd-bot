@@ -1331,7 +1331,7 @@ module.exports = {
 
 
         else if (mastermindCommand === "reminder" || mastermindCommand === "reminders" || mastermindCommand === "remind"
-            || mastermindCommand === "rem" || mastermindCommand === "re" || mastermindCommand === "r") {
+            || mastermindCommand === "remindme" || mastermindCommand === "rem" || mastermindCommand === "re" || mastermindCommand === "r") {
             const userMasterminds = await Mastermind.find({ userID: authorID })
                 .sort({ _id: -1 });
             if (userMasterminds) if (userMasterminds.length) {

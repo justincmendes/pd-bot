@@ -18,6 +18,7 @@ const fastEmbedColour = fn.fastEmbedColour;
 const habitEmbedColour = fn.habitEmbedColour;
 const quoteEmbedColour = fn.quoteEmbedColour;
 const mastermindEmbedColour = fn.mastermindEmbedColour;
+const trackEmbedColour = fn.trackEmbedColour;
 
 const reminders = new Discord.Collection();
 
@@ -115,6 +116,13 @@ module.exports = {
                 if (reminderTypes.includes(title) && isRecurring) {
                     title = `Repeating ${title}`;
                 }
+                if (title === "Voice Channel Tracking") {
+                    const reportString = await fn.getTrackingReportString(bot, userID);
+                    if (reportString) {
+                        message = reportString;
+                    }
+                    else message = "";
+                }
                 if (sendAsEmbed) {
                     const originalEmbedColour = embedColour;
                     switch (title) {
@@ -130,7 +138,10 @@ module.exports = {
                             break;
                         case "Mastermind": embedColour = mastermindEmbedColour;
                             break;
+                        case "Voice Channel Tracking": embedColour = trackEmbedColour;
+                            break;
                         case "Repeating Reminder": embedColour = repeatEmbedColour;
+                            break;
                         default:
                             // Assuming the embedColour passed in is valid hex code****
                             if (!embedColour && embedColour !== 0) {
@@ -142,7 +153,10 @@ module.exports = {
                     if (embedColour !== originalEmbedColour) {
                         await Reminder.findByIdAndUpdate(reminderID, { $set: { embedColour } });
                     }
-                    let reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`;
+                    let reminderFooter = "";
+                    if (title !== "Quote") {
+                        reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`;
+                    }
                     message = new Discord.MessageEmbed()
                         .setTitle(titleOut)
                         .setDescription(message)
@@ -157,7 +171,9 @@ module.exports = {
                     if (!userPermissions.has("MENTION_EVERYONE")) {
                         message = message.replace(/\@(everyone|here)/g, `\@\u200b$1`);
                     }
-                    if (title !== "Quote") message += `\n\n\\\*\\\*__A **${fn.millisecondsToTimeString(duration)} ${titleOut}** set by **${username}**__\\\*\\\*`;
+                    if (title !== "Quote" && title !== "Voice Channel Tracking") {
+                        message += `\n\n\\\*\\\*__A **${fn.millisecondsToTimeString(duration)} ${titleOut}** set by **${username}**__\\\*\\\*`;
+                    }
                 }
                 // var mentions;
                 // if (!isDM) {
@@ -189,7 +205,7 @@ module.exports = {
                         id: reminderID.toString(),
                         connectedId: connectedDocument ? connectedDocument.toString() : undefined,
                         timeout: fn.setLongTimeout(async () => {
-                            const updatedReminderObject = await this.updateRecurringReminderByObjectID(reminderID);
+                            const updatedReminderObject = await this.updateRecurringReminderByObjectID(bot, reminderID);
                             if (updatedReminderObject) {
                                 console.log({ updatedReminderObject });
                                 console.log("Updated Recurring Reminder in Database!");
@@ -430,7 +446,7 @@ module.exports = {
         console.log(`Deleting all of ${userID}'s reminders`);
     },
 
-    updateRecurringReminderByObjectID: async function (reminderID) {
+    updateRecurringReminderByObjectID: async function (bot, reminderID) {
         if (reminderID) {
             const reminder = await this.getOneReminderByObjectID(reminderID);
             if (reminder) if (reminder.isRecurring) {
@@ -490,10 +506,18 @@ module.exports = {
                                 { $set: { "quote.nextQuote": newEndTime } }, { new: true });
                         }
                     }
+                    if (reminder.title === "Voice Channel Tracking") {
+                        updateObject.message = await fn.getTrackingReportString(bot, reminder.userID);
+                    }
                     const updateReminder = await Reminder
                         .findOneAndUpdate({ _id: reminderID },
                             { $set: updateObject }, { new: true });
-                    if (updateReminder) return updateReminder;
+                    if (updateReminder) {
+                        if (reminder.title === "Voice Channel Tracking") {
+                            updateReminder.message = updateObject.message;
+                        }
+                        return updateReminder;
+                    }
                 }
             }
         }

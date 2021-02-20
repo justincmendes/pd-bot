@@ -457,7 +457,7 @@ module.exports = {
         var botUserServers = new Array();
         for (i = 0; i < botServersIDs.length; i++) {
             const server = await bot.guilds.cache.get(botServersIDs[i]);
-            if(server) if (server.member(userID) && botServersIDs[i]) {
+            if (server) if (server.member(userID) && botServersIDs[i]) {
                 botUserServers.push(botServersIDs[i]);
             }
         }
@@ -1825,7 +1825,7 @@ module.exports = {
     // Assumes that the userTimezone is already daylight-saving adjusted
     timeCommandHandlerToUTC: function (args, messageCreatedTimestamp, userTimezone = -4,
         userDaylightSavingSetting = true, isRelativeToNow = true, forceRelativeTime = false,
-        isForInterval = false, durationOnly = false) {
+        isForInterval = false, isForTimeDuration = false) {
         const startTimestamp = Date.now();
         if (!Array.isArray(args) && typeof args === 'string') {
             args = args.toLowerCase().split(/[\s\n]+/);
@@ -1847,7 +1847,7 @@ module.exports = {
         const relativeTimeAgoOrFromNow = /(in)?(\d*\.?\d+|\d+\.?\d*)(seconds?|secs?|minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?|yrs?)(ago|prior|before|fromnow|later(?:today)?|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const relativeTimeTest = relativeTimeAgoOrFromNow.exec(timeArgs);
         console.log({ relativeTimeTest });
-        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|(?:every)?other|this(?:coming)?|(?:this)?coming|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:mon)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:weds?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
+        const dayOfWeekRegex = /(in)?((?:\d+)|(?:last|past|next|(?:every)?other|thisweek|this(?:coming)?|(?:this)?coming|following|previous|prior))?((?:yesterday)|(?:yest?)|(?:thedaybefore)|(?:tod(?:ay)?)|(?:tomorrow)|(?:tom)|(?:tmrw?)|(?:mondays?)|(?:mon)|(?:tuesdays?)|(?:tu(?:es?)?)|(?:wednesdays?)|(?:weds?)|(?:thursdays?)|(?:th(?:urs?)?)|(?:fridays?)|(?:f(?:ri?)?)|(?:saturdays?)|(?:sat)|(?:sundays?)|(?:sun?))(ago|prior|before|fromnow|later|inthefuture)?(?:at)?(?:(?:(?:(\d{1}(?:\d{1})?)\:?(\d{2}))|(?:(\d{1}(?:\d{1})?)))(pm?|am?)?((?:[a-z]+)|(?:[\-\+](?:(?:(?:(?:\d{1}(?:\d{1})?)\:?(?:\d{2})))|(?:(?:\d*\.?\d+)))))?)?/;
         const dayOfWeekTest = dayOfWeekRegex.exec(timeArgs);
         console.log({ dayOfWeekTest });
         // Absolute Time: Past and Future
@@ -1870,7 +1870,7 @@ module.exports = {
         // 0 - All choices we're null or insufficient/not chosen.
         if (!decision) return false;
         else {
-            if (durationOnly && decision !== 1 && decision !== 5) return false;
+            if (isForTimeDuration && decision !== 1 && decision !== 5) return false;
             var timestampOut, timezoneString;
             switch (decision) {
                 case 1:
@@ -2110,6 +2110,17 @@ module.exports = {
         return [year, month, day];
     },
 
+    getStartOfWeekTimestamp: function (timestamp, timezoneOffset,
+        daylightSaving, mondayStart = false) {
+        let weekOfDate = this.timeCommandHandlerToUTC(
+            `this week ${mondayStart ? "monday" : "sunday"}`, timestamp,
+            timezoneOffset, daylightSaving, false);
+        if (weekOfDate) {
+            weekOfDate -= timezoneOffset * HOUR_IN_MS;
+        }
+        return weekOfDate;
+    },
+
     /**
      * 
      * @param {RegExpExecArray} relativeTimeTest 1
@@ -2317,7 +2328,7 @@ module.exports = {
         }
         else if (day) {
             let isThis = false;
-            let relativeDay = /((?:\d+)|(?:last|past|next|(every)?other|this(?:coming)?|(?:this)?coming|following|previous|prior))/.exec(relativeTimeExpressionArray[2]);
+            let relativeDay = /((?:\d+)|(?:last|past|next|(every)?other|thisweek|this(?:coming)?|(?:this)?coming|following|previous|prior))/.exec(relativeTimeExpressionArray[2]);
             let isDigit = /(?:\d+)/.test(relativeDay);
             if (!relativeDay) {
                 if (isForInterval) relativeDay = "thiscoming";
@@ -2354,7 +2365,9 @@ module.exports = {
                 numberOfTimeScales = 0;
                 isThis = true;
             }
-            else return false;
+            else if (!/thisweek/.test(relativeDay)) {
+                return false;
+            }
 
             var targetDayOfWeek;
             // First Letter Switch
@@ -2382,8 +2395,14 @@ module.exports = {
             // Get how far the relative day of week is from the current day of the week
             let currentDate = new Date(Date.now() + timezone * HOUR_IN_MS);
             let currentDayOfWeek = currentDate.getUTCDay();
-            console.log({ isThis, numberOfTimeScales, currentDate, currentDayOfWeek, targetDayOfWeek });
             const isPastDay = targetDayOfWeek < currentDayOfWeek;
+            if (/thisweek/.test(relativeDay)) {
+                isThis = true;
+                if (isPastDay) numberOfTimeScales = -1;
+                else numberOfTimeScales = 0;
+            }
+            console.log({ isThis, numberOfTimeScales, currentDate, currentDayOfWeek, targetDayOfWeek });
+
 
             // Convention: Traverse Forward along the Week, until the 
             // Target Day of Week is found
@@ -4335,6 +4354,21 @@ module.exports = {
         }
     },
 
+    getTrackingReportString: async function (bot, userID) {
+        // Get the latest information from the user settings
+        const userSettings = await User.findOne({ discordID: userID });
+        var outputString = "";
+        if (userSettings) {
+            const { voiceChannels, timezone } = userSettings;
+            if (voiceChannels) if (voiceChannels.length) {
+                outputString = `**__Week of ${this.timestampToDateString(this.getStartOfWeekTimestamp(Date.now() + timezone.offset,
+                    timezone.offset, timezone.daylightSaving, false), false, true, true) || ""}:__**`
+                    + `\n${await this.voiceChannelArrayToString(bot, userID, voiceChannels) || ""}`;
+            }
+        }
+        return outputString;
+    },
+
     voiceChannelArrayToString: async function (bot, userID, voiceChannels) {
         var currentTracking = await Track.findOne({ userID });
         if (currentTracking) {
@@ -4358,7 +4392,7 @@ module.exports = {
         const outputString = voiceChannels.map(vcObject => {
             return `- **${bot.channels.cache.get(vcObject.id).name}** `
                 + `(${bot.channels.cache.get(vcObject.id).guild.name}): `
-                + `${this.millisecondsToTimeString(vcObject.timeTracked)}`
+                + `**__${this.millisecondsToTimeString(vcObject.timeTracked)}__**`
                 + `\n-- **Last Tracked:** ${this.timestampToDateString(vcObject.lastTrackedTimestamp)}`;
         }).join('\n\n');
         return outputString;
@@ -4507,7 +4541,6 @@ module.exports = {
     },
 
 
-
     getTierMaxMessage: function (PREFIX, commandUsed, thresholdValue, type, tier, supportsArchive = false) {
         return `You've ${supportsArchive ? "archived" : "created"} the **__maximum number of ${supportsArchive ? "archived " : ""}${type[0].toLowerCase()} entries__** (**${thresholdValue}**) `
             + `as a **Tier ${tier || 1} user** and cannot ${supportsArchive ? "archive" : "create"} any more ${type[0].toLowerCase()} entries!`
@@ -4597,6 +4630,7 @@ module.exports = {
     guildSettingsEmbedColour: "#964b00",
     pesterEmbedColour: "#FF4500",
     quoteEmbedColour: "#FF69B4",
+    trackEmbedColour: "#FF6347",
     taskEmbedColour: "#308014",
     defaultEmbedColour: "#ADD8E6",
 

@@ -1156,7 +1156,7 @@ module.exports = {
 
 
         else if (goalCommand === "reminder" || goalCommand === "reminders" || goalCommand === "remind"
-            || goalCommand === "rem" || goalCommand === "re" || goalCommand === "r") {
+            || goalCommand === "remindme" || goalCommand === "rem" || goalCommand === "re" || goalCommand === "r") {
             const userGoals = await Goal.find({ userID: authorID, archived: false })
                 .sort({ _id: +1 });
             if (userGoals) if (userGoals.length) {

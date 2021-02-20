@@ -2,6 +2,7 @@ const User = require("../database/schemas/user");
 const Reminder = require("../database/schemas/reminder");
 const Habit = require("../database/schemas/habit");
 const Log = require("../database/schemas/habittracker");
+const Track = require("../database/schemas/track");
 const quotes = require("../../utilities/quotes.json").quotes;
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
@@ -19,18 +20,21 @@ const daysOfWeekList = daysOfWeek.map((day, i) => {
 }).join(`\n`);
 const userEmbedColour = fn.userSettingsEmbedColour;
 const quoteEmbedColour = fn.quoteEmbedColour;
-// Private Function Declarations
+const trackEmbedColour = fn.trackEmbedColour;
 
+// Private Function Declarations
 async function userDocumentToString(bot, userSettings) {
     const { timezone: { name, offset, daylightSaving }, likesPesteringAccountability: likesAccountability,
         habitCron, getQuote, quoteInterval, nextQuote, tier, deleteRepliesDuringCommand, voiceChannels,
         discordID: userID, } = userSettings;
+    const voiceChannelString = await fn.voiceChannelArrayToString(bot, userID, voiceChannels);
     const output = `__**Timezone:**__ ${name}\n- **UTC Offset (in hours):** ${fn.hoursToUTCOffset(offset)}`
         + `\n- **Daylight Savings Time:** ${daylightSaving ? "Yes" : "No"}`
         + `\n\n__**Habit Reset Time:**__\n- **Daily:** ${fn.msToTimeFromMidnight(habitCron.daily)}`
         + `\n- **Weekly:** ${fn.getDayOfWeekToString(habitCron.weekly)}`
-        + `\n\n__**Voice Channels Tracked:**__\n${await fn.voiceChannelArrayToString(bot, userID, voiceChannels)}`
-        + `\n\n__**Get Quotes:**__ ${getQuote ? "Yes" : "No"}`
+        + `\n\n__**Voice Channels Tracked:**__\n${voiceChannelString}`
+        + `${voiceChannelString === "" ? "" : "\n"}`
+        + `\n__**Get Quotes:**__ ${getQuote ? "Yes" : "No"}`
         + `\n- **Next Quote:** ${getQuote ? nextQuote ? fn.timestampToDateString(nextQuote + (offset * HOUR_IN_MS)) : "N/A" : "N/A"}`
         + `\n- **Quote Interval:** ${getQuote ? quoteInterval ? `Every ${quoteInterval}` : "N/A" : "N/A"}`
         + `\n\n__**Delete Replies Sent During Commands:**__ ${deleteRepliesDuringCommand ? "Yes" : "No"}`
@@ -94,8 +98,8 @@ module.exports = {
                 const fieldToEditTitle = `${showUserSettings.title}: Edit Field`;
                 var fieldToEdit, fieldToEditIndex;
                 const selectedField = await fn.getUserSelectedObject(bot, message, PREFIX,
-                    fieldToEditInstructions, fieldToEditTitle, userFields, "", false,
-                    userEmbedColour, 600000, 0, fieldToEditAdditionalMessage);
+                    `${fieldToEditAdditionalMessage}\n\n\n${fieldToEditInstructions}`, fieldToEditTitle, userFields, "", false,
+                    userEmbedColour, 600000, 0);
                 if (!selectedField) return;
                 else {
                     fieldToEdit = selectedField.object;
@@ -105,7 +109,7 @@ module.exports = {
                 const type = "Settings";
                 continueEdit = false;
                 const originalTimezone = userSettings.timezone.name;
-                var userEdit, targetVcObject,
+                var userEdit,
                     updatedTimezoneOffset = timezoneOffset,
                     updatedDaylightSaving = daylightSaving,
                     updatedTimezone = originalTimezone,
@@ -177,7 +181,7 @@ module.exports = {
                                 return `${bot.channels.cache.get(vcObject.id).name} (${bot.channels.cache.get(vcObject.id).guild.name})`;
                             }).join('\n')}`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
-                            ['📊', '🗑️'], type, forceSkip, userEmbedColour);
+                            ['📊', '🗑️'], type, forceSkip, trackEmbedColour);
                         break;
                     case 10 - quoteAdjustment:
                         let vcList = "";
@@ -190,7 +194,7 @@ module.exports = {
                         const selectVoiceChannel = await fn.userSelectFromList(bot, message, PREFIX,
                             vcList, userSettings.voiceChannels.length,
                             "**Type the number corresponding to the voice channel you would like to edit the time tracked for:**\n",
-                            `${type}: Select Voice Channel`, userEmbedColour, 180000);
+                            `${type}: Select Voice Channel`, trackEmbedColour, 180000);
                         if (!selectVoiceChannel && selectVoiceChannel !== 0) return;
                         else {
                             const targetVcObject = userSettings.voiceChannels[selectVoiceChannel];
@@ -200,7 +204,7 @@ module.exports = {
                                 + `\n\n${fn.durationExamples}`;
                             do {
                                 const userTimeInput = await fn.messageDataCollect(bot, message, PREFIX, userSettingsPrompt,
-                                    `${type}: Change Time Tracked`, userEmbedColour, 180000, false);
+                                    `${type}: Change Time Tracked`, trackEmbedColour, 180000, false);
                                 if (userTimeInput === "back") break;
                                 if (userTimeInput === "stop" || !userTimeInput) return;
                                 const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
@@ -213,11 +217,17 @@ module.exports = {
                                     userEdit = endTime - now;
                                     break;
                                 }
-                                else fn.sendReplyThenDelete(message, `**Please enter a proper time duration __> 1 hour__!**...\nTry \`${PREFIX}date\` for **valid time inputs!**`, 30000);
+                                else fn.sendReplyThenDelete(message, `**Please enter a proper time duration __> 0d:0h:0m:0s__!**...\nTry \`${PREFIX}date\` for **valid time inputs!**`, 30000);
                             }
                             while (true)
                             if (userEdit || userEdit === 0) {
                                 if (!isNaN(userEdit)) if (userEdit >= 0) {
+                                    await Track.updateMany({ userID: authorID }, {
+                                        $set: {
+                                            start: fn.getCurrentUTCTimestampFlooredToSecond(),
+                                            end: fn.getCurrentUTCTimestampFlooredToSecond(),
+                                        },
+                                    });
                                     targetVcObject.timeTracked = userEdit;
                                     userSettings = await User.findByIdAndUpdate(userSettings._id, {
                                         $set: { voiceChannels: userSettings.voiceChannels }
@@ -677,7 +687,7 @@ module.exports = {
                                         // If in server, list out all voice channel names and user select from them,
                                         // Or list all across all mutual servers
                                         const targetVoiceChannel = await fn.getTargetChannel(bot, message, PREFIX,
-                                            `Add Voice Channel to Track Time Spent`, forceSkip, false, true, false, userEmbedColour,
+                                            `Add Voice Channel to Track Time Spent`, forceSkip, false, true, false, trackEmbedColour,
                                             userSettings.voiceChannels.map(vc => vc.id));
                                         if (!targetVoiceChannel) return;
                                         console.log({ targetVoiceChannel });
@@ -709,7 +719,7 @@ module.exports = {
                                         const vcTargetIndex = await fn.userSelectFromList(bot, message, PREFIX,
                                             vcList, userSettings.voiceChannels.length,
                                             "**Type the number corresponding to the voice channel you would like to stop tracking:**\n",
-                                            `${type}: Voice Channel Removal`, userEmbedColour, 180000);
+                                            `${type}: Voice Channel Removal`, trackEmbedColour, 180000);
                                         if (!vcTargetIndex && vcTargetIndex !== 0) return;
                                         else {
                                             const vcTarget = userSettings.voiceChannels[vcTargetIndex];
@@ -841,7 +851,8 @@ module.exports = {
                             currentQuote, "Quote", true, false, true, userSettings.quoteInterval,
                             false, quoteEmbedColour);
                     }
-                    const continueEditMessage = `Do you want to continue **editing your settings?**\n\n${await userDocumentToString(bot, userSettings)}`;
+                    const continueEditMessage = `Do you want to continue **editing your settings?**`
+                        + `\n\n${await userDocumentToString(bot, userSettings)}`;
                     continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Settings: Continue Editing?`, 300000);
                 }
             }
