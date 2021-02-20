@@ -448,7 +448,8 @@ module.exports = {
                     var goalCollection;
                     if (indexByRecency) goalCollection = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived, }, 0, numberArg);
                     else goalCollection = await getGoalsByStartTime(authorID, 0, numberArg, isArchived);
-                    const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(message, goalCollection, numberArg, 0), '', true, false, goalEmbedColour);
+                    const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(message, goalCollection, numberArg, 0),
+                        '', true, false, goalEmbedColour);
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} goals?**`;
                     const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalArray, multipleDeleteMessage, forceSkip,
                         `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Past ${numberArg} Goals (${sortType})`, 600000);
@@ -561,7 +562,8 @@ module.exports = {
                             var goalCollection;
                             if (indexByRecency) goalCollection = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived, }, skipEntries, pastNumberOfEntries);
                             else goalCollection = await getGoalsByStartTime(authorID, skipEntries, pastNumberOfEntries, isArchived);
-                            const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(message, goalCollection, pastNumberOfEntries, skipEntries), '', true, false, goalEmbedColour);
+                            const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(message, goalCollection, pastNumberOfEntries, skipEntries),
+                                '', true, false, goalEmbedColour);
                             if (skipEntries >= totalGoalNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By Start Time";
                             const multipleDeleteMessage = `Are you sure you want to **delete ${goalCollection.length} goals past goal ${skipEntries}?**`;
@@ -602,7 +604,7 @@ module.exports = {
                     console.log({ goalTargetID });
                     const goalIndex = await getRecentGoalIndex(authorID, isArchived);
                     const goalEmbed = fn.getEmbedArray(`__**Goal ${goalIndex}:**__ ${goalDocumentToString(goalView)}`,
-                        `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`, true, true, goalEmbedColour);
+                        `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`, true, false, goalEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent goal?:**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalEmbed, deleteConfirmMessage, forceSkip,
                         `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`, 600000);
@@ -653,7 +655,7 @@ module.exports = {
                 const goalTargetID = goalView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
                 const goalEmbed = fn.getEmbedArray(`__**Goal ${pastNumberOfEntriesIndex}:**__ ${goalDocumentToString(goalView)}`,
-                    `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goal ${pastNumberOfEntriesIndex} (${sortType})`, true, true, goalEmbedColour);
+                    `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goal ${pastNumberOfEntriesIndex} (${sortType})`, true, false, goalEmbedColour);
                 const deleteConfirmMessage = `Are you sure you want to **delete Goal ${pastNumberOfEntriesIndex}?**`;
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalEmbed, deleteConfirmMessage, forceSkip,
                     `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goal ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
@@ -779,7 +781,12 @@ module.exports = {
                     else goalView = await getGoalsByStartTime(authorID, 0, goalIndex, isArchived);
                     console.log({ goalView, pastNumberOfEntriesIndex: goalIndex });
                     const goalArray = multipleGoalsToStringArray(message, goalView, goalIndex, 0);
-                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalArray, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${goalIndex} Goals (${sortType})`, true, true, goalEmbedColour));
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                        goalArray, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${goalIndex} Goals (${sortType})`,
+                        true, `Goals ${fn.timestampToDateString(
+                            Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                        )}`, goalEmbedColour
+                    ));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -817,7 +824,11 @@ module.exports = {
                                 else goalView = await getGoalsByStartTime(authorID, entriesToSkip, goalIndex, isArchived);
                                 console.log({ goalView });
                                 const goalStringArray = multipleGoalsToStringArray(message, goalView, goalIndex, entriesToSkip);
-                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(goalStringArray, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${goalIndex} Goals Past ${entriesToSkip} (${sortType})`, true, true, goalEmbedColour));
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                                    goalStringArray, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${goalIndex} Goals Past ${entriesToSkip} (${sortType})`,
+                                    true, `Goals ${fn.timestampToDateString(
+                                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                                    )}`, goalEmbedColour));
                                 return;
                             }
                         }
@@ -838,7 +849,10 @@ module.exports = {
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
                 const goalString = `__**Goal ${goalIndex}:**__ ${goalDocumentToString(goalView)}`;
-                const goalEmbed = fn.getEmbedArray(goalString, `Long-Term Goal${isArchived ? ` Archive` : ""}: See Goal ${goalIndex} (${sortType})`, true, true, goalEmbedColour);
+                const goalEmbed = fn.getEmbedArray(goalString, `Long-Term Goal${isArchived ? ` Archive` : ""}: See Goal ${goalIndex} (${sortType})`,
+                true, `Goal ${fn.timestampToDateString(
+                    Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                )}`, goalEmbedColour);
                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, goalEmbed);
             }
         }

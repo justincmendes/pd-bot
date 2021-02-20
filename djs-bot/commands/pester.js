@@ -74,12 +74,14 @@ module.exports = {
                 }
                 else return null;
             }).filter((userProfile) => userProfile !== null);
-            await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(userArray, `Pestering Accountability: ${guildName}`, false, false, pesterEmbedColour));
+            await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                userArray, `Pestering Accountability: ${guildName}`, false, false, pesterEmbedColour
+            ));
             return;
         }
         else {
             let targetIDs = fn.getIDArrayFromNames(args, allMembers, guild);
-            if(!targetIDs) return message.reply(`**No users in __${guildName}__ exist on file...**`);
+            if (!targetIDs) return message.reply(`**No users in __${guildName}__ exist on file...**`);
             if (targetIDs.length > 0) {
                 var usernameArray = new Array();
                 const findUsers = await User.find({ discordID: { $in: targetIDs } }, pesterProjection);

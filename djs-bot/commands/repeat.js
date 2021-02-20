@@ -241,7 +241,7 @@ module.exports = {
                     console.log({ reminderTargetID });
                     const reminderIndex = await rm.getRecentReminderIndex(authorID, true);
                     const reminderEmbed = fn.getEmbedArray(`__**Reminder ${reminderIndex}:**__\n${rm.reminderDocumentToString(bot, reminderView, timezoneOffset)}`,
-                        `Recurring Reminder: Delete Recent Reminder`, true, true, repeatEmbedColour);
+                        `Recurring Reminder: Delete Recent Reminder`, true, false, repeatEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent reminder?**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, reminderEmbed, deleteConfirmMessage, forceSkip,
                         `Recurring Reminder: Delete Recent Reminder`, 600000);
@@ -294,7 +294,7 @@ module.exports = {
                 const reminderTargetID = reminderDocument._id;
                 const sortType = indexByRecency ? "By Recency" : "By End Time";
                 const reminderEmbed = fn.getEmbedArray(`__**Reminder ${pastNumberOfEntriesIndex}:**__\n${rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset)}`,
-                    `Recurring Reminder: Delete Reminder ${pastNumberOfEntriesIndex} (${sortType})`, true, true, repeatEmbedColour);
+                    `Recurring Reminder: Delete Reminder ${pastNumberOfEntriesIndex} (${sortType})`, true, false, repeatEmbedColour);
                 const deleteConfirmMessage = `Are you sure you want to **delete Reminder ${pastNumberOfEntriesIndex}?**`;
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, reminderEmbed, deleteConfirmMessage, forceSkip,
                     `Recurring Reminder: Delete Reminder ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
@@ -422,7 +422,11 @@ module.exports = {
                     else reminderDocument = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, 0, pastNumberOfEntriesIndex);
                     console.log({ reminderView: reminderDocument });
                     const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderDocument, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
-                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(reminderDataToStringArray, `Recurring Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`, true, true, repeatEmbedColour));
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                        reminderDataToStringArray, `Recurring Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`,
+                        true, `Recurring Reminders ${fn.timestampToDateString(
+                            Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                        )}`, repeatEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -461,7 +465,11 @@ module.exports = {
                                 else reminderDocument = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ reminderView: reminderDocument });
                                 const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderDocument, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
-                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(reminderDataToStringArray, `Recurring Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`, true, true, repeatEmbedColour));
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                                    reminderDataToStringArray, `Recurring Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`,
+                                    true, `Recurring Reminders ${fn.timestampToDateString(
+                                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                                    )}`, repeatEmbedColour));
                                 message.channel.send(reminderEmbed);
                                 return;
                             }
@@ -483,7 +491,11 @@ module.exports = {
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By End Time";
                 const reminderDataToString = `__**Reminder ${pastNumberOfEntriesIndex}:**__\n` + rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
-                const reminderEmbed = fn.getEmbedArray(reminderDataToString, `Recurring Reminder: See Reminder ${pastNumberOfEntriesIndex} (${sortType})`, true, true, repeatEmbedColour);
+                const reminderEmbed = fn.getEmbedArray(reminderDataToString,
+                    `Recurring Reminder: See Reminder ${pastNumberOfEntriesIndex} (${sortType})`,
+                    true, `Recurring Reminder ${fn.timestampToDateString(
+                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                    )}`, repeatEmbedColour);
                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, reminderEmbed);
             }
         }

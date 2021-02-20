@@ -2,6 +2,8 @@
  * File of all the important and universally reusable functions!
  */
 const Discord = require("discord.js");
+const fs = require("fs");
+const Attachment = require("discord.js");
 const mongoose = require("mongoose");
 const Reminder = require("../djs-bot/database/schemas/reminder");
 const User = require("../djs-bot/database/schemas/user");
@@ -2448,8 +2450,10 @@ module.exports = {
         return [hours, minutes, seconds, ms];
     },
 
-    timestampToDateString: function (timestamp, showTime = true, showDayOfWeek = true, monthInText = true) {
-        if (timestamp === undefined || timestamp === null || timestamp === false) return null;
+    timestampToDateString: function (timestamp, showTime = true,
+        showDayOfWeek = true, monthInText = true, removePunctuation = false) {
+        if (timestamp === undefined || timestamp === null
+            || timestamp === false) return null;
         const date = new Date(timestamp);
         const year = date.getUTCFullYear();
         const month = date.getUTCMonth() + 1;
@@ -2471,7 +2475,11 @@ module.exports = {
             const seconds = this.getValidMinutesString(date.getUTCSeconds());
             timeString = `, ${hours}:${minutes}:${seconds} ${amPmString}`;
         }
-        return `${dayOfWeekString || ""}${dateString || ""}${timeString || ""}`;
+        let outputString = `${dayOfWeekString || ""}${dateString || ""}${timeString || ""}`;
+        if (removePunctuation) {
+            outputString = outputString.replace(/\s*[\:\,]\s*/g, " ");
+        }
+        return outputString;
     },
 
     /**
@@ -3378,7 +3386,8 @@ module.exports = {
      * @param {String} title 
      * @param {String} embedColour 
      */
-    getEmbedArray: function (elements, title, doubleSpace = true, includesFile = false, embedColour = this.defaultEmbedColour,) {
+    getEmbedArray: function (elements, title, doubleSpace = true,
+        fileName = null, embedColour = this.defaultEmbedColour,) {
         try {
             let embedString = new Array();
             let maxString = "";
@@ -3433,7 +3442,7 @@ module.exports = {
                     let embedArray = new Array();
                     embedString.forEach(string => {
                         const embed = this.getMessageEmbed(string, title, embedColour);
-                        embedArray.push(includesFile ? embed.setFooter(this.fileFooterText) : embed);
+                        embedArray.push(fileName ? embed.setFooter(`${this.fileFooterText} (${fileName})`) : embed);
                     });
                     return embedArray;
                 }
@@ -3445,8 +3454,9 @@ module.exports = {
         }
     },
 
-    // With to file capability
-    sendPaginationEmbed: async function (bot, channelID, authorID, embedArray, withDelete = true) {
+    // With file capability
+    sendPaginationEmbed: async function (bot, channelID, authorID,
+        embedArray, withDelete = true) {
         var embed;
         if (Array.isArray(embedArray)) {
             let currentPage = 0;
@@ -3457,17 +3467,33 @@ module.exports = {
                 const right = '➡';
                 const cancel = '🗑️';
                 const file = '📎';
+                const withFile = embedArray[0].footer ?
+                    embedArray[0].footer.text.startsWith(this.fileFooterText) ?
+                        true : false : false;
                 let emojis = embedArray.length > 1 ? [left, right] : [];
                 emojis = withDelete ? emojis.concat([cancel]) : emojis;
-                emojis = embedArray[0].footer ? (embedArray[0].footer.text === this.fileFooterText ? emojis.concat([file]) : emojis) : emojis;
+                emojis = withFile ? emojis.concat([file]) : emojis;
                 emojis.forEach(async (emoji, i) => {
                     await this.quickReact(embed, emoji, i);
                 });
+                var fileName = "";
+                if (withFile) {
+                    const removedCommonFooter = embedArray[0].footer.text.replace(
+                        this.fileFooterText, ""
+                    );
+                    if (removedCommonFooter) {
+                        const startOfFileName = removedCommonFooter.indexOf('(');
+                        const endOfFileName = removedCommonFooter.indexOf(")");
+                        fileName = removedCommonFooter.substr(startOfFileName + 1,
+                            endOfFileName - startOfFileName);
+                    }
+                }
 
+                var sentFile = false;
                 const filter = (reaction, user) => emojis.includes(reaction.emoji.name) && (authorID === user.id);
                 const collector = embed.createReactionCollector(filter);
 
-                collector.on('collect', (reaction, user) => {
+                collector.on('collect', async (reaction, user) => {
                     switch (reaction.emoji.name) {
                         case right:
                             if (currentPage < embedArray.length - 1) {
@@ -3486,12 +3512,42 @@ module.exports = {
                             }
                             break;
                         case cancel:
-                            collector.stop();
-                            console.log("Stopped pagination");
-                            embed.delete();
-                            return;
+                            if (withDelete) {
+                                collector.stop();
+                                console.log("Stopped pagination");
+                                embed.delete();
+                                return;
+                            }
                         // When sending the file, have a flag and ensure that the user only
                         // gets the file sent to them once.
+                        case file:
+                            if (withFile && sentFile === false) {
+                                const path = `utilities/file_storage/${user.id}${fileName ? `_${fileName}` : ""}.txt`;
+                                let outputString = embedArray.map(embed => embed.description)
+                                    .join("\n\n");
+                                console.log({ embedArray, outputString, path });
+                                if (outputString) {
+                                    outputString = this.removeBoldingAndUnderlining(outputString);
+                                    fs.writeFileSync(path, outputString);
+                                    const userObject = bot.users.cache.get(user.id);
+                                    if (userObject && outputString) {
+                                        await userObject.send({
+                                            files: [
+                                                {
+                                                    attachment: path,
+                                                    name: `${fileName}.txt`,
+                                                }
+                                            ]
+                                        });
+                                        sentFile = true;
+                                    }
+                                    fs.unlink(path, (err) => {
+                                        console.error(err);
+                                        return;
+                                    });
+                                }
+                            }
+                            break;
                     }
                     embed.edit(embedArray[currentPage]);
                     if (channel.type !== 'dm') reaction.users.remove(user);
@@ -3499,6 +3555,11 @@ module.exports = {
             }
         }
         return embed;
+    },
+
+    removeBoldingAndUnderlining: function (string) {
+        const outputString = string.replace(/\*\*|\_\_/g, "");
+        return outputString;
     },
 
     createUserSettings: async function (bot, userID, timezoneObject) {
@@ -3693,7 +3754,8 @@ module.exports = {
         channelList = await this.listOfServerChannels(bot, message, botUserMutualServerIDs[targetServerIndex],
             allowTextChannels, allowVoiceChannels);
         if (channelList.length == 0) {
-            this.sendReplyThenDelete(message, "This server has **no channels!** EXITING...");
+            this.sendReplyThenDelete(message, `This server has **no ${allowTextChannels && !allowVoiceChannels ? "text " : ""}`
+                + `${allowTextChannels && allowVoiceChannels ? "and " : ""}${!allowTextChannels && allowVoiceChannels ? "voice " : ""}channels!** EXITING...`);
             return false;
         }
         else {

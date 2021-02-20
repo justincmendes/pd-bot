@@ -40,7 +40,9 @@ async function sendGeneratedTemplate(bot, message, numberOfUsers, namesForTempla
         }
         else templateArray.push(fn.mastermindWeeklyJournalEntry(namesForTemplate[templateIndex], withMarkdown));
     }
-    await fn.sendPaginationEmbed(bot, message.channel.id, message.author.id, fn.getEmbedArray(templateArray, "Mastermind: Weekly Reflection And Goals Template", true, true, templateEmbedColour));
+    await fn.sendPaginationEmbed(bot, message.channel.id, message.author.id, fn.getEmbedArray(
+        templateArray, "Mastermind: Weekly Reflection And Goals Template", true,
+        "Mastermind Weekly Reflection and Weekly Goals Template", templateEmbedColour));
 }
 
 async function getOneMastermindByCreatedTime(userID, mastermindIndex) {
@@ -852,7 +854,7 @@ module.exports = {
                     console.log({ mastermindTargetID });
                     const mastermindIndex = await getRecentMastermindIndex(authorID);
                     const mastermindEmbed = fn.getEmbedArray(`__**Mastermind ${mastermindIndex}:**__\n${mastermindDocumentToString(bot, mastermindView)}`,
-                        `Mastermind: Delete Recent Entry`, true, true, mastermindEmbedColour);
+                        `Mastermind: Delete Recent Entry`, true, false, mastermindEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent entry?:**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, mastermindEmbed, deleteConfirmMessage, forceSkip,
                         `Mastermind: Delete Recent Entry`, 600000);
@@ -899,7 +901,7 @@ module.exports = {
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
                 const deleteConfirmMessage = `Are you sure you want to **delete Entry ${pastNumberOfEntriesIndex}?**`;
                 const mastermindEmbed = fn.getEmbedArray(`__**Mastermind ${pastNumberOfEntriesIndex}:**__\n${mastermindDocumentToString(bot, mastermindView)}`,
-                    `Mastermind: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, true, true, mastermindEmbedColour);
+                    `Mastermind: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, true, false, mastermindEmbedColour);
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, mastermindEmbed, deleteConfirmMessage, forceSkip,
                     `Mastermind: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
@@ -1004,7 +1006,11 @@ module.exports = {
                     else mastermindView = await getMastermindByCreatedAt(authorID, 0, pastNumberOfEntriesIndex);
                     console.log({ mastermindView, pastNumberOfEntriesIndex });
                     const mastermindStringArray = multipleMastermindsToString(bot, message, mastermindView, pastNumberOfEntriesIndex, 0, true);
-                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(mastermindStringArray, `Mastermind: See ${pastNumberOfEntriesIndex} Entries (${sortType})`, true, true, mastermindEmbedColour));
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                        mastermindStringArray, `Mastermind: See ${pastNumberOfEntriesIndex} Entries (${sortType})`,
+                        true, `Mastermind Reflections ${fn.timestampToDateString(
+                            Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                        )}`, mastermindEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -1042,7 +1048,11 @@ module.exports = {
                                 else mastermindView = await getMastermindByCreatedAt(authorID, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ mastermindView });
                                 const mastermindStringArray = multipleMastermindsToString(bot, message, mastermindView, pastNumberOfEntriesIndex, entriesToSkip, true);
-                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(mastermindStringArray, `Mastermind: See ${pastNumberOfEntriesIndex} Entries Past ${entriesToSkip} (${sortType})`, true, true, mastermindEmbedColour));
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                                    mastermindStringArray, `Mastermind: See ${pastNumberOfEntriesIndex} Entries Past ${entriesToSkip} (${sortType})`,
+                                    true, `Mastermind Reflections ${fn.timestampToDateString(
+                                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                                    )}`, mastermindEmbedColour));
                                 return;
                             }
                         }
@@ -1063,7 +1073,10 @@ module.exports = {
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
                 const mastermindString = `__**Mastermind ${pastNumberOfEntriesIndex}:**__\n${mastermindDocumentToString(bot, mastermindView)}`;
-                const mastermindEmbed = fn.getEmbedArray(mastermindString, `Mastermind: See Entry ${pastNumberOfEntriesIndex} (${sortType})`, true, true, mastermindEmbedColour);
+                const mastermindEmbed = fn.getEmbedArray(mastermindString, `Mastermind: See Entry ${pastNumberOfEntriesIndex} (${sortType})`,
+                    true, `Mastermind Reflection ${fn.timestampToDateString(
+                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                    )}`, mastermindEmbedColour);
                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, mastermindEmbed);
             }
         }

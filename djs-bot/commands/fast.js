@@ -378,7 +378,7 @@ async function getFastPostEmbedArray(bot, message, PREFIX, fastData, forceSkip =
 
 async function showFastPost(bot, message, fastPost, mistakeMessage) {
     fn.sendReplyThenDelete(message, "**Here was your post:**", 600000);
-    fn.sendPaginationEmbed(bot, message.channel.id, message.author.id, fastPost, true);
+    await fn.sendPaginationEmbed(bot, message.channel.id, message.author.id, fastPost, true);
     message.reply(mistakeMessage);
     return;
 }
@@ -892,7 +892,12 @@ module.exports = {
                     else fastView = await fn.getEntriesByStartTime(Fast, { userID: authorID }, 0, pastNumberOfEntriesIndex);
                     console.log({ fastView });
                     const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
-                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts (${sortType})`, true, true, fastEmbedColour));
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                        fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts (${sortType})`,
+                        true, `Fasts ${fn.timestampToDateString(
+                            Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                        )}`, fastEmbedColour
+                    ));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -931,7 +936,12 @@ module.exports = {
                                 else fastView = await fn.getEntriesByStartTime(Fast, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ fastView });
                                 const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
-                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip} (${sortType})`, true, true, fastEmbedColour));
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                                    fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip} (${sortType})`,
+                                    true, `Fasts ${fn.timestampToDateString(
+                                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                                    )}`, fastEmbedColour
+                                ));
                                 return;
                             }
                         }
@@ -965,7 +975,10 @@ module.exports = {
                     showFastEndMessage = true;
                 }
                 const fastDataToString = `__**Fast ${pastNumberOfEntriesIndex}:**__\n` + fastDataArrayToString(fastData, showFastEndMessage, PREFIX, commandUsed);
-                const fastEmbed = fn.getEmbedArray(fastDataToString, `Fast: See Fast ${pastNumberOfEntriesIndex} (${sortType})`, true, true, fastEmbedColour);
+                const fastEmbed = fn.getEmbedArray(fastDataToString, `Fast: See Fast ${pastNumberOfEntriesIndex} (${sortType})`,
+                    true, `Fast ${fn.timestampToDateString(
+                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                    )}`, fastEmbedColour);
                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fastEmbed);
             }
         }
@@ -1181,7 +1194,7 @@ module.exports = {
                     console.log({ fastTargetID });
                     const fastIndex = await getCurrentOrRecentFastIndex(authorID);
                     const fastEmbed = fn.getEmbedArray(`__**Fast ${fastIndex}:**__\n${fastDataArrayToString(fastData)}`,
-                        `Fast: Delete Recent Fast`, true, true, fastEmbedColour);
+                        `Fast: Delete Recent Fast`, true, false, fastEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent fast?**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, fastEmbed, deleteConfirmMessage, forceSkip,
                         `Fast: Delete Recent Fast`, 600000);
@@ -1230,7 +1243,7 @@ module.exports = {
                 const fastTargetID = fastView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
                 const fastEmbed = fn.getEmbedArray(`__**Fast ${pastNumberOfEntriesIndex}:**__\n${fastDataArrayToString(fastData)}`,
-                    `Fast: Delete Fast ${pastNumberOfEntriesIndex} (${sortType})`, true, true, fastEmbedColour);
+                    `Fast: Delete Fast ${pastNumberOfEntriesIndex} (${sortType})`, true, false, fastEmbedColour);
                 const deleteConfirmMessage = `Are you sure you want to **delete Fast ${pastNumberOfEntriesIndex}?**`;
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, fastEmbed, deleteConfirmMessage, forceSkip,
                     `Fast: Delete Fast ${pastNumberOfEntriesIndex} (${sortType})`, 600000);

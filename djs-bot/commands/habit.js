@@ -695,8 +695,9 @@ module.exports = {
                     var habitCollection;
                     if (indexByRecency) habitCollection = await fn.getEntriesByRecency(Habit, { userID: authorID, archived: isArchived, }, 0, numberArg);
                     else habitCollection = await getHabitsByCreatedAt(authorID, 0, numberArg, isArchived);
-                    const habitArray = fn.getEmbedArray(await multipleHabitsToStringArray(message, habitCollection, numberArg, 0, false, true, false, true),
-                        '', true, false, habitEmbedColour);
+                    const habitArray = fn.getEmbedArray(await multipleHabitsToStringArray(
+                        message, habitCollection, numberArg, 0, false, true, false, true
+                    ), '', true, false, habitEmbedColour);
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} habits?**`;
                     const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, habitArray, multipleDeleteMessage, forceSkip,
                         `Habit${isArchived ? ` Archive` : ""}: Delete Past ${numberArg} Habits (${sortType})`, 600000);
@@ -842,7 +843,7 @@ module.exports = {
                     console.log({ habitTargetID });
                     const habitIndex = await getRecentHabitIndex(authorID, isArchived);
                     const habitEmbed = fn.getEmbedArray(`__**Habit ${habitIndex}:**__ ${await habitDocumentToString(habitView, true, false, true)}`,
-                        `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, true, true, habitEmbedColour);
+                        `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, true, false, habitEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent habit?:**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, habitEmbed, deleteConfirmMessage, forceSkip,
                         `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, 600000);
@@ -894,7 +895,7 @@ module.exports = {
                 const habitTargetID = habitView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
                 const habitEmbed = fn.getEmbedArray(`__**Habit ${pastNumberOfEntriesIndex}:**__ ${await habitDocumentToString(habitView, true, false, true)}`,
-                    `Habit${isArchived ? ` Archive` : ""}: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`, true, true, habitEmbedColour);
+                    `Habit${isArchived ? ` Archive` : ""}: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`, true, false, habitEmbedColour);
                 const deleteConfirmMessage = `Are you sure you want to **delete Habit ${pastNumberOfEntriesIndex}?**`;
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, habitEmbed, deleteConfirmMessage, forceSkip,
                     `Habit${isArchived ? ` Archive` : ""}: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
@@ -1017,7 +1018,11 @@ module.exports = {
                     else habitView = await getHabitsByCreatedAt(authorID, 0, habitIndex, isArchived);
                     console.log({ habitView, pastNumberOfEntriesIndex: habitIndex });
                     const habitArray = await multipleHabitsToStringArray(message, habitView, habitIndex, 0, false, true, true, true, true);
-                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(habitArray, `Habit${isArchived ? ` Archive` : ""}: See ${habitIndex} Habits(${sortType})`, true, true, habitEmbedColour));
+                    await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                        habitArray, `Habit${isArchived ? ` Archive` : ""}: See ${habitIndex} Habits(${sortType})`,
+                        true, `Habits ${fn.timestampToDateString(
+                            Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                        )}`, habitEmbedColour));
                     return;
                 }
                 // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
@@ -1055,7 +1060,11 @@ module.exports = {
                                 else habitView = await getHabitsByCreatedAt(authorID, entriesToSkip, habitIndex, isArchived);
                                 console.log({ habitView });
                                 const habitStringArray = await multipleHabitsToStringArray(message, habitView, habitIndex, entriesToSkip, false, true, true, true, true);
-                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(habitStringArray, `Habit${isArchived ? ` Archive` : ""}: See ${habitIndex} Habits Past ${entriesToSkip} (${sortType})`, true, true, habitEmbedColour));
+                                await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
+                                    habitStringArray, `Habit${isArchived ? ` Archive` : ""}: See ${habitIndex} Habits Past ${entriesToSkip} (${sortType})`,
+                                    true, `Habits ${fn.timestampToDateString(
+                                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                                    )}`, habitEmbedColour));
                                 return;
                             }
                         }
@@ -1076,7 +1085,10 @@ module.exports = {
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
                 const habitString = `__ ** Habit ${habitIndex}:** __ ${await habitDocumentToString(habitView, true, true, true, true)} `;
-                const habitEmbed = fn.getEmbedArray(habitString, `Habit${isArchived ? ` Archive` : ""}: See Habit ${habitIndex} (${sortType})`, true, true, habitEmbedColour);
+                const habitEmbed = fn.getEmbedArray(habitString, `Habit${isArchived ? ` Archive` : ""}: See Habit ${habitIndex} (${sortType})`,
+                    true, `Habit ${fn.timestampToDateString(
+                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                    )}`, habitEmbedColour);
                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, habitEmbed);
             }
         }
@@ -1740,7 +1752,7 @@ module.exports = {
 
         // Get the stats for the Past X Days
         else if (habitCommand === "past") {
-            
+
         }
 
 
