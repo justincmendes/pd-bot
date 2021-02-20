@@ -3485,7 +3485,7 @@ module.exports = {
                         const startOfFileName = removedCommonFooter.indexOf('(');
                         const endOfFileName = removedCommonFooter.indexOf(")");
                         fileName = removedCommonFooter.substr(startOfFileName + 1,
-                            endOfFileName - startOfFileName);
+                            endOfFileName - startOfFileName - 1);
                     }
                 }
 
