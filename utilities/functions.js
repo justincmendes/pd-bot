@@ -4204,7 +4204,7 @@ module.exports = {
             if (allUsers.length) {
                 allUsers.forEach(async user => {
                     const currentUserObject = bot.users.cache.get(user.discordID);
-                    if(currentUserObject) {
+                    if (currentUserObject) {
                         await this.updateUser(currentUserObject);
                     }
                 });
@@ -4731,7 +4731,8 @@ module.exports = {
                     await Reminder.findByIdAndDelete(reminder._id);
                 });
                 // await Reminder.deleteMany({ guildID: guildObject.id });
-                console.log(`Removed from ${guildName || ""}(${guildID || ""})\nDeleting Guild Settings and Reminders...`);
+                console.log(`Removing Guild Settings and Reminders from`
+                    + ` ${guildName ? `${guildName} (${guildID || ""})` : guildID || ""}...`);
             }
 
             // Unlink any users voice channel tracking data:
