@@ -177,7 +177,7 @@ module.exports = {
                     case 9 - quoteAdjustment:
                         // Check if the user wants to remove a voice channel or add one.
                         userSettingsPrompt = `\nDo you want to **add** (📊) another voice channel to track or **remove** (🗑️) a voice channel you are currently tracking your time in?`
-                            + `\n(**Cap at ${tier}**)\n\n**__Current tracked voice channels:__**\n${userSettings.voiceChannels.map(vcObject => {
+                            + `\n(**Cap at ${2 * tier}**)\n\n**__Current tracked voice channels:__**\n${userSettings.voiceChannels.map(vcObject => {
                                 return `${bot.channels.cache.get(vcObject.id).name} (${bot.channels.cache.get(vcObject.id).guild.name})`;
                             }).join('\n')}`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
@@ -678,9 +678,9 @@ module.exports = {
                                 if (typeof userEdit === "boolean") {
                                     // Add voice channel
                                     if (userEdit) {
-                                        if (userSettings.voiceChannels) if (userSettings.voiceChannels.length >= tier) {
+                                        if (userSettings.voiceChannels) if (userSettings.voiceChannels.length >= 2 * tier) {
                                             message.reply("**You cannot track another voice channel because you don't have any more spots!**"
-                                                + `\n(${tier} voice channels allowed in total)`);
+                                                + `\n(${2 * tier} voice channels allowed in total)`);
                                             continueEdit = true;
                                             break;
                                         }
