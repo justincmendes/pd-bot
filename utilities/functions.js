@@ -4404,7 +4404,7 @@ module.exports = {
                     mutualServers.forEach(async serverID => {
                         const server = bot.guilds.cache.get(serverID);
                         const serverMember = server.members.cache.get(user.discordID);
-                        if (serverMember.voice.channel) {
+                        if (serverMember) if (serverMember.voice) if (serverMember.voice.channel) {
                             await this.setupVoiceChannelTracking(
                                 bot, user.discordID, serverMember.voice.channel.id
                             );
