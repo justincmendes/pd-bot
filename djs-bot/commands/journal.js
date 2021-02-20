@@ -72,7 +72,7 @@ async function getGeneratedPromptAndAnswer(bot, message, PREFIX, prompts) {
                 console.log({ currentPrompt });
             }
         }
-        const user = bot.users.fetch(currentPrompt.userID);
+        const user = bot.users.cache.get(currentPrompt.userID);
         let entry = await fn.getMultilineEntry(bot, message, PREFIX, `**__${currentPrompt || ""}__**${user ? `\n\nBy: __**${user.username}**__` : ""}`,
             "Journal: Prompt and Answer", true, journalEmbedColour, newPromptInstructions, newPromptKeywords, newPrompt ? "" : entry.array);
         if (!entry) return false;

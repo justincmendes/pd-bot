@@ -3508,7 +3508,7 @@ module.exports = {
                 && !timezoneObject.daylightSaving && timezoneObject.daylightSaving !== false) {
                 return false;
             }
-            const user = await bot.users.fetch(userID);
+            const user = bot.users.cache.get(userID);
             const userDaylightSavingsSettings = timezoneObject.daylightSaving;
             const daylightOffset = this.isDaylightSavingTime(Date.now() + timezoneObject.offset * HOUR_IN_MS,
                 timezoneObject.name, userDaylightSavingsSettings) ? this.getTimezoneDaylightOffset(timezoneObject.name) : 0;
@@ -4139,7 +4139,7 @@ module.exports = {
         if (allUsers) {
             if (allUsers.length) {
                 allUsers.forEach(async user => {
-                    const currentUser = await bot.users.fetch(user.discordID, false);
+                    const currentUser = bot.users.cache.get(user.discordID, false);
                     await User.updateOne({ discordID: user.discordID }, {
                         $set:
                         {
