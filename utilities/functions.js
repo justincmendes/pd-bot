@@ -4638,11 +4638,16 @@ module.exports = {
         if (channelObject) if (channelObject.type === "voice") {
             const allUsersSettings = await User.find({});
             if (allUsersSettings) if (allUsersSettings.length) {
+                console.log(`Unlinking any users' voice channel time tracking from`
+                    + ` ${channelObject.name} (${channelObject.id})`);
                 allUsersSettings.forEach(async userSettings => {
                     const { voiceChannels } = userSettings;
                     if (voiceChannels) if (voiceChannels.length) {
                         voiceChannels.forEach(async (vc, i) => {
                             if (vc.id === channelObject.id) {
+                                console.log(`Unlinking ${userSettings.discordTag} from`
+                                    + ` ${channelObject.name} (${channelObject.guild.name})`
+                                    + ` - channel id: ${channelObject.id}`);
                                 voiceChannels[i].channelName = channelObject.name;
                                 voiceChannels[i].guildName = channelObject.guild.name;
                                 await User.updateOne({ _id: userSettings._id }, {

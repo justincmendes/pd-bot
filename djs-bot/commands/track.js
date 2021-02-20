@@ -130,13 +130,13 @@ module.exports = {
                                     + ` (${fn.getVoiceChannelServerString(bot, vcObject)})`;
                             }).join('\n')}`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, trackPrompt,
-                            ['📊', '🗑️'], type, forceSkip, trackEmbedColour);
+                            ['📊', '🗑️'], type, true, trackEmbedColour);
                         break;
                     case 1:
                         let vcList = "";
                         userSettings.voiceChannels.forEach((vc, i) => {
                             vcList += `\`${i + 1}\` - ${fn.getVoiceChannelNameString(bot, vc)}`
-                            + ` (${fn.getVoiceChannelServerString(bot, vc)})`;
+                                + ` (${fn.getVoiceChannelServerString(bot, vc)})`;
                             if (i !== userSettings.voiceChannels.length) {
                                 vcList += '\n';
                             }
@@ -226,6 +226,7 @@ module.exports = {
                                                 },
                                             },
                                         }, { new: true });
+                                        await fn.resetAllVoiceChannelTracking(bot);
                                     }
 
                                     // Remove voice channel
@@ -256,6 +257,11 @@ module.exports = {
                                                     },
                                                 },
                                             }, { new: true });
+                                            if (fn.voiceTrackingHasUser(userSettings.discordID)) {
+                                                fn.voiceTrackingClearInterval(userSettings.discordID);
+                                                fn.voiceTrackingDeleteCollection(userSettings.discordID);
+                                                await Track.deleteMany({ userID: userSettings.discordID });
+                                            }
                                         }
                                     }
                                 }

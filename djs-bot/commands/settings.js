@@ -182,7 +182,7 @@ module.exports = {
                                     + ` (${fn.getVoiceChannelServerString(bot, vcObject)})`;
                             }).join('\n')}`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
-                            ['📊', '🗑️'], type, forceSkip, trackEmbedColour);
+                            ['📊', '🗑️'], type, true, trackEmbedColour);
                         break;
                     case 10 - quoteAdjustment:
                         let vcList = "";
@@ -702,6 +702,7 @@ module.exports = {
                                                 },
                                             },
                                         }, { new: true });
+                                        await fn.resetAllVoiceChannelTracking(bot);
                                     }
 
                                     // Remove voice channel
@@ -732,6 +733,11 @@ module.exports = {
                                                     },
                                                 },
                                             }, { new: true });
+                                            if (fn.voiceTrackingHasUser(userSettings.discordID)) {
+                                                fn.voiceTrackingClearInterval(userSettings.discordID);
+                                                fn.voiceTrackingDeleteCollection(userSettings.discordID);
+                                                await Track.deleteMany({ userID: userSettings.discordID });
+                                            }
                                         }
                                     }
                                 }
