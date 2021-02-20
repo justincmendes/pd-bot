@@ -4520,7 +4520,7 @@ module.exports = {
                     if (user) {
                         const days = parseInt(trackObject.timeTracked / DAY_IN_MS);
                         user.send("Congratulations! You have spent at least"
-                            + ` **__${days}day${days > 1 ? "s" : ""}__**`
+                            + ` **__${days} day${days > 1 ? "s" : ""}__**`
                             + `  in **${bot.channels.cache.get(trackObject.id).name}**`
                             + ` (${bot.channels.cache.get(trackObject.id).guild.name})`
                             + `\n⏳ - **__${this.millisecondsToTimeString(trackObject.timeTracked)}__**`);
