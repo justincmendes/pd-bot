@@ -3522,7 +3522,8 @@ module.exports = {
                         // gets the file sent to them once.
                         case file:
                             if (withFile && sentFile === false) {
-                                const path = `${__dirname}/utilities/file_storage/${user.id}${fileName ? `_${fileName}` : ""}.txt`;
+                                // const path = `${__dirname}/utilities/file_storage/${user.id}${fileName ? `_${fileName}` : ""}.txt`;
+                                const path = `${__dirname}/${user.id}${fileName ? `_${fileName}` : ""}.txt`;
                                 let outputString = embedArray.map(embed => embed.description)
                                     .join("\n\n");
                                 console.log({ embedArray, outputString, path });
