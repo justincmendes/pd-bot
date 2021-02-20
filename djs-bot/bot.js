@@ -433,13 +433,15 @@ bot.on("message", async message => {
 // For dynamic bot settings per guild
 // Will help with handling unique prefixes!
 bot.on("guildCreate", async (guild) => {
+    await fn.resetAllVoiceChannelTracking(bot);
     await fn.setupNewGuild(bot, guild.id, guild.name);
     return;
 });
 
 // Remove the settings and preset data if PD is removed from guild
 bot.on('guildDelete', async (guild) => {
-    await fn.deleteGuild(guild.id, guild.name, guild.channels.cache);
+    // console.log([...guild.channels.cache.values()]);
+    await fn.deleteGuild(guild.id, guild.name, guild.channels.cache).array();
     return;
 });
 

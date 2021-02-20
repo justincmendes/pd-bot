@@ -4635,6 +4635,7 @@ module.exports = {
     unlinkVoiceChannelTracking: async function (channelObject) {
         // If a user tracked voice channel gets deleted,
         // make the channel name as the id and store the guildName
+        console.log({ channelObject });
         if (channelObject) if (channelObject.type === "voice") {
             const allUsersSettings = await User.find({});
             if (allUsersSettings) if (allUsersSettings.length) {
@@ -4655,6 +4656,11 @@ module.exports = {
                                         voiceChannels,
                                     },
                                 });
+                                if (fn.voiceTrackingHasUser(userSettings.discordID)) {
+                                    fn.voiceTrackingClearInterval(userSettings.discordID);
+                                    fn.voiceTrackingDeleteCollection(userSettings.discordID);
+                                    await Track.deleteMany({ userID: userSettings.discordID });
+                                }
                             }
                         });
                     }
@@ -4741,8 +4747,10 @@ module.exports = {
             }
 
             // Unlink any users voice channel tracking data:
+            console.log({ guildChannelObjectArray });
             if (guildChannelObjectArray) if (guildChannelObjectArray.length) {
                 guildChannelObjectArray.forEach(async channel => {
+                    console.log({ channel });
                     await this.unlinkVoiceChannelTracking(channel);
                 });
             }

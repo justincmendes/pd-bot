@@ -702,7 +702,9 @@ module.exports = {
                                                 },
                                             },
                                         }, { new: true });
-                                        await fn.resetAllVoiceChannelTracking(bot);
+                                        await fn.setupVoiceChannelTracking(
+                                            bot, authorID, targetVoiceChannel
+                                        );
                                     }
 
                                     // Remove voice channel
