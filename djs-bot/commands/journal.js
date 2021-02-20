@@ -179,7 +179,7 @@ function journalDocumentToString(journalDoc) {
 function multipleJournalsToString(message, journalArray, numberOfJournals, entriesToSkip = 0, toArray = false) {
     var entriesToString = new Array();
     console.log({ numberOfJournals });
-    for (i = 0; i < numberOfJournals; i++) {
+    for (let i = 0; i < numberOfJournals; i++) {
         if (journalArray[i] === undefined) {
             numberOfJournals = i;
             fn.sendErrorMessage(message, `**JOURNALS ${i + entriesToSkip + 1}**+ ONWARDS DO NOT EXIST...`);
@@ -205,7 +205,7 @@ async function getRecentJournalIndex(userID) {
                 .sort({ _id: -1 });
             targetID = targetID._id.toString();
             console.log({ targetID });
-            for (i = 0; i < entries.length; i++) {
+            for (let i = 0; i < entries.length; i++) {
                 if (entries[i]._id.toString() === targetID) {
                     index = i + 1;
                     return index;
@@ -546,7 +546,7 @@ module.exports = {
                     }
                     var journalTargetIDs = new Array();
                     var journalStringArray = new Array();
-                    for (i = 0; i < toDelete.length; i++) {
+                    for (let i = 0; i < toDelete.length; i++) {
                         var journalView;
                         if (indexByRecency) {
                             journalView = await getOneJournalByRecency(authorID, toDelete[i] - 1);

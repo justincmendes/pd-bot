@@ -167,7 +167,7 @@ async function multipleHabitsToStringArray(message, habitArray, numberOfHabits,
     showSettings = false, showTotalStats = false) {
     var habitsToString = new Array();
     console.log({ numberOfHabits });
-    for (i = 0; i < numberOfHabits; i++) {
+    for (let i = 0; i < numberOfHabits; i++) {
         if (habitArray[i] === undefined) {
             numberOfHabits = i;
             fn.sendErrorMessage(message, `**HABITS ${i + entriesToSkip + 1}**+ ONWARDS DO NOT EXIST...`);
@@ -263,7 +263,7 @@ async function getRecentHabitIndex(userID, archived) {
                 .sort({ _id: -1 });
             targetID = targetID._id.toString();
             console.log({ targetID });
-            for (i = 0; i < entries.length; i++) {
+            for (let i = 0; i < entries.length; i++) {
                 if (entries[i]._id.toString() === targetID) {
                     index = i + 1;
                     return index;
@@ -749,7 +749,7 @@ module.exports = {
                     }
                     var habitTargetIDs = new Array();
                     var habitArray = new Array();
-                    for (i = 0; i < toDelete.length; i++) {
+                    for (let i = 0; i < toDelete.length; i++) {
                         var habitView;
                         if (indexByRecency) {
                             habitView = await getOneHabitByRecency(authorID, toDelete[i] - 1, isArchived);

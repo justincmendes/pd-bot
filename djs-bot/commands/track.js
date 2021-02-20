@@ -156,7 +156,7 @@ module.exports = {
                                 if (userTimeInput === "back") break;
                                 if (userTimeInput === "stop" || !userTimeInput) return;
                                 const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
-                                let now = fn.getCurrentUTCTimestampFlooredToSecond();
+                                let now = Date.now();
                                 endTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now,
                                     timezoneOffset, daylightSaving, true, true, false, true);
                                 if (endTime || endTime === 0) {

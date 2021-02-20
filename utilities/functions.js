@@ -456,8 +456,9 @@ module.exports = {
     userAndBotMutualServerIDs: async function (bot, userID) {
         // Check all of the servers the bot is in
         const botServersIDs = await this.getAllBotServers(bot);
+        console.log({ botServersIDs })
         var botUserServers = new Array();
-        for (i = 0; i < botServersIDs.length; i++) {
+        for (let i = 0; i < botServersIDs.length; i++) {
             const server = await bot.guilds.cache.get(botServersIDs[i]);
             if (server) if (server.member(userID) && botServersIDs[i]) {
                 botUserServers.push(botServersIDs[i]);
@@ -3738,7 +3739,7 @@ module.exports = {
         forceSkip = false, allowTextChannels = true, allowVoiceChannels = false,
         forPosting = true, embedColour = this.defaultEmbedColour, excludedChannels = []) {
         // Find all the mutual servers with the user and bot
-        var botUserMutualServerIDs = await this.userAndBotMutualServerIDs(bot, message);
+        var botUserMutualServerIDs = await this.userAndBotMutualServerIDs(bot, message.author.id);
         var targetServerIndex, targetChannelIndex;
         var channelList, channelListDisplay;
         var confirmSendToChannel = false;
@@ -4401,6 +4402,8 @@ module.exports = {
         if (users) if (users.length) {
             users.forEach(async user => {
                 const mutualServers = await this.userAndBotMutualServerIDs(bot, user.discordID);
+                console.log(user.discordID);
+                console.log({ mutualServers });
                 if (mutualServers) if (mutualServers.length) {
                     mutualServers.forEach(async serverID => {
                         const server = bot.guilds.cache.get(serverID);
@@ -4501,13 +4504,29 @@ module.exports = {
             if (!vcInformation) return false;
             else {
                 const { userSettings, voiceChannels, voiceChannelIndex } = vcInformation;
-                voiceChannels[voiceChannelIndex].timeTracked = addDuration ?
-                    voiceChannels[voiceChannelIndex].timeTracked + durationChange
+                const targetVcObject = voiceChannels[voiceChannelIndex];
+                const originalTimeTracked = targetVcObject.timeTracked;
+                targetVcObject.timeTracked = addDuration ?
+                    targetVcObject.timeTracked + durationChange
                     : durationChange;
-                if (voiceChannels[voiceChannelIndex].timeTracked < 0) {
-                    voiceChannels[voiceChannelIndex].timeTracked = 0;
+                if (targetVcObject.timeTracked < 0) {
+                    targetVcObject.timeTracked = 0;
                 }
-                voiceChannels[voiceChannelIndex].lastTrackedTimestamp = lastTracked || lastTracked === 0 ?
+                console.log(`Original: ${parseInt(originalTimeTracked / DAY_IN_MS)}`);
+                console.log(`Updated: ${parseInt(targetVcObject.timeTracked / DAY_IN_MS)}`);
+                if (parseInt(originalTimeTracked / DAY_IN_MS) <
+                    parseInt(targetVcObject.timeTracked / DAY_IN_MS)
+                    && durationChange > 0) {
+                    const { userID } = userSettings;
+                    const user = bot.users.cache.get(userID);
+                    if (user) {
+                        user.send("Congratulations! You have spent at least "
+                            + `${parseInt(targetVcObject.timeTracked / DAY_IN_MS)}`
+                            + ` days in ${bot.channels.cache.get(targetVcObject.voiceChannelID).name}`
+                            + ` (${bot.channels.cache.get(targetVcObject.voiceChannelID).guild.name})`);
+                    }
+                }
+                targetVcObject.lastTrackedTimestamp = lastTracked || lastTracked === 0 ?
                     lastTracked : this.getCurrentUTCTimestampFlooredToSecond() + userSettings.timezone.offset * HOUR_IN_MS;
                 const updatedUserSettings = await User.findByIdAndUpdate(userSettings.id, {
                     $set: { voiceChannels: voiceChannels }
@@ -4616,7 +4635,7 @@ module.exports = {
     getTierStarString: function (tier) {
         tier = tier ? tier : 1;
         var output = "";
-        for (i = 0; i < tier; i++) {
+        for (let i = 0; i < tier; i++) {
             output += "🌟 ";
         }
         for (i = tier; i < 3; i++) {

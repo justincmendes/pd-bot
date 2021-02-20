@@ -147,7 +147,7 @@ module.exports = {
                     }
                     var reminderTargetIDs = new Array();
                     var reminderStringArray = new Array();
-                    for (i = 0; i < toDelete.length; i++) {
+                    for (let i = 0; i < toDelete.length; i++) {
                         var reminderDocument;
                         if (indexByRecency) {
                             reminderDocument = await rm.getOneReminderByRecency(authorID, toDelete[i] - 1, true);

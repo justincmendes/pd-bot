@@ -106,7 +106,7 @@ function mastermindDocumentToString(bot, mastermindDoc) {
 function multipleMastermindsToString(bot, message, mastermindArray, numberOfMasterminds, entriesToSkip = 0, toArray = false) {
     var entriesToString = new Array();
     console.log({ numberOfMasterminds });
-    for (i = 0; i < numberOfMasterminds; i++) {
+    for (let i = 0; i < numberOfMasterminds; i++) {
         if (mastermindArray[i] === undefined) {
             numberOfMasterminds = i;
             fn.sendErrorMessage(message, `**MASTERMINDS ${i + entriesToSkip + 1}**+ ONWARDS DO NOT EXIST...`);
@@ -139,7 +139,7 @@ async function getRecentMastermindIndex(userID) {
                 .sort({ _id: -1 });
             targetID = targetID._id.toString();
             console.log({ targetID });
-            for (i = 0; i < entries.length; i++) {
+            for (let i = 0; i < entries.length; i++) {
                 if (entries[i]._id.toString() === targetID) {
                     index = i + 1;
                     return index;
@@ -765,7 +765,7 @@ module.exports = {
                     }
                     var mastermindTargetIDs = new Array();
                     var mastermindStringArray = new Array();
-                    for (i = 0; i < toDelete.length; i++) {
+                    for (let i = 0; i < toDelete.length; i++) {
                         var mastermindView;
                         if (indexByRecency) {
                             mastermindView = await getOneMastermindByRecency(authorID, toDelete[i] - 1);

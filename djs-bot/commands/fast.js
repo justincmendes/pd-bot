@@ -64,7 +64,7 @@ function fastDocumentToDataArray(fastDocument, userTimezone = 0, calculateFastDu
 }
 function multipleFastsToString(message, fastArray, numberOfFasts, userTimezoneOffset, entriesToSkip = 0, toArray = false) {
     var fastDataOut = toArray ? new Array() : "";
-    for (i = 0; i < numberOfFasts; i++) {
+    for (let i = 0; i < numberOfFasts; i++) {
         if (fastArray[i] === undefined) {
             numberOfFasts = i;
             fn.sendErrorMessage(message, `**FASTS ${i + entriesToSkip + 1}**+ ONWARDS DO NOT EXIST...`);
@@ -416,7 +416,7 @@ async function getCurrentOrRecentFastIndex(userID) {
             .find({ userID })
             .sort({ startTime: -1 });
         if (fastIsInProgress) {
-            for (i = 0; i < fasts.length; i++) {
+            for (let i = 0; i < fasts.length; i++) {
                 if (fasts[i].endTime === null) {
                     index = i + 1;
                     break;
@@ -429,7 +429,7 @@ async function getCurrentOrRecentFastIndex(userID) {
                 .sort({ _id: -1 });
             targetID = targetID._id.toString();
             console.log({ targetID });
-            for (i = 0; i < fasts.length; i++) {
+            for (let i = 0; i < fasts.length; i++) {
                 if (fasts[i]._id.toString() === targetID) {
                     index = i + 1;
                     break;
@@ -528,7 +528,7 @@ async function getUserReminderEndTime(bot, message, PREFIX, fastTimeHelpMessage,
         // Undo the timezoneOffset to get the end time in UTC
         const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
         var intendedFastDuration, now;
-        now = fn.getCurrentUTCTimestampFlooredToSecond();
+        now = Date.now();
         reminderEndTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now,
             userTimezoneOffset, userDaylightSavingSetting, true, true, false, false);
         if (reminderEndTime || reminderEndTime === 0) {
@@ -1090,7 +1090,7 @@ module.exports = {
                         }
                         var fastTargetIDs = new Array();
                         var fastDataToString = new Array();
-                        for (i = 0; i < toDelete.length; i++) {
+                        for (let i = 0; i < toDelete.length; i++) {
                             var fastView;
                             if (indexByRecency) {
                                 fastView = await getOneFastByRecency(authorID, toDelete[i] - 1);

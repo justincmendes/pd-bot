@@ -323,7 +323,7 @@ module.exports = {
         let streakReset = cronPeriods;
         var currentStreak = 0;
 
-        for (i = 0; i < sortedLogs.length; i++) {
+        for (let i = 0; i < sortedLogs.length; i++) {
             if (sortedLogs[i]) {
                 const latestLog = sortedLogs[i];
                 if (sortedLogs[i + 1]) {
@@ -399,7 +399,7 @@ module.exports = {
         // streak we are calculating for is partial due to the habit being
         // created in the middle of the given start and end time period
         let checkLogs = new Array();
-        for (i = 0; i < sortedLogs.length; i++) {
+        for (let i = 0; i < sortedLogs.length; i++) {
             if (sortedLogs[i]) {
                 if (sortedLogs[i].timestamp) {
                     const logTimestamp = sortedLogs[i].timestamp;
@@ -414,7 +414,7 @@ module.exports = {
         let pastStreak = 0;
         // Equivalent to filtering the array based on the state
         // and then taking the length
-        for (i = 0; i < checkLogs.length; i++) {
+        for (let i = 0; i < checkLogs.length; i++) {
             if (checkLogs[i]) {
                 const isAfterCreation = createdAt || createdAt === 0 ?
                     checkLogs[i].timestamp >= createdAt : true;

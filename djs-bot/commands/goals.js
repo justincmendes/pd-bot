@@ -106,7 +106,7 @@ async function getRecentGoalIndex(userID, archived) {
                 .sort({ _id: -1 });
             targetID = targetID._id.toString();
             console.log({ targetID });
-            for (i = 0; i < entries.length; i++) {
+            for (let i = 0; i < entries.length; i++) {
                 if (entries[i]._id.toString() === targetID) {
                     index = i + 1;
                     return index;
@@ -138,7 +138,7 @@ function getGoalReadOrDeleteHelp(PREFIX, commandUsed, crudCommand) {
 function multipleGoalsToStringArray(message, goalArray, numberOfGoals, entriesToSkip = 0, toString = false) {
     var goalsToString = new Array();
     console.log({ numberOfGoals });
-    for (i = 0; i < numberOfGoals; i++) {
+    for (let i = 0; i < numberOfGoals; i++) {
         if (goalArray[i] === undefined) {
             numberOfGoals = i;
             fn.sendErrorMessage(message, `**GOALS ${i + entriesToSkip + 1}**+ ONWARDS DO NOT EXIST...`);
@@ -307,9 +307,8 @@ module.exports = {
                 else goalReason = goalReason.message;
 
                 let time = ["started", "plan to have finished"];
-                for (i = 0; i < 2; i++) {
+                for (let i = 0; i < 2; i++) {
                     do {
-                        const index = i;
                         let goalsTimePrompt = `**Please enter the date and time when you __${time[i]}__ this goal:**\n${i === 0 ? timeExamples : futureTimeExamples}`;
                         let timeInput = await fn.getSingleEntry(bot, message, PREFIX, goalsTimePrompt, "Long-Term Goal: Creation - Set Time", forceSkip, goalEmbedColour,
                             additionalInstructions, additionalKeywords);
@@ -321,7 +320,6 @@ module.exports = {
                         timeInput = timeInput.toLowerCase().split(/[\s\n]+/);
                         const now = Date.now();
                         timeInput = fn.timeCommandHandlerToUTC(timeInput, now, timezoneOffset, daylightSaving);
-                        i = index;
                         if (!timeInput && timeInput !== 0) {
                             fn.sendReplyThenDelete(message, `**INVALID DATE/TIME**...`, 60000);
                             continue;
@@ -504,7 +502,7 @@ module.exports = {
                     }
                     var goalTargetIDs = new Array();
                     var habits = new Array();
-                    for (i = 0; i < toDelete.length; i++) {
+                    for (let i = 0; i < toDelete.length; i++) {
                         var goalView;
                         if (indexByRecency) {
                             goalView = await getOneGoalByRecency(authorID, toDelete[i] - 1, isArchived);
