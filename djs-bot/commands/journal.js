@@ -241,7 +241,10 @@ module.exports = {
         const journalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
         const journalActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${journalCommand} help\``;
         const journalType = args[1] ? args[1].toLowerCase() : false;
-        const guildID = message.guild.id || false;
+        var guildID;
+        if (message.guild) {
+            guildID = message.guild.id;
+        }
         const authorID = message.author.id;
         const authorUsername = message.author.username;
         const userSettings = await User.findOne({ discordID: authorID });
@@ -854,9 +857,9 @@ module.exports = {
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
                 const journalString = `__**Journal ${pastNumberOfEntriesIndex}:**__\n${journalDocumentToString(journalView)}`;
                 const journalEmbed = fn.getEmbedArray(journalString, `Journal: See Entry ${pastNumberOfEntriesIndex} (${sortType})`,
-                true, `Journal ${fn.timestampToDateString(
-                    Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
-                )}`, journalEmbedColour);
+                    true, `Journal ${fn.timestampToDateString(
+                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                    )}`, journalEmbedColour);
                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, journalEmbed);
             }
         }
