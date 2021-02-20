@@ -32,6 +32,7 @@ const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
 const Habit = require("./database/schemas/habit");
 const Track = require("./database/schemas/track");
+const user = require("./database/schemas/user");
 bot.mongoose = require("../utilities/mongoose");
 
 const pdBotTag = `<@!${CLIENT_ID}>`;
@@ -70,15 +71,35 @@ bot.on("ready", async () => {
 
     bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
 
-    await fn.rescheduleAllDST();
-    await hb.resetAllHabitCrons();
-    await rm.resetReminders(bot);
+    await fn.updateGuilds(bot);
     await fn.updateAllUsers(bot);
+    await fn.rescheduleAllDST();
+    await rm.resetReminders(bot);
+    await hb.resetAllHabitCrons();
     await fn.resetAllVoiceChannelTracking(bot);
 
     // For Testing
+    // if (message.author.id === "208829852583723008") {
+    //     const directory = `utilities/file_storage/208829852583723008`;
+    //     const path = `${directory}/${fn.timestampToDateString(Date.now(), true, true, true, true)}.txt`;
+    //     const outputString = "Yay!\nThis works!\n\n\n\n\n\nLots of \\n";
+    //     if (outputString) {
+    //         fs.appendFileSync(path, outputString);
+    //         const fileOut = fs.readFileSync(path, 'utf-8');
+    //         const userObject = bot.users.cache.get("208829852583723008");
+    //         if (userObject && fileOut) {
+    //             await userObject.send({ files: [path] });
+    //             console.log("true");
+    //         }
+    //         fs.unlink(path, (err) => {
+    //             console.error(err);
+    //             return;
+    //         });
+    //     }
+    // }
+
     // console.log(fn.timestampToDateString(fn.getStartOfWeekTimestamp(Date.now() - 5 * HOUR_IN_MS, -5, true, false)));
-    
+
     // const result = await rm.cancelReminder("208829852583723008", "5f9647410dd2ff1eb497d05d");
     // console.log({ result });
 
@@ -412,48 +433,19 @@ bot.on("message", async message => {
 // For dynamic bot settings per guild
 // Will help with handling unique prefixes!
 bot.on("guildCreate", async (guild) => {
-    try {
-        const guildObject = await Guild.findOne({ guildID: guild.id });
-        // Check if it already exists to avoid duplicates
-        if (guildObject) return console.log(`${bot.user.username} is already in ${guild.name}! Won't create new instance in Database.`);
-        else {
-            const guildSettings = await fn.createGuildSettings(guild.id, "EST", true);
-            if (guildSettings) console.log(`${bot.user.username} has joined the server ${guild.name}! Saved to Database.`);
-            else console.log(`There was an error adding ${guild.name} to the database.`);
-        }
-    }
-    catch (err) {
-        return console.error(err);
-    }
+    await fn.setupNewGuild(bot, guild.id, guild.name);
+    return;
 });
 
 // Remove the settings and preset data if PD is removed from guild
 bot.on('guildDelete', async (guild) => {
-    try {
-        await Guild.deleteOne({ guildID: guild.id });
-        const guildReminders = await Reminder.find({ guildID: guild.id });
-        guildReminders.forEach(async reminder => {
-            await rm.cancelReminderById(reminder._id);
-            await Reminder.findByIdAndDelete(reminder._id);
-        });
-        // await Reminder.deleteMany({ guildID: guild.id });
-        console.log(`Removed from ${guild.name}(${guild.id})\nDeleting Guild Settings and Reminders...`);
-    }
-    catch (err) {
-        return console.error(err);
-    }
+    await fn.deleteGuild(guild.id, guild.name, guild.channels.cache);
+    return;
 });
 
 bot.on('guildMemberUpdate', async (member) => {
     const user = member.user;
-    const { id, avatar, username, discriminator } = user;
-    // console.log({ user, id, avatar, username, discriminator });
-    const updateUser = await User.findOneAndUpdate({ discordID: id }, {
-        $set: { avatar, discordTag: `${username}#${discriminator}`, }
-    }, { new: true });
-    if (updateUser) {
-        console.log({ updateUser });
-    }
+    await fn.updateUser(user);
     return;
 });
 
@@ -514,6 +506,12 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
         }
     }
     return;
+});
+
+bot.on('channelDelete', async (channel) => {
+    // If a user tracked voice channel gets deleted,
+    // make the channel name as the id and store the guildName
+    await fn.unlinkVoiceChannelTracking(channel);
 });
 
 // To ensure that the MongoDB is connected before logging in

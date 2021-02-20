@@ -96,7 +96,15 @@ const userSettingsSchema = mongoose.Schema({
         lastTrackedTimestamp: {
             type: Number,
             required: false,
-        }
+        },
+        guildName: {
+            type: String,
+            required: false,
+        },
+        channelName: {
+            type: String,
+            required: false,
+        },
     }],
 });
 

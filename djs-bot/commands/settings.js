@@ -178,7 +178,8 @@ module.exports = {
                         // Check if the user wants to remove a voice channel or add one.
                         userSettingsPrompt = `\nDo you want to **add** (📊) another voice channel to track or **remove** (🗑️) a voice channel you are currently tracking your time in?`
                             + `\n(**Cap at ${2 * tier}**)\n\n**__Current tracked voice channels:__**\n${userSettings.voiceChannels.map(vcObject => {
-                                return `${bot.channels.cache.get(vcObject.id).name} (${bot.channels.cache.get(vcObject.id).guild.name})`;
+                                return `${fn.getVoiceChannelNameString(bot, vcObject)}`
+                                    + ` (${fn.getVoiceChannelServerString(bot, vcObject)})`;
                             }).join('\n')}`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
                             ['📊', '🗑️'], type, forceSkip, trackEmbedColour);
@@ -186,7 +187,8 @@ module.exports = {
                     case 10 - quoteAdjustment:
                         let vcList = "";
                         userSettings.voiceChannels.forEach((vc, i) => {
-                            vcList += `\`${i + 1}\` - ${bot.channels.cache.get(vc.id).name} (${bot.channels.cache.get(vc.id).guild.name})`;
+                            vcList += `\`${i + 1}\` - ${fn.getVoiceChannelNameString(bot, vc)}`
+                                + ` (${fn.getVoiceChannelServerString(bot, vc)})`;
                             if (i !== userSettings.voiceChannels.length) {
                                 vcList += '\n';
                             }
@@ -680,7 +682,7 @@ module.exports = {
                                     if (userEdit) {
                                         if (userSettings.voiceChannels) if (userSettings.voiceChannels.length >= 2 * tier) {
                                             message.reply("**You cannot track another voice channel because you don't have any more spots!**"
-                                                + `\n(${2 * tier} voice channels allowed in total)`);
+                                                + `\n(Tier: ${tier} - ${2 * tier} voice channels allowed in total)`);
                                             continueEdit = true;
                                             break;
                                         }
@@ -711,7 +713,7 @@ module.exports = {
                                         }
                                         let vcList = "";
                                         userSettings.voiceChannels.forEach((vc, i) => {
-                                            vcList += `\`${i + 1}\` - ${bot.channels.cache.get(vc.id).name}`;
+                                            vcList += `\`${i + 1}\` - ${fn.getVoiceChannelNameString(bot, vc)}`;
                                             if (i !== userSettings.voiceChannels.length) {
                                                 vcList += '\n';
                                             }
