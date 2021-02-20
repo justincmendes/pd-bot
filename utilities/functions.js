@@ -4523,7 +4523,7 @@ module.exports = {
                             + ` **__${days}day${days > 1 ? "s" : ""}__**`
                             + `  in **${bot.channels.cache.get(trackObject.id).name}**`
                             + ` (${bot.channels.cache.get(trackObject.id).guild.name})`
-                            + `\n⏳ - **__${this.millisecondsToTimeString(vcObject.timeTracked)}__**`);
+                            + `\n⏳ - **__${this.millisecondsToTimeString(trackObject.timeTracked)}__**`);
                     }
                 }
                 trackObject.lastTrackedTimestamp = lastTracked || lastTracked === 0 ?
