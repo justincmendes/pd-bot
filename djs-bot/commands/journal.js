@@ -241,10 +241,7 @@ module.exports = {
         const journalHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
         const journalActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${journalCommand} help\``;
         const journalType = args[1] ? args[1].toLowerCase() : false;
-        var guildID;
-        if (message.guild) {
-            guildID = message.guild.id;
-        }
+        let guildID = message.channel.type === 'dm' ? undefined : message.guild.id;
         const authorID = message.author.id;
         const authorUsername = message.author.username;
         const userSettings = await User.findOne({ discordID: authorID });

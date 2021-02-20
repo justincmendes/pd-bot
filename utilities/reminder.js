@@ -86,10 +86,12 @@ module.exports = {
     setNewChannelReminder: async function (bot, userID, channelToSend, startTimestamp, endTimestamp,
         reminderMessage, title, sendAsEmbed = false, connectedDocumentID = undefined, isRecurring = false,
         interval = undefined, remainingOccurrences = undefined, embedColour = undefined) {
+        const channel = bot.channels.cache.get(channelToSend);
+        if (!channel) return false;
         if (!remainingOccurrences && remainingOccurrences !== 0) remainingOccurrences = undefined;
         if (!interval) interval = undefined;
         if (!mongoose.Types.ObjectId.isValid(connectedDocumentID)) connectedDocumentID = undefined;
-        const guildID = bot.channels.cache.get(channelToSend).guild.id;
+        const guildID = channel.guild.id;
         console.log({ connectedDocumentID, guildID });
         const reminder = await this.putNewReminderInDatabase(userID, channelToSend, startTimestamp, endTimestamp, reminderMessage,
             title, connectedDocumentID, false, sendAsEmbed, isRecurring, interval, remainingOccurrences, guildID, embedColour)
@@ -166,10 +168,12 @@ module.exports = {
                 else {
                     // Add a zero-width space between the @everyone/@here mentions for users who are not
                     // originally able to mention the given roles with their current permissions
-                    const targetChannel = bot.guilds.cache.get(guildID).channels.cache.get(channelID);
-                    const userPermissions = targetChannel.permissionsFor(bot.users.cache.get(userID));
-                    if (!userPermissions.has("MENTION_EVERYONE")) {
-                        message = message.replace(/\@(everyone|here)/g, `\@\u200b$1`);
+                    if (!isDM) {
+                        const targetChannel = bot.guilds.cache.get(guildID).channels.cache.get(channelID);
+                        const userPermissions = targetChannel.permissionsFor(bot.users.cache.get(userID));
+                        if (!userPermissions.has("MENTION_EVERYONE")) {
+                            message = message.replace(/\@(everyone|here)/g, `\@\u200b$1`);
+                        }
                     }
                     if (title !== "Quote" && title !== "Voice Channel Tracking") {
                         message += `\n\n\\\*\\\*__A **${fn.millisecondsToTimeString(duration)} ${titleOut}** set by **${username}**__\\\*\\\*`;
@@ -577,8 +581,10 @@ module.exports = {
         const typeString = "**Type:**" + (isRecurring ? " Repeating" : " One-Time") + (isDM ? ", DM" : ", Channel");
         const intervalString = (isRecurring ? `**Interval:** Every ${interval}\n` : "")
             + (remainingOccurrences && remainingOccurrences !== 0 ? `**Reminders Left:** ${remainingOccurrences}\n` : "");
-        const channelName = isDM ? "" : `**Channel:** \#${bot.channels.cache.get(channel).name}\n`;
-        const guildString = isDM ? "" : `**Guild:** ${bot.guilds.cache.get(guildID).name}\n`;
+        const channelName = isDM ? "" : `**Channel:** \#${bot.channels.cache.get(channel) ?
+            bot.channels.cache.get(channel).name : ""}\n`;
+        const guildString = isDM ? "" : `**Guild:** ${bot.guilds.cache.get(guildID) ?
+            bot.guilds.cache.get(guildID).name : ""}\n`;
         console.log({ reminderDocument });
         return `${titleString}${typeString}\n${intervalString}${guildString}${channelName}`
             + `**Start Time:** ${fn.timestampToDateString(startTime + HOUR_IN_MS * userTimezoneOffset)}`
@@ -587,6 +593,7 @@ module.exports = {
     },
 
     getProperReminderMessageRoles: function (bot, guildID, message) {
+        if (!guildID) return message;
         const roleRegex = /\<\@\&(\d+)\>/g;
         const roles = message.replace(roleRegex, (match, roleID, offset, string) => {
             return `\@${bot.guilds.cache.get(guildID).roles.cache.get(roleID).name}`;

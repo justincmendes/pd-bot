@@ -666,16 +666,23 @@ module.exports = {
                                                 else {
                                                     let channelID = /\<\#(\d+)\>/.exec(channelType);
                                                     channelID = channelID[1];
-                                                    const userPermissions = bot.channels.cache.get(channelID).permissionsFor(authorID);
-                                                    console.log({ userPermissions });
-                                                    if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL")) {
-                                                        isDM = false;
-                                                        channel = channelID;
-                                                        guildID = bot.channels.cache.get(channelID).guild.id;
+                                                    const channel = bot.channels.cache.get(channelID);
+                                                    if(!channel) {
+                                                        continueEdit = true;
+                                                        message.reply(`**This channel (\#${channelID}) does not exist...**`);
                                                     }
                                                     else {
-                                                        continueEdit = true;
-                                                        message.reply(`You are **not authorized to send messages** to that channel...`);
+                                                        const userPermissions = channel.permissionsFor(authorID);
+                                                        console.log({ userPermissions });
+                                                        if (userPermissions.has("SEND_MESSAGES") && userPermissions.has("VIEW_CHANNEL")) {
+                                                            isDM = false;
+                                                            channel = channelID;
+                                                            guildID = channel.guild.id;
+                                                        }
+                                                        else {
+                                                            continueEdit = true;
+                                                            message.reply(`You are **not authorized to send messages** to that channel...`);
+                                                        }
                                                     }
                                                 }
                                             }
