@@ -218,19 +218,27 @@ module.exports = {
                                     || updatedReminderObject.remainingOccurrences < 0;
 
                                 if (bot.channels.cache.get(channel) || bot.users.cache.get(userID)) {
-                                    const { footer } = message;
-                                    var editedFooter = footer.text;
-                                    // 0 is allowed if there were occurrences left,
-                                    // but the bot was down when the reminder should have sent.
-                                    // Send it then delete it.
-                                    if (isLastReminder) {
-                                        editedFooter += `\nThis is the last reminder!`;
+                                    if (updatedReminderObject.remainingOccurrences ||
+                                        updatedReminderObject.remainingOccurrences === 0) {
+                                        var remainingOccurrencesMessage = "";
+                                        if (isLastReminder) {
+                                            remainingOccurrencesMessage = `\nThis is the last reminder!`;
+                                        }
+                                        else if (updatedReminderObject.remainingOccurrences) {
+                                            remainingOccurrencesMessage = `\n${updatedReminderObject.remainingOccurrences} more reminder`
+                                                + `${updatedReminderObject.remainingOccurrences === 1 ? "" : "s"} left!`;
+                                        }
+                                        if (updatedReminderObject.sendAsEmbed) {
+                                            const { footer } = message;
+                                            // 0 is allowed if there were occurrences left,
+                                            // but the bot was down when the reminder should have sent.
+                                            // Send it then delete it.
+                                            message = message.setFooter(footer.text + remainingOccurrencesMessage,
+                                                footer.iconURL);
+                                        }
+                                        else message += remainingOccurrencesMessage;
                                     }
-                                    else if (updatedReminderObject.remainingOccurrences) {
-                                        editedFooter += `\n${updatedReminderObject.remainingOccurrences} more reminder`
-                                            + `${updatedReminderObject.remainingOccurrences === 1 ? "" : "s"} left!`;
-                                    }
-                                    message = message.setFooter(editedFooter, footer.iconURL);
+                                    
                                     channelObject.send(message);
                                     await this.sendReminderByObject(bot, updatedReminderObject);
                                     if (!isLastReminder) return;

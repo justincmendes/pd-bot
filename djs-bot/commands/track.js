@@ -297,6 +297,9 @@ module.exports = {
         }
 
 
-        else return message.channel.send(showTrackedVoiceChannels);
+        else {
+            await updateTrackingReportReminder(bot, authorID);
+            return message.channel.send(showTrackedVoiceChannels);
+        }
     }
 };
