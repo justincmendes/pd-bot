@@ -3,7 +3,6 @@
  */
 const Discord = require("discord.js");
 const fs = require("fs");
-const Attachment = require("discord.js");
 const mongoose = require("mongoose");
 const Reminder = require("../djs-bot/database/schemas/reminder");
 const User = require("../djs-bot/database/schemas/user");
@@ -15,7 +14,7 @@ require("dotenv").config();
 const CLIENT_ID = process.env.DASHBOARD_CLIENT_ID;
 const DEFAULT_PREFIX = '?';
 const TRACKING_INTERVAL = 5000;
-const TIMEOUT_MS = 375;
+const TIMEOUT_MS = 400;
 // Timescale Constants
 const SECOND_IN_MS = 1000;
 const MINUTE_IN_MS = 60000;
@@ -3333,6 +3332,45 @@ module.exports = {
         }
     },
 
+    getUserEditDuration: async function (bot, message, PREFIX,
+        timezoneOffset, daylightSaving, field, currentValue, title, minimumDuration = 0,
+        embedColour = this.defaultEmbedColour, additionalInstructions = "") {
+        try {
+            const prompt = `\nWhat do you want to change the **${field}** to?`
+                + `\n\n**__Current ${field}:__** ${currentValue}`
+                + `\n\nType \`back\` to go **back to the main edit menu**`
+                + (minimumDuration ? `\n\n⏳ Any duration longer than **${this.millisecondsToTimeString(minimumDuration)}** ⏳` : "")
+                + `\n\n${this.durationExamples}`
+                + `${additionalInstructions ? `\n${additionalInstructions}` : ""}`;
+            do {
+                const userTimeInput = await this.messageDataCollect(bot, message, PREFIX, prompt,
+                    title, embedColour, 180000, false);
+                if (userTimeInput === "back") return "back";
+                if (userTimeInput === "stop" || !userTimeInput) return false;
+                const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
+                let now = Date.now();
+                endTime = this.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now,
+                    timezoneOffset, daylightSaving, true, true, false, true);
+                if (endTime || endTime === 0) {
+                    now = this.getCurrentUTCTimestampFlooredToSecond();
+                    endTime -= HOUR_IN_MS * timezoneOffset;
+                    const duration = endTime - now;
+                    if (!isNaN(duration) && duration >= 0
+                        && duration >= minimumDuration) {
+                        return endTime - now;
+                    }
+                }
+                this.sendReplyThenDelete(message, `**Please enter a proper time duration __> ${this.millisecondsToTimeString(minimumDuration)}__!**...`
+                    + `\nTry \`${PREFIX}date\` for **valid time inputs!**`, 30000);
+            }
+            while (true)
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
     endTimeAfterStartTime: function (message, startTimestamp, endTimestamp, type) {
         if (endTimestamp) {
             if (endTimestamp < startTimestamp) {
@@ -3714,39 +3752,6 @@ module.exports = {
                 daylightSaving: userDaylightSavingSetting,
             };
             return timezone;
-        }
-    },
-
-    createGuildSettings: async function (guildID, timezone = "EST", daylightSaving = true) {
-        try {
-            const initialOffset = this.getTimezoneOffset(timezone);
-            const daylightOffset = this.isDaylightSavingTime(Date.now() + initialOffset * HOUR_IN_MS,
-                timezone, daylightSaving) ? this.getTimezoneDaylightOffset(timezone) : 0;
-            const guildConfig = new Guild({
-                _id: mongoose.Types.ObjectId(),
-                guildID,
-                prefix: DEFAULT_PREFIX,
-                timezone: {
-                    name: timezone.toUpperCase(),
-                    offset: initialOffset + daylightOffset,
-                    daylightSaving,
-                },
-                mastermind: {
-                    roles: [],
-                    resetDay: 0,
-                },
-                quote: {
-                    roles: [],
-                    getQuote: false,
-                },
-            });
-            const result = await guildConfig.save();
-            console.log({ result });
-            return result;
-        }
-        catch (err) {
-            console.error(err);
-            return false;
         }
     },
 
@@ -4266,6 +4271,39 @@ module.exports = {
         return;
     },
 
+    resetAllVoiceChannelTracking: async function (bot) {
+        const allTracking = await Track.find({});
+        if (allTracking) if (allTracking.length) {
+            allTracking.forEach(async trackObject => {
+                await this.updateVoiceChannelTimeTracked(
+                    bot, trackObject.userID, trackObject.voiceChannelID,
+                    trackObject.end - trackObject.start, true,
+                    trackObject.end);
+                await Track.deleteOne({ _id: trackObject._id });
+            });
+            console.log("Successfully removed all lingering voice channel tracking objects.");
+        }
+        // Check if the user is currently in a voice channel and setup tracking
+        const users = await User.find({});
+        if (users) if (users.length) {
+            users.forEach(async user => {
+                const mutualServers = await this.userAndBotMutualServerIDs(bot, user.discordID);
+                if (mutualServers) if (mutualServers.length) {
+                    mutualServers.forEach(async serverID => {
+                        const server = bot.guilds.cache.get(serverID);
+                        const serverMember = server.members.cache.get(user.discordID);
+                        if (serverMember) if (serverMember.voice) if (serverMember.voice.channel) {
+                            await this.setupVoiceChannelTracking(
+                                bot, user.discordID, serverMember.voice.channel.id
+                            );
+                        }
+                    });
+                }
+            });
+            console.log("Successfully updated voice channel tracking for members in voice channels.");
+        }
+    },
+
     updateAllUsers: async function (bot) {
         const allUsers = await User.find({});
         if (allUsers) {
@@ -4448,37 +4486,24 @@ module.exports = {
         return false;
     },
 
-    resetAllVoiceChannelTracking: async function (bot) {
-        const allTracking = await Track.find({});
-        if (allTracking) if (allTracking.length) {
-            allTracking.forEach(async trackObject => {
-                await this.updateVoiceChannelTimeTracked(
-                    bot, trackObject.userID, trackObject.voiceChannelID,
-                    trackObject.end - trackObject.start, true,
-                    trackObject.end);
-                await Track.deleteOne({ _id: trackObject._id });
-            });
-            console.log("Successfully removed all lingering voice channel tracking objects.");
-        }
-        // Check if the user is currently in a voice channel and setup tracking
-        const users = await User.find({});
-        if (users) if (users.length) {
-            users.forEach(async user => {
-                const mutualServers = await this.userAndBotMutualServerIDs(bot, user.discordID);
-                if (mutualServers) if (mutualServers.length) {
-                    mutualServers.forEach(async serverID => {
-                        const server = bot.guilds.cache.get(serverID);
-                        const serverMember = server.members.cache.get(user.discordID);
-                        if (serverMember) if (serverMember.voice) if (serverMember.voice.channel) {
-                            await this.setupVoiceChannelTracking(
-                                bot, user.discordID, serverMember.voice.channel.id
-                            );
-                        }
-                    });
-                }
-            });
-            console.log("Successfully updated voice channel tracking for members in voice channels.");
-        }
+    voiceTrackingHasUser: function (userID) {
+        return tracking.has(userID);
+    },
+
+    voiceTrackingAddCollection: function (key, value) {
+        return tracking.set(key, value);
+    },
+
+    voiceTrackingClearInterval: function (userID) {
+        return clearInterval(tracking.get(userID));
+    },
+
+    voiceTrackingGetInterval: function (userID) {
+        return tracking.get(userID)
+    },
+
+    voiceTrackingDeleteCollection: function (userID) {
+        return tracking.delete(userID);
     },
 
     getTrackingReportString: async function (bot, userID) {
@@ -4496,7 +4521,8 @@ module.exports = {
         return outputString;
     },
 
-    voiceChannelArrayToString: async function (bot, userID, voiceChannels) {
+    voiceChannelArrayToString: async function (bot, userID, voiceChannels,
+        doubleSpace = true, doubleBulletedList = true) {
         var currentTracking = await Track.findOne({ userID });
         if (currentTracking) {
             const update = await this.updateVoiceChannelTimeTracked(
@@ -4517,11 +4543,14 @@ module.exports = {
         }
 
         const outputString = voiceChannels.map(vcObject => {
-            return `- **${this.getVoiceChannelNameString(bot, vcObject)}** `
+            return `${doubleBulletedList ? "- " : ""}**${this.getVoiceChannelNameString(bot, vcObject)}** `
                 + `(${this.getVoiceChannelServerString(bot, vcObject)}): `
                 + `**__${this.millisecondsToTimeString(vcObject.timeTracked)}__**`
-                + `\n-- **Last Tracked:** ${this.timestampToDateString(vcObject.lastTrackedTimestamp)}`;
-        }).join('\n\n');
+                + `\n-${doubleBulletedList ? "-" : ""} **Auto Reset:** ${vcObject.autoReset ? "Yes" : "No"}`
+                + (vcObject.autoReset ? `\n-${doubleBulletedList ? "-" : ""} **Auto Reset Delay:**`
+                    + ` ${this.millisecondsToTimeString(vcObject.autoResetDelay || 0)}` : "")
+                + `\n-${doubleBulletedList ? "-" : ""} **Last Tracked:** ${this.timestampToDateString(vcObject.lastTrackedTimestamp)}`;
+        }).join(doubleSpace ? '\n\n' : '\n');
         return outputString;
     },
 
@@ -4672,157 +4701,6 @@ module.exports = {
                 }, TRACKING_INTERVAL)
                 tracking.set(userID, interval);
             }
-            return true;
-        }
-        catch (err) {
-            console.log(err);
-            return false;
-        }
-    },
-
-    voiceTrackingHasUser: function (userID) {
-        return tracking.has(userID);
-    },
-
-    voiceTrackingAddCollection: function (key, value) {
-        return tracking.set(key, value);
-    },
-
-    voiceTrackingClearInterval: function (userID) {
-        return clearInterval(tracking.get(userID));
-    },
-
-    voiceTrackingGetInterval: function (userID) {
-        return tracking.get(userID)
-    },
-
-    voiceTrackingDeleteCollection: function (userID) {
-        return tracking.delete(userID);
-    },
-
-    unlinkVoiceChannelTracking: async function (channelObject) {
-        // If a user tracked voice channel gets deleted,
-        // make the channel name as the id and store the guildName
-        console.log({ channelObject });
-        if (channelObject) if (channelObject.type === "voice") {
-            const allUsersSettings = await User.find({});
-            if (allUsersSettings) if (allUsersSettings.length) {
-                console.log(`Unlinking any users' voice channel time tracking from`
-                    + ` ${channelObject.name} (${channelObject.id})`);
-                allUsersSettings.forEach(async userSettings => {
-                    const { voiceChannels } = userSettings;
-                    if (voiceChannels) if (voiceChannels.length) {
-                        voiceChannels.forEach(async (vc, i) => {
-                            if (vc.id === channelObject.id) {
-                                console.log(`Unlinking ${userSettings.discordTag} from`
-                                    + ` ${channelObject.name} (${channelObject.guild.name})`
-                                    + ` - channel id: ${channelObject.id}`);
-                                voiceChannels[i].channelName = channelObject.name;
-                                voiceChannels[i].guildName = channelObject.guild.name;
-                                await User.updateOne({ _id: userSettings._id }, {
-                                    $set: {
-                                        voiceChannels,
-                                    },
-                                });
-                                if (this.voiceTrackingHasUser(userSettings.discordID)) {
-                                    this.voiceTrackingClearInterval(userSettings.discordID);
-                                    this.voiceTrackingDeleteCollection(userSettings.discordID);
-                                    await Track.deleteMany({ userID: userSettings.discordID });
-                                }
-                            }
-                        });
-                    }
-                });
-            }
-        }
-    },
-
-    setupNewGuild: async function (bot, guildID, guildName) {
-        try {
-            const guildObject = await Guild.findOne({ guildID: guildID });
-            // Check if it already exists to avoid duplicates
-            if (guildObject) {
-                console.log(`${bot.user.username} is already in ${guildName}! Won't create new instance in Database.`);
-                return guildObject;
-            }
-            else {
-                const guildSettings = await this.createGuildSettings(guildID, "EST", true);
-                if (guildSettings) {
-                    console.log(`${bot.user.username} has joined the server ${guildName}! Saved to Database.`);
-                    return guildSettings;
-                }
-                else {
-                    console.log(`There was an error adding ${guildName} to the database.`);
-                    return null;
-                }
-            }
-        }
-        catch (err) {
-            return console.error(err);
-        }
-    },
-
-    updateGuilds: async function (bot) {
-        try {
-            const allGuilds = await this.getAllBotServers(bot);
-            const allGuildSettings = await Guild.find({});
-            let guildSettingIDArray = allGuildSettings ? allGuildSettings.length ?
-                allGuildSettings.map(guild => guild.guildID) : [] : [];
-            if (allGuilds) if (allGuilds.length) {
-                allGuilds.forEach(async (guild, i) => {
-                    if (guild) {
-                        if (!guildSettingIDArray.includes(guild)) {
-                            const newGuildSettings = await this.setupNewGuild(
-                                bot, guild, bot.guilds.cache.get(guild)
-                            );
-                            if (newGuildSettings) {
-                                guildSettingIDArray[i] = newGuildSettings;
-                            }
-                        };
-                    }
-                });
-            }
-            if (guildSettingIDArray) if (guildSettingIDArray.length) {
-                guildSettingIDArray.forEach(async guild => {
-                    if (guild) {
-                        if (!allGuilds.includes(guild)) {
-                            // console.log(`Guild to Delete: ${guild}`);
-                            await this.deleteGuild(guild, "", []);
-                        }
-                    }
-                });
-            }
-            return true;
-        }
-        catch (err) {
-            console.error(err);
-            return false;
-        }
-    },
-
-    deleteGuild: async function (guildID, guildName, guildChannelObjectArray) {
-        try {
-            if (guildID) {
-                await Guild.deleteOne({ guildID: guildID });
-                const guildReminders = await Reminder.find({ guildID: guildID });
-                guildReminders.forEach(async reminder => {
-                    await rm.cancelReminderById(reminder._id);
-                    await Reminder.findByIdAndDelete(reminder._id);
-                });
-                // await Reminder.deleteMany({ guildID: guildObject.id });
-                console.log(`Removing Guild Settings and Reminders from`
-                    + ` ${guildName ? `${guildName} (${guildID || ""})` : guildID || ""}...`);
-            }
-
-            // Unlink any users voice channel tracking data:
-            console.log({ guildChannelObjectArray });
-            if (guildChannelObjectArray) if (guildChannelObjectArray.length) {
-                guildChannelObjectArray.forEach(async channel => {
-                    console.log({ channel });
-                    await this.unlinkVoiceChannelTracking(channel);
-                });
-            }
-            console.log(`Unlinking any users voice channel tracking data from this server.`);
             return true;
         }
         catch (err) {

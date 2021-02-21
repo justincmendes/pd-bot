@@ -21,6 +21,8 @@ const bot = new Discord.Client({
 const fn = require("../utilities/functions");
 const rm = require("../utilities/reminder");
 const hb = require("../utilities/habit");
+const tr = require("../utilities/track");
+const gu = require("../utilities/guild");
 const fs = require("fs");
 bot.commands = new Discord.Collection();
 const cooldowns = new Discord.Collection();
@@ -32,7 +34,6 @@ const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
 const Habit = require("./database/schemas/habit");
 const Track = require("./database/schemas/track");
-const user = require("./database/schemas/user");
 bot.mongoose = require("../utilities/mongoose");
 
 const pdBotTag = `<@!${CLIENT_ID}>`;
@@ -71,7 +72,10 @@ bot.on("ready", async () => {
 
     bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
 
-    await fn.updateGuilds(bot);
+    // DO NOT have this activated when testing
+    // - it will delete all of the guildsettings data
+    await gu.updateGuilds(bot);
+
     await fn.updateAllUsers(bot);
     await fn.rescheduleAllDST();
     await rm.resetReminders(bot);
@@ -434,14 +438,14 @@ bot.on("message", async message => {
 // Will help with handling unique prefixes!
 bot.on("guildCreate", async (guild) => {
     await fn.resetAllVoiceChannelTracking(bot);
-    await fn.setupNewGuild(bot, guild.id, guild.name);
+    await gu.setupNewGuild(bot, guild.id, guild.name);
     return;
 });
 
 // Remove the settings and preset data if PD is removed from guild
 bot.on('guildDelete', async (guild) => {
     // console.log([...guild.channels.cache.values()]);
-    await fn.deleteGuild(guild.id, guild.name, guild.channels.cache).array();
+    await gu.deleteGuild(guild.id, guild.name, guild.channels.cache).array();
     return;
 });
 
@@ -492,6 +496,7 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
         fn.voiceTrackingClearInterval(userID);
         fn.voiceTrackingDeleteCollection(userID);
         await Track.deleteMany({ userID });
+        await tr.updateTrackingReportReminder(bot, userID);
 
         // If they transferred to a new channel:
         // Delete old interval.
@@ -513,7 +518,7 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
 bot.on('channelDelete', async (channel) => {
     // If a user tracked voice channel gets deleted,
     // make the channel name as the id and store the guildName
-    await fn.unlinkVoiceChannelTracking(channel);
+    await tr.unlinkVoiceChannelTracking(channel);
 });
 
 // To ensure that the MongoDB is connected before logging in

@@ -18,6 +18,10 @@ const trackSchema = mongoose.Schema({
         type: Number,
         required: true,
     },
+    finishedSession: {
+        type: Boolean,
+        required: false,
+    },
 });
 
 module.exports = mongoose.model("Track", trackSchema, "tracking");

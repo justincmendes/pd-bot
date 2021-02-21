@@ -7,6 +7,7 @@ const quotes = require("../../utilities/quotes.json").quotes;
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 const hb = require("../../utilities/habit");
+const tr = require("../../utilities/track");
 const { authorize } = require("passport");
 require("dotenv").config();
 
@@ -869,6 +870,11 @@ module.exports = {
             while (continueEdit === true)
             return;
         }
-        else return message.channel.send(showUserSettings);
+
+
+        else {
+            await tr.updateTrackingReportReminder(bot, authorID);
+            return message.channel.send(showUserSettings);
+        }
     }
 };

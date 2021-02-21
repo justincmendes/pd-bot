@@ -87,15 +87,15 @@ const userSettingsSchema = mongoose.Schema({
     voiceChannels: [{
         id: {
             type: String,
-            required: false,
+            required: true,
         },
         timeTracked: {
             type: Number,
-            required: false,
+            required: true,
         },
         lastTrackedTimestamp: {
             type: Number,
-            required: false,
+            required: true,
         },
         guildName: {
             type: String,
@@ -103,6 +103,15 @@ const userSettingsSchema = mongoose.Schema({
         },
         channelName: {
             type: String,
+            required: false,
+        },
+        autoReset: {
+            type: Boolean,
+            required: true,
+            default: false,
+        },
+        autoResetDelay: {
+            type: Number,
             required: false,
         },
     }],
