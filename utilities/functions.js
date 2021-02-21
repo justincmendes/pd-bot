@@ -277,6 +277,12 @@ module.exports = {
                 // Create the awaitMessages promise object for the confirmation message just sent
                 result = await message.channel.awaitMessages(filter, { time: delayTime, max: 1 })
                     .then(async reacted => {
+                        // Apply to other collection functions (i.e. userConfirmation)
+                        // Put all in here, if no reacted first, 
+                        // send ERROR user didn't respond within <TIME>s
+                        
+                        // if(reacted.first()) {
+                        //}
                         console.log(`${reacted.first().author.username}'s message was collected!`);
                         confirm.delete();
                         console.log(`Message Sent (in function): ${reacted.first().content}`);
@@ -4656,9 +4662,9 @@ module.exports = {
                                         voiceChannels,
                                     },
                                 });
-                                if (fn.voiceTrackingHasUser(userSettings.discordID)) {
-                                    fn.voiceTrackingClearInterval(userSettings.discordID);
-                                    fn.voiceTrackingDeleteCollection(userSettings.discordID);
+                                if (this.voiceTrackingHasUser(userSettings.discordID)) {
+                                    this.voiceTrackingClearInterval(userSettings.discordID);
+                                    this.voiceTrackingDeleteCollection(userSettings.discordID);
                                     await Track.deleteMany({ userID: userSettings.discordID });
                                 }
                             }
