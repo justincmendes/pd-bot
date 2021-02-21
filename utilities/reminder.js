@@ -160,7 +160,8 @@ module.exports = {
                     }
                     let reminderFooter = "";
                     if (title !== "Quote") {
-                        reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`;
+                        reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`
+                            + usernameAndDiscriminator !== "someone" ? ` (${usernameAndDiscriminator})` : "";
                     }
                     message = new Discord.MessageEmbed()
                         .setTitle(titleOut)
@@ -179,7 +180,8 @@ module.exports = {
                         }
                     }
                     if (title !== "Quote" && title !== "Voice Channel Tracking") {
-                        message += `\n\n\\\*\\\*__A **${fn.millisecondsToTimeString(duration)} ${titleOut}** set by **${username}**__\\\*\\\*`;
+                        message += `\n\n__A **${fn.millisecondsToTimeString(duration)} ${titleOut}** set by **${username}**`
+                            + `${usernameAndDiscriminator !== "someone" ? ` (${usernameAndDiscriminator})` : ""}__`;
                     }
                 }
                 // var mentions;
