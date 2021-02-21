@@ -22,6 +22,12 @@ const daysOfWeekList = daysOfWeek.map((day, i) => {
 const userEmbedColour = fn.userSettingsEmbedColour;
 const quoteEmbedColour = fn.quoteEmbedColour;
 const trackEmbedColour = fn.trackEmbedColour;
+const habitEmbedColour = fn.habitEmbedColour;
+const pesterEmbedColour = fn.pesterEmbedColour;
+
+const MINIMUM_AUTO_RESET_DELAY = tr.MINIMUM_AUTO_RESET_DELAY;
+const DEFAULT_AUTO_RESET_DELAY = tr.DEFAULT_AUTO_RESET_DELAY;
+const MINIMUM_AUTO_RESET_TRACK_PERIOD = tr.MINIMUM_AUTO_RESET_TRACK_PERIOD;
 
 // Private Function Declarations
 async function userDocumentToString(bot, userSettings) {
@@ -90,7 +96,8 @@ module.exports = {
                         "Get Quotes", "Delete Replies Sent During Commands", "Likes Pestering Accountability",
                         "Tracked Voice Channels"];
                 if (userSettings.voiceChannels) if (userSettings.voiceChannels.length) {
-                    userFields = userFields.concat(["Time Spent in Voice Channels"]);
+                    userFields = userFields.concat(["Time Spent in Voice Channels",
+                        "Auto Reset", "Auto Reset Delay"]);
                 }
                 const quoteAdjustment = userSettings.getQuote ? 0 : 2;
                 var continueEdit;
@@ -114,7 +121,8 @@ module.exports = {
                     updatedTimezoneOffset = timezoneOffset,
                     updatedDaylightSaving = daylightSaving,
                     updatedTimezone = originalTimezone,
-                    userSettingsPrompt = "";
+                    userSettingsPrompt = "",
+                    selectVoiceChannel, targetVcObject;
                 let { habitCron } = userSettings;
                 switch (fieldToEditIndex) {
                     case 0:
@@ -128,24 +136,24 @@ module.exports = {
                         break;
                     case 2:
                         userSettingsPrompt = `Enter the **time of day** (i.e. 1a, 3:30AM, etc.) you would like your **habits to reset daily:**`;
-                        userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
+                        userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, habitEmbedColour);
                         break;
                     case 3:
                         userSettingsPrompt = `Enter the number corresponding to the __**day of the week**__ when you would like your **weekly habits counter to reset:**`;
-                        userEdit = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, daysOfWeek.length, type, daysOfWeek, forceSkip, userEmbedColour, `${userSettingsPrompt}\n\n${daysOfWeekList}`);
+                        userEdit = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, daysOfWeek.length, type, daysOfWeek, forceSkip, habitEmbedColour, `${userSettingsPrompt}\n\n${daysOfWeekList}`);
                         if (userEdit !== false && !isNaN(userEdit)) userEdit--;
                         console.log({ userEdit });
                         break;
                     case 4:
                         userSettingsPrompt = `Do you want to regularly receive an **inspirational quote?**\n🙌 - **Yes**\n⛔ - **No**`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
-                            ['🙌', '⛔'], type, forceSkip, userEmbedColour);
+                            ['🙌', '⛔'], type, forceSkip, quoteEmbedColour);
                         break;
                     case 5:
                         if (userSettings.getQuote) {
                             userSettingsPrompt = `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}`
                                 + "\n\nType `skip` to **start it now**"
-                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, quoteEmbedColour);
                         }
                         else {
                             fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
@@ -156,7 +164,7 @@ module.exports = {
                     case 6:
                         if (userSettings.getQuote) {
                             userSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
-                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, userEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, quoteEmbedColour);
                         }
                         else {
                             fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
@@ -173,70 +181,63 @@ module.exports = {
                     case 8 - quoteAdjustment:
                         userSettingsPrompt = `Are you into **pestering accountability** (💪) or not so much (🙅‍♀️)?`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
-                            ['💪', '🙅‍♀️'], type, forceSkip, userEmbedColour);
+                            ['💪', '🙅‍♀️'], type, forceSkip, pesterEmbedColour);
                         break;
                     case 9 - quoteAdjustment:
                         // Check if the user wants to remove a voice channel or add one.
                         userSettingsPrompt = `\nDo you want to **add** (📊) another voice channel to track or **remove** (🗑️) a voice channel you are currently tracking your time in?`
-                            + `\n(**Cap at ${2 * tier}**)\n\n**__Current tracked voice channels:__**\n${userSettings.voiceChannels.map(vcObject => {
-                                return `${fn.getVoiceChannelNameString(bot, vcObject)}`
-                                    + ` (${fn.getVoiceChannelServerString(bot, vcObject)})`;
-                            }).join('\n')}`;
+                            + `\n(**Cap at ${2 * tier}**)\n\n**__Current tracked voice channels:__**\n${await fn.voiceChannelArrayToString(
+                                bot, authorID, userSettings.voiceChannels, true, true, false
+                            )}`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
-                            ['📊', '🗑️'], type, true, trackEmbedColour);
+                            ['📊', '🗑️'], `Track ${type}`, true, trackEmbedColour);
                         break;
                     case 10 - quoteAdjustment:
-                        let vcList = "";
-                        userSettings.voiceChannels.forEach((vc, i) => {
-                            vcList += `\`${i + 1}\` - ${fn.getVoiceChannelNameString(bot, vc)}`
-                                + ` (${fn.getVoiceChannelServerString(bot, vc)})`;
-                            if (i !== userSettings.voiceChannels.length) {
-                                vcList += '\n';
-                            }
-                        });
-                        const selectVoiceChannel = await fn.userSelectFromList(bot, message, PREFIX,
-                            vcList, userSettings.voiceChannels.length,
-                            "**Type the number corresponding to the voice channel you would like to edit the time tracked for:**\n",
-                            `${type}: Select Voice Channel`, trackEmbedColour, 180000);
+                        selectVoiceChannel = await tr.userSelectVoiceChannelObject(bot, message, PREFIX,
+                            userSettings.voiceChannels, `Track ${type}: Select Voice Channel`, "to edit the time tracked");
                         if (!selectVoiceChannel && selectVoiceChannel !== 0) return;
                         else {
-                            const targetVcObject = userSettings.voiceChannels[selectVoiceChannel];
-                            userSettingsPrompt = `\nWhat do you want to change the **time tracked** to?`
-                                + `\n\n**__Current time tracked:__** ${fn.millisecondsToTimeString(targetVcObject.timeTracked)}`
-                                + `\n\nType \`back\` to go **back to the main edit menu**`
-                                + `\n\n${fn.durationExamples}`;
-                            do {
-                                const userTimeInput = await fn.messageDataCollect(bot, message, PREFIX, userSettingsPrompt,
-                                    `${type}: Change Time Tracked`, trackEmbedColour, 180000, false);
-                                if (userTimeInput === "back") break;
-                                if (userTimeInput === "stop" || !userTimeInput) return;
-                                const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
-                                let now = Date.now();
-                                endTime = fn.timeCommandHandlerToUTC(timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs, now,
-                                    timezoneOffset, daylightSaving, true, true, false, true);
-                                if (endTime || endTime === 0) {
-                                    now = fn.getCurrentUTCTimestampFlooredToSecond();
-                                    endTime -= HOUR_IN_MS * timezoneOffset;
-                                    userEdit = endTime - now;
-                                    break;
-                                }
-                                else fn.sendReplyThenDelete(message, `**Please enter a proper time duration __> 0d:0h:0m:0s__!**...\nTry \`${PREFIX}date\` for **valid time inputs!**`, 30000);
+                            targetVcObject = userSettings.voiceChannels[selectVoiceChannel];
+                            userEdit = await fn.getUserEditDuration(bot, message, PREFIX, timezoneOffset, daylightSaving,
+                                "time tracked", fn.millisecondsToTimeString(targetVcObject.timeTracked),
+                                `Track ${type}: Change Time Tracked`, 0, trackEmbedColour);
+                        }
+                        break;
+                    case 11 - quoteAdjustment:
+                        selectVoiceChannel = await tr.userSelectVoiceChannelObject(bot, message, PREFIX,
+                            userSettings.voiceChannels, `Track ${type}: Auto Reset`, "to edit the auto reset setting");
+                        console.log({ selectVoiceChannel });
+                        if (!selectVoiceChannel && selectVoiceChannel !== 0) return;
+                        else {
+                            targetVcObject = userSettings.voiceChannels[selectVoiceChannel];
+                            trackPrompt = `\nDo you want to your voice channel tracking to **automatically reset**`
+                                + ` your time spent in ${bot.channels.cache.get(targetVcObject.id) ?
+                                    `**${bot.channels.cache.get(targetVcObject.id).name}**` : "the tracked voice channel"}`
+                                + ` to 0:00 and send you a **DM report of your time spent in ${bot.channels.cache.get(targetVcObject.id) ?
+                                    `${bot.channels.cache.get(targetVcObject.id).name}` : "the tracked voice channel"}**`
+                                + ` whenever you leave (for sessions at least ${fn.millisecondsToTimeString(MINIMUM_AUTO_RESET_TRACK_PERIOD)} long)?`
+                                + `\n\n**🔁 - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto reset delay** after you leave - in case you come back within that time)`;
+                            userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, trackPrompt,
+                                ['🔁', '⛔'], `Track ${type}`, true, trackEmbedColour);
+                        }
+                        break;
+                    case 12 - quoteAdjustment:
+                        selectVoiceChannel = await tr.userSelectVoiceChannelObject(bot, message, PREFIX,
+                            userSettings.voiceChannels, `Track ${type}: Auto Reset Delay`,
+                            "to edit the auto reset delay");
+                        if (!selectVoiceChannel && selectVoiceChannel !== 0) return;
+                        else {
+                            targetVcObject = userSettings.voiceChannels[selectVoiceChannel];
+                            if (!targetVcObject.autoReset) {
+                                message.reply(`Please enable **Auto Reset** first to change the **Auto Reset Delay**.`
+                                    + `\n(Auto Reset Delay: The time frame before automatically resetting the voice channel tracking)`);
+                                userEdit = "back";
+                                break;
                             }
-                            while (true)
-                            if (userEdit || userEdit === 0) {
-                                if (!isNaN(userEdit)) if (userEdit >= 0) {
-                                    await Track.updateMany({ userID: authorID }, {
-                                        $set: {
-                                            start: fn.getCurrentUTCTimestampFlooredToSecond(),
-                                            end: fn.getCurrentUTCTimestampFlooredToSecond(),
-                                        },
-                                    });
-                                    targetVcObject.timeTracked = userEdit;
-                                    userSettings = await User.findByIdAndUpdate(userSettings._id, {
-                                        $set: { voiceChannels: userSettings.voiceChannels }
-                                    }, { new: true });
-                                }
-                            }
+                            userEdit = await fn.getUserEditDuration(bot, message, PREFIX, timezoneOffset, daylightSaving,
+                                "auto reset delay", fn.millisecondsToTimeString(targetVcObject.autoResetDelay || 0),
+                                `Track ${type}: Change Auto Reset Delay`, MINIMUM_AUTO_RESET_DELAY,
+                                trackEmbedColour, `\n**__Recommended:__** \`15 sec\` \`30s\` \`1 min\` \`5m\` (**Default:** \`15 seconds\`)`);
                         }
                         break;
                 }
@@ -427,7 +428,7 @@ module.exports = {
                                     let error = false;
                                     if (userEdit) {
                                         userSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
-                                        let intervalInput = await fn.getUserEditString(bot, message, PREFIX, "Quote Interval", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                        let intervalInput = await fn.getUserEditString(bot, message, PREFIX, "Quote Interval", userSettingsPrompt, type, forceSkip, quoteEmbedColour);
                                         if (!intervalInput) return;
                                         else if (intervalInput === "back") {
                                             continueEdit = true;
@@ -461,7 +462,7 @@ module.exports = {
                                             else {
                                                 userSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚\n${futureTimeExamples}`
                                                     + "\n\nType `skip` to **start it now**"
-                                                let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                                let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, quoteEmbedColour);
                                                 if (!quoteTrigger) return;
                                                 else if (quoteTrigger === "back") {
                                                     continueEdit = true;
@@ -587,7 +588,7 @@ module.exports = {
                                         userSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚`
                                             + `${nextQuote ? !isNaN(nextQuote) ? `\n\n**Currently**: ${fn.timestampToDateString(nextQuote)}` : "" : ""}`
                                             + `\n${futureTimeExamples}\n\nType \`same\` to **keep it the same**\nType \`skip\` to **start it now**`;
-                                        let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, userEmbedColour);
+                                        let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, quoteEmbedColour);
                                         if (!quoteTrigger) return;
                                         else if (quoteTrigger === "back") {
                                             continueEdit = true;
@@ -683,7 +684,7 @@ module.exports = {
                                     if (userEdit) {
                                         if (userSettings.voiceChannels) if (userSettings.voiceChannels.length >= 2 * tier) {
                                             message.reply("**You cannot track another voice channel because you don't have any more spots!**"
-                                                + `\n(Tier: ${tier} - ${2 * tier} voice channels allowed in total)`);
+                                                + `\n(**__Tier:__ ${tier}** = ${2 * tier} voice channels allowed in total)`);
                                             continueEdit = true;
                                             break;
                                         }
@@ -692,20 +693,68 @@ module.exports = {
                                         const targetVoiceChannel = await fn.getTargetChannel(bot, message, PREFIX,
                                             `Add Voice Channel to Track Time Spent`, forceSkip, false, true, false, trackEmbedColour,
                                             userSettings.voiceChannels.map(vc => vc.id));
-                                        if (!targetVoiceChannel) return;
                                         console.log({ targetVoiceChannel });
-                                        userSettings = await User.findByIdAndUpdate(userSettings._id, {
-                                            $push: {
-                                                voiceChannels: {
-                                                    id: targetVoiceChannel,
-                                                    timeTracked: 0,
-                                                    lastTrackedTimestamp: Date.now() + HOUR_IN_MS * timezoneOffset,
+                                        if (!targetVoiceChannel) return;
+
+                                        // Check if the user wants the auto reset feature:
+                                        const autoResetPrompt = `\nDo you want to your voice channel tracking to **automatically reset**`
+                                            + ` your time spent in ${bot.channels.cache.get(targetVoiceChannel) ?
+                                                `**${bot.channels.cache.get(targetVoiceChannel).name}**` : "the tracked voice channel"}`
+                                            + ` to 0:00 and send you a **DM report of your time spent in ${bot.channels.cache.get(targetVoiceChannel) ?
+                                                `${bot.channels.cache.get(targetVoiceChannel).name}` : "the tracked voice channel"}**`
+                                            + ` whenever you leave (for sessions at least ${fn.millisecondsToTimeString(MINIMUM_AUTO_RESET_TRACK_PERIOD)} long)?`
+                                            + `\n\n**🔁 - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto reset delay** after you leave - in case you come back within that time)`;
+                                        var resetDelay;
+                                        let autoReset = await fn.getUserEditBoolean(bot, message, PREFIX, "Auto Reset", autoResetPrompt,
+                                            ['🔁', '⛔'], type, true, trackEmbedColour);
+                                        if (!autoReset) return;
+                                        else if (autoReset === "back") {
+                                            continueEdit = true;
+                                            break;
+                                        }
+                                        else {
+                                            switch (autoReset) {
+                                                case '🔁': autoReset = true;
+                                                    break;
+                                                case '⛔': autoReset = false;
+                                                    break;
+                                                default: autoReset = null;
+                                                    break;
+                                            }
+                                            if (typeof autoReset === "boolean") {
+                                                // Set the reset delay
+                                                if (autoReset) {
+                                                    resetDelay = await fn.getUserEditDuration(bot, message, PREFIX, timezoneOffset, daylightSaving,
+                                                        "auto reset delay", fn.millisecondsToTimeString(DEFAULT_AUTO_RESET_DELAY),
+                                                        `${type}: Change Auto Reset Delay`, MINIMUM_AUTO_RESET_DELAY,
+                                                        trackEmbedColour, `\n**__Recommended:__** \`15 sec\` \`30s\` \`1 min\` \`5m\` (**Default:** \`15 seconds\`)`);
+                                                    if (!resetDelay && resetDelay !== 0) return;
+                                                    else if (resetDelay === "back") {
+                                                        continueEdit = true;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            else {
+                                                continueEdit = true;
+                                                break;
+                                            }
+
+                                            userSettings = await User.findByIdAndUpdate(userSettings._id, {
+                                                $push: {
+                                                    voiceChannels: {
+                                                        id: targetVoiceChannel,
+                                                        timeTracked: 0,
+                                                        lastTrackedTimestamp: Date.now() + HOUR_IN_MS * timezoneOffset,
+                                                        autoReset,
+                                                        autoResetDelay: resetDelay,
+                                                    },
                                                 },
-                                            },
-                                        }, { new: true });
-                                        await fn.setupVoiceChannelTracking(
-                                            bot, authorID, targetVoiceChannel
-                                        );
+                                            }, { new: true });
+                                            await fn.setupVoiceChannelTracking(
+                                                bot, authorID, targetVoiceChannel
+                                            );
+                                        }
                                     }
 
                                     // Remove voice channel
@@ -717,7 +766,8 @@ module.exports = {
                                         }
                                         let vcList = "";
                                         userSettings.voiceChannels.forEach((vc, i) => {
-                                            vcList += `\`${i + 1}\` - ${fn.getVoiceChannelNameString(bot, vc)}`;
+                                            vcList += `\`${i + 1}\` - **${fn.getVoiceChannelNameString(bot, vc)}**`
+                                                + ` (${fn.getVoiceChannelServerString(bot, vc)})`;
                                             if (i !== userSettings.voiceChannels.length) {
                                                 vcList += '\n';
                                             }
@@ -725,26 +775,102 @@ module.exports = {
                                         const vcTargetIndex = await fn.userSelectFromList(bot, message, PREFIX,
                                             vcList, userSettings.voiceChannels.length,
                                             "**Type the number corresponding to the voice channel you would like to stop tracking:**\n",
-                                            `${type}: Voice Channel Removal`, trackEmbedColour, 180000);
+                                            `${type}: Removal`, trackEmbedColour, 180000);
                                         if (!vcTargetIndex && vcTargetIndex !== 0) return;
                                         else {
                                             const vcTarget = userSettings.voiceChannels[vcTargetIndex];
-                                            userSettings = await User.findByIdAndUpdate(userSettings._id, {
-                                                $pull: {
-                                                    voiceChannels: {
-                                                        id: vcTarget.id,
-                                                    },
-                                                },
-                                            }, { new: true });
-                                            if (fn.voiceTrackingHasUser(userSettings.discordID)) {
-                                                fn.voiceTrackingClearInterval(userSettings.discordID);
-                                                fn.voiceTrackingDeleteCollection(userSettings.discordID);
-                                                await Track.deleteMany({ userID: userSettings.discordID });
+                                            if (vcTarget) if (vcTarget.id) {
+                                                const confirmDelete = await fn.getUserConfirmation(bot, message, PREFIX,
+                                                    `**Are you sure you want to stop tracking this voice channel?**`
+                                                    + `\n${await fn.voiceChannelArrayToString(bot, authorID, [vcTarget], false)}`,
+                                                    forceSkip, `${type}: Confirm Removal`, 180000);
+                                                if (confirmDelete === null) return;
+                                                else if (!confirmDelete) continueEdit = true;
+                                                else {
+                                                    userSettings = await User.findByIdAndUpdate(userSettings._id, {
+                                                        $pull: {
+                                                            voiceChannels: {
+                                                                id: vcTarget.id,
+                                                            },
+                                                        },
+                                                    }, { new: true });
+                                                    if (fn.voiceTrackingHasUser(userSettings.discordID)) {
+                                                        fn.voiceTrackingClearInterval(userSettings.discordID);
+                                                        fn.voiceTrackingDeleteCollection(userSettings.discordID);
+                                                        await Track.deleteMany({ userID: userSettings.discordID });
+                                                    }
+
+                                                }
+                                                break;
                                             }
                                         }
                                     }
                                 }
-                                else continueEdit = true;
+                                continueEdit = true;
+                            }
+                            break;
+                        case 10 - quoteAdjustment:
+                            {
+                                if (targetVcObject) if (typeof targetVcObject === 'object') {
+                                    await Track.updateMany({ userID: authorID }, {
+                                        $set: {
+                                            start: fn.getCurrentUTCTimestampFlooredToSecond(),
+                                            end: fn.getCurrentUTCTimestampFlooredToSecond(),
+                                        },
+                                    });
+                                    targetVcObject.timeTracked = userEdit;
+                                    userSettings = await User.findByIdAndUpdate(userSettings._id, {
+                                        $set: { voiceChannels: userSettings.voiceChannels }
+                                    }, { new: true });
+                                }
+                                continueEdit = true;
+                            }
+                            break;
+                        case 11 - quoteAdjustment:
+                            {
+                                switch (userEdit) {
+                                    case '🔁': userEdit = true;
+                                        break;
+                                    case '⛔': userEdit = false;
+                                        break;
+                                    default: userEdit = null;
+                                        break;
+                                }
+                                if (typeof userEdit === "boolean") {
+                                    if (targetVcObject) if (typeof targetVcObject === 'object') {
+                                        targetVcObject.autoReset = userEdit;
+                                        // Set the reset delay
+                                        if (userEdit) {
+                                            const resetDelay = await fn.getUserEditDuration(bot, message, PREFIX, timezoneOffset, daylightSaving,
+                                                "auto reset delay", fn.millisecondsToTimeString(targetVcObject.autoResetDelay || 0),
+                                                `${type}: Change Auto Reset Delay`, MINIMUM_AUTO_RESET_DELAY,
+                                                trackEmbedColour, `\n**__Recommended:__** \`15 sec\` \`30s\` \`1 min\` \`5m\` (**Default:** \`15 seconds\`)`);
+                                            if (!resetDelay && resetDelay !== 0) return;
+                                            else if (resetDelay === "back") {
+                                                continueEdit = true;
+                                                break;
+                                            }
+                                            else targetVcObject.autoResetDelay = resetDelay;
+                                        }
+                                        userSettings = await User.findByIdAndUpdate(userSettings._id, {
+                                            $set: { voiceChannels: userSettings.voiceChannels }
+                                        }, { new: true });
+                                        break;
+                                    }
+                                }
+                                continueEdit = true;
+                            }
+                            break;
+                        case 12 - quoteAdjustment:
+                            {
+                                if (targetVcObject) if (typeof targetVcObject === 'object') {
+                                    targetVcObject.autoResetDelay = userEdit;
+                                    userSettings = await User.findByIdAndUpdate(userSettings._id, {
+                                        $set: { voiceChannels: userSettings.voiceChannels }
+                                    }, { new: true });
+                                    break;
+                                }
+                                continueEdit = true;
                             }
                             break;
                     }

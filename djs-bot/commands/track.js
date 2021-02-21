@@ -8,9 +8,9 @@ require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
 const trackEmbedColour = fn.trackEmbedColour;
-const MINIMUM_AUTO_RESET_DELAY = 5000;
-const DEFAULT_AUTO_RESET_DELAY = 15000;
-const MINIMUM_AUTO_RESET_TRACK_PERIOD = 60000;
+const MINIMUM_AUTO_RESET_DELAY = tr.MINIMUM_AUTO_RESET_DELAY;
+const DEFAULT_AUTO_RESET_DELAY = tr.DEFAULT_AUTO_RESET_DELAY;
+const MINIMUM_AUTO_RESET_TRACK_PERIOD = tr.MINIMUM_AUTO_RESET_TRACK_PERIOD;
 
 // Private Function Declarations
 
@@ -84,7 +84,7 @@ module.exports = {
                         // Check if the user wants to remove a voice channel or add one.
                         trackPrompt = `\nDo you want to **add** (📊) another voice channel to track or **remove** (🗑️) a voice channel you are currently tracking your time in?`
                             + `\n(**Cap at ${2 * tier}**)\n\n**__Current tracked voice channels:__**\n${await fn.voiceChannelArrayToString(
-                                bot, authorID, userSettings.voiceChannels, true, false
+                                bot, authorID, userSettings.voiceChannels, true, true, false
                             )}`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, trackPrompt,
                             ['📊', '🗑️'], type, true, trackEmbedColour);
@@ -157,7 +157,7 @@ module.exports = {
                                     if (userEdit) {
                                         if (userSettings.voiceChannels) if (userSettings.voiceChannels.length >= 2 * tier) {
                                             message.reply("**You cannot track another voice channel because you don't have any more spots!**"
-                                                + `\n(Tier: ${tier} - ${2 * tier} voice channels allowed in total)`);
+                                                + `\n(**__Tier:__ ${tier}** = ${2 * tier} voice channels allowed in total)`);
                                             continueEdit = true;
                                             break;
                                         }
@@ -239,7 +239,8 @@ module.exports = {
                                         }
                                         let vcList = "";
                                         userSettings.voiceChannels.forEach((vc, i) => {
-                                            vcList += `\`${i + 1}\` - ${fn.getVoiceChannelNameString(bot, vc)}`;
+                                            vcList += `\`${i + 1}\` - **${fn.getVoiceChannelNameString(bot, vc)}**`
+                                                + ` (${fn.getVoiceChannelServerString(bot, vc)})`;
                                             if (i !== userSettings.voiceChannels.length) {
                                                 vcList += '\n';
                                             }
@@ -251,22 +252,35 @@ module.exports = {
                                         if (!vcTargetIndex && vcTargetIndex !== 0) return;
                                         else {
                                             const vcTarget = userSettings.voiceChannels[vcTargetIndex];
-                                            userSettings = await User.findByIdAndUpdate(userSettings._id, {
-                                                $pull: {
-                                                    voiceChannels: {
-                                                        id: vcTarget.id,
-                                                    },
-                                                },
-                                            }, { new: true });
-                                            if (fn.voiceTrackingHasUser(userSettings.discordID)) {
-                                                fn.voiceTrackingClearInterval(userSettings.discordID);
-                                                fn.voiceTrackingDeleteCollection(userSettings.discordID);
-                                                await Track.deleteMany({ userID: userSettings.discordID });
+                                            console.log({ vcTarget });
+                                            if (vcTarget) if (vcTarget.id) {
+                                                const confirmDelete = await fn.getUserConfirmation(bot, message, PREFIX,
+                                                    `**Are you sure you want to stop tracking this voice channel?**`
+                                                    + `\n${await fn.voiceChannelArrayToString(bot, authorID, [vcTarget], false)}`,
+                                                    forceSkip, `${type}: Confirm Removal`, 180000);
+                                                if (confirmDelete === null) return;
+                                                else if (!confirmDelete) continueEdit = true;
+                                                else {
+                                                    userSettings = await User.findByIdAndUpdate(userSettings._id, {
+                                                        $pull: {
+                                                            voiceChannels: {
+                                                                id: vcTarget.id,
+                                                            },
+                                                        },
+                                                    }, { new: true });
+                                                    if (fn.voiceTrackingHasUser(userSettings.discordID)) {
+                                                        fn.voiceTrackingClearInterval(userSettings.discordID);
+                                                        fn.voiceTrackingDeleteCollection(userSettings.discordID);
+                                                        await Track.deleteMany({ userID: userSettings.discordID });
+                                                    }
+
+                                                }
+                                                break;
                                             }
                                         }
                                     }
                                 }
-                                else continueEdit = true;
+                                continueEdit = true;
                             }
                             break;
                         case 1:
@@ -282,6 +296,7 @@ module.exports = {
                                     $set: { voiceChannels: userSettings.voiceChannels }
                                 }, { new: true });
                             }
+                            continueEdit = true;
                             break;
                         case 2:
                             switch (userEdit) {
@@ -314,7 +329,7 @@ module.exports = {
                                     break;
                                 }
                             }
-                            else continueEdit = true;
+                            continueEdit = true;
                             break;
                         case 3:
                             if (targetVcObject) if (typeof targetVcObject === 'object') {
@@ -324,6 +339,8 @@ module.exports = {
                                 }, { new: true });
                                 break;
                             }
+                            continueEdit = true;
+                            break;
                     }
                 }
                 else continueEdit = true;

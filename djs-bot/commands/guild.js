@@ -17,6 +17,8 @@ const daysOfWeekList = daysOfWeek.map((day, i) => {
     return `\`${i + 1}\` - **${day}**`;
 }).join(`\n`);
 const guildEmbedColour = fn.guildSettingsEmbedColour;
+const mastermindEmbedColour = fn.mastermindEmbedColour;
+const quoteEmbedColour = fn.quoteEmbedColour;
 
 // Private Function Declarations
 /**
@@ -140,7 +142,7 @@ module.exports = {
                     fieldToEdit = selectedField.object;
                     fieldToEditIndex = selectedField.index;
                 }
-                
+
                 const type = "Guild";
                 continueEdit = false;
                 var userEdit, guildSettingsPrompt = "";
@@ -162,33 +164,33 @@ module.exports = {
                     case 3:
                         guildSettingsPrompt = `Please enter one or more **mastermind facilitator roles:** (Cap at 5)`
                             + `\n(**Current roles:** ${guildConfig.mastermind.roles.map(roleID => `<@&${roleID}>`).join(', ')})`;
-                        userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt, type, forceSkip, guildEmbedColour);
+                        userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt, type, forceSkip, mastermindEmbedColour);
                         break;
                     case 4:
                         guildSettingsPrompt = `Enter the number corresponding to the __**day of the week**__ when you would like the server's **weekly mastermind reset to happen:**`;
-                        userEdit = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, daysOfWeek.length, type, daysOfWeek, forceSkip, guildEmbedColour, `${guildSettingsPrompt}\n\n${daysOfWeekList}`);
+                        userEdit = await fn.getUserEditNumber(bot, message, PREFIX, fieldToEdit, daysOfWeek.length, type, daysOfWeek, forceSkip, mastermindEmbedColour, `${guildSettingsPrompt}\n\n${daysOfWeekList}`);
                         if (userEdit !== false && !isNaN(userEdit)) userEdit--;
                         console.log({ userEdit });
                         break;
                     case wantsQuote ? 5 : null:
                         guildSettingsPrompt = `Please enter the **target channel (using #)** send quotes to.`;
-                        userEdit = await rm.getChannelOrDM(bot, message, PREFIX, guildSettingsPrompt, `Guild: Quote Channel`, false, guildEmbedColour);
+                        userEdit = await rm.getChannelOrDM(bot, message, PREFIX, guildSettingsPrompt, `Guild: Quote Channel`, false, quoteEmbedColour);
                         break;
                     case wantsQuote ? 6 : 5:
                         guildSettingsPrompt = `Please enter one or more **quote roles (to get recurring inspiration):** (Cap at 5)`
                             + `\n(**Current roles:** ${guildConfig.quote.roles.map(roleID => `<@&${roleID}>`).join(', ')})`;
-                        userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt, type, forceSkip, guildEmbedColour);
+                        userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt, type, forceSkip, quoteEmbedColour);
                         break;
                     case wantsQuote ? 7 : 6:
                         guildSettingsPrompt = `Do you want to regularly receive an **inspirational quote?**\n🙌 - **Yes**\n⛔ - **No**`;
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt,
-                            ['🙌', '⛔'], type, forceSkip, guildEmbedColour);
+                            ['🙌', '⛔'], type, forceSkip, quoteEmbedColour);
                         break;
                     case wantsQuote ? 8 : null:
                         if (wantsQuote) {
                             guildSettingsPrompt = `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}`
                                 + "\n\nType `skip` to **start it now**"
-                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt, type, forceSkip, guildEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt, type, forceSkip, quoteEmbedColour);
                         }
                         else {
                             fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
@@ -199,7 +201,7 @@ module.exports = {
                     case wantsQuote ? 9 : null:
                         if (wantsQuote) {
                             guildSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
-                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt, type, forceSkip, guildEmbedColour);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, guildSettingsPrompt, type, forceSkip, quoteEmbedColour);
                         }
                         else {
                             fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
@@ -340,7 +342,7 @@ module.exports = {
                                     let error = false;
                                     quote.getQuote = userEdit;
                                     if (userEdit) {
-                                        let targetChannel = await rm.getChannelOrDM(bot, message, PREFIX, `Please enter the **target channel (using #)** send quotes to.`, `Guild: Quote Channel`, false, guildEmbedColour);
+                                        let targetChannel = await rm.getChannelOrDM(bot, message, PREFIX, `Please enter the **target channel (using #)** send quotes to.`, `Guild: Quote Channel`, false, quoteEmbedColour);
                                         targetChannel = channelRegex.exec(targetChannel);
                                         if (!targetChannel) return;
                                         quote.channel = targetChannel[1];
@@ -348,7 +350,7 @@ module.exports = {
                                         guildSettingsPrompt = `Please enter one or more **quote \@roles (to get notified with the quotes):** (Cap at 5)`
                                             + `\n(**Current roles:** ${guildConfig.quote.roles.map(roleID => `<@&${roleID}>`).join(', ')})`
                                             + `\n\nType \`same\` to **keep the same roles** as shown above`;
-                                        const updatedRoles = await fn.getUserEditString(bot, message, PREFIX, "Quote Role(s)", guildSettingsPrompt, type, forceSkip, guildEmbedColour);
+                                        const updatedRoles = await fn.getUserEditString(bot, message, PREFIX, "Quote Role(s)", guildSettingsPrompt, type, forceSkip, quoteEmbedColour);
                                         if (!updatedRoles) return;
                                         else if (updatedRoles === "back") {
                                             continueEdit = true;
@@ -364,7 +366,7 @@ module.exports = {
                                             quote.roles = roles;
                                         }
                                         guildSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
-                                        let intervalInput = await fn.getUserEditString(bot, message, PREFIX, "Quote Interval", guildSettingsPrompt, type, forceSkip, guildEmbedColour);
+                                        let intervalInput = await fn.getUserEditString(bot, message, PREFIX, "Quote Interval", guildSettingsPrompt, type, forceSkip, quoteEmbedColour);
                                         if (!intervalInput) return;
                                         else if (intervalInput === "back") {
                                             continueEdit = true;
@@ -399,7 +401,7 @@ module.exports = {
                                             quote.quoteInterval = intervalInput.join(' ');
                                             guildSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚\n${futureTimeExamples}`
                                                 + "\n\nType `skip` to **start it now**"
-                                            let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", guildSettingsPrompt, type, forceSkip, guildEmbedColour);
+                                            let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", guildSettingsPrompt, type, forceSkip, quoteEmbedColour);
                                             if (!quoteTrigger) return;
                                             else if (quoteTrigger === "back") {
                                                 continueEdit = true;
@@ -517,7 +519,7 @@ module.exports = {
                                         guildSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚`
                                             + `${quote.nextQuote ? !isNaN(quote.nextQuote) ? `\n\n**Currently**: ${fn.timestampToDateString(quote.nextQuote)}` : "" : ""}`
                                             + `\n${futureTimeExamples}\n\nType \`same\` to **keep it the same**\nType \`skip\` to **start it now**`
-                                        let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", guildSettingsPrompt, type, forceSkip, guildEmbedColour);
+                                        let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", guildSettingsPrompt, type, forceSkip, quoteEmbedColour);
                                         if (!quoteTrigger) return;
                                         else if (quoteTrigger === "back") {
                                             continueEdit = true;
@@ -566,7 +568,7 @@ module.exports = {
                     if (guildConfig.quote.getQuote) {
                         if (fieldToEditIndex >= 5 && fieldToEditIndex <= 9) {
                             const now = fn.getCurrentUTCTimestampFlooredToSecond();
-                            
+
                             const reminderQuery = { title: "Quote", isDM: false, guildID };
                             const reminders = await Reminder.find(reminderQuery);
                             reminders.forEach(async reminder => {

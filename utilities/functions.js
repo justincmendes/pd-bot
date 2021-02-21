@@ -4522,7 +4522,7 @@ module.exports = {
     },
 
     voiceChannelArrayToString: async function (bot, userID, voiceChannels,
-        doubleSpace = true, doubleBulletedList = true) {
+        showUpdatedVoiceChannels = true, doubleSpace = true, doubleBulletedList = true) {
         var currentTracking = await Track.findOne({ userID });
         if (currentTracking) {
             const update = await this.updateVoiceChannelTimeTracked(
@@ -4530,7 +4530,7 @@ module.exports = {
                 this.getCurrentUTCTimestampFlooredToSecond() - currentTracking.start,
                 true
             );
-            if (update) {
+            if (showUpdatedVoiceChannels && update) {
                 voiceChannels = update.voiceChannels;
             }
             currentTracking = await Track.findOneAndUpdate({ _id: currentTracking._id },
