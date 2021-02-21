@@ -19,7 +19,7 @@ const timeExamples = fn.timeExamples;
 // Using Object Destructuring
 
 // Function Declarations and Definitions
-function fastDataArrayToString(fastData, showFastEndMessage = false, PREFIX = '?', commandUsed = 'fast') {
+function fastDataArrayToString(bot, fastData, showFastEndMessage = false, PREFIX = '?', commandUsed = 'fast') {
     let [startTimestamp, endTimestamp, fastDuration, fastBreaker, moodRating, reflectionText] = fastData;
     let fastDataString = `**Start Time:** ${startTimestamp ? fn.timestampToDateString(startTimestamp) : ""}\n` +
         `**End Time:** ${endTimestamp ? fn.timestampToDateString(endTimestamp) : ""}\n` +
@@ -30,6 +30,7 @@ function fastDataArrayToString(fastData, showFastEndMessage = false, PREFIX = '?
     if (showFastEndMessage) {
         fastDataString += `\n\n(Want to end your fast? \`${PREFIX}${commandUsed} end\`)`;
     }
+    fastDataString = fn.getRoleMentionToTextString(bot, fastDataString);
     return fastDataString;
 }
 function fastDocumentToDataArray(fastDocument, userTimezone = 0, calculateFastDuration = false, updateShownEndTime = false, endTimestamp = null) {
@@ -62,7 +63,7 @@ function fastDocumentToDataArray(fastDocument, userTimezone = 0, calculateFastDu
     fastDataArray = [startTimestamp, endTimestamp, fastDuration, fastBreaker, moodRating, reflectionText];
     return fastDataArray;
 }
-function multipleFastsToString(message, fastArray, numberOfFasts, userTimezoneOffset, entriesToSkip = 0, toArray = false) {
+function multipleFastsToString(bot, message, fastArray, numberOfFasts, userTimezoneOffset, entriesToSkip = 0, toArray = false) {
     var fastDataOut = toArray ? new Array() : "";
     for (let i = 0; i < numberOfFasts; i++) {
         if (fastArray[i] === undefined) {
@@ -77,7 +78,7 @@ function multipleFastsToString(message, fastArray, numberOfFasts, userTimezoneOf
         else {
             fastData = fastDocumentToDataArray(fastArray[i]);
         }
-        const fastDataString = `__**Fast ${i + entriesToSkip + 1}:**__\n${fastDataArrayToString(fastData)}`;
+        const fastDataString = `__**Fast ${i + entriesToSkip + 1}:**__\n${fastDataArrayToString(bot, fastData)}`;
         if (toArray) fastDataOut.push(fastDataString);
         else {
             fastDataOut = fastDataOut + fastDataString;
@@ -98,7 +99,7 @@ async function getTotalFasts(userID) {
     }
 }
 
-async function getCurrentOrRecentFastEmbed(userID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed = 'fast') {
+async function getCurrentOrRecentFastEmbed(bot, userID, fastIsInProgress, userTimezoneOffset, PREFIX, commandUsed = 'fast') {
     var fastView, fastType, fastData, fastDataToString, fastEmbed;
     if (fastIsInProgress === true) {
         // Show the user the current fast
@@ -122,10 +123,10 @@ async function getCurrentOrRecentFastEmbed(userID, fastIsInProgress, userTimezon
     }
     fastDataToString = `__**Fast ${await getCurrentOrRecentFastIndex(userID)}:**__\n`;
     if (fastIsInProgress === true) {
-        fastDataToString += fastDataArrayToString(fastData, true, PREFIX, commandUsed);
+        fastDataToString += fastDataArrayToString(bot, fastData, true, PREFIX, commandUsed);
     }
     else {
-        fastDataToString += fastDataArrayToString(fastData, false, PREFIX, commandUsed);
+        fastDataToString += fastDataArrayToString(bot, fastData, false, PREFIX, commandUsed);
     }
     fastEmbed = fn.getMessageEmbed(fastDataToString, `Fast: See ${fastType} Fast`, fastEmbedColour);
     return (fastEmbed);
@@ -335,7 +336,7 @@ async function getFastPostEmbedArray(bot, message, PREFIX, fastData, forceSkip =
             const addFullFastPrompt = "Are you sure you want to add your **full fast (including mood and reflection)**";
             let confirmOverwrite = await fn.getUserConfirmation(bot, message, PREFIX, addFullFastPrompt, true, "Fast Post: Add Full Fast");
             if (confirmOverwrite === true) {
-                collectedMessage = `=============\n${fastDataArrayToString(fastData)}\n=============`;
+                collectedMessage = `=============\n${fastDataArrayToString(bot, fastData)}\n=============`;
                 fastPost.push(collectedMessage);
                 fastPostMessagePrompt = `${fastPostMessagePrompt}\n${collectedMessage}`;
             }
@@ -810,7 +811,7 @@ module.exports = {
             // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort. 
             // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
             if (!seeCommands.includes(args[1]) && isNaN(args[1])) {
-                message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
+                message.channel.send(await getCurrentOrRecentFastEmbed(bot, authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                 return message.reply(fastSeeHelpMessage);
             }
             // Do not show the most recent fast embed, when a valid command is called
@@ -826,7 +827,7 @@ module.exports = {
                 // Handling Argument 1:
                 const isNumberArg = !isNaN(args[1]);
                 if (seeType === "recent" || seeType === "current") {
-                    return message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
+                    return message.channel.send(await getCurrentOrRecentFastEmbed(bot, authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                 }
                 else if (seeType === "all") {
                     pastNumberOfEntriesIndex = totalFastNumber;
@@ -845,7 +846,7 @@ module.exports = {
                 // After this filter:
                 // If the first argument after "see" is not past, then it is not a valid call
                 else {
-                    message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
+                    message.channel.send(await getCurrentOrRecentFastEmbed(bot, authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                     return message.reply(fastSeeHelpMessage);
                 }
                 console.log({ pastNumberOfEntriesIndex, pastFunctionality });
@@ -861,11 +862,11 @@ module.exports = {
                     if (args[2] !== undefined) {
                         // If the next argument is NotaNumber, invalid "past" command call
                         if (isNaN(args[2])) {
-                            message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
+                            message.channel.send(await getCurrentOrRecentFastEmbed(bot, authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                             return message.reply(fastSeeHelpMessage);
                         }
                         if (parseInt(args[2]) <= 0) {
-                            message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
+                            message.channel.send(await getCurrentOrRecentFastEmbed(bot, authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                             return message.reply(fastSeeHelpMessage);
                         }
                         const confirmSeeMessage = `Are you sure you want to **see ${args[2]} fasts?**`;
@@ -876,7 +877,7 @@ module.exports = {
                         // If the next argument is undefined, implied "see all" command call unless "all" was not called:
                         // => empty "past" command call
                         if (seeType !== "all") {
-                            message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
+                            message.channel.send(await getCurrentOrRecentFastEmbed(bot, authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                             return message.reply(fastSeeHelpMessage);
                         }
                         const confirmSeeAllMessage = "Are you sure you want to **see all** of your fast history?";
@@ -891,7 +892,7 @@ module.exports = {
                     if (indexByRecency) fastView = await fn.getEntriesByRecency(Fast, { userID: authorID }, 0, pastNumberOfEntriesIndex);
                     else fastView = await fn.getEntriesByStartTime(Fast, { userID: authorID }, 0, pastNumberOfEntriesIndex);
                     console.log({ fastView });
-                    const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
+                    const fastDataToStringArray = multipleFastsToString(bot, message, fastView, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
                     await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
                         fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts (${sortType})`,
                         true, `Fasts ${fn.timestampToDateString(
@@ -935,7 +936,7 @@ module.exports = {
                                 if (indexByRecency) fastView = await fn.getEntriesByRecency(Fast, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
                                 else fastView = await fn.getEntriesByStartTime(Fast, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ fastView });
-                                const fastDataToStringArray = multipleFastsToString(message, fastView, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
+                                const fastDataToStringArray = multipleFastsToString(bot, message, fastView, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
                                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
                                     fastDataToStringArray, `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip} (${sortType})`,
                                     true, `Fasts ${fn.timestampToDateString(
@@ -974,7 +975,7 @@ module.exports = {
                 if (fastEndTime === null) {
                     showFastEndMessage = true;
                 }
-                const fastDataToString = `__**Fast ${pastNumberOfEntriesIndex}:**__\n` + fastDataArrayToString(fastData, showFastEndMessage, PREFIX, commandUsed);
+                const fastDataToString = `__**Fast ${pastNumberOfEntriesIndex}:**__\n` + fastDataArrayToString(bot, fastData, showFastEndMessage, PREFIX, commandUsed);
                 const fastEmbed = fn.getEmbedArray(fastDataToString, `Fast: See Fast ${pastNumberOfEntriesIndex} (${sortType})`,
                     true, `Fast ${fn.timestampToDateString(
                         Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
@@ -1007,7 +1008,7 @@ module.exports = {
 
             // Show the user the most recent fast
             if (args[1] === undefined || args.length === 1) {
-                message.channel.send(await getCurrentOrRecentFastEmbed(authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
+                message.channel.send(await getCurrentOrRecentFastEmbed(bot, authorID, fastIsInProgress, timezoneOffset, PREFIX, commandUsed));
                 return message.reply(fastDeleteHelpMessage);
             }
 
@@ -1035,7 +1036,7 @@ module.exports = {
                     var fastCollection;
                     if (indexByRecency) fastCollection = await fn.getEntriesByRecency(Fast, { userID: authorID }, 0, numberArg);
                     else fastCollection = await fn.getEntriesByStartTime(Fast, { userID: authorID }, 0, numberArg);
-                    const fastDataToStringArray = multipleFastsToString(message, fastCollection, numberArg, timezoneOffset, 0, true);
+                    const fastDataToStringArray = multipleFastsToString(bot, message, fastCollection, numberArg, timezoneOffset, 0, true);
                     const fastArray = fn.getEmbedArray(fastDataToStringArray, ``, true, false, fastEmbedColour);
                     console.log({ fastArray });
                     // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
@@ -1106,7 +1107,7 @@ module.exports = {
                                 fastData = fastDocumentToDataArray(fastView);
                             }
                             fastTargetIDs.push(fastView._id);
-                            fastDataToString.push(`__**Fast ${toDelete[i]}:**__\n${fastDataArrayToString(fastData)}`);
+                            fastDataToString.push(`__**Fast ${toDelete[i]}:**__\n${fastDataArrayToString(bot, fastData)}`);
                         }
                         const fastDataToStringArray = fn.getEmbedArray(fastDataToString, ``, true, false);
                         const deleteConfirmMessage = `Are you sure you want to **delete fasts ${toDelete}?:**`
@@ -1151,7 +1152,7 @@ module.exports = {
                             var fastCollection;
                             if (indexByRecency) fastCollection = await fn.getEntriesByRecency(Fast, { userID: authorID }, skipEntries, pastNumberOfEntries);
                             else fastCollection = await fn.getEntriesByStartTime(Fast, { userID: authorID }, skipEntries, pastNumberOfEntries);
-                            const showFasts = multipleFastsToString(message, fastCollection, pastNumberOfEntries, timezoneOffset, skipEntries, true);
+                            const showFasts = multipleFastsToString(bot, message, fastCollection, pastNumberOfEntries, timezoneOffset, skipEntries, true);
                             const fastArray = fn.getEmbedArray(showFasts, ``, true, false, fastEmbedColour);
                             if (skipEntries >= totalFastNumber) return;
                             // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
@@ -1193,7 +1194,7 @@ module.exports = {
                     const fastTargetID = fastView._id;
                     console.log({ fastTargetID });
                     const fastIndex = await getCurrentOrRecentFastIndex(authorID);
-                    const fastEmbed = fn.getEmbedArray(`__**Fast ${fastIndex}:**__\n${fastDataArrayToString(fastData)}`,
+                    const fastEmbed = fn.getEmbedArray(`__**Fast ${fastIndex}:**__\n${fastDataArrayToString(bot, fastData)}`,
                         `Fast: Delete Recent Fast`, true, false, fastEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent fast?**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, fastEmbed, deleteConfirmMessage, forceSkip,
@@ -1242,7 +1243,7 @@ module.exports = {
                 const fastData = fastView.fastDuration ? fastDocumentToDataArray(fastView) : fastDocumentToDataArray(fastView, timezoneOffset, true);
                 const fastTargetID = fastView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
-                const fastEmbed = fn.getEmbedArray(`__**Fast ${pastNumberOfEntriesIndex}:**__\n${fastDataArrayToString(fastData)}`,
+                const fastEmbed = fn.getEmbedArray(`__**Fast ${pastNumberOfEntriesIndex}:**__\n${fastDataArrayToString(bot, fastData)}`,
                     `Fast: Delete Fast ${pastNumberOfEntriesIndex} (${sortType})`, true, false, fastEmbedColour);
                 const deleteConfirmMessage = `Are you sure you want to **delete Fast ${pastNumberOfEntriesIndex}?**`;
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, fastEmbed, deleteConfirmMessage, forceSkip,
@@ -1319,12 +1320,12 @@ module.exports = {
                     continueEdit = false;
                     if (fastView.endTime === null) {
                         fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
-                        showFast = fastDataArrayToString(fastData, true, PREFIX, commandUsed);
+                        showFast = fastDataArrayToString(bot, fastData, true, PREFIX, commandUsed);
                         isCurrent = true;
                     }
                     else {
                         fastData = fastDocumentToDataArray(fastView);
-                        showFast = fastDataArrayToString(fastData);
+                        showFast = fastDataArrayToString(bot, fastData);
                     }
                     // Field the user wants to edit
                     const fieldToEditInstructions = "**Which field do you want to edit?**";
@@ -1526,7 +1527,7 @@ module.exports = {
                                         : await fn.getEntryIndexByFunction(authorID, fastTargetID, totalFastNumber, getOneFastByStartTime);
                                     console.log({ fastView, fastData, fastTargetID, fieldToEditIndex });
                                     fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
-                                    showFast = fastDataArrayToString(fastData);
+                                    showFast = fastDataArrayToString(bot, fastData);
                                     console.log({ userEdit });
                                     const continueEditMessage = `Do you want to continue **editing Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n${showFast}`;
                                     continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Fast: Continue Editing Fast ${pastNumberOfEntriesIndex}?`, 300000);
@@ -1549,7 +1550,7 @@ module.exports = {
                                     : await fn.getEntryIndexByFunction(authorID, fastTargetID, totalFastNumber, getOneFastByStartTime);
                                 console.log({ fastView, fastData, fastTargetID, fieldToEditIndex });
                                 fastData = fastDocumentToDataArray(fastView, timezoneOffset, true);
-                                showFast = fastDataArrayToString(fastData);
+                                showFast = fastDataArrayToString(bot, fastData);
                             }
                             else {
                                 message.reply("**Fast does not exist anymore...**");

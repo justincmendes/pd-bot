@@ -145,14 +145,14 @@ async function getOneJournalByObjectID(journalTargetID) {
     }
 }
 
-async function getMostRecentJournal(userID, embedColour = journalEmbedColour) {
+async function getMostRecentJournal(bot, userID, embedColour = journalEmbedColour) {
     const recentJournalToString = `__**Journal ${await getRecentJournalIndex(userID)}:**__`
-        + `\n${journalDocumentToString(await getOneJournalByRecency(userID, 0))}`;
+        + `\n${journalDocumentToString(bot, await getOneJournalByRecency(userID, 0))}`;
     const journalEmbed = fn.getMessageEmbed(recentJournalToString, `Journal See Recent Entry`, embedColour);
     return journalEmbed;
 }
 
-function journalDocumentToString(journalDoc) {
+function journalDocumentToString(bot, journalDoc) {
     const { createdAt, template, entry, } = journalDoc;
     let entryString = `**Created At:** ${createdAt ? fn.timestampToDateString(createdAt) : ""}\n**Type: **`;
     switch (template) {
@@ -173,10 +173,11 @@ function journalDocumentToString(journalDoc) {
             entryString += "Freehand" + `${entry.message ? `\n💬 **Entry:**\n${entry.message}` : ""}`;
             break;
     }
+    entryString = fn.getRoleMentionToTextString(bot, entryString);
     return entryString;
 }
 
-function multipleJournalsToString(message, journalArray, numberOfJournals, entriesToSkip = 0, toArray = false) {
+function multipleJournalsToString(bot, message, journalArray, numberOfJournals, entriesToSkip = 0, toArray = false) {
     var entriesToString = new Array();
     console.log({ numberOfJournals });
     for (let i = 0; i < numberOfJournals; i++) {
@@ -186,7 +187,7 @@ function multipleJournalsToString(message, journalArray, numberOfJournals, entri
             break;
         }
         const journalString = `__**Journal ${i + entriesToSkip + 1}:**__`
-            + `\n${journalDocumentToString(journalArray[i])}`;
+            + `\n${journalDocumentToString(bot, journalArray[i])}`;
         entriesToString.push(journalString);
     }
     if (!toArray) entriesToString = entriesToString.join('\n\n');
@@ -495,7 +496,7 @@ module.exports = {
                     var journalCollection;
                     if (indexByRecency) journalCollection = await fn.getEntriesByRecency(Journal, { userID: authorID }, 0, numberArg);
                     else journalCollection = await getJournalByCreatedAt(authorID, 0, numberArg);
-                    const journalStringArray = fn.getEmbedArray(multipleJournalsToString(message, journalCollection, numberArg, 0, true),
+                    const journalStringArray = fn.getEmbedArray(multipleJournalsToString(bot, message, journalCollection, numberArg, 0, true),
                         '', true, false, journalEmbedColour);
                     console.log({ journalStringArray });
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} entries?** `;
@@ -555,7 +556,7 @@ module.exports = {
                             journalView = await getOneJournalByCreatedTime(authorID, toDelete[i] - 1);
                         }
                         journalTargetIDs.push(journalView._id);
-                        journalStringArray.push(`__**Journal ${toDelete[i]}:**__\n${journalDocumentToString(journalView)}`);
+                        journalStringArray.push(`__**Journal ${toDelete[i]}:**__\n${journalDocumentToString(bot, journalView)}`);
                     }
                     const deleteConfirmMessage = `Are you sure you want to **delete entries ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By Date Created";
@@ -598,7 +599,7 @@ module.exports = {
                             var journalCollection;
                             if (indexByRecency) journalCollection = await fn.getEntriesByRecency(Journal, { userID: authorID }, skipEntries, pastNumberOfEntries);
                             else journalCollection = await getJournalByCreatedAt(authorID, skipEntries, pastNumberOfEntries);
-                            const journalStringArray = fn.getEmbedArray(multipleJournalsToString(message, journalCollection, pastNumberOfEntries, skipEntries, true),
+                            const journalStringArray = fn.getEmbedArray(multipleJournalsToString(bot, message, journalCollection, pastNumberOfEntries, skipEntries, true),
                                 '', true, false, journalEmbedColour);
                             if (skipEntries >= totalJournalNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By Date Created";
@@ -634,7 +635,7 @@ module.exports = {
                     const journalTargetID = journalView._id;
                     console.log({ journalTargetID });
                     const journalIndex = await getRecentJournalIndex(authorID);
-                    const journalEmbed = fn.getEmbedArray(`__**Journal ${journalIndex}:**__\n${journalDocumentToString(journalView)}`,
+                    const journalEmbed = fn.getEmbedArray(`__**Journal ${journalIndex}:**__\n${journalDocumentToString(bot, journalView)}`,
                         `Journal: Delete Recent Entry`, true, false, journalEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent entry?:**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, journalEmbed, deleteConfirmMessage, forceSkip,
@@ -681,7 +682,7 @@ module.exports = {
                 const journalTargetID = journalView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
                 const deleteConfirmMessage = `Are you sure you want to **delete Entry ${pastNumberOfEntriesIndex}?**`;
-                const journalEmbed = fn.getEmbedArray(`__**Journal ${pastNumberOfEntriesIndex}:**__\n${journalDocumentToString(journalView)}`,
+                const journalEmbed = fn.getEmbedArray(`__**Journal ${pastNumberOfEntriesIndex}:**__\n${journalDocumentToString(bot, journalView)}`,
                     `Journal: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, true, false, journalEmbedColour);
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, journalEmbed, deleteConfirmMessage, forceSkip,
                     `Journal: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
@@ -732,7 +733,7 @@ module.exports = {
                 // Handling Argument 1:
                 const isNumberArg = !isNaN(args[1]);
                 if (seeType === "recent") {
-                    return message.channel.send(await getMostRecentJournal(authorID, journalEmbedColour));
+                    return message.channel.send(await getMostRecentJournal(bot, authorID, journalEmbedColour));
                 }
                 else if (seeType === "all") {
                     pastNumberOfEntriesIndex = totalJournalNumber;
@@ -785,7 +786,7 @@ module.exports = {
                     if (indexByRecency) journalView = await fn.getEntriesByRecency(Journal, { userID: authorID }, 0, pastNumberOfEntriesIndex);
                     else journalView = await getJournalByCreatedAt(authorID, 0, pastNumberOfEntriesIndex);
                     console.log({ journalView, pastNumberOfEntriesIndex });
-                    const journalStringArray = multipleJournalsToString(message, journalView, pastNumberOfEntriesIndex, 0, true);
+                    const journalStringArray = multipleJournalsToString(bot, message, journalView, pastNumberOfEntriesIndex, 0, true);
                     await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
                         journalStringArray, `Journal: See ${pastNumberOfEntriesIndex} Entries (${sortType})`,
                         true, `Journals ${fn.timestampToDateString(
@@ -827,7 +828,7 @@ module.exports = {
                                 if (indexByRecency) journalView = await fn.getEntriesByRecency(Journal, { userID: authorID }, entriesToSkip, pastNumberOfEntriesIndex);
                                 else journalView = await getJournalByCreatedAt(authorID, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ journalView });
-                                const journalStringArray = multipleJournalsToString(message, journalView, pastNumberOfEntriesIndex, entriesToSkip, true);
+                                const journalStringArray = multipleJournalsToString(bot, message, journalView, pastNumberOfEntriesIndex, entriesToSkip, true);
                                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
                                     journalStringArray, `Journal: See ${pastNumberOfEntriesIndex} Entries Past ${entriesToSkip} (${sortType})`,
                                     true, `Journals ${fn.timestampToDateString(
@@ -852,7 +853,7 @@ module.exports = {
                 }
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
-                const journalString = `__**Journal ${pastNumberOfEntriesIndex}:**__\n${journalDocumentToString(journalView)}`;
+                const journalString = `__**Journal ${pastNumberOfEntriesIndex}:**__\n${journalDocumentToString(bot, journalView)}`;
                 const journalEmbed = fn.getEmbedArray(journalString, `Journal: See Entry ${pastNumberOfEntriesIndex} (${sortType})`,
                     true, `Journal ${fn.timestampToDateString(
                         Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
@@ -924,7 +925,7 @@ module.exports = {
                         const checkJournal = await getOneJournalByObjectID(journalTargetID);
                         if (!checkJournal) return;
                         continueEdit = false;
-                        showJournal = journalDocumentToString(journalDocument);
+                        showJournal = journalDocumentToString(bot, journalDocument);
                         // Field the user wants to edit
                         const fieldToEditInstructions = "**Which field do you want to edit?**";
                         const fieldToEditAdditionalMessage = `__**Journal ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showJournal}`;
@@ -1046,7 +1047,7 @@ module.exports = {
                                         await fn.getEntryIndexByFunction(authorID, journalTargetID, totalJournalNumber, getOneJournalByRecency)
                                         : await fn.getEntryIndexByFunction(authorID, journalTargetID, totalJournalNumber, getOneJournalByCreatedTime);
                                     console.log({ journalDocument, journalTargetID, fieldToEditIndex });
-                                    showJournal = journalDocumentToString(journalDocument);
+                                    showJournal = journalDocumentToString(bot, journalDocument);
                                     const continueEditMessage = `Do you want to continue **editing Journal ${pastNumberOfEntriesIndex}?:**\n\n__**Journal ${pastNumberOfEntriesIndex}:**__\n${showJournal}`;
                                     continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Journal: Continue Editing Journal ${pastNumberOfEntriesIndex}?`, 300000);
                                 }
@@ -1067,7 +1068,7 @@ module.exports = {
                                     await fn.getEntryIndexByFunction(authorID, journalTargetID, totalJournalNumber, getOneJournalByRecency)
                                     : await fn.getEntryIndexByFunction(authorID, journalTargetID, totalJournalNumber, getOneJournalByCreatedTime);
                                 console.log({ journalDocument, journalTargetID, fieldToEditIndex });
-                                showJournal = journalDocumentToString(journalDocument);
+                                showJournal = journalDocumentToString(bot, journalDocument);
                             }
                             else {
                                 message.reply("**Journal not found...**");
@@ -1111,7 +1112,7 @@ module.exports = {
                     forceSkip, true, false, true, journalEmbedColour);
                 if (!targetChannel) return;
                 const member = bot.guilds.cache.get(guildID).member(authorID);
-                const posts = fn.getEmbedArray(journalDocumentToString(journal), `${member ? `${member.displayName}'s ` : ""}Journal Entry`
+                const posts = fn.getEmbedArray(journalDocumentToString(bot, journal), `${member ? `${member.displayName}'s ` : ""}Journal Entry`
                     + ` - ${fn.timestampToDateString(journal.createdAt, false, true, true)}`, true, false, journalEmbedColour);
                 posts.forEach(async post => {
                     await fn.sendMessageToChannel(bot, post, targetChannel);

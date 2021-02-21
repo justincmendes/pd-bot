@@ -280,7 +280,7 @@ module.exports = {
                         // Apply to other collection functions (i.e. userConfirmation)
                         // Put all in here, if no reacted first, 
                         // send ERROR user didn't respond within <TIME>s
-                        
+
                         // if(reacted.first()) {
                         //}
                         console.log(`${reacted.first().author.username}'s message was collected!`);
@@ -3532,8 +3532,11 @@ module.exports = {
                                 const path = `${__dirname}/${user.id}${fileName ? `_${fileName}` : ""}.txt`;
                                 let outputString = embedArray.map(embed => embed.description)
                                     .join("\n\n");
-                                console.log({ embedArray, outputString, path });
+                                // console.log({ embedArray, outputString, path });
                                 if (outputString) {
+                                    outputString = this.getUserMentionToTextString(bot, outputString, false, true);
+                                    outputString = this.getRoleMentionToTextString(bot, outputString, true);
+                                    outputString = this.getChannelMentionToTextString(bot, outputString, true);
                                     outputString = this.removeBoldingAndUnderlining(outputString);
                                     fs.writeFileSync(path, outputString);
                                     const userObject = bot.users.cache.get(user.id);
@@ -3549,7 +3552,9 @@ module.exports = {
                                         sentFile = true;
                                     }
                                     fs.unlink(path, (err) => {
-                                        console.error(err);
+                                        if (err) {
+                                            console.error(err);
+                                        }
                                         return;
                                     });
                                 }
@@ -3570,6 +3575,63 @@ module.exports = {
         // And ensure that every asterisk has a pair in front of it! (look ahead)
         const outputString = string.replace(/\*\*|\_\_/g, "");
         return outputString;
+    },
+
+    getRoleMentionToTextString: function (bot, str, includeAt = true) {
+        const roleRegex = /\<\@\&(\d+)\>/g;
+        str = str.replace(roleRegex, (match, roleID, offset, string) => {
+            var role = "";
+            bot.guilds.cache.forEach(guild => {
+                if (guild) {
+                    role = guild.roles.cache.get(roleID);
+                    if (role) {
+                        role = role.name;
+                        if (includeAt) {
+                            role = `\@${role}`;
+                        }
+                    }
+                }
+            });
+            if (role) return role;
+            return `(Role: ${roleID})`;
+        });
+        return str;
+    },
+
+    getUserMentionToTextString: function (bot, str, includeAt = true,
+        sendDiscordTag = false) {
+        const mentionRegex = /\<\@\!(\d+)\>/g;
+        str = str.replace(mentionRegex, (match, userID, offset, string) => {
+            const user = bot.users.cache.get(userID);
+            if (user) {
+                const outputString = sendDiscordTag ? user.tag
+                    : `${includeAt ? `\@${user.username}` : user.username}`;
+                return outputString;
+            }
+            return `(User: ${userID})`;
+        });
+        return str;
+    },
+
+    getChannelMentionToTextString: function (bot, str, includeHashtag = true) {
+        const channelRegex = /\<\#(\d+)\>/g;
+        str = str.replace(channelRegex, (match, channelID, offset, string) => {
+            var channel = "";
+            bot.guilds.cache.forEach(guild => {
+                if (guild) {
+                    channel = guild.channels.cache.get(channelID);
+                    if (channel) {
+                        channel = channel.name;
+                        if (includeHashtag) {
+                            channel = `\#${channel}`;
+                        }
+                    }
+                }
+            });
+            if (channel) return channel;
+            return `(Channel: ${channelID})`;
+        });
+        return str;
     },
 
     createUserSettings: async function (bot, userID, timezoneObject) {

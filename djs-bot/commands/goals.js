@@ -23,14 +23,16 @@ const areasOfLifeList = fn.getAreasOfLifeList().join('\n');
 
 // Function Declarations and Definitions
 
-function goalDocumentToString(goalDocument, showType = true) {
+function goalDocumentToString(bot, goalDocument, showType = true) {
     const { archived, completed, type, description, reason, steps, checkpoints, start, end } = goalDocument;
     const areaOfLife = showType ? `${areasOfLifeEmojis[type] ? `${areasOfLifeEmojis[type]} ` : ""}${areasOfLife[type] ? `__${areasOfLife[type]}__` : ""}` : false;
-    return (`${archived ? "\*\***ARCHIVED**\*\*\n" : ""}${areaOfLife ? areaOfLife : ""}${description ? `\n🎯 - **Description:**\n${description}` : ""}`
+    let outputString = `${archived ? "\*\***ARCHIVED**\*\*\n" : ""}${areaOfLife ? areaOfLife : ""}${description ? `\n🎯 - **Description:**\n${description}` : ""}`
         + `${reason ? `\n💭 - **Reason:**\n${reason}` : ""}${checkpoints ? `\n🏁 - **Checkpoints:**\n${checkpoints}` : ""}${steps ? `\n👣 - **Steps:**\n${steps}` : ""}`
         + `${start && !isNaN(start) ? `\n**Start:** ${fn.timestampToDateString(start, false, true, true)}` : ""}`
         + `${end && !isNaN(end) ? `\n**Target Completion:** ${fn.timestampToDateString(end, false, true, true)}` : ""}`
-        + `\n**Status:** ${completed ? "Completed" : "In Progess"}`);
+        + `\n**Status:** ${completed ? "Completed" : "In Progess"}`
+    outputString = fn.getRoleMentionToTextString(bot, outputString);
+    return outputString;
 }
 
 async function getGoalIndexByFunction(userID, goalID, totalGoals, archived, getOneGoal) {
@@ -135,7 +137,7 @@ function getGoalReadOrDeleteHelp(PREFIX, commandUsed, crudCommand) {
         + `\n\n\`<force?>\`: (OPT.) type **force** at the end of your command to **skip all of the confirmation windows!**`;
 }
 
-function multipleGoalsToStringArray(message, goalArray, numberOfGoals, entriesToSkip = 0, toString = false) {
+function multipleGoalsToStringArray(bot, message, goalArray, numberOfGoals, entriesToSkip = 0, toString = false) {
     var goalsToString = new Array();
     console.log({ numberOfGoals });
     for (let i = 0; i < numberOfGoals; i++) {
@@ -144,16 +146,16 @@ function multipleGoalsToStringArray(message, goalArray, numberOfGoals, entriesTo
             fn.sendErrorMessage(message, `**GOALS ${i + entriesToSkip + 1}**+ ONWARDS DO NOT EXIST...`);
             break;
         }
-        const goalString = `__**Goal ${i + entriesToSkip + 1}:**__ ${goalDocumentToString(goalArray[i])}`;
+        const goalString = `__**Goal ${i + entriesToSkip + 1}:**__ ${goalDocumentToString(bot, goalArray[i])}`;
         goalsToString.push(goalString);
     }
     if (toString) goalsToString = goalsToString.join('\n\n')
     return goalsToString;
 }
 
-async function getRecentGoal(userID, isArchived, embedColour) {
+async function getRecentGoal(bot, userID, isArchived, embedColour) {
     const recentGoalToString = `__**Goal ${await getRecentGoalIndex(userID, isArchived)}:**__`
-        + `${goalDocumentToString(await getOneGoalByRecency(userID, 0, isArchived))}`;
+        + `${goalDocumentToString(bot, await getOneGoalByRecency(userID, 0, isArchived))}`;
     const goalEmbed = fn.getMessageEmbed(recentGoalToString, `Long-Term Goal: See Recent Goal`, embedColour);
     return goalEmbed;
 }
@@ -446,7 +448,7 @@ module.exports = {
                     var goalCollection;
                     if (indexByRecency) goalCollection = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived, }, 0, numberArg);
                     else goalCollection = await getGoalsByStartTime(authorID, 0, numberArg, isArchived);
-                    const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(message, goalCollection, numberArg, 0),
+                    const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(bot, message, goalCollection, numberArg, 0),
                         '', true, false, goalEmbedColour);
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} goals?**`;
                     const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalArray, multipleDeleteMessage, forceSkip,
@@ -511,7 +513,7 @@ module.exports = {
                             goalView = await getOneGoalByStartTime(authorID, toDelete[i] - 1, isArchived);
                         }
                         goalTargetIDs.push(goalView._id);
-                        habits.push(`__**Goal ${toDelete[i]}:**__ ${goalDocumentToString(goalView)}`);
+                        habits.push(`__**Goal ${toDelete[i]}:**__ ${goalDocumentToString(bot, goalView)}`);
                     }
                     const deleteConfirmMessage = `Are you sure you want to **delete goals ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By Start Time";
@@ -560,7 +562,7 @@ module.exports = {
                             var goalCollection;
                             if (indexByRecency) goalCollection = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived, }, skipEntries, pastNumberOfEntries);
                             else goalCollection = await getGoalsByStartTime(authorID, skipEntries, pastNumberOfEntries, isArchived);
-                            const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(message, goalCollection, pastNumberOfEntries, skipEntries),
+                            const goalArray = fn.getEmbedArray(multipleGoalsToStringArray(bot, message, goalCollection, pastNumberOfEntries, skipEntries),
                                 '', true, false, goalEmbedColour);
                             if (skipEntries >= totalGoalNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By Start Time";
@@ -601,7 +603,7 @@ module.exports = {
                     const goalTargetID = goalView._id;
                     console.log({ goalTargetID });
                     const goalIndex = await getRecentGoalIndex(authorID, isArchived);
-                    const goalEmbed = fn.getEmbedArray(`__**Goal ${goalIndex}:**__ ${goalDocumentToString(goalView)}`,
+                    const goalEmbed = fn.getEmbedArray(`__**Goal ${goalIndex}:**__ ${goalDocumentToString(bot, goalView)}`,
                         `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`, true, false, goalEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent goal?:**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalEmbed, deleteConfirmMessage, forceSkip,
@@ -652,7 +654,7 @@ module.exports = {
                 }
                 const goalTargetID = goalView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
-                const goalEmbed = fn.getEmbedArray(`__**Goal ${pastNumberOfEntriesIndex}:**__ ${goalDocumentToString(goalView)}`,
+                const goalEmbed = fn.getEmbedArray(`__**Goal ${pastNumberOfEntriesIndex}:**__ ${goalDocumentToString(bot, goalView)}`,
                     `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Goal ${pastNumberOfEntriesIndex} (${sortType})`, true, false, goalEmbedColour);
                 const deleteConfirmMessage = `Are you sure you want to **delete Goal ${pastNumberOfEntriesIndex}?**`;
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, goalEmbed, deleteConfirmMessage, forceSkip,
@@ -713,7 +715,7 @@ module.exports = {
                 // Handling Argument 1:
                 const isNumberArg = !isNaN(args[1 + archiveShift]);
                 if (seeType === "recent") {
-                    return message.channel.send(await getRecentGoal(authorID, isArchived, goalEmbedColour));
+                    return message.channel.send(await getRecentGoal(bot, authorID, isArchived, goalEmbedColour));
                 }
                 else if (seeType === "all") {
                     if (isArchived) {
@@ -778,7 +780,7 @@ module.exports = {
                     if (indexByRecency) goalView = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived }, 0, goalIndex);
                     else goalView = await getGoalsByStartTime(authorID, 0, goalIndex, isArchived);
                     console.log({ goalView, pastNumberOfEntriesIndex: goalIndex });
-                    const goalArray = multipleGoalsToStringArray(message, goalView, goalIndex, 0);
+                    const goalArray = multipleGoalsToStringArray(bot, message, goalView, goalIndex, 0);
                     await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
                         goalArray, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${goalIndex} Goals (${sortType})`,
                         true, `Goals ${fn.timestampToDateString(
@@ -808,7 +810,7 @@ module.exports = {
                                     entriesToSkip = parseInt(args[3 + archiveShift + shiftIndex]);
                                 }
                                 else if (args[3 + archiveShift + shiftIndex].toLowerCase() === "recent") {
-                                    entriesToSkip = await getRecentGoal(authorID, isArchived, goalEmbedColour);
+                                    entriesToSkip = await getRecentGoal(bot, authorID, isArchived, goalEmbedColour);
                                 }
                                 else return message.reply(goalActionHelpMessage);
                                 if (entriesToSkip < 0 || entriesToSkip > totalGoalNumber) {
@@ -821,7 +823,7 @@ module.exports = {
                                 if (indexByRecency) goalView = await fn.getEntriesByRecency(Goal, { userID: authorID, archived: isArchived }, entriesToSkip, goalIndex);
                                 else goalView = await getGoalsByStartTime(authorID, entriesToSkip, goalIndex, isArchived);
                                 console.log({ goalView });
-                                const goalStringArray = multipleGoalsToStringArray(message, goalView, goalIndex, entriesToSkip);
+                                const goalStringArray = multipleGoalsToStringArray(bot, message, goalView, goalIndex, entriesToSkip);
                                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
                                     goalStringArray, `Long-Term Goal${isArchived ? ` Archive` : ""}: See ${goalIndex} Goals Past ${entriesToSkip} (${sortType})`,
                                     true, `Goals ${fn.timestampToDateString(
@@ -846,11 +848,11 @@ module.exports = {
                 }
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By Start Time";
-                const goalString = `__**Goal ${goalIndex}:**__ ${goalDocumentToString(goalView)}`;
+                const goalString = `__**Goal ${goalIndex}:**__ ${goalDocumentToString(bot, goalView)}`;
                 const goalEmbed = fn.getEmbedArray(goalString, `Long-Term Goal${isArchived ? ` Archive` : ""}: See Goal ${goalIndex} (${sortType})`,
-                true, `Goal ${fn.timestampToDateString(
-                    Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
-                )}`, goalEmbedColour);
+                    true, `Goal ${fn.timestampToDateString(
+                        Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
+                    )}`, goalEmbedColour);
                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, goalEmbed);
             }
         }
@@ -912,7 +914,7 @@ module.exports = {
                     const checkGoal = await getOneGoalByObjectID(goalTargetID);
                     if (!checkGoal) return;
                     continueEdit = false;
-                    showGoal = goalDocumentToString(goalDocument);
+                    showGoal = goalDocumentToString(bot, goalDocument);
                     // Field the user wants to edit
                     const fieldToEditInstructions = "**Which field do you want to edit?**";
                     const fieldToEditAdditionalMessage = `__**Goal ${goalIndex} (${sortType}):**__ ${showGoal}`;
@@ -1066,7 +1068,7 @@ module.exports = {
                                     await getGoalIndexByFunction(authorID, goalTargetID, isArchived ? totalArchiveNumber : totalGoalNumber, isArchived, getOneGoalByRecency)
                                     : await getGoalIndexByFunction(authorID, goalTargetID, isArchived ? totalArchiveNumber : totalGoalNumber, isArchived, getOneGoalByStartTime);
                                 console.log({ goalDocument, goalTargetID, fieldToEditIndex });
-                                showGoal = goalDocumentToString(goalDocument);
+                                showGoal = goalDocumentToString(bot, goalDocument);
                                 const continueEditMessage = `Do you want to continue **editing Goal ${goalIndex}?:**\n\n__**Goal ${goalIndex}:**__ ${showGoal}`;
                                 continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Long-Term Goal${isArchived ? " Archive" : ""}: Continue Editing Goal ${goalIndex}?`, 300000);
                             }
@@ -1087,7 +1089,7 @@ module.exports = {
                                 await getGoalIndexByFunction(authorID, goalTargetID, isArchived ? totalArchiveNumber : totalGoalNumber, isArchived, getOneGoalByStartTime)
                                 : await getGoalIndexByFunction(authorID, goalTargetID, isArchived ? totalArchiveNumber : totalGoalNumber, isArchived, getOneGoalByRecency);
                             console.log({ goalDocument, goalTargetID, fieldToEditIndex });
-                            showGoal = goalDocumentToString(goalDocument);
+                            showGoal = goalDocumentToString(bot, goalDocument);
                         }
                         else {
                             message.reply(`**${isArchived ? "Archived " : ""}Goal not found...**`);
@@ -1109,7 +1111,7 @@ module.exports = {
                 forceSkip, true, false, true, goalEmbedColour);
             if (!targetChannel) return;
             const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
-            const goalStringArray = multipleGoalsToStringArray(message, goals, totalGoalNumber, 0);
+            const goalStringArray = multipleGoalsToStringArray(bot, message, goals, totalGoalNumber, 0);
             if (goalStringArray.length) goalStringArray[0] = `<@!${authorID}>\n${goalStringArray[0]}`;
             const posts = fn.getEmbedArray(goalStringArray, `${member ? `${member.displayName}'s ` : ""}Long-Term Goals`
                 + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, false, goalEmbedColour);

@@ -96,6 +96,7 @@ function mastermindDocumentToString(bot, mastermindDoc) {
             observations, areaOfLife, stopEntry, startEntry, continueEntry, goals);
     }
     else entryString = journal.entry;
+    entryString = fn.getRoleMentionToTextString(bot, entryString);
     return `**User:** ${username}`
         + `\n**Created At:** ${fn.timestampToDateString(createdAt)}`
         + guildString

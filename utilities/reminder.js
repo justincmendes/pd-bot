@@ -238,7 +238,6 @@ module.exports = {
                                         }
                                         else message += remainingOccurrencesMessage;
                                     }
-                                    
                                     channelObject.send(message);
                                     await this.sendReminderByObject(bot, updatedReminderObject);
                                     if (!isLastReminder) return;
@@ -594,10 +593,14 @@ module.exports = {
         const guildString = isDM ? "" : `**Guild:** ${bot.guilds.cache.get(guildID) ?
             bot.guilds.cache.get(guildID).name : ""}\n`;
         console.log({ reminderDocument });
-        return `${titleString}${typeString}\n${intervalString}${guildString}${channelName}`
+
+        let outputString = `${titleString}${typeString}\n${intervalString}${guildString}${channelName}`
             + `**Start Time:** ${fn.timestampToDateString(startTime + HOUR_IN_MS * userTimezoneOffset)}`
             + `\n**End Time:** ${fn.timestampToDateString(endTime + HOUR_IN_MS * userTimezoneOffset)}`
             + `\n**Message:** ${replaceRoles ? this.getProperReminderMessageRoles(bot, guildID, message) : message}`;
+
+        outputString = fn.getRoleMentionToTextString(bot, outputString);
+        return outputString;
     },
 
     getProperReminderMessageRoles: function (bot, guildID, message) {
