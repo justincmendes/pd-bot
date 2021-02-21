@@ -339,7 +339,7 @@ module.exports = {
                             currentQuote = quotes[quoteIndex].message;
                         }
                         await rm.setNewDMReminder(bot, authorID, currentTimestamp, quoteSettings.nextQuote,
-                            currentQuote, "Quote", true, false, true, quoteSettings.quoteInterval, quoteEmbedColour);
+                            currentQuote, "Quote", true, false, true, quoteSettings.quoteInterval, false, quoteEmbedColour);
                     }
                     const continueEditMessage = `Do you want to continue **editing your quote settings?**\n\n${quoteDocumentToString(quoteSettings, timezoneOffset)}`;
                     continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Quote: Continue Editing?`, 300000);
