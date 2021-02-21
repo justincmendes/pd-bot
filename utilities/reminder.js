@@ -125,6 +125,9 @@ module.exports = {
                     }
                     else message = "";
                 }
+                if (isDM && sendAsEmbed === undefined) {
+                    sendAsEmbed = true;
+                }
                 if (sendAsEmbed) {
                     const originalEmbedColour = embedColour;
                     switch (title) {
