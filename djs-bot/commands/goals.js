@@ -308,10 +308,11 @@ module.exports = {
                 }
                 else goalReason = goalReason.message;
 
-                let time = ["started", "plan to have finished"];
+                const timeField = ["started", "plan to have finished"]
+                let time = [undefined, undefined];
                 for (let i = 0; i < 2; i++) {
                     do {
-                        let goalsTimePrompt = `**Please enter the date and time when you __${time[i]}__ this goal:**\n${i === 0 ? timeExamples : futureTimeExamples}`;
+                        let goalsTimePrompt = `**Please enter the date and time when you __${timeField[i]}__ this goal:**\n${i === 0 ? timeExamples : futureTimeExamples}`;
                         let timeInput = await fn.getSingleEntry(bot, message, PREFIX, goalsTimePrompt, "Long-Term Goal: Creation - Set Time", forceSkip, goalEmbedColour,
                             additionalInstructions, additionalKeywords);
                         if (!timeInput) return;
@@ -323,6 +324,7 @@ module.exports = {
                         const now = Date.now();
                         timeInput = fn.timeCommandHandlerToUTC(timeInput, now, timezoneOffset, daylightSaving);
                         if (!timeInput && timeInput !== 0) {
+                            time[i] = false;
                             fn.sendReplyThenDelete(message, `**INVALID DATE/TIME**...`, 60000);
                             continue;
                         }
@@ -332,6 +334,7 @@ module.exports = {
                     if (reset) break;
                 }
                 if (reset) continue;
+                console.log({ time });
 
                 console.log(`Start: ${fn.timestampToDateString(time[0])}\nEnd: ${fn.timestampToDateString(time[1])}`);
                 if (fn.endTimeAfterStartTime(message, time[0], time[1], "Long-Term Goal")) {
