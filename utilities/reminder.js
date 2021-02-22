@@ -128,7 +128,7 @@ module.exports = {
                 if (isDM && sendAsEmbed === undefined) {
                     sendAsEmbed = true;
                 }
-                else (title === "Quote" && !isDM) {
+                if (title === "Quote" && !isDM) {
                     sendAsEmbed = false;
                 }
                 if (sendAsEmbed) {
