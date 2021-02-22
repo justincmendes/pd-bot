@@ -128,6 +128,9 @@ module.exports = {
                 if (isDM && sendAsEmbed === undefined) {
                     sendAsEmbed = true;
                 }
+                else (title === "Quote" && !isDM) {
+                    sendAsEmbed = false;
+                }
                 if (sendAsEmbed) {
                     const originalEmbedColour = embedColour;
                     switch (title) {
