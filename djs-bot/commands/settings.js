@@ -894,7 +894,7 @@ module.exports = {
                         + ` **${updatedTimezone}, ${fn.hoursToUTCOffset(updatedTimezoneOffset)} - ${updatedDaylightSaving ? "NO DST" : "considering DST"}**`
                         + "\n(Type `4` to leave your reminders adjusted to your old timezone)"
                         + "\n(Your habit reset time, if any, will automatically be adapted regardless of your choice here)",
-                        false, `${showUserSettings.title}: Reminder Adjustment Confirmation`);
+                        `${showUserSettings.title}: Reminder Adjustment Confirmation`, userEmbedColour);
                     if (!confirmUpdateReminders && confirmUpdateReminders !== 0) break;
                     switch (confirmUpdateReminders) {
                         case 1: reminderQuery.isDM = true;
