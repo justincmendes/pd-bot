@@ -613,8 +613,11 @@ module.exports = {
 
     reminderDocumentToString: async function (bot, reminderDocument, userTimezoneOffset = 0, replaceRoles = true) {
         if (reminderDocument.title === "Voice Channel Tracking") {
-            await this.updateTrackingReportReminder(bot, reminderDocument.userID);
-            reminderDocument = await Reminder.findById(reminderDocument._id);
+            const success = await this.updateTrackingReportReminder(bot, reminderDocument.userID);
+            if (success) {
+                reminderDocument = await Reminder.findById(reminderDocument._id);
+                reminderDocument.message = await fn.getTrackingReportString(bot, reminderDocument.userID);
+            }
         }
         const { isDM, isRecurring, channel, startTime, endTime,
             message, title, interval, remainingOccurrences, guildID } = reminderDocument;
@@ -622,8 +625,8 @@ module.exports = {
         const typeString = "**Type:**" + (isRecurring ? " Repeating" : " One-Time") + (isDM ? ", DM" : ", Channel");
         const intervalString = (isRecurring ? `**Interval:** Every ${interval}\n` : "")
             + (remainingOccurrences && remainingOccurrences !== 0 ? `**Reminders Left:** ${remainingOccurrences}\n` : "");
-        const channelName = isDM ? "" : `**Channel:** \#${bot.channels.cache.get(channel) ?
-            bot.channels.cache.get(channel).name : ""}\n`;
+        const channelName = isDM ? "" : `**Channel:** ${bot.channels.cache.get(channel) ?
+            `\#${bot.channels.cache.get(channel).name}` : fn.getChannelMentionToTextString(bot, `<#${channel}>`, true)}\n`;
         const guildString = isDM ? "" : `**Guild:** ${bot.guilds.cache.get(guildID) ?
             bot.guilds.cache.get(guildID).name : ""}\n`;
         console.log({ reminderDocument });
