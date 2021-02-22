@@ -487,15 +487,23 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
         const trackingDocument = await Track.findOne({
             userID, voiceChannelID: oldChannelID
         });
+        const autoResetEnabled = !!trackingDocument ?
+            typeof trackingDocument.finishedSession === 'boolean'
+            : false;
         if (trackingDocument) {
-            await fn.updateVoiceChannelTimeTracked(bot, userID, oldChannelID,
-                fn.getCurrentUTCTimestampFlooredToSecond() - trackingDocument.start,
-                true,
-            );
+            if (autoResetEnabled) {
+                await fn.voiceTrackingSetAutoReset(bot, userID, trackingDocument);
+            }
+            else {
+                await fn.updateVoiceChannelTimeTracked(bot, userID, oldChannelID,
+                    fn.getCurrentUTCTimestampFlooredToSecond() - trackingDocument.start,
+                    true,
+                );
+            }
         }
         fn.voiceTrackingClearInterval(userID);
         fn.voiceTrackingDeleteCollection(userID);
-        await Track.deleteMany({ userID });
+        if (!autoResetEnabled) await Track.deleteOne({ userID, voiceChannelID: oldChannelID, });
         await tr.updateTrackingReportReminder(bot, userID);
 
         // If they transferred to a new channel:

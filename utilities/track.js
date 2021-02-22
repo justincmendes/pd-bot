@@ -121,9 +121,5 @@ module.exports = {
             }
         }
     },
-    
-    MINIMUM_AUTO_RESET_DELAY: 5000,
-    DEFAULT_AUTO_RESET_DELAY: 15000,
-    MINIMUM_AUTO_RESET_TRACK_PERIOD: 60000,
 
 };

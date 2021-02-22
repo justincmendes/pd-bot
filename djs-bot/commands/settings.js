@@ -25,9 +25,9 @@ const trackEmbedColour = fn.trackEmbedColour;
 const habitEmbedColour = fn.habitEmbedColour;
 const pesterEmbedColour = fn.pesterEmbedColour;
 
-const MINIMUM_AUTO_RESET_DELAY = tr.MINIMUM_AUTO_RESET_DELAY;
-const DEFAULT_AUTO_RESET_DELAY = tr.DEFAULT_AUTO_RESET_DELAY;
-const MINIMUM_AUTO_RESET_TRACK_PERIOD = tr.MINIMUM_AUTO_RESET_TRACK_PERIOD;
+const MINIMUM_AUTO_RESET_DELAY = fn.MINIMUM_AUTO_RESET_DELAY;
+const DEFAULT_AUTO_RESET_DELAY = fn.DEFAULT_AUTO_RESET_DELAY;
+const MINIMUM_AUTO_RESET_TRACK_PERIOD = fn.MINIMUM_AUTO_RESET_TRACK_PERIOD;
 
 // Private Function Declarations
 async function userDocumentToString(bot, userSettings) {

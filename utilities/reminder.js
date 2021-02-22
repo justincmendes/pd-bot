@@ -179,10 +179,12 @@ module.exports = {
                             message = message.replace(/\@(everyone|here)/g, `\@\u200b$1`);
                         }
                     }
-                    if (title !== "Quote" && title !== "Voice Channel Tracking") {
-                        message += `\n\n__A **${fn.millisecondsToTimeString(duration)} ${titleOut}** set by **${username}**`
-                            + `${usernameAndDiscriminator !== "someone" ? ` (${usernameAndDiscriminator})` : ""}__`;
-                    }
+                    // Will keep commented out since it does not look nice with the reminder
+                    // + it takes up space!
+                    // if (title !== "Quote" && title !== "Voice Channel Tracking") {
+                    //     message += `\n\n__A **${fn.millisecondsToTimeString(duration)} ${titleOut}** set by **${username}**__`
+                    //         + `${usernameAndDiscriminator !== "someone" ? ` (${usernameAndDiscriminator})` : ""}`;
+                    // }
                 }
                 // var mentions;
                 // if (!isDM) {
