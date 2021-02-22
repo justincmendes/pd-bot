@@ -942,7 +942,7 @@ module.exports = {
                     userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
                         $set: {
                             timezone: {
-                                name: updatedTimezone,
+                                name: updatedTimezone.toUpperCase(),
                                 offset: updatedTimezoneOffset,
                                 daylightSaving: updatedDaylightSaving,
                             }
