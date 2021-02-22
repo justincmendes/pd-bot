@@ -30,7 +30,7 @@ function goalDocumentToString(bot, goalDocument, showType = true) {
         + `${reason ? `\n💭 - **Reason:**\n${reason}` : ""}${checkpoints ? `\n🏁 - **Checkpoints:**\n${checkpoints}` : ""}${steps ? `\n👣 - **Steps:**\n${steps}` : ""}`
         + `${start && !isNaN(start) ? `\n**Start:** ${fn.timestampToDateString(start, false, true, true)}` : ""}`
         + `${end && !isNaN(end) ? `\n**Target Completion:** ${fn.timestampToDateString(end, false, true, true)}` : ""}`
-        + `\n**Status:** ${completed ? "Completed" : "In Progess"}`
+        + `\n**Status:** ${completed ? "Completed ✅" : "In Progess 🔲"}`
     outputString = fn.getRoleMentionToTextString(bot, outputString);
     return outputString;
 }
