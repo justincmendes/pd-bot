@@ -186,7 +186,7 @@ module.exports = {
                     //         + `${usernameAndDiscriminator !== "someone" ? ` (${usernameAndDiscriminator})` : ""}`;
                     // }
                     if (title !== "Quote" && title !== "Voice Channel Tracking") {
-                        message += usernameAndDiscriminator !== "someone" ? `\n\n- **__${usernameAndDiscriminator}__**` : "";
+                        message += usernameAndDiscriminator !== "someone" ? `\n\n- **${titleOut}** set by **__${usernameAndDiscriminator}__**` : "";
                     }
                 }
                 // var mentions;
