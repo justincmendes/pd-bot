@@ -324,7 +324,6 @@ module.exports = {
                         const now = Date.now();
                         timeInput = fn.timeCommandHandlerToUTC(timeInput, now, timezoneOffset, daylightSaving);
                         if (!timeInput && timeInput !== 0) {
-                            time[i] = false;
                             fn.sendReplyThenDelete(message, `**INVALID DATE/TIME**...`, 60000);
                             continue;
                         }
