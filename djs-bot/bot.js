@@ -472,7 +472,7 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
     console.log(`Old Channel ID: ${oldChannelID}`
         + ` - New Channel ID: ${newChannelID}`);
 
-    if (!fn.voiceTrackingHasUser(userID)) {
+    if (!fn.voiceTrackingHasUser(userID) && !fn.autoResetHasUser(userID)) {
         const vcInformation = await fn.getTargetVoiceChannelAndUserSettings(
             bot, userID, newChannelID
         );
@@ -490,6 +490,7 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
         const autoResetEnabled = !!trackingDocument ?
             typeof trackingDocument.finishedSession === 'boolean'
             : false;
+        console.log({ autoResetEnabled });
         if (trackingDocument) {
             if (autoResetEnabled) {
                 await fn.voiceTrackingSetAutoReset(bot, userID, trackingDocument);
@@ -503,8 +504,10 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
         }
         fn.voiceTrackingClearInterval(userID);
         fn.voiceTrackingDeleteCollection(userID);
-        if (!autoResetEnabled) await Track.deleteOne({ userID, voiceChannelID: oldChannelID, });
-        await tr.updateTrackingReportReminder(bot, userID);
+        if (!autoResetEnabled) {
+            await Track.deleteOne({ userID, voiceChannelID: oldChannelID, });
+            await tr.updateTrackingReportReminder(bot, userID);
+        }
 
         // If they transferred to a new channel:
         // Delete old interval.
