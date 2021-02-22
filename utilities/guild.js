@@ -11,6 +11,7 @@ const fn = require("./functions");
 const rm = require("./reminder");
 require("dotenv").config();
 
+const DEFAULT_PREFIX = '?';
 const HOUR_IN_MS = fn.HOUR_IN_MS;
 const guildEmbedColour = fn.guildSettingsEmbedColour;
 
