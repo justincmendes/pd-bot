@@ -128,9 +128,6 @@ module.exports = {
                 if (isDM && sendAsEmbed === undefined) {
                     sendAsEmbed = true;
                 }
-                if (title === "Quote" && !isDM) {
-                    sendAsEmbed = false;
-                }
                 if (sendAsEmbed) {
                     const originalEmbedColour = embedColour;
                     switch (title) {
@@ -163,8 +160,9 @@ module.exports = {
                     }
                     let reminderFooter = "";
                     if (title !== "Quote") {
-                        reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`
-                            + ((usernameAndDiscriminator !== "someone") ? ` (${usernameAndDiscriminator})` : "");
+                        // reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`
+                        //     + ((usernameAndDiscriminator !== "someone") ? ` (${usernameAndDiscriminator})` : "");
+                        reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`;
                     }
                     message = new Discord.MessageEmbed()
                         .setTitle(titleOut)
@@ -189,7 +187,7 @@ module.exports = {
                     //         + `${usernameAndDiscriminator !== "someone" ? ` (${usernameAndDiscriminator})` : ""}`;
                     // }
                     if (title !== "Quote" && title !== "Voice Channel Tracking") {
-                        message += usernameAndDiscriminator !== "someone" ? `\n\n- **${titleOut}** set by **__${usernameAndDiscriminator}__**` : "";
+                        message += usernameAndDiscriminator !== "someone" ? `\n(**${titleOut}** set by **__${username}__**)` : "";
                     }
                 }
                 // var mentions;
@@ -512,7 +510,6 @@ module.exports = {
                     if (reminder.title === "Quote") {
                         var quoteIndex, currentQuote, tags = new Array();
                         if (!reminder.isDM) {
-                            updateObject.sendAsEmbed = false;
                             const roleRegex = /(\<\@\&\d+\>)/g;
                             tags = reminder.message.match(roleRegex);
                         }

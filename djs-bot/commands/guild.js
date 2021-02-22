@@ -6,6 +6,7 @@ const quotes = require("../../utilities/quotes.json").quotes;
 const changePrefix = require("./prefix").run;
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
+const gu = require("../../utilities/guild");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
@@ -108,7 +109,10 @@ module.exports = {
         // See, Edit
         const guild = bot.guilds.cache.get(guildID);
         let guildConfig = await Guild.findOne({ guildID });
-        console.log({ guildConfig })
+        // if (!guildConfig && guildID === "736750419170164800") {
+        //     guildConfig = await gu.setupNewGuild(bot, guildID, guildName);
+        // }
+        console.log({ guildConfig });
         const guildHelpMessage = `Try \*${PREFIX}${commandUsed} help\* for more options (and how to edit)`;
         const showGuildSettings = fn.getMessageEmbed(guildDocumentToString(bot, guildConfig, inGuild),
             `${guildName}'s Settings`, guildEmbedColour)
@@ -589,7 +593,7 @@ module.exports = {
                                 });
                             }
                             await rm.setNewChannelReminder(bot, authorID, guildConfig.quote.channel, now, guildConfig.quote.nextQuote,
-                                currentQuote, "Quote", true, guildConfig._id, true, guildConfig.quote.quoteInterval, false, quoteEmbedColour);
+                                currentQuote, "Quote", false, guildConfig._id, true, guildConfig.quote.quoteInterval, false, quoteEmbedColour);
                         }
                     }
                     const continueEditMessage = `Do you want to continue **editing your settings?**\n\n${guildDocumentToString(bot, guildConfig, inGuild)}`;
