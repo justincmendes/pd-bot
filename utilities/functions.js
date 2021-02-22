@@ -4276,11 +4276,19 @@ module.exports = {
         const allTracking = await Track.find({});
         if (allTracking) if (allTracking.length) {
             allTracking.forEach(async trackObject => {
-                await this.updateVoiceChannelTimeTracked(
-                    bot, trackObject.userID, trackObject.voiceChannelID,
-                    trackObject.end - trackObject.start, true,
-                    trackObject.end);
-                await Track.deleteOne({ _id: trackObject._id });
+                if (typeof trackObject.finishedSession === 'boolean') {
+                    // Send the user the report immediately
+                    await this.voiceTrackingSetAutoReset(
+                        bot, trackObject.userID, trackObject, true
+                    );
+                }
+                else {
+                    await this.updateVoiceChannelTimeTracked(
+                        bot, trackObject.userID, trackObject.voiceChannelID,
+                        trackObject.end - trackObject.start, true,
+                        trackObject.end);
+                    await Track.deleteOne({ _id: trackObject._id });
+                }
             });
             console.log("Successfully removed all lingering voice channel tracking objects.");
         }
@@ -4551,11 +4559,12 @@ module.exports = {
                         if (!vcIndex && vcIndex !== 0) return;
                         const targetVc = userSettings.voiceChannels[vcIndex];
                         if (!targetVc) return;
+                        targetVc.timeTracked = 0;
                         await User.updateOne({ discordID: userID },
                             {
                                 $set: {
-
-                                }
+                                    voiceChannels: userSettings.voiceChannels,
+                                },
                             });
                         const user = bot.users.cache.get(userID);
                         if (!user) return;
