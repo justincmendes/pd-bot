@@ -1606,7 +1606,7 @@ module.exports = {
         // Only display the description, current streak, current state, today's count* (if any)
         // Of the non-archived ones
         else if (habitCommand === "post" || habitCommand === "p") {
-            let habits = await Habit.find({ archived: false }).sort({ createdAt: +1 });
+            let habits = await Habit.find({ userID: authorID, archived: false }).sort({ createdAt: +1 });
             if (!habits) return message.reply(`**You don't have any habits**, try \`${PREFIX}${commandUsed} start\``);
             const targetChannel = await fn.getTargetChannel(bot, message, PREFIX, `Habit`,
                 forceSkip, true, false, true, habitEmbedColour);
@@ -1790,8 +1790,8 @@ module.exports = {
 
             do {
                 var habitArray;
-                if (indexByRecency) habitArray = await Habit.find({ archived: false }, { _id: 1, "habit.description": 1 }).sort({ _id: -1 });
-                else habitArray = await Habit.find({ archived: false }, { _id: 1, "habit.description": 1 }).sort({ "habit.createdAt": +1 });
+                if (indexByRecency) habitArray = await Habit.find({ userID: authorID, archived: false }, { _id: 1, "habit.description": 1 }).sort({ _id: -1 });
+                else habitArray = await Habit.find({ userID: authorID, archived: false }, { _id: 1, "habit.description": 1 }).sort({ "habit.createdAt": +1 });
                 if (!habitArray.length) return message.reply(`**No ${isArchived ? "archived " : ""}habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
                 var targetHabit;

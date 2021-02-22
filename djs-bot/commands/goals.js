@@ -1241,8 +1241,8 @@ module.exports = {
 
             do {
                 var habits;
-                if (indexByRecency) habits = await Goal.find({ archived: false }, { _id: 1, description: 1 }).sort({ _id: -1 });
-                else habits = await Goal.find({ archived: false }, { _id: 1, description: 1 }).sort({ start: +1 });
+                if (indexByRecency) habits = await Goal.find({ userID: authorID, archived: false }, { _id: 1, description: 1 }).sort({ _id: -1 });
+                else habits = await Goal.find({ userID: authorID, archived: false }, { _id: 1, description: 1 }).sort({ start: +1 });
                 if (!habits.length) return message.reply(`**No ${isArchived ? "archived " : ""}goals** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
                 let targetGoal = await fn.getUserSelectedObject(bot, message, PREFIX,
