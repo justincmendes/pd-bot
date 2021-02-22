@@ -125,7 +125,7 @@ module.exports = {
                     }
                     else message = "";
                 }
-                if ((isDM || title === "Quote") && sendAsEmbed === undefined) {
+                if (isDM && sendAsEmbed === undefined) {
                     sendAsEmbed = true;
                 }
                 if (sendAsEmbed) {
@@ -161,7 +161,7 @@ module.exports = {
                     let reminderFooter = "";
                     if (title !== "Quote") {
                         reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`
-                            + usernameAndDiscriminator !== "someone" ? ` (${usernameAndDiscriminator})` : "";
+                            + ((usernameAndDiscriminator !== "someone") ? ` (${usernameAndDiscriminator})` : "");
                     }
                     message = new Discord.MessageEmbed()
                         .setTitle(titleOut)
@@ -185,6 +185,9 @@ module.exports = {
                     //     message += `\n\n__A **${fn.millisecondsToTimeString(duration)} ${titleOut}** set by **${username}**__`
                     //         + `${usernameAndDiscriminator !== "someone" ? ` (${usernameAndDiscriminator})` : ""}`;
                     // }
+                    if (title !== "Quote" && title !== "Voice Channel Tracking") {
+                        message += usernameAndDiscriminator !== "someone" ? `\n\n- **__${usernameAndDiscriminator}__**` : "";
+                    }
                 }
                 // var mentions;
                 // if (!isDM) {
@@ -506,6 +509,7 @@ module.exports = {
                     if (reminder.title === "Quote") {
                         var quoteIndex, currentQuote, tags = new Array();
                         if (!reminder.isDM) {
+                            updateObject.sendAsEmbed = false;
                             const roleRegex = /(\<\@\&\d+\>)/g;
                             tags = reminder.message.match(roleRegex);
                         }
@@ -614,7 +618,14 @@ module.exports = {
         if (!guildID) return message;
         const roleRegex = /\<\@\&(\d+)\>/g;
         const roles = message.replace(roleRegex, (match, roleID, offset, string) => {
-            return `\@${bot.guilds.cache.get(guildID).roles.cache.get(roleID).name}`;
+            const guild = bot.guilds.cache.get(guildID);
+            if (guild) {
+                const role = guild.roles.cache.get(roleID);
+                if (role) {
+                    return `\@${role.name}`;
+                }
+            }
+            return match;
         });
         return roles;
     },
