@@ -954,7 +954,7 @@ module.exports = {
                             break;
                         case 3:
                             goalEditMessagePrompt = "\n🎯 **What is your __long-term goal__?**\n(Within 250 characters)";
-                            userEdit = await fn.getUserEditString(bot, message, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 250);
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, goalEditMessagePrompt, titleType, forceSkip, goalEmbedColour, 250);
                             description = userEdit;
                             break;
                         case 4:
