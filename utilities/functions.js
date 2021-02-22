@@ -4602,45 +4602,15 @@ module.exports = {
                                 return;
                             }
 
-                            const user = bot.users.cache.get(userID);
-                            if (!user) {
-                                this.autoResetDeleteCollection(userID);
-                                this.autoResetClearTimeout(userID);
-                                return;
-                            }
-
-                            const { voiceChannels, timezone } = userSettings;
-                            vcIndex = this.getMatchingVoiceChannelIndex(
-                                bot, voiceChannels.map(vc => vc.id), trackObject.voiceChannelID
+                            const successfulSend = await this.sendAutoResetReportDM(
+                                bot, userID, userSettings, trackObject.voiceChannelID,
+                                finalTimeTracked
                             );
-                            if (!vcIndex && vcIndex !== 0) {
+                            if (!successfulSend) {
                                 this.autoResetDeleteCollection(userID);
                                 this.autoResetClearTimeout(userID);
                                 return;
                             }
-
-                            const channel = bot.channels.cache.get(voiceChannels[vcIndex].id);
-                            var title = "";
-                            if (timezone.offset || timezone.offset === 0) {
-                                if (channel) {
-                                    title = `${this.timestampToDateString(
-                                        Date.now() + timezone.offset * HOUR_IN_MS,
-                                        false, true, true, false)}: ${channel.name}`;
-                                }
-                                else {
-                                    title = `Tracking ${this.timestampToDateString(
-                                        Date.now() + timezone.offset * HOUR_IN_MS,
-                                        false, true, true, false)}`;
-                                }
-                            }
-                            else {
-                                title = `Voice Channel Tracking${channel ? `: ${channel.name}` : ""}`
-                            }
-                            voiceChannels[vcIndex].timeTracked = finalTimeTracked;
-                            const autoResetMessage = await this.voiceChannelArrayToString(
-                                bot, userID, [voiceChannels[vcIndex]], false, false, false);
-                            const messageEmbed = this.getMessageEmbed(autoResetMessage, title, this.trackEmbedColour);
-                            user.send(messageEmbed);
                         }
                     }
                     this.autoResetDeleteCollection(userID);
@@ -4653,6 +4623,56 @@ module.exports = {
                 await Track.deleteOne({ _id: trackObject._id });
             }
             return success;
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
+    sendAutoResetReportDM: async function (bot, userID, userSettings,
+        targetChannelID, finalTimeTracked) {
+        try {
+            const user = bot.users.cache.get(userID);
+            if (!user) {
+                this.autoResetDeleteCollection(userID);
+                this.autoResetClearTimeout(userID);
+                return false;
+            }
+
+            const { voiceChannels, timezone } = userSettings;
+            vcIndex = this.getMatchingVoiceChannelIndex(
+                bot, voiceChannels.map(vc => vc.id), targetChannelID
+            );
+            if (!vcIndex && vcIndex !== 0) {
+                this.autoResetDeleteCollection(userID);
+                this.autoResetClearTimeout(userID);
+                return false;
+            }
+
+            const channel = bot.channels.cache.get(voiceChannels[vcIndex].id);
+            var title = "";
+            if (timezone.offset || timezone.offset === 0) {
+                if (channel) {
+                    title = `${this.timestampToDateString(
+                        Date.now() + timezone.offset * HOUR_IN_MS,
+                        false, true, true, false)}: ${channel.name}`;
+                }
+                else {
+                    title = `Tracking ${this.timestampToDateString(
+                        Date.now() + timezone.offset * HOUR_IN_MS,
+                        false, true, true, false)}`;
+                }
+            }
+            else {
+                title = `Voice Channel Tracking${channel ? `: ${channel.name}` : ""}`
+            }
+            voiceChannels[vcIndex].timeTracked = finalTimeTracked;
+            const autoResetMessage = await this.voiceChannelArrayToString(
+                bot, userID, [voiceChannels[vcIndex]], false, false, false);
+            const messageEmbed = this.getMessageEmbed(autoResetMessage, title, this.trackEmbedColour);
+            user.send(messageEmbed);
+            return true;
         }
         catch (err) {
             console.log(err);

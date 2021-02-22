@@ -852,6 +852,11 @@ module.exports = {
                                             }
                                             else targetVcObject.autoResetDelay = resetDelay;
                                         }
+                                        await fn.sendAutoResetReportDM(
+                                            bot, authorID, userSettings, targetVcObject.id,
+                                            targetVcObject.timeTracked
+                                        );
+                                        targetVcObject.timeTracked = 0;
                                         userSettings = await User.findByIdAndUpdate(userSettings._id, {
                                             $set: { voiceChannels: userSettings.voiceChannels }
                                         }, { new: true });
