@@ -1107,7 +1107,7 @@ module.exports = {
 
 
         else if (goalCommand === "post" || goalCommand === "p") {
-            let goals = await Goal.find({ archived: false }).sort({ start: +1 });
+            let goals = await Goal.find({ userID: authorID, archived: false }).sort({ start: +1 });
             if (!goals) return message.reply(`**You don't have any goals**, try \`${PREFIX}${commandUsed} start\``);
             const targetChannel = await fn.getTargetChannel(bot, message, PREFIX, `Long-Term Goal`,
                 forceSkip, true, false, true, goalEmbedColour);
