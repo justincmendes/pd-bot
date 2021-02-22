@@ -16,24 +16,6 @@ const trackEmbedColour = fn.trackEmbedColour;
 // Private Function Declarations
 
 module.exports = {
-    updateTrackingReportReminder: async function (bot, userID) {
-        const currentTrackReminders = await Reminder.find({ userID, title: "Voice Channel Tracking" });
-        if (currentTrackReminders) if (currentTrackReminders.length) {
-            currentTrackReminders.forEach(async reminder => {
-                const newReminder = await Reminder.findByIdAndUpdate(reminder._id,
-                    {
-                        $set: { message: await fn.getTrackingReportString(bot, userID) }
-                    }, { new: true });
-                if (newReminder) {
-                    await rm.cancelReminderById(reminder._id);
-                    await rm.sendReminderByObject(bot, newReminder);
-                }
-            });
-            return true;
-        }
-        return false;
-    },
-
     cancelAndDeleteAllTrackReminders: async function (userID) {
         const currentTrackReminders = await Reminder.find({ userID, title: "Voice Channel Tracking" });
         if (currentTrackReminders) if (currentTrackReminders.length) {

@@ -91,7 +91,7 @@ module.exports = {
                     var reminderCollection;
                     if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: true }, 0, numberArg);
                     else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, 0, numberArg);
-                    const reminderStringArray = fn.getEmbedArray(rm.multipleRemindersToString(bot, message, reminderCollection, numberArg, timezoneOffset, 0, true),
+                    const reminderStringArray = fn.getEmbedArray(await rm.multipleRemindersToString(bot, message, reminderCollection, numberArg, timezoneOffset, 0, true),
                         '', true, false, repeatEmbedColour);
                     // If the message is too long, the confirmation window didn't pop up and it defaulted to false!
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} reminder(s)?**`;
@@ -154,7 +154,7 @@ module.exports = {
                         }
                         else reminderDocument = await rm.getOneReminderByEndTime(authorID, toDelete[i] - 1, true);
                         reminderTargetIDs.push(reminderDocument._id);
-                        reminderStringArray.push(`__**Reminder ${toDelete[i]}:**__\n${rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset)}`);
+                        reminderStringArray.push(`__**Reminder ${toDelete[i]}:**__\n${await rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset)}`);
                     }
                     const deleteConfirmMessage = `Are you sure you want to **delete reminders ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By End Time";
@@ -199,7 +199,7 @@ module.exports = {
                             var reminderCollection;
                             if (indexByRecency) reminderCollection = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: true }, skipEntries, pastNumberOfEntries);
                             else reminderCollection = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, skipEntries, pastNumberOfEntries);
-                            const reminderStringArray = fn.getEmbedArray(rm.multipleRemindersToString(bot, message, reminderCollection, pastNumberOfEntries, timezoneOffset, skipEntries, true),
+                            const reminderStringArray = fn.getEmbedArray(await rm.multipleRemindersToString(bot, message, reminderCollection, pastNumberOfEntries, timezoneOffset, skipEntries, true),
                                 '', true, false, repeatEmbedColour);
                             if (skipEntries >= totalReminderNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By End Time";
@@ -240,7 +240,7 @@ module.exports = {
                     const reminderTargetID = reminderView._id;
                     console.log({ reminderTargetID });
                     const reminderIndex = await rm.getRecentReminderIndex(authorID, true);
-                    const reminderEmbed = fn.getEmbedArray(`__**Reminder ${reminderIndex}:**__\n${rm.reminderDocumentToString(bot, reminderView, timezoneOffset)}`,
+                    const reminderEmbed = fn.getEmbedArray(`__**Reminder ${reminderIndex}:**__\n${await rm.reminderDocumentToString(bot, reminderView, timezoneOffset)}`,
                         `Recurring Reminder: Delete Recent Reminder`, true, false, repeatEmbedColour);
                     const deleteConfirmMessage = `Are you sure you want to **delete your most recent reminder?**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, reminderEmbed, deleteConfirmMessage, forceSkip,
@@ -293,7 +293,7 @@ module.exports = {
                 }
                 const reminderTargetID = reminderDocument._id;
                 const sortType = indexByRecency ? "By Recency" : "By End Time";
-                const reminderEmbed = fn.getEmbedArray(`__**Reminder ${pastNumberOfEntriesIndex}:**__\n${rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset)}`,
+                const reminderEmbed = fn.getEmbedArray(`__**Reminder ${pastNumberOfEntriesIndex}:**__\n${await rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset)}`,
                     `Recurring Reminder: Delete Reminder ${pastNumberOfEntriesIndex} (${sortType})`, true, false, repeatEmbedColour);
                 const deleteConfirmMessage = `Are you sure you want to **delete Reminder ${pastNumberOfEntriesIndex}?**`;
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, reminderEmbed, deleteConfirmMessage, forceSkip,
@@ -421,7 +421,7 @@ module.exports = {
                     if (indexByRecency) reminderDocument = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: true }, 0, pastNumberOfEntriesIndex);
                     else reminderDocument = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, 0, pastNumberOfEntriesIndex);
                     console.log({ reminderView: reminderDocument });
-                    const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderDocument, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
+                    const reminderDataToStringArray = await rm.multipleRemindersToString(bot, message, reminderDocument, pastNumberOfEntriesIndex, timezoneOffset, 0, true);
                     await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
                         reminderDataToStringArray, `Recurring Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`,
                         true, `Recurring Reminders ${fn.timestampToDateString(
@@ -464,7 +464,7 @@ module.exports = {
                                 if (indexByRecency) reminderDocument = await fn.getEntriesByRecency(Reminder, { userID: authorID, isRecurring: true }, entriesToSkip, pastNumberOfEntriesIndex);
                                 else reminderDocument = await fn.getEntriesByEarliestEndTime(Reminder, { userID: authorID, isRecurring: true }, entriesToSkip, pastNumberOfEntriesIndex);
                                 console.log({ reminderView: reminderDocument });
-                                const reminderDataToStringArray = rm.multipleRemindersToString(bot, message, reminderDocument, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
+                                const reminderDataToStringArray = await rm.multipleRemindersToString(bot, message, reminderDocument, pastNumberOfEntriesIndex, timezoneOffset, entriesToSkip, true);
                                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
                                     reminderDataToStringArray, `Recurring Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`,
                                     true, `Recurring Reminders ${fn.timestampToDateString(
@@ -490,7 +490,7 @@ module.exports = {
                 }
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By End Time";
-                const reminderDataToString = `__**Reminder ${pastNumberOfEntriesIndex}:**__\n` + rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
+                const reminderDataToString = `__**Reminder ${pastNumberOfEntriesIndex}:**__\n` + await rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
                 const reminderEmbed = fn.getEmbedArray(reminderDataToString,
                     `Recurring Reminder: See Reminder ${pastNumberOfEntriesIndex} (${sortType})`,
                     true, `Recurring Reminder ${fn.timestampToDateString(
@@ -555,7 +555,7 @@ module.exports = {
                         if (isRecurring) reminderFields = reminderFields.concat(["Interval", "Remaining Repetitions"]);
 
                         continueEdit = false;
-                        showReminder = rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
+                        showReminder = await rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
                         // Field the user wants to edit
                         const fieldToEditInstructions = "**Which field do you want to edit?**";
                         const fieldToEditAdditionalMessage = `__**Reminder ${pastNumberOfEntriesIndex} (${sortType}):**__\n${showReminder}`;
@@ -850,7 +850,7 @@ module.exports = {
                                         await rm.sendReminderByObject(bot, newReminder);
                                         pastNumberOfEntriesIndex = indexByRecency ? await rm.getReminderIndexByRecency(authorID, reminderTargetID, isRecurring) : await rm.getReminderIndexByEndTime(authorID, reminderTargetID, isRecurring);
                                         console.log({ reminderView: reminderDocument, reminderTargetID, fieldToEditIndex });
-                                        showReminder = rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
+                                        showReminder = await rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
                                         console.log({ userEdit });
                                         const continueEditMessage = `Do you want to continue **editing Reminder ${pastNumberOfEntriesIndex}?:**\n\n__**Reminder ${pastNumberOfEntriesIndex}:**__\n${showReminder}`;
                                         continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Recurring Reminder: Continue Editing Reminder ${pastNumberOfEntriesIndex}?`, 300000);
@@ -870,7 +870,7 @@ module.exports = {
                                 if (reminderDocument) {
                                     pastNumberOfEntriesIndex = indexByRecency ? await rm.getReminderIndexByRecency(authorID, reminderTargetID, isRecurring) : await rm.getReminderIndexByEndTime(authorID, reminderTargetID, isRecurring);
                                     console.log({ reminderView: reminderDocument, reminderTargetID, fieldToEditIndex });
-                                    showReminder = rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
+                                    showReminder = await rm.reminderDocumentToString(bot, reminderDocument, timezoneOffset);
                                 }
                                 else {
                                     message.reply("**Recurring Reminder not found...**");

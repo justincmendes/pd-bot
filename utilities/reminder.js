@@ -6,6 +6,7 @@ const User = require("../djs-bot/database/schemas/user");
 const mongoose = require("mongoose");
 const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
+const reminder = require("../djs-bot/database/schemas/reminder");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
@@ -570,7 +571,7 @@ module.exports = {
         }
     },
 
-    multipleRemindersToString: function (bot, message, reminderArray, numberOfReminders, userTimezoneOffset, entriesToSkip = 0, toArray = false) {
+    multipleRemindersToString: async function (bot, message, reminderArray, numberOfReminders, userTimezoneOffset, entriesToSkip = 0, toArray = false) {
         var remindersToString = toArray ? new Array() : "";
         console.log({ numberOfReminders });
         for (let i = 0; i < numberOfReminders; i++) {
@@ -580,7 +581,7 @@ module.exports = {
                 break;
             }
             const reminderString = `__**Reminder ${i + entriesToSkip + 1}:**__`
-                + `\n${this.reminderDocumentToString(bot, reminderArray[i], userTimezoneOffset)}`;
+                + `\n${await this.reminderDocumentToString(bot, reminderArray[i], userTimezoneOffset)}`;
             if (toArray) remindersToString.push(reminderString);
             else {
                 remindersToString = `${remindersToString}${reminderString}`;
@@ -592,7 +593,29 @@ module.exports = {
         return remindersToString;
     },
 
-    reminderDocumentToString: function (bot, reminderDocument, userTimezoneOffset = 0, replaceRoles = true) {
+    updateTrackingReportReminder: async function (bot, userID) {
+        const currentTrackReminders = await Reminder.find({ userID, title: "Voice Channel Tracking" });
+        if (currentTrackReminders) if (currentTrackReminders.length) {
+            currentTrackReminders.forEach(async reminder => {
+                const newReminder = await Reminder.findByIdAndUpdate(reminder._id,
+                    {
+                        $set: { message: await fn.getTrackingReportString(bot, userID) }
+                    }, { new: true });
+                if (newReminder) {
+                    await this.cancelReminderById(reminder._id);
+                    await this.sendReminderByObject(bot, newReminder);
+                }
+            });
+            return true;
+        }
+        return false;
+    },
+
+    reminderDocumentToString: async function (bot, reminderDocument, userTimezoneOffset = 0, replaceRoles = true) {
+        if (reminderDocument.title === "Voice Channel Tracking") {
+            await this.updateTrackingReportReminder(bot, reminderDocument.userID);
+            reminderDocument = await Reminder.findById(reminderDocument._id);
+        }
         const { isDM, isRecurring, channel, startTime, endTime,
             message, title, interval, remainingOccurrences, guildID } = reminderDocument;
         const titleString = `**Title:** ${title}\n`;
@@ -714,7 +737,7 @@ module.exports = {
 
     getMostRecentReminder: async function (bot, userID, isRecurring, userTimezoneOffset, embedColour = reminderEmbedColour) {
         const recentReminderToString = `__**Reminder ${await this.getRecentReminderIndex(userID, isRecurring)}:**__`
-            + `\n${this.reminderDocumentToString(bot, await this.getOneReminderByRecency(userID, 0, isRecurring), userTimezoneOffset)}`;
+            + `\n${await this.reminderDocumentToString(bot, await this.getOneReminderByRecency(userID, 0, isRecurring), userTimezoneOffset)}`;
         const reminderEmbed = fn.getMessageEmbed(recentReminderToString, `Reminder: See Recent Reminder`, embedColour);
         return (reminderEmbed);
     },

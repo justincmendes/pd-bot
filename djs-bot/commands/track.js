@@ -346,7 +346,7 @@ module.exports = {
                 else continueEdit = true;
 
                 if (!continueEdit) {
-                    await tr.updateTrackingReportReminder(bot, authorID);
+                    await rm.updateTrackingReportReminder(bot, authorID);
                     const continueEditMessage = `Do you want to continue **editing your settings?**`
                         + `\n\n${await fn.voiceChannelArrayToString(bot, authorID, userSettings.voiceChannels)}`;
                     continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Voice Channel Tracking: Continue Editing?`, 300000);
@@ -377,7 +377,7 @@ module.exports = {
 
 
         else {
-            await tr.updateTrackingReportReminder(bot, authorID);
+            await rm.updateTrackingReportReminder(bot, authorID);
             return message.channel.send(showTrackedVoiceChannels);
         }
     }

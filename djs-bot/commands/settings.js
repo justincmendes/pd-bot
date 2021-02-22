@@ -999,7 +999,7 @@ module.exports = {
 
 
         else {
-            await tr.updateTrackingReportReminder(bot, authorID);
+            await rm.updateTrackingReportReminder(bot, authorID);
             return message.channel.send(showUserSettings);
         }
     }
