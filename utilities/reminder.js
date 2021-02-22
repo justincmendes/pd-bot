@@ -125,7 +125,7 @@ module.exports = {
                     }
                     else message = "";
                 }
-                if (isDM && sendAsEmbed === undefined) {
+                if ((isDM || title === "Quote") && sendAsEmbed === undefined) {
                     sendAsEmbed = true;
                 }
                 if (sendAsEmbed) {
