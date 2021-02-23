@@ -4855,17 +4855,17 @@ module.exports = {
                 userID, voiceChannelID: targetChannelID
             });
             if (currentTracking && targetVc.autoSendReport) {
-                if (typeof trackingDocument.originalTimeTracked === 'number') {
-                    originalTimeTracked = currentTracking.originalTimeTracked;
-                }
-                else originalTimeTracked = targetVc.timeTracked;
+                // if (typeof trackingDocument.originalTimeTracked === 'number') {
+                //     originalTimeTracked = currentTracking.originalTimeTracked;
+                // }
+                // else originalTimeTracked = targetVc.timeTracked;
                 trackingDocument = await Track.updateOne({ _id: currentTracking._id },
                     {
                         $set: {
                             start: this.getCurrentUTCTimestampFlooredToSecond(),
                             end: this.getCurrentUTCTimestampFlooredToSecond(),
                             finishedSession: false,
-                            originalTimeTracked
+                            // originalTimeTracked
                         }
                     }, { new: true });
                 this.autoSendTrackReportClearTimeout(userID);
