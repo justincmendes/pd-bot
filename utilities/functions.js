@@ -4853,13 +4853,18 @@ module.exports = {
             const currentTracking = await Track.findOne({
                 userID, voiceChannelID: targetChannelID
             });
-            if (currentTracking) {
+            if (currentTracking && targetVc.autoSendReport) {
+                if (typeof trackingDocument.originalTimeTracked === 'number') {
+                    originalTimeTracked = trackingDocument.originalTimeTracked
+                }
+                else originalTimeTracked = targetVc.timeTracked;
                 trackingDocument = await Track.updateOne({ _id: currentTracking._id },
                     {
                         $set: {
                             start: this.getCurrentUTCTimestampFlooredToSecond(),
                             end: this.getCurrentUTCTimestampFlooredToSecond(),
                             finishedSession: false,
+                            originalTimeTracked
                         }
                     }, { new: true });
                 this.autoSendTrackReportClearTimeout(userID);
