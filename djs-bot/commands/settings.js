@@ -748,6 +748,7 @@ module.exports = {
                                                 default: autoSendReport = null;
                                                     break;
                                             }
+                                            var autoReset = false;
                                             if (typeof autoSendReport === "boolean") {
                                                 if (autoSendReport) {
                                                     // Set the auto reset
@@ -759,7 +760,7 @@ module.exports = {
                                                         + ` for at least ${fn.millisecondsToTimeString(MINIMUM_AUTO_REPORT_TRACK_PERIOD)} long?`
                                                         + `\n\n**0️⃣ - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay**`
                                                         + ` for after you leave the voice channel - in case you come back within that time)`;
-                                                    let autoReset = await fn.getUserEditBoolean(bot, message, PREFIX, "Auto Reset", trackPrompt,
+                                                    autoReset = await fn.getUserEditBoolean(bot, message, PREFIX, "Auto Reset", trackPrompt,
                                                         ['0️⃣', '⛔'], `Track ${type}`, true, trackEmbedColour);
                                                     if (!autoReset && autoReset !== 0) return;
                                                     else if (autoReset === "back") {
