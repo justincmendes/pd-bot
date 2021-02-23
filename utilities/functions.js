@@ -4275,7 +4275,7 @@ module.exports = {
     resetAllVoiceChannelTracking: async function (bot) {
         const allTracking = await Track.find({});
         if (allTracking) if (allTracking.length) {
-            allTracking.forEach(async trackObject => {
+            for (const trackObject of allTracking) {
                 if (typeof trackObject.finishedSession === 'boolean') {
                     // Send the user the report immediately
                     await this.voiceTrackingSetAutoSendTrackReport(
@@ -4289,16 +4289,16 @@ module.exports = {
                         trackObject.end);
                 }
                 await Track.deleteOne({ _id: trackObject._id });
-            });
+            }
             console.log("Successfully removed all lingering voice channel tracking objects.");
         }
         // Check if the user is currently in a voice channel and setup tracking
         const users = await User.find({});
         if (users) if (users.length) {
-            users.forEach(async user => {
+            for (const user of users) {
                 const mutualServers = await this.userAndBotMutualServerIDs(bot, user.discordID);
                 if (mutualServers) if (mutualServers.length) {
-                    mutualServers.forEach(async serverID => {
+                    for (const serverID of mutualServers) {
                         const server = bot.guilds.cache.get(serverID);
                         const serverMember = server.members.cache.get(user.discordID);
                         if (serverMember) if (serverMember.voice) if (serverMember.voice.channel) {
@@ -4307,9 +4307,9 @@ module.exports = {
                                 bot, user.discordID, serverMember.voice.channel.id
                             );
                         }
-                    });
+                    }
                 }
-            });
+            }
             console.log("Successfully updated voice channel tracking for members in voice channels.");
         }
     },
@@ -4798,10 +4798,9 @@ module.exports = {
 
     voiceChannelArrayToString: async function (bot, userID, voiceChannels,
         showUpdatedVoiceChannels = true, doubleSpace = true, doubleBulletedList = true) {
-        console.log({ voiceChannels });
         var currentTracking = await Track.find({ userID });
         if (currentTracking) if (currentTracking.length) {
-            currentTracking.forEach(async trackObject => {
+            for (const trackObject of currentTracking) {
                 // if (!this.autoSendTrackReportUserHasChannel(
                 //     userID, trackObject.voiceChannelID
                 // )) {
@@ -4812,6 +4811,7 @@ module.exports = {
                         true
                     );
                     if (showUpdatedVoiceChannels && update) {
+                        isUpdated = true;
                         voiceChannels = update.voiceChannels;
                     }
                     await Track.findOneAndUpdate({ _id: trackObject._id },
@@ -4822,11 +4822,15 @@ module.exports = {
                             },
                         }, { new: true });
                 }
-            });
+            }
         }
-        console.log({ voiceChannels });
-
-        const outputString = await voiceChannels.map(vcObject => {
+        // if (isUpdated) {
+        //     const userSettings = await User.findOne({ discordID: userID });
+        //     if (showUpdatedVoiceChannels) {
+        //         voiceChannels = userSettings.voiceChannels;
+        //     }
+        // }
+        const outputString = voiceChannels.map(vcObject => {
             return `${doubleBulletedList ? "- " : ""}**${this.getVoiceChannelNameString(bot, vcObject)}** `
                 + `(${this.getVoiceChannelServerString(bot, vcObject)}): `
                 + `**__${this.millisecondsToTimeString(vcObject.timeTracked)}__**`
@@ -4901,6 +4905,8 @@ module.exports = {
                 if (trackObject.timeTracked < 0) {
                     trackObject.timeTracked = 0;
                 }
+                // console.log(originalTimeTracked);
+                // console.log(trackObject.timeTracked);
                 if (parseInt(originalTimeTracked / DAY_IN_MS) <
                     parseInt(trackObject.timeTracked / DAY_IN_MS)
                     && durationChange > 0) {
