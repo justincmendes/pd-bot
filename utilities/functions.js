@@ -27,7 +27,7 @@ const YEAR_IN_MS = 3.154e+10;
 const MAX_32_BIT_SIGNED_INT = 2147483647;
 const spamRecords = new Discord.Collection();
 const tracking = new Discord.Collection();
-const autoReset = new Discord.Collection();
+const autoSendReport = new Discord.Collection();
 
 // Private Function Declarations
 
@@ -4278,7 +4278,7 @@ module.exports = {
             allTracking.forEach(async trackObject => {
                 if (typeof trackObject.finishedSession === 'boolean') {
                     // Send the user the report immediately
-                    await this.voiceTrackingSetAutoReset(
+                    await this.voiceTrackingSetAutoSendTrackReport(
                         bot, trackObject.userID, trackObject, true
                     );
                 }
@@ -4515,43 +4515,43 @@ module.exports = {
         return tracking.delete(userID);
     },
 
-    autoResetHasUser: function (userID) {
-        return autoReset.has(userID);
+    autoSendTrackReportHasUser: function (userID) {
+        return autoSendReport.has(userID);
     },
 
-    autoResetAddCollection: function (key, value) {
-        return autoReset.set(key, value);
+    autoSendTrackReportAddCollection: function (key, value) {
+        return autoSendReport.set(key, value);
     },
 
-    autoResetClearTimeout: function (userID) {
-        return clearTimeout(autoReset.get(userID));
+    autoSendTrackReportClearTimeout: function (userID) {
+        return clearTimeout(autoSendReport.get(userID));
     },
 
-    autoResetGetTimeout: function (userID) {
-        return autoReset.get(userID)
+    autoSendTrackReportGetTimeout: function (userID) {
+        return autoSendReport.get(userID)
     },
 
-    autoResetDeleteCollection: function (userID) {
-        return autoReset.delete(userID);
+    autoSendTrackReportDeleteCollection: function (userID) {
+        return autoSendReport.delete(userID);
     },
 
-    voiceTrackingSetAutoReset: async function (bot, userID, trackObject, uponRestart = false) {
+    voiceTrackingSetAutoSendTrackReport: async function (bot, userID, trackObject, uponRestart = false) {
         try {
             var success = false;
-            var autoResetDelay;
+            var autoReportDelay;
             let userSettings = await User.findOne({ discordID: userID });
             if (userSettings) if (userSettings.voiceChannels) if (userSettings.voiceChannels.length) {
                 const vcIndex = this.getMatchingVoiceChannelIndex(
                     bot, userSettings.voiceChannels.map(vc => vc.id), trackObject.voiceChannelID
                 );
                 const targetVc = userSettings.voiceChannels[vcIndex];
-                if (targetVc) autoResetDelay = targetVc.autoResetDelay;
+                if (targetVc) autoReportDelay = targetVc.autoSendDelay;
             }
-            if (autoResetDelay || autoResetDelay === 0) {
-                if (uponRestart) autoResetDelay = 0;
+            if (autoReportDelay || autoReportDelay === 0) {
+                if (uponRestart) autoReportDelay = 0;
                 // Set finishedSession to true, indicating that the timer is starting.
                 await Track.findByIdAndUpdate(trackObject._id, { $set: { finishedSession: true } });
-                autoReset.set(userID, this.setLongTimeout(async () => {
+                autoSendReport.set(userID, this.setLongTimeout(async () => {
                     let updatedTrackObject = await Track.findOne({
                         userID, voiceChannelID: trackObject.voiceChannelID,
                         finishedSession: true,
@@ -4563,6 +4563,7 @@ module.exports = {
                         // await this.updateVoiceChannelTimeTracked(bot, userID, updatedTrackObject.voiceChannelID,
                         //     updatedTrackObject.end - updatedTrackObject.start, true,
                         // );
+                        const { originalTimeTracked } = updatedTrackObject;
                         if (this.voiceTrackingHasUser(userID)) {
                             this.voiceTrackingClearInterval(userID);
                             this.voiceTrackingDeleteCollection(userID);
@@ -4575,20 +4576,26 @@ module.exports = {
                                 bot, userSettings.voiceChannels.map(vc => vc.id), trackObject.voiceChannelID
                             );
                             if (!vcIndex && vcIndex !== 0) {
-                                this.autoResetDeleteCollection(userID);
-                                this.autoResetClearTimeout(userID);
+                                this.autoSendTrackReportDeleteCollection(userID);
+                                this.autoSendTrackReportClearTimeout(userID);
                                 return;
                             }
                             const targetVc = userSettings.voiceChannels[vcIndex];
                             if (!targetVc) {
-                                this.autoResetDeleteCollection(userID);
-                                this.autoResetClearTimeout(userID);
+                                this.autoSendTrackReportDeleteCollection(userID);
+                                this.autoSendTrackReportClearTimeout(userID);
                                 return;
                             }
 
+                            console.log({ targetVc });
+                            const autoResetEnabled = targetVc.autoReset;
                             const finalTimeTracked = targetVc.timeTracked;
-                            console.log({ finalTimeTracked });
-                            targetVc.timeTracked = 0;
+                            const totalTimeTracked = autoResetEnabled
+                                ? finalTimeTracked : finalTimeTracked - originalTimeTracked;
+                            console.log({ finalTimeTracked, totalTimeTracked });
+                            if (autoResetEnabled) {
+                                targetVc.timeTracked = 0;
+                            }
                             await User.updateOne({ discordID: userID },
                                 {
                                     $set: {
@@ -4596,27 +4603,27 @@ module.exports = {
                                     },
                                 });
                             // Check if the time spent in the channel is greater than MINIMUM
-                            if (finalTimeTracked < this.MINIMUM_AUTO_RESET_TRACK_PERIOD) {
-                                this.autoResetDeleteCollection(userID);
-                                this.autoResetClearTimeout(userID);
+                            if (totalTimeTracked < this.MINIMUM_AUTO_REPORT_TRACK_PERIOD) {
+                                this.autoSendTrackReportDeleteCollection(userID);
+                                this.autoSendTrackReportClearTimeout(userID);
                                 return;
                             }
 
-                            const successfulSend = await this.sendAutoResetReportDM(
+                            const successfulSend = await this.sendAutoSendReportToDM(
                                 bot, userID, userSettings, trackObject.voiceChannelID,
-                                finalTimeTracked
+                                totalTimeTracked
                             );
                             if (!successfulSend) {
-                                this.autoResetDeleteCollection(userID);
-                                this.autoResetClearTimeout(userID);
+                                this.autoSendTrackReportDeleteCollection(userID);
+                                this.autoSendTrackReportClearTimeout(userID);
                                 return;
                             }
                         }
                     }
-                    this.autoResetDeleteCollection(userID);
-                    this.autoResetClearTimeout(userID);
+                    this.autoSendTrackReportDeleteCollection(userID);
+                    this.autoSendTrackReportClearTimeout(userID);
                     return;
-                }, autoResetDelay));
+                }, autoReportDelay));
                 success = true;
             }
             if (!success) {
@@ -4630,13 +4637,13 @@ module.exports = {
         }
     },
 
-    sendAutoResetReportDM: async function (bot, userID, userSettings,
-        targetChannelID, finalTimeTracked) {
+    sendAutoSendReportToDM: async function (bot, userID, userSettings,
+        targetChannelID, totalTimeTracked) {
         try {
             const user = bot.users.cache.get(userID);
             if (!user) {
-                this.autoResetDeleteCollection(userID);
-                this.autoResetClearTimeout(userID);
+                this.autoSendTrackReportDeleteCollection(userID);
+                this.autoSendTrackReportClearTimeout(userID);
                 return false;
             }
 
@@ -4645,8 +4652,8 @@ module.exports = {
                 bot, voiceChannels.map(vc => vc.id), targetChannelID
             );
             if (!vcIndex && vcIndex !== 0) {
-                this.autoResetDeleteCollection(userID);
-                this.autoResetClearTimeout(userID);
+                this.autoSendTrackReportDeleteCollection(userID);
+                this.autoSendTrackReportClearTimeout(userID);
                 return false;
             }
 
@@ -4667,10 +4674,10 @@ module.exports = {
             else {
                 title = `Voice Channel Tracking${channel ? `: ${channel.name}` : ""}`
             }
-            voiceChannels[vcIndex].timeTracked = finalTimeTracked;
-            const autoResetMessage = await this.voiceChannelArrayToString(
+            voiceChannels[vcIndex].timeTracked = totalTimeTracked;
+            const autoReportMessage = await this.voiceChannelArrayToString(
                 bot, userID, [voiceChannels[vcIndex]], false, false, false);
-            const messageEmbed = this.getMessageEmbed(autoResetMessage, title, this.trackEmbedColour);
+            const messageEmbed = this.getMessageEmbed(autoReportMessage, title, this.trackEmbedColour);
             user.send(messageEmbed);
             return true;
         }
@@ -4698,7 +4705,7 @@ module.exports = {
     voiceChannelArrayToString: async function (bot, userID, voiceChannels,
         showUpdatedVoiceChannels = true, doubleSpace = true, doubleBulletedList = true) {
         var currentTracking = await Track.findOne({ userID });
-        if (currentTracking && !this.autoResetHasUser(userID)) {
+        if (currentTracking && !this.autoSendTrackReportHasUser(userID)) {
             const update = await this.updateVoiceChannelTimeTracked(
                 bot, userID, currentTracking.voiceChannelID,
                 this.getCurrentUTCTimestampFlooredToSecond() - currentTracking.start,
@@ -4720,9 +4727,11 @@ module.exports = {
             return `${doubleBulletedList ? "- " : ""}**${this.getVoiceChannelNameString(bot, vcObject)}** `
                 + `(${this.getVoiceChannelServerString(bot, vcObject)}): `
                 + `**__${this.millisecondsToTimeString(vcObject.timeTracked)}__**`
-                + `\n-${doubleBulletedList ? "-" : ""} **Auto Reset:** ${vcObject.autoReset ? "Yes" : "No"}`
-                + (vcObject.autoReset ? `\n-${doubleBulletedList ? "-" : ""} **Auto Reset Delay:**`
-                    + ` ${this.millisecondsToTimeString(vcObject.autoResetDelay || 0)}` : "")
+                + `\n-${doubleBulletedList ? "-" : ""} **Auto Send Report:** ${vcObject.autoSendReport ? "Yes" : "No"}`
+                + (vcObject.autoSendReport ? `\n-${doubleBulletedList ? "-" : ""} **Auto Send Delay:**`
+                    + ` ${this.millisecondsToTimeString(vcObject.autoSendDelay || 0)}` : "")
+                + (vcObject.autoSendReport ? `\n-${doubleBulletedList ? "-" : ""} **Auto Reset:**`
+                    + ` ${vcObject.autoReset ? "Yes" : "No"}` : "")
                 + `\n-${doubleBulletedList ? "-" : ""} **Last Tracked:** ${this.timestampToDateString(vcObject.lastTrackedTimestamp)}`;
         }).join(doubleSpace ? '\n\n' : '\n');
         return outputString;
@@ -4835,7 +4844,8 @@ module.exports = {
             }
             if (!vcInformation) return false;
 
-            var trackingDocument, targetVcIndex, userSettings, finishedSession;
+            var trackingDocument, targetVcIndex, userSettings,
+                finishedSession, originalTimeTracked;
             userSettings = vcInformation.userSettings;
             targetVcIndex = vcInformation.voiceChannelIndex;
             const targetVc = vcInformation.voiceChannels[targetVcIndex];
@@ -4852,12 +4862,13 @@ module.exports = {
                             finishedSession: false,
                         }
                     }, { new: true });
-                this.autoResetClearTimeout(userID);
-                this.autoResetDeleteCollection(userID);
+                this.autoSendTrackReportClearTimeout(userID);
+                this.autoSendTrackReportDeleteCollection(userID);
             }
             else {
-                if (targetVc.autoReset) {
+                if (targetVc.autoSendReport) {
                     finishedSession = false;
+                    originalTimeTracked = targetVc.timeTracked;
                 }
                 trackingDocument = new Track({
                     _id: mongoose.Types.ObjectId(),
@@ -4866,6 +4877,7 @@ module.exports = {
                     start: this.getCurrentUTCTimestampFlooredToSecond(),
                     end: this.getCurrentUTCTimestampFlooredToSecond(),
                     finishedSession,
+                    originalTimeTracked,
                 });
                 await trackingDocument.save()
                     .catch(err => console.error(err));
@@ -5036,7 +5048,7 @@ module.exports = {
     CLOSE_MESSAGE_DELAY: 2500,
     CLOSE_COMMAND_SPAM_NUMBER: 8,
     CLOSE_MESSAGE_SPAM_NUMBER: 5,
-    MINIMUM_AUTO_RESET_DELAY: 5000,
-    DEFAULT_AUTO_RESET_DELAY: 15000,
-    MINIMUM_AUTO_RESET_TRACK_PERIOD: 60000,
+    MINIMUM_AUTO_REPORT_DELAY: 5000,
+    DEFAULT_AUTO_REPORT_DELAY: 15000,
+    MINIMUM_AUTO_REPORT_TRACK_PERIOD: 60000,
 };

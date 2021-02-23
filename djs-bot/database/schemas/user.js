@@ -110,9 +110,14 @@ const userSettingsSchema = mongoose.Schema({
             required: true,
             default: false,
         },
-        autoResetDelay: {
+        autoSendDelay: {
             type: Number,
             required: false,
+        },
+        autoSendReport: {
+            type: Boolean,
+            required: true,
+            default: false,
         },
     }],
 });

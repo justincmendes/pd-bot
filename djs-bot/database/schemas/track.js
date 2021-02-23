@@ -22,6 +22,10 @@ const trackSchema = mongoose.Schema({
         type: Boolean,
         required: false,
     },
+    originalTimeTracked: {
+        type: Number,
+        required: false,
+    },
 });
 
 module.exports = mongoose.model("Track", trackSchema, "tracking");

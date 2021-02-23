@@ -472,7 +472,7 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
     console.log(`Old Channel ID: ${oldChannelID}`
         + ` - New Channel ID: ${newChannelID}`);
 
-    if (!fn.voiceTrackingHasUser(userID) && !fn.autoResetHasUser(userID)) {
+    if (!fn.voiceTrackingHasUser(userID) && !fn.autoSendTrackReportHasUser(userID)) {
         const vcInformation = await fn.getTargetVoiceChannelAndUserSettings(
             bot, userID, newChannelID
         );
@@ -487,13 +487,13 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
         const trackingDocument = await Track.findOne({
             userID, voiceChannelID: oldChannelID
         });
-        const autoResetEnabled = !!trackingDocument ?
+        const autoSendReportEnabled = !!trackingDocument ?
             typeof trackingDocument.finishedSession === 'boolean'
             : false;
-        console.log({ autoResetEnabled });
+        console.log({ autoSendReportEnabled });
         if (trackingDocument) {
-            if (autoResetEnabled) {
-                await fn.voiceTrackingSetAutoReset(bot, userID, trackingDocument);
+            if (autoSendReportEnabled) {
+                await fn.voiceTrackingSetAutoSendTrackReport(bot, userID, trackingDocument, false);
             }
             else {
                 await fn.updateVoiceChannelTimeTracked(bot, userID, oldChannelID,
@@ -504,7 +504,7 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
         }
         fn.voiceTrackingClearInterval(userID);
         fn.voiceTrackingDeleteCollection(userID);
-        if (!autoResetEnabled) {
+        if (!autoSendReportEnabled) {
             await Track.deleteOne({ userID, voiceChannelID: oldChannelID, });
             await rm.updateTrackingReportReminder(bot, userID);
         }

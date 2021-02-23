@@ -25,9 +25,9 @@ const trackEmbedColour = fn.trackEmbedColour;
 const habitEmbedColour = fn.habitEmbedColour;
 const pesterEmbedColour = fn.pesterEmbedColour;
 
-const MINIMUM_AUTO_RESET_DELAY = fn.MINIMUM_AUTO_RESET_DELAY;
-const DEFAULT_AUTO_RESET_DELAY = fn.DEFAULT_AUTO_RESET_DELAY;
-const MINIMUM_AUTO_RESET_TRACK_PERIOD = fn.MINIMUM_AUTO_RESET_TRACK_PERIOD;
+const MINIMUM_AUTO_REPORT_DELAY = fn.MINIMUM_AUTO_REPORT_DELAY;
+const DEFAULT_AUTO_REPORT_DELAY = fn.DEFAULT_AUTO_REPORT_DELAY;
+const MINIMUM_AUTO_REPORT_TRACK_PERIOD = fn.MINIMUM_AUTO_REPORT_TRACK_PERIOD;
 
 // Private Function Declarations
 async function userDocumentToString(bot, userSettings) {
@@ -215,7 +215,7 @@ module.exports = {
                                     `**${bot.channels.cache.get(targetVcObject.id).name}**` : "the tracked voice channel"}`
                                 + ` to 0:00 and send you a **DM report of your time spent in ${bot.channels.cache.get(targetVcObject.id) ?
                                     `${bot.channels.cache.get(targetVcObject.id).name}` : "the tracked voice channel"}**`
-                                + ` whenever you leave (for sessions at least ${fn.millisecondsToTimeString(MINIMUM_AUTO_RESET_TRACK_PERIOD)} long)?`
+                                + ` whenever you leave (for sessions at least ${fn.millisecondsToTimeString(MINIMUM_AUTO_REPORT_TRACK_PERIOD)} long)?`
                                 + `\n\n**🔁 - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto reset delay** after you leave - in case you come back within that time)`;
                             userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, trackPrompt,
                                 ['🔁', '⛔'], `Track ${type}`, true, trackEmbedColour);
@@ -228,15 +228,15 @@ module.exports = {
                         if (!selectVoiceChannel && selectVoiceChannel !== 0) return;
                         else {
                             targetVcObject = userSettings.voiceChannels[selectVoiceChannel];
-                            if (!targetVcObject.autoReset) {
+                            if (!targetVcObject.autoSendReport) {
                                 message.reply(`Please enable **Auto Reset** first to change the **Auto Reset Delay**.`
                                     + `\n(Auto Reset Delay: The time frame before automatically resetting the voice channel tracking)`);
                                 userEdit = "back";
                                 break;
                             }
                             userEdit = await fn.getUserEditDuration(bot, message, PREFIX, timezoneOffset, daylightSaving,
-                                "auto reset delay", fn.millisecondsToTimeString(targetVcObject.autoResetDelay || 0),
-                                `Track ${type}: Change Auto Reset Delay`, MINIMUM_AUTO_RESET_DELAY,
+                                "auto reset delay", fn.millisecondsToTimeString(targetVcObject.autoSendDelay || 0),
+                                `Track ${type}: Change Auto Reset Delay`, MINIMUM_AUTO_REPORT_DELAY,
                                 trackEmbedColour, `\n**__Recommended:__** \`15 sec\` \`30s\` \`1 min\` \`5m\` (**Default:** \`15 seconds\`)`);
                         }
                         break;
@@ -702,31 +702,31 @@ module.exports = {
                                                 `**${bot.channels.cache.get(targetVoiceChannel).name}**` : "the tracked voice channel"}`
                                             + ` to 0:00 and send you a **DM report of your time spent in ${bot.channels.cache.get(targetVoiceChannel) ?
                                                 `${bot.channels.cache.get(targetVoiceChannel).name}` : "the tracked voice channel"}**`
-                                            + ` whenever you leave (for sessions at least ${fn.millisecondsToTimeString(MINIMUM_AUTO_RESET_TRACK_PERIOD)} long)?`
+                                            + ` whenever you leave (for sessions at least ${fn.millisecondsToTimeString(MINIMUM_AUTO_REPORT_TRACK_PERIOD)} long)?`
                                             + `\n\n**🔁 - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto reset delay** after you leave - in case you come back within that time)`;
                                         var resetDelay;
-                                        let autoReset = await fn.getUserEditBoolean(bot, message, PREFIX, "Auto Reset", autoResetPrompt,
+                                        let autoSendReport = await fn.getUserEditBoolean(bot, message, PREFIX, "Auto Reset", autoResetPrompt,
                                             ['🔁', '⛔'], type, true, trackEmbedColour);
-                                        if (!autoReset) return;
-                                        else if (autoReset === "back") {
+                                        if (!autoSendReport) return;
+                                        else if (autoSendReport === "back") {
                                             continueEdit = true;
                                             break;
                                         }
                                         else {
-                                            switch (autoReset) {
-                                                case '🔁': autoReset = true;
+                                            switch (autoSendReport) {
+                                                case '🔁': autoSendReport = true;
                                                     break;
-                                                case '⛔': autoReset = false;
+                                                case '⛔': autoSendReport = false;
                                                     break;
-                                                default: autoReset = null;
+                                                default: autoSendReport = null;
                                                     break;
                                             }
-                                            if (typeof autoReset === "boolean") {
+                                            if (typeof autoSendReport === "boolean") {
                                                 // Set the reset delay
-                                                if (autoReset) {
+                                                if (autoSendReport) {
                                                     resetDelay = await fn.getUserEditDuration(bot, message, PREFIX, timezoneOffset, daylightSaving,
-                                                        "auto reset delay", fn.millisecondsToTimeString(DEFAULT_AUTO_RESET_DELAY),
-                                                        `${type}: Change Auto Reset Delay`, MINIMUM_AUTO_RESET_DELAY,
+                                                        "auto reset delay", fn.millisecondsToTimeString(DEFAULT_AUTO_REPORT_DELAY),
+                                                        `${type}: Change Auto Reset Delay`, MINIMUM_AUTO_REPORT_DELAY,
                                                         trackEmbedColour, `\n**__Recommended:__** \`15 sec\` \`30s\` \`1 min\` \`5m\` (**Default:** \`15 seconds\`)`);
                                                     if (!resetDelay && resetDelay !== 0) return;
                                                     else if (resetDelay === "back") {
@@ -746,8 +746,8 @@ module.exports = {
                                                         id: targetVoiceChannel,
                                                         timeTracked: 0,
                                                         lastTrackedTimestamp: Date.now() + HOUR_IN_MS * timezoneOffset,
-                                                        autoReset,
-                                                        autoResetDelay: resetDelay,
+                                                        autoSendReport,
+                                                        autoSendDelay: resetDelay,
                                                     },
                                                 },
                                             }, { new: true });
@@ -838,21 +838,21 @@ module.exports = {
                                 }
                                 if (typeof userEdit === "boolean") {
                                     if (targetVcObject) if (typeof targetVcObject === 'object') {
-                                        targetVcObject.autoReset = userEdit;
+                                        targetVcObject.autoSendReport = userEdit;
                                         // Set the reset delay
                                         if (userEdit) {
                                             const resetDelay = await fn.getUserEditDuration(bot, message, PREFIX, timezoneOffset, daylightSaving,
-                                                "auto reset delay", fn.millisecondsToTimeString(targetVcObject.autoResetDelay || 0),
-                                                `${type}: Change Auto Reset Delay`, MINIMUM_AUTO_RESET_DELAY,
+                                                "auto reset delay", fn.millisecondsToTimeString(targetVcObject.autoSendDelay || 0),
+                                                `${type}: Change Auto Reset Delay`, MINIMUM_AUTO_REPORT_DELAY,
                                                 trackEmbedColour, `\n**__Recommended:__** \`15 sec\` \`30s\` \`1 min\` \`5m\` (**Default:** \`15 seconds\`)`);
                                             if (!resetDelay && resetDelay !== 0) return;
                                             else if (resetDelay === "back") {
                                                 continueEdit = true;
                                                 break;
                                             }
-                                            else targetVcObject.autoResetDelay = resetDelay;
+                                            else targetVcObject.autoSendDelay = resetDelay;
                                         }
-                                        await fn.sendAutoResetReportDM(
+                                        await fn.sendAutoSendReportToDM(
                                             bot, authorID, userSettings, targetVcObject.id,
                                             targetVcObject.timeTracked
                                         );
@@ -869,7 +869,7 @@ module.exports = {
                         case 12 - quoteAdjustment:
                             {
                                 if (targetVcObject) if (typeof targetVcObject === 'object') {
-                                    targetVcObject.autoResetDelay = userEdit;
+                                    targetVcObject.autoSendDelay = userEdit;
                                     userSettings = await User.findByIdAndUpdate(userSettings._id, {
                                         $set: { voiceChannels: userSettings.voiceChannels }
                                     }, { new: true });
