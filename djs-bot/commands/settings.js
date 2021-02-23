@@ -722,6 +722,7 @@ module.exports = {
                                         console.log({ targetVoiceChannel });
                                         if (!targetVoiceChannel) return;
 
+                                        targetVcObject = userSettings.voiceChannels[targetVoiceChannel];
                                         // Check if the user wants the auto reset feature:
                                         const autoSendReportPrompt = `\nDo you want to your voice channel tracking to **automatically DM you a report**`
                                             + ` of your time spent in **${bot.channels.cache.get(targetVcObject.id) ?
