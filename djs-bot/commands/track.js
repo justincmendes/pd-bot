@@ -193,15 +193,14 @@ module.exports = {
                                             `Add Voice Channel to Track Time Spent`, forceSkip, false, true, false, trackEmbedColour,
                                             userSettings.voiceChannels.map(vc => vc.id));
                                         console.log({ targetVoiceChannel });
-                                        if (!targetVoiceChannel) return;
+                                        if (!targetVoiceChannel && targetVoiceChannel !== 0) return;
 
-                                        targetVcObject = userSettings.voiceChannels[targetVoiceChannel];
                                         // Check if the user wants the auto send report feature:
                                         const autoSendReportPrompt = `\nDo you want to your voice channel tracking to **automatically DM you a report**`
-                                            + ` of your time spent in **${bot.channels.cache.get(targetVcObject.id) ?
-                                                `${bot.channels.cache.get(targetVcObject.id).name}` : "the tracked voice channel"}**`
-                                            + ` whenever you stay in **${bot.channels.cache.get(targetVcObject.id) ?
-                                                `${bot.channels.cache.get(targetVcObject.id).name}` : "the tracked voice channel"}**`
+                                            + ` of your time spent in **${bot.channels.cache.get(targetVoiceChannel) ?
+                                                `${bot.channels.cache.get(targetVoiceChannel).name}` : "the tracked voice channel"}**`
+                                            + ` whenever you stay in **${bot.channels.cache.get(targetVoiceChannel) ?
+                                                `${bot.channels.cache.get(targetVoiceChannel).name}` : "the tracked voice channel"}**`
                                             + ` for at least ${fn.millisecondsToTimeString(MINIMUM_AUTO_REPORT_TRACK_PERIOD)} long?`
                                             + `\n\n**🔁 - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay**`
                                             + ` for after you leave the voice channel - in case you come back within that time)`;
@@ -226,10 +225,10 @@ module.exports = {
                                                 if (autoSendReport) {
                                                     // Set the auto reset
                                                     trackPrompt = `\nDo you want to your voice channel tracking to **automatically reset**`
-                                                        + ` your time spent in ${bot.channels.cache.get(targetVcObject.id) ?
-                                                            `**${bot.channels.cache.get(targetVcObject.id).name}**` : "the tracked voice channel"}`
-                                                        + ` to 0:00 whenever you stay in **${bot.channels.cache.get(targetVcObject.id) ?
-                                                            `${bot.channels.cache.get(targetVcObject.id).name}` : "the tracked voice channel"}**`
+                                                        + ` your time spent in ${bot.channels.cache.get(targetVoiceChannel) ?
+                                                            `**${bot.channels.cache.get(targetVoiceChannel).name}**` : "the tracked voice channel"}`
+                                                        + ` to 0:00 whenever you stay in **${bot.channels.cache.get(targetVoiceChannel) ?
+                                                            `${bot.channels.cache.get(targetVoiceChannel).name}` : "the tracked voice channel"}**`
                                                         + ` for at least ${fn.millisecondsToTimeString(MINIMUM_AUTO_REPORT_TRACK_PERIOD)} long?`
                                                         + `\n\n**0️⃣ - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay**`
                                                         + ` for after you leave the voice channel - in case you come back within that time)`;
