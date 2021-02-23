@@ -4697,8 +4697,8 @@ module.exports = {
                                         },
                                     });
                                 // Check if the time spent in the channel is greater than MINIMUM
-                                //this.MINIMUM_AUTO_REPORT_TRACK_PERIOD
-                                if (totalTimeTracked < 3000) {
+                                // this.MINIMUM_AUTO_REPORT_TRACK_PERIOD
+                                if (totalTimeTracked < this.MINIMUM_AUTO_REPORT_TRACK_PERIOD) {
                                     this.autoSendTrackReportUserClearChannelTimeout(userID, trackObject.voiceChannelID);
                                     this.autoSendTrackReportUserDeleteChannel(userID, trackObject.voiceChannelID);
                                     return;
@@ -4798,6 +4798,7 @@ module.exports = {
 
     voiceChannelArrayToString: async function (bot, userID, voiceChannels,
         showUpdatedVoiceChannels = true, doubleSpace = true, doubleBulletedList = true) {
+        console.log({ voiceChannels });
         var currentTracking = await Track.find({ userID });
         if (currentTracking) if (currentTracking.length) {
             currentTracking.forEach(async trackObject => {
@@ -4823,8 +4824,9 @@ module.exports = {
                 }
             });
         }
+        console.log({ voiceChannels });
 
-        const outputString = voiceChannels.map(vcObject => {
+        const outputString = await voiceChannels.map(vcObject => {
             return `${doubleBulletedList ? "- " : ""}**${this.getVoiceChannelNameString(bot, vcObject)}** `
                 + `(${this.getVoiceChannelServerString(bot, vcObject)}): `
                 + `**__${this.millisecondsToTimeString(vcObject.timeTracked)}__**`
