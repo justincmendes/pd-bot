@@ -4564,6 +4564,7 @@ module.exports = {
                         //     updatedTrackObject.end - updatedTrackObject.start, true,
                         // );
                         const { originalTimeTracked } = updatedTrackObject;
+                        console.log({ originalTimeTracked });
                         if (this.voiceTrackingHasUser(userID)) {
                             this.voiceTrackingClearInterval(userID);
                             this.voiceTrackingDeleteCollection(userID);
@@ -4855,7 +4856,7 @@ module.exports = {
             });
             if (currentTracking && targetVc.autoSendReport) {
                 if (typeof trackingDocument.originalTimeTracked === 'number') {
-                    originalTimeTracked = trackingDocument.originalTimeTracked
+                    originalTimeTracked = currentTracking.originalTimeTracked;
                 }
                 else originalTimeTracked = targetVc.timeTracked;
                 trackingDocument = await Track.updateOne({ _id: currentTracking._id },
