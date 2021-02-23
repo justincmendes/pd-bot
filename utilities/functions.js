@@ -27,7 +27,7 @@ const YEAR_IN_MS = 3.154e+10;
 const MAX_32_BIT_SIGNED_INT = 2147483647;
 const spamRecords = new Discord.Collection();
 const tracking = new Discord.Collection();
-const autoSendReport = new Discord.Collection();
+const autoSendReports = new Discord.Collection();
 
 // Private Function Declarations
 
@@ -4302,6 +4302,7 @@ module.exports = {
                         const server = bot.guilds.cache.get(serverID);
                         const serverMember = server.members.cache.get(user.discordID);
                         if (serverMember) if (serverMember.voice) if (serverMember.voice.channel) {
+                            console.log(user.discordID);
                             await this.setupVoiceChannelTracking(
                                 bot, user.discordID, serverMember.voice.channel.id
                             );
@@ -4495,48 +4496,137 @@ module.exports = {
         return false;
     },
 
+
     voiceTrackingHasUser: function (userID) {
         return tracking.has(userID);
     },
 
-    voiceTrackingAddCollection: function (key, value) {
+    voiceTrackingAddUser: function (key, value) {
         return tracking.set(key, value);
     },
 
-    voiceTrackingClearInterval: function (userID) {
-        return clearInterval(tracking.get(userID));
+    voiceTrackingGetUser: function (userID) {
+        return tracking.get(userID);
     },
 
-    voiceTrackingGetInterval: function (userID) {
-        return tracking.get(userID)
-    },
-
-    voiceTrackingDeleteCollection: function (userID) {
+    voiceTrackingDeleteUser: function (userID) {
         return tracking.delete(userID);
     },
 
+
+    voiceTrackingUserHasChannel: function (userID, channelID) {
+        const user = this.voiceTrackingGetUser(userID);
+        if (user) return user.has(channelID);
+        return undefined;
+    },
+
+    voiceTrackingUserAddChannel: function (userID, key, value) {
+        if (!this.voiceTrackingHasUser(userID)) {
+            this.voiceTrackingAddUser(userID, new Discord.Collection());
+        }
+        const user = this.voiceTrackingGetUser(userID);
+        // console.log({ user });
+        if (user) {
+            user.set(key, value);
+            // console.log(this.voiceTrackingGetUser(userID));
+            // console.log(this.voiceTrackingUserGetChannelInterval(userID, key));
+            return true;
+        }
+        return false;
+    },
+
+    voiceTrackingUserGetChannelInterval: function (userID, channelID) {
+        const user = this.voiceTrackingGetUser(userID);
+        if (user) return user.get(channelID);
+        return undefined;
+    },
+
+    voiceTrackingUserDeleteChannel: function (userID, channelID) {
+        const user = this.voiceTrackingGetUser(userID);
+        if (user) {
+            user.delete(channelID);
+            if (user.size === 0) {
+                this.voiceTrackingDeleteUser(userID);
+            }
+            return true;
+        }
+        return false;
+    },
+
+    voiceTrackingUserClearChannelInterval: function (userID, channelID) {
+        const user = this.voiceTrackingGetUser(userID);
+        if (user) return clearInterval(user.get(channelID));
+        return false;
+    },
+
+
     autoSendTrackReportHasUser: function (userID) {
-        return autoSendReport.has(userID);
+        return autoSendReports.has(userID);
     },
 
-    autoSendTrackReportAddCollection: function (key, value) {
-        return autoSendReport.set(key, value);
+    autoSendTrackReportAddUser: function (key, value) {
+        return autoSendReports.set(key, value);
     },
 
-    autoSendTrackReportClearTimeout: function (userID) {
-        return clearTimeout(autoSendReport.get(userID));
+    autoSendTrackReportGetUser: function (userID) {
+        return autoSendReports.get(userID);
     },
 
-    autoSendTrackReportGetTimeout: function (userID) {
-        return autoSendReport.get(userID)
+    autoSendTrackReportDeleteUser: function (userID) {
+        return autoSendReports.delete(userID);
     },
 
-    autoSendTrackReportDeleteCollection: function (userID) {
-        return autoSendReport.delete(userID);
+
+    autoSendTrackReportUserHasChannel: function (userID, channelID) {
+        const user = this.autoSendTrackReportGetUser(userID);
+        if (user) return user.has(channelID);
+        return undefined;
     },
+
+    autoSendTrackReportUserAddChannel: function (userID, key, value) {
+        if (!this.autoSendTrackReportHasUser(userID)) {
+            this.autoSendTrackReportAddUser(userID, new Discord.Collection());
+        }
+        const user = this.autoSendTrackReportGetUser(userID);
+        // console.log({ user });
+        if (user) {
+            user.set(key, value);
+            // console.log(this.autoSendTrackReportGetUser(userID));
+            // console.log(this.autoSendTrackReportUserGetChannelTimeout(userID, key));
+            return true;
+        }
+        return false;
+    },
+
+    autoSendTrackReportUserGetChannelTimeout: function (userID, channelID) {
+        const user = this.autoSendTrackReportGetUser(userID);
+        if (user) return user.get(channelID);
+        return undefined;
+    },
+
+    autoSendTrackReportUserDeleteChannel: function (userID, channelID) {
+        const user = this.autoSendTrackReportGetUser(userID);
+        // console.log({ user });
+        if (user) {
+            user.delete(channelID);
+            if (user.size === 0) {
+                this.autoSendTrackReportDeleteUser(userID);
+            }
+            return true;
+        }
+        return false;
+    },
+
+    autoSendTrackReportUserClearChannelTimeout: function (userID, channelID) {
+        const user = this.autoSendTrackReportGetUser(userID);
+        if (user) return clearTimeout(user.get(channelID));
+        return false;
+    },
+
 
     voiceTrackingSetAutoSendTrackReport: async function (bot, userID, trackObject, uponRestart = false) {
         try {
+            console.log({ trackObject });
             var success = false;
             var autoReportDelay;
             let userSettings = await User.findOne({ discordID: userID });
@@ -4549,82 +4639,85 @@ module.exports = {
             }
             if (autoReportDelay || autoReportDelay === 0) {
                 if (uponRestart) autoReportDelay = 0;
+                await this.updateVoiceChannelTimeTracked(
+                    bot, userID, trackObject.voiceChannelID,
+                    trackObject.end - trackObject.start, true,
+                );
                 // Set finishedSession to true, indicating that the timer is starting.
                 await Track.findByIdAndUpdate(trackObject._id, { $set: { finishedSession: true } });
-                autoSendReport.set(userID, this.setLongTimeout(async () => {
-                    let updatedTrackObject = await Track.findOne({
-                        userID, voiceChannelID: trackObject.voiceChannelID,
-                        finishedSession: true,
-                    });
-                    if (!updatedTrackObject && uponRestart) {
-                        updatedTrackObject = trackObject;
-                    }
-                    if (updatedTrackObject) {
-                        // await this.updateVoiceChannelTimeTracked(bot, userID, updatedTrackObject.voiceChannelID,
-                        //     updatedTrackObject.end - updatedTrackObject.start, true,
-                        // );
-                        const { originalTimeTracked } = updatedTrackObject;
-                        console.log({ originalTimeTracked });
-                        if (this.voiceTrackingHasUser(userID)) {
-                            this.voiceTrackingClearInterval(userID);
-                            this.voiceTrackingDeleteCollection(userID);
+
+                this.autoSendTrackReportUserAddChannel(userID, trackObject.voiceChannelID,
+                    this.setLongTimeout(async () => {
+                        // let updatedTrackObject = await Track.findOne({
+                        //     userID, voiceChannelID: trackObject.voiceChannelID,
+                        //     finishedSession: true,
+                        // });
+                        // if (!updatedTrackObject && uponRestart) {
+                        //     updatedTrackObject = trackObject;
+                        // }
+                        if (trackObject) {
+                            const { originalTimeTracked } = trackObject;
+                            console.log({ originalTimeTracked });
+                            if (this.voiceTrackingUserHasChannel(userID, trackObject.voiceChannelID)) {
+                                this.voiceTrackingUserClearChannelInterval(userID, trackObject.voiceChannelID);
+                                this.voiceTrackingUserDeleteChannel(userID, trackObject.voiceChannelID);
+                            }
+                            await Track.deleteOne({ _id: trackObject._id });
+
+                            userSettings = await User.findOne({ discordID: userID });
+                            if (userSettings) if (userSettings.voiceChannels) if (userSettings.voiceChannels.length) {
+                                let vcIndex = this.getMatchingVoiceChannelIndex(
+                                    bot, userSettings.voiceChannels.map(vc => vc.id), trackObject.voiceChannelID
+                                );
+                                if (!vcIndex && vcIndex !== 0) {
+                                    this.autoSendTrackReportUserClearChannelTimeout(userID, trackObject.voiceChannelID);
+                                    this.autoSendTrackReportUserDeleteChannel(userID, trackObject.voiceChannelID);
+                                    return;
+                                }
+                                const targetVc = userSettings.voiceChannels[vcIndex];
+                                if (!targetVc) {
+                                    this.autoSendTrackReportUserClearChannelTimeout(userID, trackObject.voiceChannelID);
+                                    this.autoSendTrackReportUserDeleteChannel(userID, trackObject.voiceChannelID);
+                                    return;
+                                }
+
+                                console.log({ targetVc });
+                                const autoResetEnabled = targetVc.autoReset;
+                                const finalTimeTracked = targetVc.timeTracked;
+                                const totalTimeTracked = autoResetEnabled
+                                    ? finalTimeTracked : finalTimeTracked - originalTimeTracked;
+                                console.log({ finalTimeTracked, totalTimeTracked });
+                                if (autoResetEnabled) {
+                                    targetVc.timeTracked = 0;
+                                }
+                                await User.updateOne({ discordID: userID },
+                                    {
+                                        $set: {
+                                            voiceChannels: userSettings.voiceChannels,
+                                        },
+                                    });
+                                // Check if the time spent in the channel is greater than MINIMUM
+                                //this.MINIMUM_AUTO_REPORT_TRACK_PERIOD
+                                if (totalTimeTracked < 3000) {
+                                    this.autoSendTrackReportUserClearChannelTimeout(userID, trackObject.voiceChannelID);
+                                    this.autoSendTrackReportUserDeleteChannel(userID, trackObject.voiceChannelID);
+                                    return;
+                                }
+
+                                const successfulSend = await this.sendAutoSendReportToDM(
+                                    bot, userID, userSettings, trackObject.voiceChannelID, totalTimeTracked
+                                );
+                                if (!successfulSend) {
+                                    this.autoSendTrackReportUserClearChannelTimeout(userID, trackObject.voiceChannelID);
+                                    this.autoSendTrackReportUserDeleteChannel(userID, trackObject.voiceChannelID);
+                                    return;
+                                }
+                            }
                         }
-                        await Track.deleteOne({ _id: updatedTrackObject._id });
-
-                        userSettings = await User.findOne({ discordID: userID });
-                        if (userSettings) if (userSettings.voiceChannels) if (userSettings.voiceChannels.length) {
-                            let vcIndex = this.getMatchingVoiceChannelIndex(
-                                bot, userSettings.voiceChannels.map(vc => vc.id), trackObject.voiceChannelID
-                            );
-                            if (!vcIndex && vcIndex !== 0) {
-                                this.autoSendTrackReportDeleteCollection(userID);
-                                this.autoSendTrackReportClearTimeout(userID);
-                                return;
-                            }
-                            const targetVc = userSettings.voiceChannels[vcIndex];
-                            if (!targetVc) {
-                                this.autoSendTrackReportDeleteCollection(userID);
-                                this.autoSendTrackReportClearTimeout(userID);
-                                return;
-                            }
-
-                            console.log({ targetVc });
-                            const autoResetEnabled = targetVc.autoReset;
-                            const finalTimeTracked = targetVc.timeTracked;
-                            const totalTimeTracked = autoResetEnabled
-                                ? finalTimeTracked : finalTimeTracked - originalTimeTracked;
-                            console.log({ finalTimeTracked, totalTimeTracked });
-                            if (autoResetEnabled) {
-                                targetVc.timeTracked = 0;
-                            }
-                            await User.updateOne({ discordID: userID },
-                                {
-                                    $set: {
-                                        voiceChannels: userSettings.voiceChannels,
-                                    },
-                                });
-                            // Check if the time spent in the channel is greater than MINIMUM
-                            if (totalTimeTracked < this.MINIMUM_AUTO_REPORT_TRACK_PERIOD) {
-                                this.autoSendTrackReportDeleteCollection(userID);
-                                this.autoSendTrackReportClearTimeout(userID);
-                                return;
-                            }
-
-                            const successfulSend = await this.sendAutoSendReportToDM(
-                                bot, userID, userSettings, trackObject.voiceChannelID,
-                                totalTimeTracked
-                            );
-                            if (!successfulSend) {
-                                this.autoSendTrackReportDeleteCollection(userID);
-                                this.autoSendTrackReportClearTimeout(userID);
-                                return;
-                            }
-                        }
-                    }
-                    this.autoSendTrackReportDeleteCollection(userID);
-                    this.autoSendTrackReportClearTimeout(userID);
-                    return;
-                }, autoReportDelay));
+                        this.autoSendTrackReportUserClearChannelTimeout(userID, trackObject.voiceChannelID);
+                        this.autoSendTrackReportUserDeleteChannel(userID, trackObject.voiceChannelID);
+                        return;
+                    }, autoReportDelay));
                 success = true;
             }
             if (!success) {
@@ -4643,8 +4736,8 @@ module.exports = {
         try {
             const user = bot.users.cache.get(userID);
             if (!user) {
-                this.autoSendTrackReportDeleteCollection(userID);
-                this.autoSendTrackReportClearTimeout(userID);
+                this.autoSendTrackReportUserClearChannelTimeout(userID, targetChannelID);
+                this.autoSendTrackReportUserDeleteChannel(userID, targetChannelID);
                 return false;
             }
 
@@ -4653,8 +4746,8 @@ module.exports = {
                 bot, voiceChannels.map(vc => vc.id), targetChannelID
             );
             if (!vcIndex && vcIndex !== 0) {
-                this.autoSendTrackReportDeleteCollection(userID);
-                this.autoSendTrackReportClearTimeout(userID);
+                this.autoSendTrackReportUserClearChannelTimeout(userID, targetChannelID);
+                this.autoSendTrackReportUserDeleteChannel(userID, targetChannelID);
                 return false;
             }
 
@@ -4705,23 +4798,30 @@ module.exports = {
 
     voiceChannelArrayToString: async function (bot, userID, voiceChannels,
         showUpdatedVoiceChannels = true, doubleSpace = true, doubleBulletedList = true) {
-        var currentTracking = await Track.findOne({ userID });
-        if (currentTracking && !this.autoSendTrackReportHasUser(userID)) {
-            const update = await this.updateVoiceChannelTimeTracked(
-                bot, userID, currentTracking.voiceChannelID,
-                this.getCurrentUTCTimestampFlooredToSecond() - currentTracking.start,
-                true
-            );
-            if (showUpdatedVoiceChannels && update) {
-                voiceChannels = update.voiceChannels;
-            }
-            currentTracking = await Track.findOneAndUpdate({ _id: currentTracking._id },
-                {
-                    $set: {
-                        start: this.getCurrentUTCTimestampFlooredToSecond(),
-                        end: this.getCurrentUTCTimestampFlooredToSecond(),
-                    },
-                }, { new: true });
+        var currentTracking = await Track.find({ userID });
+        if (currentTracking) if (currentTracking.length) {
+            currentTracking.forEach(async trackObject => {
+                // if (!this.autoSendTrackReportUserHasChannel(
+                //     userID, trackObject.voiceChannelID
+                // )) {
+                if (!trackObject.finishedSession) {
+                    const update = await this.updateVoiceChannelTimeTracked(
+                        bot, userID, trackObject.voiceChannelID,
+                        this.getCurrentUTCTimestampFlooredToSecond() - trackObject.start,
+                        true
+                    );
+                    if (showUpdatedVoiceChannels && update) {
+                        voiceChannels = update.voiceChannels;
+                    }
+                    await Track.findOneAndUpdate({ _id: trackObject._id },
+                        {
+                            $set: {
+                                start: this.getCurrentUTCTimestampFlooredToSecond(),
+                                end: this.getCurrentUTCTimestampFlooredToSecond(),
+                            },
+                        }, { new: true });
+                }
+            });
         }
 
         const outputString = voiceChannels.map(vcObject => {
@@ -4834,6 +4934,28 @@ module.exports = {
         }
     },
 
+    createVoiceChannelTrackingDocument: async function (userID, userVoiceChannelObject, targetChannelID) {
+        if (userVoiceChannelObject.autoSendReport) {
+            finishedSession = false;
+            originalTimeTracked = userVoiceChannelObject.timeTracked;
+        }
+        trackingDocument = new Track({
+            _id: mongoose.Types.ObjectId(),
+            userID,
+            voiceChannelID: targetChannelID,
+            start: this.getCurrentUTCTimestampFlooredToSecond(),
+            end: this.getCurrentUTCTimestampFlooredToSecond(),
+            finishedSession,
+            originalTimeTracked,
+        });
+        await trackingDocument.save()
+            .catch(err => {
+                console.error(err)
+                return false;
+            });
+        return trackingDocument;
+    },
+
     setupVoiceChannelTracking: async function (bot, userID,
         targetChannelID, targetVcAndUserSettings = undefined) {
         try {
@@ -4845,8 +4967,7 @@ module.exports = {
             }
             if (!vcInformation) return false;
 
-            var trackingDocument, targetVcIndex, userSettings,
-                finishedSession, originalTimeTracked;
+            var trackingDocument, targetVcIndex, userSettings;
             userSettings = vcInformation.userSettings;
             targetVcIndex = vcInformation.voiceChannelIndex;
             const targetVc = vcInformation.voiceChannels[targetVcIndex];
@@ -4855,45 +4976,45 @@ module.exports = {
                 userID, voiceChannelID: targetChannelID
             });
             if (currentTracking && targetVc.autoSendReport) {
-                // if (typeof trackingDocument.originalTimeTracked === 'number') {
-                //     originalTimeTracked = currentTracking.originalTimeTracked;
-                // }
-                // else originalTimeTracked = targetVc.timeTracked;
-                trackingDocument = await Track.updateOne({ _id: currentTracking._id },
+                trackingDocument = await Track.findOneAndUpdate({ _id: currentTracking._id },
                     {
                         $set: {
                             start: this.getCurrentUTCTimestampFlooredToSecond(),
                             end: this.getCurrentUTCTimestampFlooredToSecond(),
                             finishedSession: false,
-                            // originalTimeTracked
                         }
                     }, { new: true });
-                this.autoSendTrackReportClearTimeout(userID);
-                this.autoSendTrackReportDeleteCollection(userID);
+                this.autoSendTrackReportUserClearChannelTimeout(userID, targetChannelID);
+                this.autoSendTrackReportUserDeleteChannel(userID, targetChannelID);
             }
             else {
-                if (targetVc.autoSendReport) {
-                    finishedSession = false;
-                    originalTimeTracked = targetVc.timeTracked;
-                }
-                trackingDocument = new Track({
-                    _id: mongoose.Types.ObjectId(),
-                    userID,
-                    voiceChannelID: targetChannelID,
-                    start: this.getCurrentUTCTimestampFlooredToSecond(),
-                    end: this.getCurrentUTCTimestampFlooredToSecond(),
-                    finishedSession,
-                    originalTimeTracked,
-                });
-                await trackingDocument.save()
-                    .catch(err => console.error(err));
+                trackingDocument = await this.createVoiceChannelTrackingDocument(
+                    userID, targetVc, targetChannelID
+                );
             }
             if (trackingDocument && (targetVcIndex || targetVcIndex === 0)) {
+                // Check if it was deleted upon arrival the start
+                // If yes, create a new one.
+                const updatedTrack = await Track.findOneAndUpdate({ _id: trackingDocument._id }, {
+                    $set: { end: trackingDocument.end, }
+                }, { new: true });
+                if (!updatedTrack) {
+                    console.log(`No Track Document found for ${trackingDocument._id},`
+                        + ` creating a new one to start`);
+                    trackingDocument = await this.createVoiceChannelTrackingDocument(
+                        userID, targetVc, targetChannelID
+                    );
+                }
+
                 var interval = setInterval(async () => {
                     trackingDocument.end = this.getCurrentUTCTimestampFlooredToSecond();
-                    await Track.updateOne({ _id: trackingDocument._id }, {
+                    const updatedTrack = await Track.findOneAndUpdate({ _id: trackingDocument._id }, {
                         $set: { end: trackingDocument.end, }
-                    });
+                    }, { new: true });
+                    if (!updatedTrack) {
+                        console.log(`No Track Document found for ${trackingDocument._id}`);
+                        clearInterval(interval);
+                    }
                     return;
 
                     // If you want to continuously update the timeTracked in real time...
@@ -4913,8 +5034,8 @@ module.exports = {
                     // if (!updatedObject) clearInterval(interval);
                     // else userSettings = updatedObject.userSettings;
                     // return;
-                }, TRACKING_INTERVAL)
-                tracking.set(userID, interval);
+                }, TRACKING_INTERVAL);
+                this.voiceTrackingUserAddChannel(userID, targetChannelID, interval);
             }
             return true;
         }
@@ -4929,7 +5050,7 @@ module.exports = {
             const { id, avatar, username, discriminator } = userObject;
             // console.log({ user, id, avatar, username, discriminator });
             const updateUser = await User.findOneAndUpdate({ discordID: id }, {
-                $set: { avatar, discordTag: `${username}#${discriminator}`, }
+                $set: { avatar, discordTag: `${username}#${discriminator} `, }
             }, { new: true });
             if (updateUser) {
                 console.log({ updateUser });

@@ -324,12 +324,14 @@ module.exports = {
                                                             },
                                                         },
                                                     }, { new: true });
-                                                    if (fn.voiceTrackingHasUser(userSettings.discordID)) {
-                                                        fn.voiceTrackingClearInterval(userSettings.discordID);
-                                                        fn.voiceTrackingDeleteCollection(userSettings.discordID);
-                                                        await Track.deleteMany({ userID: userSettings.discordID });
+                                                    if (fn.voiceTrackingUserHasChannel(authorID, vcTarget.id)) {
+                                                        fn.voiceTrackingUserClearChannelInterval(authorID, vcTarget.id);
+                                                        fn.voiceTrackingUserDeleteChannel(authorID, vcTarget.id);
+                                                        await Track.deleteOne({
+                                                            userID: userSettings.discordID,
+                                                            channelID: vcTarget.id
+                                                        });
                                                     }
-
                                                 }
                                                 break;
                                             }
@@ -341,7 +343,7 @@ module.exports = {
                             break;
                         case 1:
                             if (targetVcObject) if (typeof targetVcObject === 'object') {
-                                await Track.updateMany({ userID: authorID }, {
+                                await Track.updateOne({ userID: authorID, voiceChannelID: targetVcObject.voiceChannelID }, {
                                     $set: {
                                         start: fn.getCurrentUTCTimestampFlooredToSecond(),
                                         end: fn.getCurrentUTCTimestampFlooredToSecond(),

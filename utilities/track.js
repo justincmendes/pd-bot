@@ -91,10 +91,13 @@ module.exports = {
                                         voiceChannels,
                                     },
                                 });
-                                if (this.voiceTrackingHasUser(userSettings.discordID)) {
-                                    this.voiceTrackingClearInterval(userSettings.discordID);
-                                    this.voiceTrackingDeleteCollection(userSettings.discordID);
-                                    await Track.deleteMany({ userID: userSettings.discordID });
+                                if (fn.voiceTrackingUserHasChannel(userSettings.discordID, vc.id)) {
+                                    fn.voiceTrackingUserClearChannelInterval(userSettings.discordID, vc.id);
+                                    fn.voiceTrackingUserDeleteChannel(userSettings.discordID, vc.id);
+                                    await Track.deleteOne({
+                                        userID: userSettings.discordID,
+                                        channelID: vc.id,
+                                    });
                                 }
                             }
                         });

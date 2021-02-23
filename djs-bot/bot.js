@@ -502,8 +502,8 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
                 );
             }
         }
-        fn.voiceTrackingClearInterval(userID);
-        fn.voiceTrackingDeleteCollection(userID);
+        fn.voiceTrackingUserClearChannelInterval(userID, oldChannelID);
+        fn.voiceTrackingUserDeleteChannel(userID, oldChannelID);
         if (!autoSendReportEnabled) {
             await Track.deleteOne({ userID, voiceChannelID: oldChannelID, });
             await rm.updateTrackingReportReminder(bot, userID);
