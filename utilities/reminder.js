@@ -117,7 +117,7 @@ module.exports = {
                 const username = isDM ? user ? user.username : "someone" : bot.guilds.cache.get(channelObject.guild.id).member(userID).displayName;
                 var titleOut = title;
                 if (reminderTypes.includes(title) && isRecurring) {
-                    title = `Repeating ${title}`;
+                    titleOut = `Repeating ${title}`;
                 }
                 if (title === "Voice Channel Tracking") {
                     const reportString = await fn.getTrackingReportString(bot, userID);
