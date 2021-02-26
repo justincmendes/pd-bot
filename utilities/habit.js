@@ -252,8 +252,8 @@ module.exports = {
     /**
      * @param {mongoose.Schema.Types.ObjectId | String} habitID
      */
-    cancelHabitById: async function (habitID) {
-        const success = await fn.cancelCronById(habits, habitID);
+    cancelHabitById: function (habitID) {
+        const success = fn.cancelCronById(habits, habitID);
         if (success) {
             console.log(`Successfully cancelled habit ${habitID}.`);
         }

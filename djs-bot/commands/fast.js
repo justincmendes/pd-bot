@@ -1046,7 +1046,7 @@ module.exports = {
                     const targetIDs = await fastCollection.map(fast => fast._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Fasts (${sortType})`);
                     targetIDs.forEach(async id => {
-                        await rm.cancelReminderById(id);
+                        rm.cancelReminderById(id);
                     });
                     await del.deleteManyByIDAndConnectedReminders(Fast, targetIDs);
                     return;
@@ -1116,7 +1116,7 @@ module.exports = {
                         if (confirmDeleteMany) {
                             console.log(`Deleting ${authorID}'s Fasts ${toDelete} (${sortType})`);
                             fastTargetIDs.forEach(async id => {
-                                await rm.cancelReminderById(id);
+                                rm.cancelReminderById(id);
                             });
                             await del.deleteManyByIDAndConnectedReminders(Fast, fastTargetIDs);
                             return;
@@ -1165,7 +1165,7 @@ module.exports = {
                             const targetIDs = await fastCollection.map(fast => fast._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} fast(s) past ${skipEntries} (${sortType})`);
                             targetIDs.forEach(async id => {
-                                await rm.cancelReminderById(id);
+                                rm.cancelReminderById(id);
                             });
                             await del.deleteManyByIDAndConnectedReminders(Fast, targetIDs);
                             return;
@@ -1200,7 +1200,7 @@ module.exports = {
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, fastEmbed, deleteConfirmMessage, forceSkip,
                         `Fast: Delete Recent Fast`, 600000);
                     if (deleteIsConfirmed) {
-                        await rm.cancelReminderById(fastTargetID);
+                        rm.cancelReminderById(fastTargetID);
                         await del.deleteOneByIDAndConnectedReminders(Fast, fastTargetID);
                         return;
                     }
@@ -1250,7 +1250,7 @@ module.exports = {
                     `Fast: Delete Fast ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Fast ${sortType}`);
-                    await rm.cancelReminderById(fastTargetID);
+                    rm.cancelReminderById(fastTargetID);
                     await del.deleteOneByIDAndConnectedReminders(Fast, fastTargetID);
                     return;
                 }

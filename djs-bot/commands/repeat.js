@@ -102,7 +102,7 @@ module.exports = {
                     if (targetIDs) if (targetIDs.length) {
                         console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Reminders (${sortType})`);
                         targetIDs.forEach(async id => {
-                            await rm.cancelReminderById(id);
+                            rm.cancelReminderById(id);
                         });
                         await Reminder.deleteMany({ _id: { $in: targetIDs } });
                     }
@@ -164,7 +164,7 @@ module.exports = {
                     if (confirmDeleteMany) if (reminderTargetIDs) if (reminderTargetIDs.length) {
                         console.log(`Deleting ${authorID}'s Reminders ${toDelete} (${sortType})`);
                         reminderTargetIDs.forEach(async id => {
-                            await rm.cancelReminderById(id);
+                            rm.cancelReminderById(id);
                         });
                         await Reminder.deleteMany({ _id: { $in: reminderTargetIDs } });
                     }
@@ -211,7 +211,7 @@ module.exports = {
                             if (targetIDs) if (targetIDs.length) {
                                 console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} reminder(s) past ${skipEntries} (${sortType})`);
                                 targetIDs.forEach(async id => {
-                                    await rm.cancelReminderById(id);
+                                    rm.cancelReminderById(id);
                                 });
                                 await Reminder.deleteMany({ _id: { $in: targetIDs } });
                             }
@@ -247,7 +247,7 @@ module.exports = {
                         `Recurring Reminder: Delete Recent Reminder`, 600000);
                     if (deleteIsConfirmed) if (reminderTargetID) {
                         console.log(`Deleting ${authorUsername}'s (${authorID}) recent reminder`);
-                        await rm.cancelReminderById(reminderTargetID);
+                        rm.cancelReminderById(reminderTargetID);
                         await Reminder.deleteOne({ _id: reminderTargetID });
                     }
                     return;
@@ -270,7 +270,7 @@ module.exports = {
                     const reminderQuery = { userID: authorID, isRecurring: false };
                     const reminders = await Reminder.find(reminderQuery);
                     reminders.forEach(async reminder => {
-                        await rm.cancelReminderById(reminder._id);
+                        rm.cancelReminderById(reminder._id);
                     });
                     await Reminder.deleteMany(reminderQuery);
                     return;
@@ -300,7 +300,7 @@ module.exports = {
                     `Recurring Reminder: Delete Reminder ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) if (reminderTargetID) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Reminder ${sortType}`);
-                    await rm.cancelReminderById(reminderTargetID);
+                    rm.cancelReminderById(reminderTargetID);
                     await Reminder.deleteOne({ _id: reminderTargetID });
                 }
                 return;
@@ -846,7 +846,7 @@ module.exports = {
                                     console.log({ continueEdit, userEdit, newReminder });
                                     reminderDocument = await Reminder.findById(reminderTargetID);
                                     if (reminderDocument) {
-                                        await rm.cancelReminderById(newReminder._id);
+                                        rm.cancelReminderById(newReminder._id);
                                         await rm.sendReminderByObject(bot, newReminder);
                                         pastNumberOfEntriesIndex = indexByRecency ? await rm.getReminderIndexByRecency(authorID, reminderTargetID, isRecurring) : await rm.getReminderIndexByEndTime(authorID, reminderTargetID, isRecurring);
                                         console.log({ reminderView: reminderDocument, reminderTargetID, fieldToEditIndex });

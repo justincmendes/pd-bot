@@ -24,7 +24,7 @@ module.exports = {
                 await Guild.deleteOne({ guildID: guildID });
                 const guildReminders = await Reminder.find({ guildID: guildID });
                 guildReminders.forEach(async reminder => {
-                    await rm.cancelReminderById(reminder._id);
+                    rm.cancelReminderById(reminder._id);
                     await Reminder.findByIdAndDelete(reminder._id);
                 });
                 // await Reminder.deleteMany({ guildID: guildObject.id });

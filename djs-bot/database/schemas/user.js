@@ -107,8 +107,7 @@ const userSettingsSchema = mongoose.Schema({
         },
         autoReset: {
             type: Boolean,
-            required: true,
-            default: false,
+            required: false,
         },
         autoSendDelay: {
             type: Number,
@@ -118,6 +117,11 @@ const userSettingsSchema = mongoose.Schema({
             type: Boolean,
             required: true,
             default: false,
+        },
+        lastReminderTimeTracked: {
+            type: Number,
+            required: true,
+            default: 0,
         },
     }],
 });

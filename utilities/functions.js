@@ -4333,22 +4333,31 @@ module.exports = {
     * @param {Discord.Collection} cronCollection
     * @param {mongoose.Schema.Types.ObjectId | String} targetID
     */
-    cancelCronById: async function (cronCollection, targetID) {
+    cancelCronById: function (cronCollection, targetID) {
         try {
             if (targetID) {
                 targetID = targetID.toString();
                 var foundTarget = null;
-                cronCollection.each(async cronSubArray => {
-                    cronSubArray.forEach(async (cronObject, i) => {
-                        const targetObject = cronObject.id === targetID;
-                        if (targetObject) {
-                            console.log(`Cancelling Cron: _id = ${targetID}`);
-                            foundTarget = true;
-                            clearTimeout(cronObject.timeout);
-                            cronSubArray.splice(i, 1);
+                // console.log({ targetID })
+                if (cronCollection) {
+                    cronCollection.forEach((cronSubArray, i) => {
+                        if (cronSubArray) {
+                            for (var i = 0; i < cronSubArray.length; i++) {
+                                // console.log({ i });
+                                // console.log(cronSubArray[i].id);
+                                // console.log({ targetID });
+                                // console.log(cronSubArray[i].id === targetID);
+                                const targetObject = cronSubArray[i].id === targetID;
+                                if (targetObject) {
+                                    console.log(`Cancelling Cron: _id = ${targetID}`);
+                                    foundTarget = true;
+                                    clearTimeout(cronSubArray[i].timeout);
+                                    cronSubArray.splice(i, 1);
+                                }
+                            }
                         }
                     });
-                });
+                }
                 return foundTarget;
             }
             else return false;
@@ -4770,7 +4779,7 @@ module.exports = {
             }
             voiceChannels[vcIndex].timeTracked = totalTimeTracked;
             const autoReportMessage = await this.voiceChannelArrayToString(
-                bot, userID, [voiceChannels[vcIndex]], false, false, false);
+                bot, userID, [voiceChannels[vcIndex]], false, false, false, false);
             const messageEmbed = this.getMessageEmbed(autoReportMessage, title, this.trackEmbedColour);
             user.send(messageEmbed);
             return true;
@@ -4781,23 +4790,25 @@ module.exports = {
         }
     },
 
-    getTrackingReportString: async function (bot, userID) {
+    getTrackingReportString: async function (bot, userID, showLastReminderTimeDifference = false,
+        updatedUserSettings = undefined) {
         // Get the latest information from the user settings
-        const userSettings = await User.findOne({ discordID: userID });
+        const userSettings = updatedUserSettings ? updatedUserSettings : await User.findOne({ discordID: userID });
         var outputString = "";
         if (userSettings) {
             const { voiceChannels, timezone } = userSettings;
             if (voiceChannels) if (voiceChannels.length) {
-                outputString = `**__Week of ${this.timestampToDateString(this.getStartOfWeekTimestamp(Date.now() + timezone.offset,
-                    timezone.offset, timezone.daylightSaving, false), false, true, true) || ""}:__**`
-                    + `\n${await this.voiceChannelArrayToString(bot, userID, voiceChannels) || ""}`;
+                outputString = `**__Week of ${this.timestampToDateString(Date.now() + timezone.offset, false, true, true) || ""}:__**`
+                    + `\n${await this.voiceChannelArrayToString(bot, userID, voiceChannels,
+                        true, true, true, showLastReminderTimeDifference) || ""}`;
             }
         }
         return outputString;
     },
 
     voiceChannelArrayToString: async function (bot, userID, voiceChannels,
-        showUpdatedVoiceChannels = true, doubleSpace = true, doubleBulletedList = true) {
+        showUpdatedVoiceChannels = true, doubleSpace = true, doubleBulletedList = true,
+        showLastReminderTimeDifference = false) {
         var currentTracking = await Track.find({ userID });
         if (currentTracking) if (currentTracking.length) {
             for (const trackObject of currentTracking) {
@@ -4811,7 +4822,6 @@ module.exports = {
                         true
                     );
                     if (showUpdatedVoiceChannels && update) {
-                        isUpdated = true;
                         voiceChannels = update.voiceChannels;
                     }
                     await Track.findOneAndUpdate({ _id: trackObject._id },
@@ -4830,16 +4840,22 @@ module.exports = {
         //         voiceChannels = userSettings.voiceChannels;
         //     }
         // }
+        const extraHyphen = doubleBulletedList ? "-" : "";
         const outputString = voiceChannels.map(vcObject => {
             return `${doubleBulletedList ? "- " : ""}**${this.getVoiceChannelNameString(bot, vcObject)}** `
                 + `(${this.getVoiceChannelServerString(bot, vcObject)}): `
                 + `**__${this.millisecondsToTimeString(vcObject.timeTracked)}__**`
-                + `\n-${doubleBulletedList ? "-" : ""} **Auto Send Report:** ${vcObject.autoSendReport ? "Yes" : "No"}`
-                + (vcObject.autoSendReport ? `\n-${doubleBulletedList ? "-" : ""} **Auto Send Delay:**`
+                + `\n-${extraHyphen} **Auto Send Report:** ${vcObject.autoSendReport ? "Yes" : "No"}`
+                + (vcObject.autoSendReport ? `\n-${extraHyphen} **Auto Send Delay:**`
                     + ` ${this.millisecondsToTimeString(vcObject.autoSendDelay || 0)}` : "")
-                + (vcObject.autoSendReport ? `\n-${doubleBulletedList ? "-" : ""} **Auto Reset:**`
+                + (vcObject.autoSendReport ? `\n-${extraHyphen} **Auto Reset:**`
                     + ` ${vcObject.autoReset ? "Yes" : "No"}` : "")
-                + `\n-${doubleBulletedList ? "-" : ""} **Last Tracked:** ${this.timestampToDateString(vcObject.lastTrackedTimestamp)}`;
+                + `\n-${extraHyphen} **Last Tracked:** ${this.timestampToDateString(vcObject.lastTrackedTimestamp)}`
+                + `${showLastReminderTimeDifference && (vcObject.lastReminderTimeTracked || vcObject.lastReminderTimeTracked === 0)
+                    ? `\n-${extraHyphen} **From Last Reminder:** ${this.millisecondsToTimeString(vcObject.lastReminderTimeTracked)}`
+                    + ` -> ${this.millisecondsToTimeString(vcObject.timeTracked)} (**${vcObject.timeTracked >= vcObject.lastReminderTimeTracked ? "+" : "-"}`
+                    + `${this.millisecondsToTimeString(Math.abs(vcObject.timeTracked - vcObject.lastReminderTimeTracked))}**)`
+                    : ""}`;
         }).join(doubleSpace ? '\n\n' : '\n');
         return outputString;
     },
@@ -4927,8 +4943,9 @@ module.exports = {
                 }
                 trackObject.lastTrackedTimestamp = lastTracked || lastTracked === 0 ?
                     lastTracked : this.getCurrentUTCTimestampFlooredToSecond() + userSettings.timezone.offset * HOUR_IN_MS;
+                console.log({ trackObject });
                 const updatedUserSettings = await User.findByIdAndUpdate(userSettings.id, {
-                    $set: { voiceChannels: voiceChannels }
+                    $set: { voiceChannels }
                 }, { new: true });
                 return {
                     userSettings: updatedUserSettings,

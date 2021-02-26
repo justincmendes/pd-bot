@@ -240,7 +240,7 @@ async function deleteCurrentMastermindReminders(userID) {
         if (mastermindReminders) if (mastermindReminders.length) {
             foundOneReminder = true;
             mastermindReminders.forEach(async reminder => {
-                await rm.cancelReminderById(reminder._id);
+                rm.cancelReminderById(reminder._id);
                 await Reminder.findByIdAndDelete(reminder._id);
             });
         }

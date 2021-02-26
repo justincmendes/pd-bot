@@ -459,7 +459,7 @@ module.exports = {
                     const targetIDs = await goalCollection.map(entry => entry._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Goals (${sortType})`);
                     targetIDs.forEach(async id => {
-                        await rm.cancelReminderById(id);
+                        rm.cancelReminderById(id);
                     });
                     await del.deleteManyByIDAndConnectedReminders(Goal, targetIDs);
                     if (targetIDs) if (targetIDs.length) {
@@ -525,7 +525,7 @@ module.exports = {
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Goals ${toDelete} (${sortType})`);
                         goalTargetIDs.forEach(async id => {
-                            await rm.cancelReminderById(id);
+                            rm.cancelReminderById(id);
                         });
                         await del.deleteManyByIDAndConnectedReminders(Goal, goalTargetIDs);
                         if (goalTargetIDs) if (goalTargetIDs.length) {
@@ -576,7 +576,7 @@ module.exports = {
                             const targetIDs = await goalCollection.map(entry => entry._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} goals past ${skipEntries} (${sortType})`);
                             targetIDs.forEach(async id => {
-                                await rm.cancelReminderById(id);
+                                rm.cancelReminderById(id);
                             });
                             await del.deleteManyByIDAndConnectedReminders(Goal, targetIDs);
                             if (targetIDs) if (targetIDs.length) {

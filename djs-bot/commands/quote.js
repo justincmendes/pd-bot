@@ -187,7 +187,7 @@ module.exports = {
                                             const reminderQuery = { userID: authorID, isDM: true, isRecurring: true, title: "Quote" };
                                             const reminders = await Reminder.find(reminderQuery);
                                             reminders.forEach(async reminder => {
-                                                await rm.cancelReminderById(reminder._id);
+                                                rm.cancelReminderById(reminder._id);
                                             });
                                             await Reminder.deleteMany(reminderQuery);
                                         }
@@ -329,7 +329,7 @@ module.exports = {
                         const reminderQuery = { userID: authorID, title: "Quote", isDM: true, isRecurring: true, };
                         const reminders = await Reminder.find(reminderQuery);
                         reminders.forEach(async reminder => {
-                            await rm.cancelReminderById(reminder._id);
+                            rm.cancelReminderById(reminder._id);
                         });
                         await Reminder.deleteMany(reminderQuery);
 

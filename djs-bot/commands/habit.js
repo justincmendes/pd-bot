@@ -708,7 +708,7 @@ module.exports = {
                     const targetIDs = await habitCollection.map(entry => entry._id);
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Habits (${sortType})`);
                     targetIDs.forEach(async id => {
-                        await hb.cancelHabitById(id);
+                        hb.cancelHabitById(id);
                     });
                     await del.deleteManyByIDAndConnectedReminders(Habit, targetIDs);
                     return;
@@ -771,7 +771,7 @@ module.exports = {
                     if (confirmDeleteMany) {
                         console.log(`Deleting ${authorID}'s Habits ${toDelete} (${sortType})`);
                         habitTargetIDs.forEach(async id => {
-                            await hb.cancelHabitById(id);
+                            hb.cancelHabitById(id);
                         });
                         await del.deleteManyByIDAndConnectedReminders(Habit, habitTargetIDs);
                         return;
@@ -819,7 +819,7 @@ module.exports = {
                             const targetIDs = await habitCollection.map(entry => entry._id);
                             console.log(`Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} habits past ${skipEntries} (${sortType})`);
                             targetIDs.forEach(async id => {
-                                await hb.cancelHabitById(id);
+                                hb.cancelHabitById(id);
                             });
                             await del.deleteManyByIDAndConnectedReminders(Habit, targetIDs);
                             return;
@@ -851,7 +851,7 @@ module.exports = {
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, habitEmbed, deleteConfirmMessage, forceSkip,
                         `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, 600000);
                     if (deleteIsConfirmed) {
-                        await hb.cancelHabitById(habitTargetID);
+                        hb.cancelHabitById(habitTargetID);
                         await del.deleteOneByIDAndConnectedReminders(Habit, habitTargetID);
                         return;
                     }
@@ -874,7 +874,7 @@ module.exports = {
                     const reminderQuery = { userID: authorID };
                     const userHabits = await Reminder.find(reminderQuery);
                     userHabits.forEach(async habit => {
-                        await hb.cancelHabitById(habit._id);
+                        hb.cancelHabitById(habit._id);
                     });
                     await del.deleteManyAndConnectedReminders(Habit, reminderQuery);
                     return;
@@ -904,7 +904,7 @@ module.exports = {
                     `Habit${isArchived ? ` Archive` : ""}: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`, 600000);
                 if (deleteConfirmation) {
                     console.log(`Deleting ${authorUsername}'s (${authorID}) Habit ${sortType}`);
-                    await hb.cancelHabitById(habitTargetID);
+                    hb.cancelHabitById(habitTargetID);
                     await del.deleteOneByIDAndConnectedReminders(Habit, habitTargetID);
                     return;
                 }
@@ -1557,7 +1557,7 @@ module.exports = {
                             if (habitDocument) {
                                 userSettings = await User.findOne({ discordID: authorID });
                                 let { habitCron } = userSettings;
-                                await hb.cancelHabitById(habitDocument._id);
+                                hb.cancelHabitById(habitDocument._id);
                                 await hb.habitCron(habitDocument, timezoneOffset, habitCron);
 
                                 habitIndex = indexByRecency ?

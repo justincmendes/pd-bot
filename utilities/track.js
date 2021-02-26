@@ -20,7 +20,7 @@ module.exports = {
         const currentTrackReminders = await Reminder.find({ userID, title: "Voice Channel Tracking" });
         if (currentTrackReminders) if (currentTrackReminders.length) {
             currentTrackReminders.forEach(async reminder => {
-                await rm.cancelReminderById(reminder._id);
+                rm.cancelReminderById(reminder._id);
                 await Reminder.deleteOne({ _id: reminder._id });
             });
         }
@@ -41,9 +41,24 @@ module.exports = {
         // Cancel any on-going Track Reminders:
         await this.cancelAndDeleteAllTrackReminders(message.author.id);
 
+        const userSettings = await User.findOne({ discordID: message.author.id });
+        if (userSettings) {
+            const { voiceChannels } = userSettings;
+            if (voiceChannels) if (voiceChannels.length) {
+                for (var i = 0; i < voiceChannels.length; i++) {
+                    if (typeof voiceChannels[i].lastReminderTimeTracked === 'number') {
+                        voiceChannels[i].lastReminderTimeTracked = voiceChannels[i].timeTracked;
+                    }
+                    else voiceChannels[i].lastReminderTimeTracked = 0;
+                }
+                await User.updateOne({ discordID: message.author.id },
+                    { $set: { voiceChannels }, });
+            }
+        }
+
         await rm.setNewDMReminder(bot, message.author.id, Date.now(), endTime,
-            `${await fn.getTrackingReportString(bot, message.author.id)}`, "Voice Channel Tracking",
-            true, false, true, interval, undefined);
+            `${await fn.getTrackingReportString(bot, message.author.id, true)}`,
+            "Voice Channel Tracking", true, false, true, interval, undefined);
         return true;
     },
 

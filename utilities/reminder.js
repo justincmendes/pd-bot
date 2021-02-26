@@ -68,7 +68,7 @@ module.exports = {
             title, connectedDocumentID, true, sendAsEmbed, isRecurring, interval, remainingOccurrences, undefined, embedColour)
             .catch(err => console.error(err));
         console.log({ reminder });
-        await this.sendReminderByObject(bot, reminder, embedColour);
+        await this.sendReminderByObject(bot, reminder);
     },
 
     /**
@@ -97,7 +97,7 @@ module.exports = {
         const reminder = await this.putNewReminderInDatabase(userID, channelToSend, startTimestamp, endTimestamp, reminderMessage,
             title, connectedDocumentID, false, sendAsEmbed, isRecurring, interval, remainingOccurrences, guildID, embedColour)
             .catch(err => console.error(err));
-        await this.sendReminderByObject(bot, reminder, embedColour);
+        await this.sendReminderByObject(bot, reminder);
     },
 
     sendReminderByObject: async function (bot, reminderObject) {
@@ -118,13 +118,6 @@ module.exports = {
                 var titleOut = title;
                 if (reminderTypes.includes(title) && isRecurring) {
                     titleOut = `Repeating ${title}`;
-                }
-                if (title === "Voice Channel Tracking") {
-                    const reportString = await fn.getTrackingReportString(bot, userID);
-                    if (reportString) {
-                        message = reportString;
-                    }
-                    else message = "";
                 }
                 if (isDM && sendAsEmbed === undefined) {
                     sendAsEmbed = true;
@@ -250,6 +243,12 @@ module.exports = {
                                         }
                                         else message += remainingOccurrencesMessage;
                                     }
+                                    if (updatedReminderObject.title === "Voice Channel Tracking") {
+                                        if (updatedReminderObject.sendAsEmbed) {
+                                            message.setDescription(updatedReminderObject.message);
+                                        }
+                                        else message = updatedReminderObject.message;
+                                    }
                                     channelObject.send(message);
                                     await this.sendReminderByObject(bot, updatedReminderObject);
                                     if (!isLastReminder) return;
@@ -287,8 +286,8 @@ module.exports = {
     /**
      * @param {mongoose.Schema.Types.ObjectId | String} reminderID
      */
-    cancelReminderById: async function (reminderID) {
-        const success = await fn.cancelCronById(reminders, reminderID);
+    cancelReminderById: function (reminderID) {
+        const success = fn.cancelCronById(reminders, reminderID);
         if (success) {
             console.log(`Successfully cancelled reminder ${reminderID}.`);
         }
@@ -530,7 +529,25 @@ module.exports = {
                         }
                     }
                     if (reminder.title === "Voice Channel Tracking") {
-                        updateObject.message = await fn.getTrackingReportString(bot, reminder.userID);
+                        updateObject.message = await fn.getTrackingReportString(bot, reminder.userID, true);
+                        let updatedUserSettings = await User.findOne({ discordID: reminder.userID });
+                        if (updatedUserSettings) {
+                            const { voiceChannels } = updatedUserSettings;
+                            if (voiceChannels) if (voiceChannels.length) {
+                                for (var i = 0; i < voiceChannels.length; i++) {
+                                    if (typeof voiceChannels[i].lastReminderTimeTracked === 'number') {
+                                        voiceChannels[i].lastReminderTimeTracked = voiceChannels[i].timeTracked;
+                                    }
+                                    else voiceChannels[i].lastReminderTimeTracked = 0;
+                                }
+                                await User.updateOne({ discordID: reminder.userID },
+                                    { $set: { voiceChannels }, });
+                            }
+                            // console.log({ updatedUserSettings });
+                            // console.log(updatedUserSettings.voiceChannels);
+                            // updateObject.message = await fn.getTrackingReportString(bot, reminder.userID, true,
+                            //     updatedUserSettings);
+                        }
                     }
                     const updateReminder = await Reminder
                         .findOneAndUpdate({ _id: reminderID },
@@ -593,31 +610,37 @@ module.exports = {
         return remindersToString;
     },
 
-    updateTrackingReportReminder: async function (bot, userID) {
-        const currentTrackReminders = await Reminder.find({ userID, title: "Voice Channel Tracking" });
-        if (currentTrackReminders) if (currentTrackReminders.length) {
-            currentTrackReminders.forEach(async reminder => {
-                const newReminder = await Reminder.findByIdAndUpdate(reminder._id,
-                    {
-                        $set: { message: await fn.getTrackingReportString(bot, userID) }
-                    }, { new: true });
-                if (newReminder) {
-                    await this.cancelReminderById(reminder._id);
-                    await this.sendReminderByObject(bot, newReminder);
-                }
-            });
-            return true;
-        }
-        return false;
-    },
+    // updateTrackingReportReminder: async function (bot, userID) {
+    //     const currentTrackReminders = await Reminder.find({ userID, title: "Voice Channel Tracking" });
+    //     if (currentTrackReminders) if (currentTrackReminders.length) {
+    //         for (const reminder of currentTrackReminders) {
+    //             const newReminder = await Reminder.findByIdAndUpdate(reminder._id,
+    //                 {
+    //                     $set: { message: await fn.getTrackingReportString(bot, userID, true) }
+    //                 }, { new: true });
+    //             // if (newReminder) {
+    //             //     console.log({ reminders });
+    //             //     this.cancelReminderById(reminder._id);
+    //             //     console.log({ reminders });
+    //             //     await this.sendReminderByObject(bot, newReminder);
+    //             //     console.log({ reminders });
+    //             // }
+    //         }
+    //         return true;
+    //     }
+    //     return false;
+    // },
 
     reminderDocumentToString: async function (bot, reminderDocument, userTimezoneOffset = 0, replaceRoles = true) {
         if (reminderDocument.title === "Voice Channel Tracking") {
-            const success = await this.updateTrackingReportReminder(bot, reminderDocument.userID);
-            if (success) {
-                reminderDocument = await Reminder.findById(reminderDocument._id);
-                reminderDocument.message = await fn.getTrackingReportString(bot, reminderDocument.userID);
-            }
+            // const success = await this.updateTrackingReportReminder(bot, reminderDocument.userID);
+            // if (success) {
+            reminderDocument = await Reminder.findById(reminderDocument._id);
+            reminderDocument.message = await fn.getTrackingReportString(bot, reminderDocument.userID, true);
+            await Reminder.updateOne({ _id: reminderDocument._id }, {
+                $set: { message: reminderDocument.message }
+            });
+            // }
         }
         const { isDM, isRecurring, channel, startTime, endTime,
             message, title, interval, remainingOccurrences, guildID } = reminderDocument;

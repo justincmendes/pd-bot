@@ -415,7 +415,7 @@ module.exports = {
                                                             habits.forEach(async habit => {
                                                                 if (habit) {
                                                                     const updatedHabit = await hb.updateHabit(habit, timezoneOffset, updatedHabitCron);
-                                                                    await hb.cancelHabitById(habit._id);
+                                                                    hb.cancelHabitById(habit._id);
                                                                     await hb.habitCron(updatedHabit, timezoneOffset, updatedHabitCron);
                                                                 }
                                                             });
@@ -529,7 +529,7 @@ module.exports = {
                                             const reminderQuery = { userID: authorID, isDM: true, isRecurring: true, title: "Quote" };
                                             const reminders = await Reminder.find(reminderQuery);
                                             reminders.forEach(async reminder => {
-                                                await rm.cancelReminderById(reminder._id);
+                                                rm.cancelReminderById(reminder._id);
                                             });
                                             await Reminder.deleteMany(reminderQuery);
                                         }
@@ -1025,7 +1025,7 @@ module.exports = {
                                         startTime, endTime,
                                     }
                                 });
-                                await rm.cancelReminderById(reminder._id);
+                                rm.cancelReminderById(reminder._id);
                                 await rm.sendReminderByObject(bot, reminder);
                             });
                         }
@@ -1043,7 +1043,7 @@ module.exports = {
                             });
                         });
                         userHabits.forEach(async habit => {
-                            await hb.cancelHabitById(habit._id);
+                            hb.cancelHabitById(habit._id);
                         });
                         await hb.habitCronUser(authorID);
                     }
@@ -1079,7 +1079,7 @@ module.exports = {
                             });
                         });
                         userHabits.forEach(async habit => {
-                            await hb.cancelHabitById(habit._id);
+                            hb.cancelHabitById(habit._id);
                         });
                         await hb.habitCronUser(authorID);
                     }
@@ -1091,7 +1091,7 @@ module.exports = {
                         const reminderQuery = { userID: authorID, title: "Quote", isDM: true, isRecurring: true, };
                         const reminders = await Reminder.find(reminderQuery);
                         reminders.forEach(async reminder => {
-                            await rm.cancelReminderById(reminder._id);
+                            rm.cancelReminderById(reminder._id);
                         });
                         await Reminder.deleteMany(reminderQuery);
 
@@ -1115,7 +1115,7 @@ module.exports = {
 
 
         else {
-            await rm.updateTrackingReportReminder(bot, authorID);
+            // await rm.updateTrackingReportReminder(bot, authorID);
             return message.channel.send(showUserSettings);
         }
     }

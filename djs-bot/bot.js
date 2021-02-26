@@ -506,7 +506,7 @@ bot.on('voiceStateUpdate', async (oldState, newState) => {
         fn.voiceTrackingUserDeleteChannel(userID, oldChannelID);
         if (!autoSendReportEnabled) {
             await Track.deleteOne({ userID, voiceChannelID: oldChannelID, });
-            await rm.updateTrackingReportReminder(bot, userID);
+            // await rm.updateTrackingReportReminder(bot, userID);
         }
 
         // If they transferred to a new channel:
