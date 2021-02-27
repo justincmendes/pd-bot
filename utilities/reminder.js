@@ -853,7 +853,7 @@ module.exports = {
     },
 
     getEditInterval: async function (bot, message, PREFIX, timezoneOffset, daylightSetting, field,
-        instructionPrompt, title, embedColour = fn.defaultEmbedColour, errorReplyDelay = 60000,
+        instructionPrompt, title, embedColour = fn.defaultEmbedColour, minimumInterval = 60000, errorReplyDelay = 60000,
         intervalExamples = fn.intervalExamplesOver1Minute) {
         do {
             let interval = await fn.getUserEditString(bot, message, PREFIX, field, `${instructionPrompt}\n\n${intervalExamples}`,
@@ -862,7 +862,7 @@ module.exports = {
             else if (interval === "back") return interval;
             const timeArgs = interval.toLowerCase().split(/[\s\n]+/);
             interval = this.getProcessedInterval(message, timeArgs, PREFIX, timezoneOffset,
-                daylightSetting, errorReplyDelay);
+                daylightSetting, minimumInterval, errorReplyDelay);
             if (!interval) continue;
             else return interval;
         }
@@ -899,7 +899,7 @@ module.exports = {
 
     getInterval: async function (bot, message, PREFIX, timezoneOffset, daylightSetting,
         instructions = "__**Please enter the time you'd like in-between recurring reminders (interval):**__",
-        title = "Interval", embedColour = fn.defaultEmbedColour, dataCollectDelay = 300000, errorReplyDelay = 60000,
+        title = "Interval", embedColour = fn.defaultEmbedColour, minimumInterval = 60000, dataCollectDelay = 300000, errorReplyDelay = 60000,
         intervalExamples = fn.intervalExamplesOver1Minute,) {
         do {
             let interval = await fn.messageDataCollect(bot, message, PREFIX, `${instructions}\n\n${intervalExamples}`,
@@ -907,14 +907,15 @@ module.exports = {
             if (!interval || interval === "stop") return false;
             const timeArgs = interval.toLowerCase().split(' ');
             interval = this.getProcessedInterval(message, timeArgs, PREFIX, timezoneOffset,
-                daylightSetting, errorReplyDelay);
+                daylightSetting, minimumInterval, errorReplyDelay);
             if (!interval) continue;
             else return interval;
         }
         while (true)
     },
 
-    getProcessedInterval: function (message, timeArgs, PREFIX, timezoneOffset, daylightSetting, errorReplyDelay) {
+    getProcessedInterval: function (message, timeArgs, PREFIX, timezoneOffset, daylightSetting,
+        minimumInterval = 60000, errorReplyDelay = 60000) {
         let now = Date.now();
         const adjustedTimeArgs = timeArgs[0] !== "in" ? (["in"]).concat(timeArgs) : timeArgs
         interval = fn.timeCommandHandlerToUTC(adjustedTimeArgs, now, timezoneOffset, daylightSetting, true, true, true);
@@ -928,8 +929,8 @@ module.exports = {
             fn.sendReplyThenDelete(message, `**INVALID Interval**... ${PREFIX}date for **valid time inputs!**`, errorReplyDelay);
             return false;
         }
-        else if (interval < 60000) {
-            fn.sendReplyThenDelete(message, `Intervals must be **__> 1 minute__**`, errorReplyDelay);
+        else if (interval < minimumInterval) {
+            fn.sendReplyThenDelete(message, `Intervals must be **__> ${fn.millisecondsToTimeString(minimumInterval)}__**`, errorReplyDelay);
             return false;
         }
         else return { args: timeArgs.join(' '), duration: interval };

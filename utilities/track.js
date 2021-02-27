@@ -35,7 +35,8 @@ module.exports = {
         else endTime -= HOUR_IN_MS * timezoneOffset;
         let interval = await rm.getInterval(bot, message, PREFIX, timezoneOffset, daylightSaving,
             "**How often** do you want the **voice channel time tracking report?**",
-            "Voice Channel Tracking: Tracking Report Interval", trackEmbedColour, 300000);
+            "Voice Channel Tracking: Tracking Report Interval", trackEmbedColour, HOUR_IN_MS,
+            300000, 60000, fn.intervalExamplesOver1Hour);
         if (!interval) return false;
         else interval = interval.args;
         // Cancel any on-going Track Reminders:
