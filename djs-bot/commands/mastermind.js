@@ -1260,7 +1260,7 @@ module.exports = {
 
                                     // Update any Mastermind goals weekly reminders:
                                     if (mastermindDocument._id) {
-                                        const reminderCancelled = await rm.cancelReminderByConnectedDocument(mastermindDocument._id);
+                                        const reminderCancelled = rm.cancelReminderByConnectedDocument(mastermindDocument._id);
                                         const mastermindReminders = await Reminder.find({ isRecurring: true, connectedDocument: mastermindDocument._id });
                                         mastermindReminders.forEach(async reminder => {
                                             await Reminder.findByIdAndDelete(reminder._id);

@@ -1052,7 +1052,7 @@ module.exports = {
                                 if (fieldToEditIndex === 0 || fieldToEditIndex === 1 || fieldToEditIndex === 3
                                     || fieldToEditIndex === 7 || fieldToEditIndex === 8) {
                                     if (goalTargetID) {
-                                        await rm.cancelReminderByConnectedDocument(goalTargetID);
+                                        rm.cancelReminderByConnectedDocument(goalTargetID);
                                         const removeOldReminders = await Reminder.deleteMany({ connectedDocument: goalTargetID });
                                         if (removeOldReminders) if (removeOldReminders.deletedCount > 0) {
                                             if (fieldToEditIndex === 0 || fieldToEditIndex === 1 || fieldToEditIndex === 3
@@ -1161,7 +1161,7 @@ module.exports = {
                         if (err) return console.error(err);
                         console.log({ result });
                         if (targetGoal._id) {
-                            await rm.cancelReminderByConnectedDocument(targetGoal._id);
+                            rm.cancelReminderByConnectedDocument(targetGoal._id);
                             await Reminder.deleteMany({ connectedDocument: targetGoal._id });
                         }
                     });
@@ -1195,7 +1195,7 @@ module.exports = {
                             if (selectedGoal.object._id) {
                                 const currentReminders = await Reminder.find({ connectedDocument: selectedGoal.object._id });
                                 if (currentReminders) if (currentReminders.length) {
-                                    await rm.cancelReminderByConnectedDocument(selectedGoal.object._id);
+                                    rm.cancelReminderByConnectedDocument(selectedGoal.object._id);
                                     await Reminder.deleteMany({ connectedDocument: selectedGoal.object._id });
                                 }
                             }
@@ -1261,7 +1261,7 @@ module.exports = {
                         if (err) return console.error(err);
                         console.log({ result });
                         if (targetGoal._id) {
-                            await rm.cancelReminderByConnectedDocument(targetGoal._id);
+                            rm.cancelReminderByConnectedDocument(targetGoal._id);
                             await Reminder.deleteMany({ connectedDocument: targetGoal._id });
                         }
                     });

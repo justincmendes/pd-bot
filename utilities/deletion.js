@@ -29,7 +29,7 @@ module.exports = {
                 await Model.deleteMany(query);
                 documents.forEach(async (document) => {
                     if (document._id) {
-                        await cancelReminderByConnectedDocument(document._id);
+                        cancelReminderByConnectedDocument(document._id);
                         const reminders = await Reminder.deleteMany({ connectedDocument: document._id });
                         if (reminders.deletedCount === 0) {
                             console.log(`No reminders associated to ${document._id.toString()}`);
@@ -65,7 +65,7 @@ module.exports = {
                 if (query) await Model.deleteMany(query);
                 documents.forEach(async (document) => {
                     if (document._id) {
-                        await cancelReminderByConnectedDocument(document._id);
+                        cancelReminderByConnectedDocument(document._id);
                         const reminders = await Reminder.deleteMany({ connectedDocument: document._id });
                         if (reminders.deletedCount === 0) {
                             console.log(`No reminders associated to ${document._id.toString()}`);
@@ -102,7 +102,7 @@ module.exports = {
             else {
                 console.log(`Deleting ${Model.modelName} document (${objectID.toString()}) and it's associated reminders...`);
                 if (document._id) {
-                    await cancelReminderByConnectedDocument(document._id);
+                    cancelReminderByConnectedDocument(document._id);
                     const reminders = await Reminder.deleteMany({ connectedDocument: document._id });
                     if (reminders.deletedCount === 0) {
                         console.log(`No reminders associated to ${document._id.toString()}`);
@@ -134,7 +134,7 @@ module.exports = {
             }
             else {
                 console.log(`Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`);
-                await cancelReminderByConnectedDocument(document._id)
+                cancelReminderByConnectedDocument(document._id)
                 const reminders = await Reminder.deleteMany({ connectedDocument: document._id });
                 const deletedCount = reminders.deletedCount;
                 if (deletedCount === 0) {

@@ -303,8 +303,8 @@ module.exports = {
     /**
      * @param {mongoose.Schema.Types.ObjectId | String} connectedDocumentId
      */
-    cancelReminderByConnectedDocument: async function (connectedDocumentId) {
-        const success = await fn.cancelCronByConnectedDocument(reminders, connectedDocumentId);
+    cancelReminderByConnectedDocument: function (connectedDocumentId) {
+        const success = fn.cancelCronByConnectedDocument(reminders, connectedDocumentId);
         if (success) {
             console.log(`Successfully cancelled reminders connected to document ${connectedDocumentId}`);
         }

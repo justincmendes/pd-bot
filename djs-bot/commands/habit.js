@@ -1515,7 +1515,7 @@ module.exports = {
                                 if (habitTargetID) {
                                     const currentHabitReminders = await Reminder.find({ connectedDocument: habitTargetID });
                                     if (currentHabitReminders) if (currentHabitReminders.length) {
-                                        await rm.cancelReminderByConnectedDocument(habitTargetID);
+                                        rm.cancelReminderByConnectedDocument(habitTargetID);
                                         await Reminder.deleteMany({ connectedDocument: habitTargetID });
                                         currentHabitReminders.forEach(async reminder => {
                                             await setHabitReminder(bot, commandUsed, userID, reminder.endTime, reminder.interval,
@@ -1812,7 +1812,7 @@ module.exports = {
                             if (err) return console.error(err);
                             console.log({ result });
                             if (targetHabit._id) {
-                                await rm.cancelReminderByConnectedDocument(targetHabit._id);
+                                rm.cancelReminderByConnectedDocument(targetHabit._id);
                                 await Reminder.deleteMany({ connectedDocument: targetHabit._id });
                             }
                         });

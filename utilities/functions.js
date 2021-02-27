@@ -4409,13 +4409,13 @@ module.exports = {
     * @param {Discord.Collection} cronCollection
     * @param {mongoose.Schema.Types.ObjectId | String} connectedDocumentId
     */
-    cancelCronByConnectedDocument: async function (cronCollection, connectedDocumentId) {
+    cancelCronByConnectedDocument: function (cronCollection, connectedDocumentId) {
         try {
             if (connectedDocumentId) {
                 connectedDocumentId = connectedDocumentId.toString();
                 var foundOneReminder = null;
-                cronCollection.each(async cronSubArray => {
-                    cronSubArray.forEach(async (cronObject, i) => {
+                cronCollection.each(cronSubArray => {
+                    cronSubArray.forEach((cronObject, i) => {
                         const targetObject = cronObject.connectedId === connectedDocumentId;
                         if (targetObject) {
                             console.log(`Cancelling Reminder: connectedDocument = ${connectedDocumentId}, _id: = ${cronObject.id.toString()}`);
