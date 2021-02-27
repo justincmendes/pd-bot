@@ -139,8 +139,6 @@ module.exports = {
                             break;
                         case "Voice Channel Tracking": embedColour = trackEmbedColour;
                             break;
-                        case "Repeating Reminder": embedColour = repeatEmbedColour;
-                            break;
                         default:
                             // Assuming the embedColour passed in is valid hex code****
                             if (!embedColour && embedColour !== 0) {
@@ -159,7 +157,7 @@ module.exports = {
                         reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`;
                     }
                     message = new Discord.MessageEmbed()
-                        .setTitle(titleOut)
+                        .setTitle(title !== "Quote" && title !== "Voice Channel Tracking" ? titleOut : title)
                         .setDescription(message)
                         .setFooter(reminderFooter, user.displayAvatarURL())
                         .setColor(embedColour);
