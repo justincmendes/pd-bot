@@ -5235,27 +5235,27 @@ module.exports = {
     daysOfWeek: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     reminderTypes: ["Reminder", "Fast", "Goal", "Habit", "Journal", "Quote", "Mastermind", "Task"],
     fileFooterText: `🗑 to delete this window (not the entries)\n📎 to get all of this in a text file`,
-    timeExamples: `e.g. **now **|** 5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a`
+    timeExamples: `e.g. **now **|** 5.5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a`
         + `\n**|** next friday at 3AM **|** March 22, 2027 **|** today 10PM**`,
     futureTimeExamples: `e.g. **in 15 mins **|** next tuesday at 930p **|** 1 month from now 8pm\ntoday at 1:55P **|** July 5 at 9A **|** April 30, 2021 at 8:45am**`,
     intervalExamplesOver1Minute: `⏳ Any period longer than **1 minute** ⏳`
         + `\n\n**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)**`
         + `\n- # Days of the Week **(mondays; tuesdays; wednesdays; thursdays; fridays; saturdays; sundays)** **`
-        + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2 years`
-        + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50h 20m 95s`
+        + `\n\ne.g. **5 days **|** 12.25 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years`
+        + `\n**|** 1y:2.75d:3h:30.5m:2s **|** 18.2h **|** 12m **|** 6m50s **|** 25.5m 5s **|** 7d:2h **|** 5y 15.1d 50.3h 20.7m 95s`
         + `\n**|** friday **|** mon **|** 1 sat **|** 2 sun **|** tues at 6pm **|** wednesday at 4A **|** thurs at 12P PST**`,
     intervalExamplesOver1Hour: `⏳ Any period longer than **1 hour** ⏳`
         + `\n\n**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)**`
         + `\n- # Days of the Week **(mondays; tuesdays; wednesdays; thursdays; fridays; saturdays; sundays)** **`
-        + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2 years`
-        + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50h 20m 95s`
+        + `\n\ne.g. **5 days **|** 12.25 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years`
+        + `\n**|** 1y:2.75d:3h:30.5m:2s **|** 18.2h **|** 12m **|** 6m50s **|** 25.5m 5s **|** 7d:2h **|** 5y 15.1d 50.3h 20.7m 95s`
         + `\n**|** friday **|** mon **|** 1 sat **|** 2 sun **|** tues at 6pm **|** wednesday at 4A **|** thurs at 12P PST**`,
     durationExamples: `**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)** **`
-        + `\n\ne.g. **5 days **|** 12 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2 years`
-        + `\n**|** 1y:2d:3h:30m:2s **|** 18h **|** 12m **|** 6m50s **|** 25m 5s **|** 7d:2h **|** 5y 15d 50h 20m 95s**`,
+        + `\n\ne.g. **5 days **|** 12.25 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years`
+        + `\n**|** 1y:2.75d:3h:30.5m:2s **|** 18.2h **|** 12m **|** 6m50s **|** 25.5m 5s **|** 7d:2h **|** 5y 15.1d 50.3h 20.7m 95s**`,
     confirmationInstructions: "✅ Accept: \'Y\' \'yes\' \'1\'\n❌ Decline: \'N\' \'no\' \'0\' \'2\'",
     areasOfLifeEmojis: ['🥦', '🧠', '📚', '🙏', '🗣', '💼', '🎓', '💸', '🏠'],
     areasOfLife: ["Physical Health", "Mental/Mindset", "Personal Development", "Spiritual",
