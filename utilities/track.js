@@ -29,7 +29,7 @@ module.exports = {
     setUserTrackingReportReminder: async function (bot, message, PREFIX, timezoneOffset, daylightSaving) {
         let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSaving,
             "**When** do you want your **first voice channel time tracking report?**"
-            + "\n(Recommended: \`this sat at 12pm\` or \`this sun at 8a\` or \`next sat at 12pm\`)",
+            + "\n(Recommended: \`sat at 12pm\` or \`sun at 8a\` or \`next sat at 12pm\`)",
             "Voice Channel Tracking: Tracking Report Time of Day", true, trackEmbedColour);
         if (!endTime && endTime !== 0) return false;
         else endTime -= HOUR_IN_MS * timezoneOffset;
