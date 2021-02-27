@@ -6,6 +6,7 @@
 // FUTURE: Show the options for the full written form: i.e. Africa/Abidjan, Canada/Central, ...
 
 const fn = require("../../utilities/functions");
+const timezoneInstructions = fn.timezoneInstructions;
 
 module.exports = {
     name: "timezones",
@@ -15,6 +16,8 @@ module.exports = {
     args: false,
     run: async function run(bot, message, commandUsed, args, PREFIX,
         timezoneOffset, daylightSavings, forceSkip) {
-        message.channel.send(fn.getMessageEmbed("Timezone instructions in progress!", "Timezone Instructions"));
+        await fn.sendPaginationEmbed(bot, message.channel.id, message.author.id,
+            fn.getEmbedArray(timezoneInstructions, "Timezone Instructions"), true);
+        return;
     }
 };

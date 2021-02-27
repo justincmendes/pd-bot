@@ -459,6 +459,43 @@ module.exports = {
         + "\n**\|** Jan 5, 2020 00:00 -5:00 **\|** Aug 31/20 12a PDT **\|** September 8, 2020 559 CDT**"
         + "\n\nRemember **Daylight Saving Time (DST)** when entering **abbreviated timezones**:\n**EST and EDT** for example, are **different** because of DST.",
 
+    timezoneInstructions: "\n🌍 **In the forms** 🌍\n- __**Abbreviation**__ (EST | PST | CST | MST | AST | NT | CT)"
+        + "\n- __**UTC Timezone Offset:**__\n-- **+/- 00:00** (+8:45 | -900 or -9:00 | -12:30 | +6:00)"
+        + "\n-- **00.00** hours from UTC+00:00 (11 | 11.5 | 8.75 | -3)"
+        + "\n\n➡ __**List of Supported Timezones (as abbreviations)**__ ➡\n"
+        + " A **|** ACDT **|** ACST **|** ACT **|** ASCT **|** ASEAN **|** ACWT **|** ACWST"
+        + " **|** ADT **|** ARDT **|** ARADT **|** AEDT **|** AEST **|** AET **|** AFT **|** AKDT"
+        + " **|** AKST **|** ALMT **|** AMST **|** AMT **|** ARMT **|** ARMST **|** ARMDT **|** ANAT"
+        + " **|** ANAST **|** AQTT **|** ART **|** ARST **|** AST **|** AWST **|** AWDT **|** AZOST"
+        + " **|** AZOT **|** AZT **|** AZST **|** B **|** BDT **|** BNT **|** BIOT **|** BIT **|** BOT"
+        + " **|** BRST **|** BRT **|** BDST **|** BAST **|** BANST **|** BOST **|** BOUST **|** BVST **|** BST"
+        + " **|** BTT **|** C **|** CAT **|** CAST **|** CCT **|** CDT **|** CUDT **|** CUBDT **|** CUBAD"
+        + " **|** CEST **|** CET **|** CHADT **|** CHAST **|** CHOT **|** CHOST **|** CHST **|** CHUT"
+        + " **|** CIST **|** CIT **|** CKT **|** CLST **|** CLT **|** COST **|** COT **|** CST **|** CUST"
+        + " **|** CUBAT **|** CUBST **|** CUBA **|** CU **|** CUB **|** CT **|** CHIT **|** CHST **|** CVT"
+        + " **|** CWST **|** CXT **|** D **|** DAVT **|** DDUT **|** DFT **|** E **|** EASST **|** EAST"
+        + " **|** EAT **|** EACT **|** EASTC **|** ECABT **|** ECART **|** ECT **|** EDT **|** EEDT"
+        + " **|** EEST **|** EET **|** EGST **|** EGT **|** EIT **|** EST **|** F **|** FET **|** FJT"
+        + " **|** FJST **|** FKST **|** FKT **|** FNT **|** G **|** GALT **|** GAMT **|** GET **|** GFT"
+        + " **|** GILT **|** GIT **|** GMT **|** GSIT **|** GST **|** GYT **|** H **|** HDT **|** HADT"
+        + " **|** HAST **|** HAEC **|** HST **|** HKT **|** HMT **|** HOVST **|** HOVT **|** I **|** ICT"
+        + " **|** IDLW **|** IDT **|** IOT **|** IRDT **|** IRKT **|** IRKST **|** IRST **|** IST **|** ISRST"
+        + " **|** ISST **|** K **|** KALT **|** KGT **|** KOST **|** KRAT **|** KRAST **|** KST **|** L **|** LHST"
+        + " **|** LHSST **|** LHDT **|** LINT **|** M **|** MAGT **|** MAGST **|** MART **|** MAWT **|** MDT"
+        + " **|** MET **|** MEST **|** MHT **|** MIST **|** MIT **|** MMT **|** MSK **|** MST **|** MUT"
+        + " **|** MVT **|** MYT **|** N **|** NCT **|** NDT **|** NFT **|** NOVT **|** NOVST **|** NPT"
+        + " **|** NST **|** NT **|** NUT **|** NZDT **|** NZST **|** O **|** OMST **|** OMSST **|** ORAT"
+        + " **|** P **|** PDT **|** PET **|** PETT **|** PETST **|** PGT **|** PHOT **|** PHT **|** PKT"
+        + " **|** PMDT **|** PMST **|** PONT **|** PST **|** PWT **|** PYST **|** PYT **|** Q **|** QYZT"
+        + " **|** R **|** RET **|** ROTT **|** S **|** SAKT **|** SAMT **|** SAST **|** SBT **|** SCT"
+        + " **|** SGT **|** SLT **|** SLST **|** SRET **|** SRT **|** SST **|** SYOT **|** T **|** TAHT"
+        + " **|** THA **|** TFT **|** TJT **|** TKT **|** TLT **|** TMT **|** TRT **|** TRUT **|** TOT"
+        + " **|** TVT **|** U **|** ULAST **|** ULAT **|** UTC **|** UYST **|** UYT **|** UZT **|**"
+        + " V **|** VET **|** VLAT **|** VLAST **|** VOLT **|** VOST **|** VUT **|** W **|** WAKT"
+        + " **|** WAST **|** WAT **|** WDT **|** WEDT **|** WEST **|** WET **|** WFT **|** WIT"
+        + " **|** WGST **|** WGT **|** WIB **|** WIT **|** WITA **|** WST **|** WT"
+        + " **|** X **|** Y **|** YAKT **|** YAKST **|** YAP **|** YEKT **|** YEKST",
+
     userAndBotMutualServerIDs: async function (bot, userID) {
         // Check all of the servers the bot is in
         const botServersIDs = await this.getAllBotServers(bot);
@@ -3400,9 +3437,9 @@ module.exports = {
             if (splitElements[0] === string) {
                 splitElements = string.split(/([\,\;\:]+)/);
                 if (splitElements[0] === string) {
-                    splitElements = string.match(/[\s\S]{1,2045}[\s\n]/);
+                    splitElements = string.match(/[\s\S]{1,2045}[\s\n]*/g);
                     if (splitElements[0] === string) {
-                        splitElements = string.match(/[\s\S]{1,2046}/);
+                        splitElements = string.match(/[\s\S]{1,2046}/g);
                     }
                 }
             }
