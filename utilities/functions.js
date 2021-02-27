@@ -1937,7 +1937,8 @@ module.exports = {
                             else return false;
                         }
                         // If Long Relative Time Scale and a Defined Time: Receive Whole Number First Argument
-                        let numberOfTimeScales = argsHaveDefinedTime && isLongTimeScale ? parseInt(relativeTimeTest[2]) : parseFloat(relativeTimeTest[2]);
+                        // let numberOfTimeScales = argsHaveDefinedTime && isLongTimeScale ? parseInt(relativeTimeTest[2]) : parseFloat(relativeTimeTest[2]);
+                        let numberOfTimeScales = parseFloat(relativeTimeTest[2]);
                         if (futureTruePastFalse === false) {
                             numberOfTimeScales = -numberOfTimeScales;
                         }
@@ -1976,11 +1977,13 @@ module.exports = {
                             [hour, minute, second, millisecond] = splitTimeAdjustment;
                         }
                         console.log({ year, month, day, hour, minute, second, millisecond });
+                        [year, month, day, hour, minute, second, millisecond]
+                            = this.convertDecimalTimeScalesToIntegers(year, month, day, hour, minute, second, millisecond);
                         timestampOut = new Date(year, month, day, hour, minute, second, millisecond).getTime();
                         // if (timestampOut < 0 && !argsHaveDefinedTime) {
                         //     timestampOut -= HOUR_IN_MS;
                         // }
-                        console.log({ timestampOut });
+                        // console.log({ timestampOut });
                     }
                     break;
                 case 2:
@@ -2083,7 +2086,7 @@ module.exports = {
                         if (isRelativeToNow) messageCreatedTimestamp = Date.now() + RELATIVE_ADJUSTMENT;
 
                         let timeArray = this.getUTCTimeArray(messageCreatedTimestamp + HOUR_IN_MS * userTimezone);
-                        let [year, month, day, hour, minute, second,] = timeArray;
+                        let [year, month, day, hour, minute, second, millisecond] = timeArray;
                         var noEntries = true;
                         for (i = 2; i <= 6; i++) {
                             if (yearDayHourMinuteTest[i]) {
@@ -2110,7 +2113,9 @@ module.exports = {
                             }
                         }
                         if (noEntries) return false;
-                        timestampOut = new Date(year, month, day, hour, minute, second).getTime();
+                        [year, month, day, hour, minute, second,]
+                            = this.convertDecimalTimeScalesToIntegers(year, month, day, hour, minute, second, millisecond);
+                        timestampOut = new Date(year, month, day, hour, minute, second, millisecond).getTime();
                         timezoneString = yearDayHourMinuteTest[8];
                     }
                     break;
@@ -2206,7 +2211,18 @@ module.exports = {
         if (absoluteTimeTest && !forceRelativeTime) {
             absoluteTimeElements = this.getNumberOfDefinedElements(absoluteTimeTest)
             if (absoluteTimeElements >= 3) {
-                choice = 3;
+                if (relativeTimeTest) {
+                    if (relativeTimeTest[2]) {
+                        if (typeof parseFloat(relativeTimeTest[2]) === 'number') {
+                            if (this.isWholeNumber(parseFloat(relativeTimeTest[2]))) {
+                                choice = 3;
+                            }
+                        }
+                        else choice = 3;
+                    }
+                    else choice = 3;
+                }
+                else choice = 3;
             }
         }
         if (monthTimeTest && !forceRelativeTime) {
@@ -2491,6 +2507,66 @@ module.exports = {
         const seconds = Math.floor((milliseconds - HOUR_IN_MS * hours - MINUTE_IN_MS * minutes) / SECOND_IN_MS);
         const ms = milliseconds - HOUR_IN_MS * hours - MINUTE_IN_MS * minutes - SECOND_IN_MS * seconds;
         return [hours, minutes, seconds, ms];
+    },
+
+    isWholeNumber: function (number) {
+        return number % 1 == 0;
+    },
+
+    convertDecimalTimeScalesToIntegers: function (year, month, day, hour, minute, second, millisecond) {
+        // Check if the number has a non-zero decimal place:
+        // Use Modulus: n % 1 != 0
+        // OR Use: !Number.isInteger()
+        const isDecimalYear = !this.isWholeNumber(year);
+        if (isDecimalYear) {
+            const wholeNumberYear = parseInt(year);
+            const fractionOfYear = year - wholeNumberYear;
+            month += 12 * fractionOfYear;
+            year = wholeNumberYear;
+        }
+
+        const isDecimalMonth = !this.isWholeNumber(month);
+        if (isDecimalMonth) {
+            const wholeNumberMonth = parseInt(month);
+            const fractionOfMonth = month - wholeNumberMonth;
+            const targetMonthDays = this.getNumberOfDaysInMonthArray(year)[wholeNumberMonth];
+            day += targetMonthDays * fractionOfMonth;
+            month = wholeNumberMonth;
+        }
+
+        const isDecimalDay = !this.isWholeNumber(day);
+        if (isDecimalDay) {
+            const wholeNumberDay = parseInt(day);
+            const fractionOfDay = day - wholeNumberDay;
+            hour += 24 * fractionOfDay;
+            day = wholeNumberDay;
+        }
+
+        const isDecimalHour = !this.isWholeNumber(hour);
+        if (isDecimalHour) {
+            const wholeNumberHour = parseInt(hour);
+            const fractionOfHour = hour - wholeNumberHour;
+            minute += 60 * fractionOfHour;
+            hour = wholeNumberHour;
+        }
+
+        const isDecimalMinute = !this.isWholeNumber(minute);
+        if (isDecimalMinute) {
+            const wholeNumberMinute = parseInt(minute);
+            const fractionOfMinute = minute - wholeNumberMinute;
+            second += 60 * fractionOfMinute;
+            minute = wholeNumberMinute;
+        }
+
+        const isDecimalSecond = !this.isWholeNumber(second);
+        if (isDecimalSecond) {
+            const wholeNumberSecond = parseInt(second);
+            const fractionOfSecond = second - wholeNumberSecond;
+            millisecond += 1000 * fractionOfSecond;
+            second = wholeNumberSecond;
+        }
+        millisecond = parseInt(millisecond);
+        return [year, month, day, hour, minute, second, millisecond];
     },
 
     timestampToDateString: function (timestamp, showTime = true,
