@@ -9,6 +9,7 @@ const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 const hb = require("../../utilities/habit");
 const del = require("../../utilities/deletion");
+const { millisecondsToTimeString } = require("../../utilities/functions");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
@@ -1746,10 +1747,31 @@ module.exports = {
             return;
         }
 
-
-        else if (habitCommand === "today" || habitCommand === "tod" || habitCommand === "current" || habitCommand === "now"
-            || habitCommand === "stats" || habitCommand === "statistics" || habitCommand === "stat") {
-
+        // Show all of the stats for each of the user's habits that are not archived
+        else if (habitCommand === "today" || habitCommand === "tod" || habitCommand === "t" || habitCommand === "current"
+            || habitCommand === "now" || habitCommand === "stats" || habitCommand === "statistics" || habitCommand === "stat") {
+            const userHabits = await Habit.find({ userID: authorID, archived: false, })
+                .sort({ createdAt: +1 });
+            if (userHabits) if (userHabits.length) {
+                var habitOutputArray = new Array();
+                var i = 0;
+                for (const habit of userHabits) {
+                    i++;
+                    habitOutputArray.push(`__**Habit ${i}:**__ ${await habitDocumentToString(
+                        bot, habit, true, false, false, false
+                    )}`);
+                }
+                if (habitOutputArray.length) {
+                    const currentTimestamp = Date.now() + timezoneOffset * HOUR_IN_MS;
+                    await fn.sendPaginationEmbed(
+                        bot, message.channel.id, authorID,
+                        fn.getEmbedArray(habitOutputArray, `Today's Habits: ${fn.timestampToDateString(currentTimestamp, false, true, true, false)}`,
+                            true, `Habits ${fn.timestampToDateString(currentTimestamp, false, false, true, true)}`, habitEmbedColour), true);
+                    return;
+                }
+            }
+            message.reply(`**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+            return;
         }
 
 
