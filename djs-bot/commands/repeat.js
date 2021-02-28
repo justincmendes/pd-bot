@@ -589,7 +589,12 @@ module.exports = {
                                 break;
                             // Reminder Message does not need a prompt explanation
                             case 4:
-                                userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit, reminderEditMessagePrompt, reminderType, forceSkip, repeatEmbedColour);
+                                userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit,
+                                    `${reminderEditMessagePrompt}${reminderDocument.title === "Voice Channel Tracking" ?
+                                        `\n(NOTE: Any message changes to an active ${reminderDocument.title} reminder`
+                                        + ` **will not be saved** when the reminder sends!`
+                                        + ` You must change the **reminder type** to something else.)`
+                                        : ""}`, reminderType, forceSkip, repeatEmbedColour);
                                 break;
                             case 5:
                                 reminderEditMessagePrompt = `Would you like to make this a **__repeating (⌚)__ OR __one-time (1️⃣)__ reminder?**`;
