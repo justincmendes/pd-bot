@@ -592,7 +592,7 @@ module.exports = {
                                 userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, fieldToEdit,
                                     `${reminderEditMessagePrompt}${reminderDocument.title === "Voice Channel Tracking" ?
                                         `\n(NOTE: Any message changes to an active ${reminderDocument.title} reminder`
-                                        + ` **will not be saved** when the reminder sends!`
+                                        + ` **will not be saved** when the reminder gets sent!`
                                         + ` You must change the **reminder type** to something else.)`
                                         : ""}`, reminderType, forceSkip, repeatEmbedColour);
                                 break;
