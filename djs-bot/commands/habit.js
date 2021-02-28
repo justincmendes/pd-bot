@@ -9,7 +9,6 @@ const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 const hb = require("../../utilities/habit");
 const del = require("../../utilities/deletion");
-const { millisecondsToTimeString } = require("../../utilities/functions");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
@@ -26,7 +25,7 @@ const checkMissedSkipList = "\n`1` - **Check** ✅\n`2` - **Missed** ❌\n`3` - 
 
 // Private Function Declarations
 async function habitDocumentToString(bot, habitDocument, showConnectedGoal = false,
-    showRecentStats = false, showSettings = false, showTotalStats = false) {
+    showRecentStats = false, showSettings = false, showTotalStats = false, showPastXDays = 0) {
     console.log({ habitDocument });
     const { _id: habitID, userID, createdAt, archived, description, areaOfLife, reason, currentStreak, currentState,
         longestStreak, connectedGoal, settings, pastWeek, pastMonth, pastYear, nextCron } = habitDocument;
@@ -34,24 +33,26 @@ async function habitDocumentToString(bot, habitDocument, showConnectedGoal = fal
     const { habitCron, timezone } = userSettings;
     const { offset: timezoneOffset } = timezone;
     console.log({ userSettings, timezoneOffset });
-    const goalDocument = await Goal.findById(connectedGoal);
     let connectedGoalString = "";
-    if (showConnectedGoal && goalDocument) if (goalDocument.description && (goalDocument.type || goalDocument.type === 0)) {
-        connectedGoalString = `\n🎯 - **Associated Goal:** ${areasOfLifeEmojis[goalDocument.type] ? `${areasOfLifeEmojis[goalDocument.type]} ` : ""}`
-            + `${areasOfLife[goalDocument.type] ? `__${areasOfLife[goalDocument.type]}__` : ""}\n${goalDocument.description}`;
+    if (showConnectedGoal) {
+        const goalDocument = await Goal.findById(connectedGoal);
+        if (goalDocument) if (goalDocument.description && (goalDocument.type || goalDocument.type === 0)) {
+            connectedGoalString = `\n🎯 - **Associated Goal:** ${areasOfLifeEmojis[goalDocument.type] ? `${areasOfLifeEmojis[goalDocument.type]} ` : ""}`
+                + `${areasOfLife[goalDocument.type] ? `__${areasOfLife[goalDocument.type]}__` : ""}\n${goalDocument.description}`;
+        }
     }
     let statsString = "";
     if (showRecentStats) {
         statsString = '\n';
         const currentDate = new Date(Date.now() + HOUR_IN_MS * timezoneOffset);
         if (habitCron) if (habitCron.weekly || habitCron.weekly === 0) {
-            var pastWeekTotal = 7 - ((6 - (currentDate.getUTCDay() - habitCron.weekly)) % 7) || " N/A";
-            var pastWeekPercentage = !isNaN(pastWeekTotal) ? ` (${(((pastWeek || 0) / pastWeekTotal) * 100).toFixed(2)}%)` : "";
+            const pastWeekTotal = (6 - (habitCron.weekly - currentDate.getUTCDay())) % 7 + 1 || " N/A";
+            const pastWeekPercentage = !isNaN(pastWeekTotal) ? ` (${(((pastWeek || 0) / pastWeekTotal) * 100).toFixed(2)}%)` : "";
             statsString += `**Past Week:** ${pastWeek || 0}/${pastWeekTotal}${pastWeekPercentage}\n`;
         }
 
-        var pastMonthTotal = fn.getDayFromStartOfMonthAndCreatedAt(currentDate.getTime(), createdAt) || " N/A";
-        var pastMonthPercentage = !isNaN(pastMonthTotal) ? ` (${(((pastMonth || 0) / pastMonthTotal) * 100).toFixed(2)}%)` : "";
+        const pastMonthTotal = fn.getDayFromStartOfMonthAndCreatedAt(currentDate.getTime(), createdAt) || " N/A";
+        const pastMonthPercentage = !isNaN(pastMonthTotal) ? ` (${(((pastMonth || 0) / pastMonthTotal) * 100).toFixed(2)}%)` : "";
         statsString += `**Past Month:** ${pastMonth || 0}/${pastMonthTotal}${pastMonthPercentage}`;
 
         const createdDate = new Date(createdAt);
@@ -63,9 +64,47 @@ async function habitDocumentToString(bot, habitDocument, showConnectedGoal = fal
         else {
             pastYearTotal = fn.getDayOfYear(currentDate.getTime());
         }
-        var pastYearPercentage = !isNaN(pastYearTotal) ? ` (${(((pastYear || 0) / pastYearTotal) * 100).toFixed(2)}%)` : "";
+        const pastYearPercentage = !isNaN(pastYearTotal) ? ` (${(((pastYear || 0) / pastYearTotal) * 100).toFixed(2)}%)` : "";
         statsString += `\n**Past Year:** ${pastYear || 0}/${pastYearTotal}${pastYearPercentage}`;
     }
+
+    let pastXDaysString = "";
+    if (showPastXDays) if (typeof showPastXDays === 'number') {
+        showPastXDays = parseInt(showPastXDays);
+        // Gather all of the logs
+        let logs = await Log.find({ connectedDocument: habitID })
+            .sort({ timestamp: -1 });
+        if (logs) if (logs.length) {
+            // Find all of the logs between today's next cron
+            // & x days before
+            const pastXDaysFinal = hb.getPastDaysStreak(logs, timezoneOffset, habitCron, showPastXDays);
+            const pastXDaysPercentage = `${((pastXDaysFinal / showPastXDays) * 100).toFixed(2)}%`;
+            pastXDaysString += `\n**Past ${showPastXDays} Days:** ${pastXDaysFinal}/${showPastXDays} (${pastXDaysPercentage})`;
+
+            // const todaysCronTimestamp = new Date(
+            //     currentDate.getUTCFullYear(), currentDate.getUTCMonth(),
+            //     currentDate.getUTCDay()).getTime() + habitCron.daily;
+            // const pastCronTimestamp = new Date(
+            //     currentDate.getUTCFullYear(), currentDate.getUTCMonth(),
+            //     currentDate.getUTCDay() - showPastXDays).getTime() + habitCron.daily;
+            // logs = logs.map(log => {
+            //     const { timestamp } = log;
+            //     if (timestamp || timestamp === 0) {
+            //         if (timestamp >= pastCronTimestamp
+            //             && timestamp < todaysCronTimestamp) {
+            //             return log;
+            //         }
+            //     }
+            //     return null;
+            // })
+            //     // Take note of only the logs that have values of skips or checks!
+            //     .filter(log => log !== null).filter(log => log.state !== 0 && log.state !== 2);
+
+            // const pastXDaysPercentage = `${((logs.length / showPastXDays) * 100).toFixed(2)}%`;
+            // statsString += `\n**Past ${showPastXDays} Days:** ${logs.length}/${showPastXDays} (${pastXDaysPercentage})`;
+        }
+    }
+
     let settingsString = "";
     if (showSettings && settings) {
         settingsString = '\n';
@@ -160,7 +199,7 @@ async function habitDocumentToString(bot, habitDocument, showConnectedGoal = fal
         + `\n**Longest Streak:** ${longestStreak || 0}`
         + `${createdAt || createdAt === 0 ? `\n**Created At:** ${fn.timestampToDateString(createdAt, true, true, true)}` : ""}`
         + `${nextCron || nextCron === 0 ? `\n**Next Streak Reset:** ${fn.timestampToDateString(nextCron + timezoneOffset * HOUR_IN_MS, true, true, true)}` : ""}`
-        + statsString + settingsString + totalStatsString;
+        + statsString + pastXDaysString + settingsString + totalStatsString;
 
     outputString = fn.getRoleMentionToTextString(bot, outputString);
     return outputString;
@@ -168,7 +207,7 @@ async function habitDocumentToString(bot, habitDocument, showConnectedGoal = fal
 
 async function multipleHabitsToStringArray(bot, message, habitArray, numberOfHabits,
     entriesToSkip = 0, toString = false, showConnectedGoal = false, showRecentStats = false,
-    showSettings = false, showTotalStats = false) {
+    showSettings = false, showTotalStats = false, pastXDays = 0) {
     var habitsToString = new Array();
     console.log({ numberOfHabits });
     for (let i = 0; i < numberOfHabits; i++) {
@@ -177,7 +216,9 @@ async function multipleHabitsToStringArray(bot, message, habitArray, numberOfHab
             fn.sendErrorMessage(message, `**HABITS ${i + entriesToSkip + 1}**+ ONWARDS DO NOT EXIST...`);
             break;
         }
-        const habitString = `__**Habit ${i + entriesToSkip + 1}:**__ ${await habitDocumentToString(bot, habitArray[i], showConnectedGoal, showRecentStats, showSettings, showTotalStats)}`;
+        const habitString = `__**Habit ${i + entriesToSkip + 1}:**__ `
+            + `${await habitDocumentToString(bot, habitArray[i], showConnectedGoal,
+                showRecentStats, showSettings, showTotalStats, pastXDays)}`;
         habitsToString.push(habitString);
     }
     if (toString) habitsToString = habitsToString.join('\n\n')
@@ -313,13 +354,56 @@ function getGoalTypeString(goalType) {
 
 async function setHabitReminder(bot, commandUsed, userID, endTime, interval, habitDescription,
     habitID, countGoal = false, goalType = false, countMetric = false,) {
-    const reminderMessage = `**__Reminder to track your habit__** 😁.\n\n**Habit:** ${habitDescription}`
-        + `${countGoal || countGoal === 0 ? `\n**Current${goalType ? ` ${fn.toTitleCase(getGoalTypeString(goalType))}` : ""}:**`
-            + ` ${countGoal}${countMetric ? ` (${countMetric})` : ""}` : ""}`
-        + `\n\nType** \`?${commandUsed} log\` **- to **track your habit**`;
-    const now = fn.getCurrentUTCTimestampFlooredToSecond();
-    await rm.setNewDMReminder(bot, userID, now, endTime, reminderMessage,
-        "Habit", true, habitID, true, interval, false, habitEmbedColour);
+    try {
+        const reminderMessage = `**__Reminder to track your habit__** 😁.\n\n**Habit:** ${habitDescription}`
+            + `${countGoal || countGoal === 0 ? `\n**Current${goalType ? ` ${fn.toTitleCase(getGoalTypeString(goalType))}` : ""}:**`
+                + ` ${countGoal}${countMetric ? ` (${countMetric})` : ""}` : ""}`
+            + `\n\nType** \`?${commandUsed} log\` **- to **track your habit**`;
+        const now = fn.getCurrentUTCTimestampFlooredToSecond();
+        // Delete currently running reminders!
+        if (habitID) {
+            rm.cancelReminderByConnectedDocument(habitID);
+            await Reminder.deleteMany({ userID, connectedDocument: habitID });
+        }
+        await rm.setNewDMReminder(bot, userID, now, endTime, reminderMessage,
+            "Habit", true, habitID, true, interval, false, habitEmbedColour);
+        return true;
+    }
+    catch (err) {
+        console.log(err);
+        return false;
+    }
+}
+
+async function setUserHabitReminder(bot, message, PREFIX, timezoneOffset, daylightSaving,
+    commandUsed, userID, habitDocument) {
+    try {
+        let interval = await rm.getInterval(bot, message, PREFIX, timezoneOffset, daylightSaving,
+            "__**Please enter the time you'd like in-between recurring reminders (interval):**__",
+            "Habit: Reminder Interval", habitEmbedColour);
+        if (!interval) return false;
+        let { duration: intervalDuration, args: intervalArgs } = interval;
+
+        let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSaving,
+            "**When** would you like to **get your first habit reminder?**",
+            "Habit: First Reminder Time", true, habitEmbedColour);
+        if (!endTime) return false;
+        endTime -= HOUR_IN_MS * timezoneOffset;
+
+        const successfullySetReminder = await setHabitReminder(bot, commandUsed, userID, endTime, intervalArgs, habitDocument.description,
+            habitDocument._id, habitDocument.settings.countGoal, habitDocument.settings.countGoalType, habitDocument.settings.countMetric);
+        if (successfullySetReminder) {
+            console.log("Habit log recurring reminder set.");
+            message.reply(`Habit log recurring reminder set!\n**__First Reminder:__**`
+                + ` **${fn.millisecondsToTimeString(endTime - fn.getCurrentUTCTimestampFlooredToSecond())}** from now`
+                + `\n**__Interval:__** **${fn.millisecondsToTimeString(intervalDuration)}**`);
+        }
+        return successfullySetReminder;
+    }
+    catch (err) {
+        console.log(err);
+        return false;
+    }
 }
 
 module.exports = {
@@ -347,7 +431,7 @@ module.exports = {
         let userSettings = await User.findOne({ discordID: authorID });
         const { tier } = userSettings;
         let habitUsageMessage = `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\``
-            + "\n\n\`<ACTION>\`: **add; see; today; log; edit; end; archive; delete; post**"
+            + "\n\n\`<ACTION>\`: **add; see; log/end; delete; edit; archive; post; today; stats/statistics; past (stats on past x days);**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         habitUsageMessage = fn.getMessageEmbed(habitUsageMessage, "Habit: Help", habitEmbedColour);
         const habitHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
@@ -366,7 +450,8 @@ module.exports = {
 
 
         else if (habitCommand === "start" || habitCommand === "create" || habitCommand === "s" || habitCommand === "set"
-            || habitCommand === "c" || habitCommand === "make" || habitCommand === "m" || habitCommand === "add") {
+            || habitCommand === "st" || habitCommand === "c" || habitCommand === "make" || habitCommand === "m"
+            || habitCommand === "add") {
             if (tier === 1) {
                 if (totalHabitNumber >= habitMax) {
                     return message.channel.send(fn.getMessageEmbed(fn.getTierMaxMessage(PREFIX, commandUsed, habitMax, ["Habit", "Habits"], 1, false),
@@ -485,7 +570,7 @@ module.exports = {
                         else countGoalType++;
                         goalTypeString = getGoalTypeString(countGoalType);
                         countGoal = await fn.getNumberEntry(bot, message, PREFIX,
-                            `**What is your ${goalTypeString} for __${countMetric}?:__**\n\n(Enter a number)`,
+                            `**What is your ${goalTypeString} for __${countMetric}?__**\n\n(Enter a number)`,
                             `Habit: Creation - Advanced Settings: Count Goal`, forceSkip, true, true,
                             undefined, undefined, habitEmbedColour, additionalInstructions, additionalKeywords);
                         if (!countGoal && countGoal !== 0) return;
@@ -626,27 +711,13 @@ module.exports = {
                         message.reply(`**Habit ${await getHabitIndexByFunction(authorID, habitDocument._id, totalHabitNumber, false, getOneHabitByCreatedAt)} Saved!**`);
                     })
                     .catch(err => console.error(err));
-                const confirmReminder = await fn.getUserConfirmation(bot, message, PREFIX, "Do you want to set a **recurring reminder** for when you want to **log/complete this habit?**"
+
+                const confirmReminder = await fn.getUserConfirmation(bot, message, PREFIX,
+                    "Do you want to set a **recurring reminder** for when you want to **log/complete this habit?**"
                     + `\n\n${habitDescription}`, false, "Habit: Completion Reminder", 180000);
                 if (!confirmReminder) return;
-
-                let interval = await rm.getInterval(bot, message, PREFIX, timezoneOffset, daylightSaving,
-                    "__**Please enter the time you'd like in-between recurring reminders (interval):**__",
-                    "Habit: Reminder Interval", habitEmbedColour);
-                if (!interval) return;
-                let { duration: intervalDuration, args: intervalArgs } = interval;
-
-                let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSaving,
-                    "**When** would you like to **get your first habit reminder?**",
-                    "Habit: First Reminder Time", forceSkip, habitEmbedColour);
-                if (!endTime) return;
-                endTime -= HOUR_IN_MS * timezoneOffset;
-
-                await setHabitReminder(bot, commandUsed, authorID, endTime, intervalArgs, habitDescription,
-                    habitDocument._id, countGoal, countGoalType, countMetric);
-                console.log("Habit log recurring reminder set.");
-                message.reply(`Habit log recurring reminder set!\n**__First Reminder:__** **${fn.millisecondsToTimeString(endTime - fn.getCurrentUTCTimestampFlooredToSecond())}** from now`
-                    + `\n**__Interval:__** **${fn.millisecondsToTimeString(intervalDuration)}**`);
+                await setUserHabitReminder(bot, message, PREFIX, timezoneOffset, daylightSaving,
+                    commandUsed, authorID, habitDocument);
                 return;
             }
             while (reset)
@@ -654,8 +725,8 @@ module.exports = {
         }
 
 
-        else if (habitCommand === "delete" || habitCommand === "remove" || habitCommand === "del" || habitCommand === "d"
-            || habitCommand === "rem" || habitCommand === "r") {
+        else if (habitCommand === "delete" || habitCommand === "del" || habitCommand === "d"
+            || habitCommand === "remove" || habitCommand === "rem" || habitCommand === "r") {
             /**
              * Allow them to delete any habits - archived or not
              */
@@ -700,7 +771,7 @@ module.exports = {
                     if (indexByRecency) habitCollection = await fn.getEntriesByRecency(Habit, { userID: authorID, archived: isArchived, }, 0, numberArg);
                     else habitCollection = await getHabitsByCreatedAt(authorID, 0, numberArg, isArchived);
                     const habitArray = fn.getEmbedArray(await multipleHabitsToStringArray(bot,
-                        message, habitCollection, numberArg, 0, false, true, false, true
+                        message, habitCollection, numberArg, 0, false, true, true, true, true
                     ), '', true, false, habitEmbedColour);
                     const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} habits?**`;
                     const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, habitArray, multipleDeleteMessage, forceSkip,
@@ -762,7 +833,7 @@ module.exports = {
                             habitView = await getOneHabitByCreatedAt(authorID, toDelete[i] - 1, isArchived);
                         }
                         habitTargetIDs.push(habitView._id);
-                        habitArray.push(`__**Habit ${toDelete[i]}:**__ ${await habitDocumentToString(bot, habitView, true, false, true)}`);
+                        habitArray.push(`__**Habit ${toDelete[i]}:**__ ${await habitDocumentToString(bot, habitView, true, true, true, true)}`);
                     }
                     const deleteConfirmMessage = `Are you sure you want to **delete habits ${toDelete.toString()}?**`;
                     const sortType = indexByRecency ? "By Recency" : "By Date Created";
@@ -808,7 +879,8 @@ module.exports = {
                             var habitCollection;
                             if (indexByRecency) habitCollection = await fn.getEntriesByRecency(Habit, { userID: authorID, archived: isArchived, }, skipEntries, pastNumberOfEntries);
                             else habitCollection = await getHabitsByCreatedAt(authorID, skipEntries, pastNumberOfEntries, isArchived);
-                            const habitArray = fn.getEmbedArray(await multipleHabitsToStringArray(bot, message, habitCollection, pastNumberOfEntries, skipEntries, false, true, false, true),
+                            const habitArray = fn.getEmbedArray(await multipleHabitsToStringArray(bot, message,
+                                habitCollection, pastNumberOfEntries, skipEntries, false, true, true, true, true),
                                 '', true, false, habitEmbedColour);
                             if (skipEntries >= totalHabitNumber) return;
                             const sortType = indexByRecency ? "By Recency" : "By Date Created";
@@ -846,9 +918,9 @@ module.exports = {
                     const habitTargetID = habitView._id;
                     console.log({ habitTargetID });
                     const habitIndex = await getRecentHabitIndex(authorID, isArchived);
-                    const habitEmbed = fn.getEmbedArray(`__**Habit ${habitIndex}:**__ ${await habitDocumentToString(bot, habitView, true, false, true)}`,
+                    const habitEmbed = fn.getEmbedArray(`__**Habit ${habitIndex}:**__ ${await habitDocumentToString(bot, habitView, true, true, true, true)}`,
                         `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, true, false, habitEmbedColour);
-                    const deleteConfirmMessage = `Are you sure you want to **delete your most recent habit?:**`;
+                    const deleteConfirmMessage = `Are you sure you want to **delete your most recent habit?**`;
                     const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, habitEmbed, deleteConfirmMessage, forceSkip,
                         `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`, 600000);
                     if (deleteIsConfirmed) {
@@ -898,7 +970,7 @@ module.exports = {
                 }
                 const habitTargetID = habitView._id;
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
-                const habitEmbed = fn.getEmbedArray(`__**Habit ${pastNumberOfEntriesIndex}:**__ ${await habitDocumentToString(bot, habitView, true, false, true)}`,
+                const habitEmbed = fn.getEmbedArray(`__**Habit ${pastNumberOfEntriesIndex}:**__ ${await habitDocumentToString(bot, habitView, true, true, true, true)}`,
                     `Habit${isArchived ? ` Archive` : ""}: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`, true, false, habitEmbedColour);
                 const deleteConfirmMessage = `Are you sure you want to **delete Habit ${pastNumberOfEntriesIndex}?**`;
                 const deleteConfirmation = await fn.getPaginatedUserConfirmation(bot, message, PREFIX, habitEmbed, deleteConfirmMessage, forceSkip,
@@ -1021,7 +1093,7 @@ module.exports = {
                     if (indexByRecency) habitView = await fn.getEntriesByRecency(Habit, { userID: authorID, archived: isArchived }, 0, habitIndex);
                     else habitView = await getHabitsByCreatedAt(authorID, 0, habitIndex, isArchived);
                     console.log({ habitView, pastNumberOfEntriesIndex: habitIndex });
-                    const habitArray = await multipleHabitsToStringArray(bot, message, habitView, habitIndex, 0, false, true, true, true, true);
+                    const habitArray = await multipleHabitsToStringArray(bot, message, habitView, habitIndex, 0, false, true, false, false, false);
                     await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
                         habitArray, `Habit${isArchived ? ` Archive` : ""}: See ${habitIndex} Habits(${sortType})`,
                         true, `Habits ${fn.timestampToDateString(
@@ -1063,7 +1135,8 @@ module.exports = {
                                 if (indexByRecency) habitView = await fn.getEntriesByRecency(Habit, { userID: authorID, archived: isArchived }, entriesToSkip, habitIndex);
                                 else habitView = await getHabitsByCreatedAt(authorID, entriesToSkip, habitIndex, isArchived);
                                 console.log({ habitView });
-                                const habitStringArray = await multipleHabitsToStringArray(bot, message, habitView, habitIndex, entriesToSkip, false, true, true, true, true);
+                                const habitStringArray = await multipleHabitsToStringArray(bot, message, habitView,
+                                    habitIndex, entriesToSkip, false, true, false, false, false);
                                 await fn.sendPaginationEmbed(bot, message.channel.id, authorID, fn.getEmbedArray(
                                     habitStringArray, `Habit${isArchived ? ` Archive` : ""}: See ${habitIndex} Habits Past ${entriesToSkip} (${sortType})`,
                                     true, `Habits ${fn.timestampToDateString(
@@ -1088,7 +1161,7 @@ module.exports = {
                 }
                 // NOT using the past functionality:
                 const sortType = indexByRecency ? "By Recency" : "By Date Created";
-                const habitString = `__ ** Habit ${habitIndex}:** __ ${await habitDocumentToString(bot, habitView, true, true, true, true)} `;
+                const habitString = `__ ** Habit ${habitIndex}:** __ ${await habitDocumentToString(bot, habitView, true, false, false, false)} `;
                 const habitEmbed = fn.getEmbedArray(habitString, `Habit${isArchived ? ` Archive` : ""}: See Habit ${habitIndex} (${sortType})`,
                     true, `Habit ${fn.timestampToDateString(
                         Date.now() + timezoneOffset * HOUR_IN_MS, false, false, true, true
@@ -1352,7 +1425,7 @@ module.exports = {
                             }
                             break;
                         case 13:
-                            habitEditMessagePrompt = `**What is your ${goalTypeString || "goal"} for __${countMetric || "this count-based habit"}?:__**`;
+                            habitEditMessagePrompt = `**What is your ${goalTypeString || "goal"} for __${countMetric || "this count-based habit"}?__**`;
                             userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, habitEditMessagePrompt, type, forceSkip, habitEmbedColour);
                             break;
                     }
@@ -1525,6 +1598,22 @@ module.exports = {
                                     }
                                 }
                             }
+
+                            // Update Stats!
+                            const { habitCron } = userSettings;
+                            const currentLogs = await Log.find({ connectedDocument: habitDocument._id })
+                                .sort({ timestamp: -1 });
+                            currentStreak = hb.calculateCurrentStreak(
+                                currentLogs, timezoneOffset, habitCron,
+                                isWeeklyType, cronPeriods,
+                            );
+                            if (currentStreak > (longestStreak ? longestStreak : 0)) {
+                                longestStreak = currentStreak;
+                            }
+                            pastWeek = hb.getPastWeekStreak(currentLogs, timezoneOffset, habitCron, createdAt);
+                            pastMonth = hb.getPastMonthStreak(currentLogs, timezoneOffset, habitCron, createdAt);
+                            pastYear = hb.getPastYearStreak(currentLogs, timezoneOffset, habitCron, createdAt);
+
                             console.log(`Editing ${authorID}'s Habit ${habitIndex} (${sortType})`);
                             habitDocument = await Habit.findOneAndUpdate({ _id: habitTargetID }, {
                                 $set:
@@ -1566,7 +1655,7 @@ module.exports = {
                                     : await getHabitIndexByFunction(authorID, habitTargetID, isArchived ? totalArchiveNumber : totalHabitNumber, isArchived, getOneHabitByCreatedAt);
                                 console.log({ habitDocument, habitTargetID, fieldToEditIndex });
                                 showHabit = await habitDocumentToString(bot, habitDocument, true, true, true, true);
-                                const continueEditMessage = `Do you want to continue **editing ${isArchived ? "Archived " : ""}Habit ${habitIndex}?:**\n\n__**${isArchived ? "Archived " : ""}`
+                                const continueEditMessage = `Do you want to continue **editing ${isArchived ? "Archived " : ""}Habit ${habitIndex}?**\n\n__**${isArchived ? "Archived " : ""}`
                                     + `Habit ${habitIndex}:**__ ${showHabit}${fieldToEditIndex === 0 ? `\n\n__**Edited Log:**__\n${hb.logDocumentToString(logs[targetLogIndex])}` : ""}`;
                                 continueEdit = await fn.getUserConfirmation(bot, message, PREFIX, continueEditMessage, forceSkip, `Habit${isArchived ? " Archive" : ""}: Continue Editing Habit ${habitIndex}?`, 300000);
                             }
@@ -1613,7 +1702,8 @@ module.exports = {
                 forceSkip, true, false, true, habitEmbedColour);
             if (!targetChannel) return;
             const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
-            const habitStringArray = await multipleHabitsToStringArray(bot, message, habits, totalHabitNumber, 0, false, true);
+            const habitStringArray = await multipleHabitsToStringArray(bot, message, habits, totalHabitNumber, 0,
+                false, true, false, false, false);
             if (habitStringArray.length) habitStringArray[0] = `<@!${authorID}>\n${habitStringArray[0]}`;
             const posts = fn.getEmbedArray(habitStringArray, `${member ? `${member.displayName}'s` : ""} Habits`
                 + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, false, habitEmbedColour);
@@ -1624,8 +1714,8 @@ module.exports = {
         }
 
 
-        else if (habitCommand === "log" || habitCommand === "track" || habitCommand === "check" || habitCommand === "complete"
-            || habitCommand === "end" || habitCommand === "e") {
+        else if (habitCommand === "log" || habitCommand === "track" || habitCommand === "check"
+            || habitCommand === "complete" || habitCommand === "end" || habitCommand === "e") {
             // (similar indexing to edit, recent or #) + archive
             // Make a list - similar to archive
             let habitEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\``
@@ -1647,41 +1737,86 @@ module.exports = {
             if (!habitArray.length) return message.reply(`**No ${isArchived ? "archived " : ""}habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
 
             do {
-                let targetHabit = await fn.getUserSelectedObject(bot, message, PREFIX, "__**Which habit would you like to log?:**__",
-                    `Habit${isArchived ? " Archive" : ""}: Select Habit To Log`, habitArray, "description", true, habitEmbedColour, 600000);
+                let targetHabit = await fn.getUserSelectedObject(bot, message, PREFIX, "__**Which habit would you like to log?**__",
+                    `Habit${isArchived ? " Archive" : ""}: Select Habit To Log`, habitArray, "description", false, habitEmbedColour, 600000);
                 if (!targetHabit) return;
                 else targetHabit = targetHabit.object;
 
+                // If it is a count habit, get the count input first.
+
+                const { habitCron } = userSettings;
+                const { settings } = targetHabit;
+                const { isCountType, countGoal, countMetric,
+                    countGoalType, autoLogType } = settings;
+                var countValue;
+                const countGoalTypeString = fn.toTitleCase(getGoalTypeString(countGoalType));
+                if (isCountType) {
+                    countValue = await fn.getNumberEntry(bot, message, PREFIX,
+                        `Enter your **${countMetric}** (${countGoalTypeString}: **${countGoal}**)`,
+                        `Habit${isArchived ? " Archive" : ""}: ${countGoalTypeString}`,
+                        true, true, true, undefined, undefined, habitEmbedColour);
+                    if (!countValue && countValue !== 0) countValue = undefined;
+                }
+                // Then based on the user's countValue (if any), show the suggested log based on their goal
+                const suggestedLogFromCountGoal = isCountType ?
+                    `\n\n**${countMetric}:** ${hb.getStateEmoji(countValue >= countGoal ? 1 : 2)}`
+                    + `\nCurrent Value (**${countValue}**) vs. ${countGoalTypeString} (**${countGoal}**)`
+                    : "";
+
                 let habitLog = await fn.userSelectFromList(bot, message, PREFIX, checkMissedSkipList, 3,
-                    `__**What is the status of your habit?:**__\n**Currently:** ${hb.getStateEmoji(targetHabit.currentState)}`,
+                    `__**What will you set the status of your habit to?**__\n**Currently:**`
+                    + ` ${hb.getStateEmoji(targetHabit.currentState)}${suggestedLogFromCountGoal}`,
                     `Habit${isArchived ? " Archive" : ""}: Log`, habitEmbedColour, 600000, 0);
                 if (!habitLog && habitLog !== 0) return;
                 habitLog++;
 
+                let currentLogs = await Log.find({ connectedDocument: targetHabit._id }).sort({ timestamp: -1 });
+                let todaysLog = await hb.getTodaysLog(currentLogs, timezoneOffset, habitCron.daily);
+                var currentReflection = "";
+                if (todaysLog) {
+                    currentReflection = todaysLog.message || "";
+                }
+                var reflectionMessage;
+                const confirmReflection = await fn.getUserConfirmation(bot, message, PREFIX,
+                    `Would you like to **__add a${currentReflection ? " new" : ""} reflection message__** to go with your habit log?`
+                    + `\n\n**Current Log: ${hb.getStateEmoji(habitLog)}**`
+                    + `\n**Current Reflection Message:**${currentReflection ? `\n${currentReflection}` : " N/A"}`,
+                    forceSkip, `Habit${isArchived ? " Archive" : ""}: Write Reflection Message? (Optional)`, 300000);
+                if (confirmReflection) {
+                    reflectionMessage = await fn.getMultilineEntry(bot, message, PREFIX,
+                        `**Write a reflection message to go with your habit log.**\n(Within 1000 characters)`,
+                        `Habit${isArchived ? " Archive" : ""}: Reflection Message`,
+                        true, habitEmbedColour, 1000);
+                    if (!reflectionMessage) reflectionMessage = undefined;
+                    else reflectionMessage = reflectionMessage.message;
+                }
+                else if (confirmReflection === null) return;
+
                 const confirmEnd = await fn.getUserConfirmation(bot, message, PREFIX,
-                    `**__Are you sure you want to log this habit as:__ ${hb.getStateEmoji(habitLog)}?**`
-                    + `\n\n**Previously:** ${hb.getStateEmoji(targetHabit.currentState)}\n\n🎯 - __**Description:**__\n${targetHabit.description}`,
-                    forceSkip, `Habit${isArchived ? " Archive" : ""}: Confirm Log`);
+                    `**__Are you sure you want to log this habit as:__** ${hb.getStateEmoji(habitLog)}`
+                    + `\n**Previously:** ${hb.getStateEmoji(targetHabit.currentState)}\n\n🎯 - __**Description:**__\n${targetHabit.description}`,
+                    forceSkip, `Habit${isArchived ? " Archive" : ""}: Confirm Log?`);
                 if (confirmEnd) {
                     // 1. Check if there has already been a log for today.
                     // 2. If so, find it and edit it, otherwise create a new one with the desired log
                     // If no logs
-                    const { habitCron } = userSettings;
-                    const currentLogs = await Log.find({ connectedDocument: targetHabit._id }).sort({ timestamp: -1 });
-                    const todaysLog = await hb.getTodaysLog(currentLogs, timezoneOffset, habitCron.daily);
+                    currentLogs = await Log.find({ connectedDocument: targetHabit._id }).sort({ timestamp: -1 });
+                    todaysLog = await hb.getTodaysLog(currentLogs, timezoneOffset, habitCron.daily);
                     console.log({ todaysLog });
                     if (todaysLog) {
                         console.log("Includes logs");
-                        const recentLog = await Log.findOne({ connectedDocument: targetHabit._id })
-                            .sort({ _id: -1 });
-                        if (!recentLog) return;
-                        await Log.updateOne({ connectedDocument: recentLog.connectedDocument }, {
+                        // const recentLog = await Log.findOne({ connectedDocument: targetHabit._id })
+                        //     .sort({ _id: -1 });
+                        // if (!recentLog) return;
+                        todaysLog = await Log.findOneAndUpdate({ _id: todaysLog._id }, {
                             $set: {
                                 timestamp: fn.getCurrentUTCTimestampFlooredToSecond()
                                     + timezoneOffset * HOUR_IN_MS,
                                 state: habitLog,
+                                message: reflectionMessage,
                             }
-                        });
+                        }, { new: true });
+                        // else return console.error(`Today's Log has no connectedDocument!`);
                     }
                     else {
                         console.log("No logs");
@@ -1690,6 +1825,7 @@ module.exports = {
                             timestamp: fn.getCurrentUTCTimestampFlooredToSecond()
                                 + timezoneOffset * HOUR_IN_MS,
                             state: habitLog,
+                            message: reflectionMessage,
                             connectedDocument: targetHabit._id,
                         });
                         if (!newLog) return;
@@ -1699,9 +1835,61 @@ module.exports = {
                                 console.error(err);
                                 return;
                             });
+                        todaysLog = newLog;
                     }
+                    if (isCountType && (countValue || countValue === 0)) {
+                        await Log.updateOne({ _id: todaysLog._id }, { $push: { count: countValue } });
+                    }
+
                     console.log({ targetHabit });
-                    await Habit.updateOne({ _id: targetHabit._id }, { $set: { currentState: habitLog } },
+                    var { currentStreak, longestStreak, pastWeek, pastMonth, pastYear } = targetHabit;
+                    currentLogs = await Log.find({ connectedDocument: targetHabit._id }).sort({ timestamp: -1 });
+                    currentStreak = hb.calculateCurrentStreak(
+                        currentLogs, timezoneOffset, habitCron,
+                        targetHabit.settings.isWeeklyType,
+                        targetHabit.settings.cronPeriods,
+                    );
+                    if (currentStreak > (longestStreak ? longestStreak : 0)) {
+                        longestStreak = currentStreak;
+                    }
+                    pastWeek = hb.getPastWeekStreak(currentLogs, timezoneOffset, habitCron, targetHabit.createdAt);
+                    pastMonth = hb.getPastMonthStreak(currentLogs, timezoneOffset, habitCron, targetHabit.createdAt);
+                    pastYear = hb.getPastYearStreak(currentLogs, timezoneOffset, habitCron, targetHabit.createdAt);
+                    // // Going from unchecked to check: increment streak
+                    // if (previousState === 0 || previousState === 2) {
+                    //     if (habitLog === 1 || habitLog === 3) {
+                    //         if (longestStreak === currentStreak) {
+                    //             longestStreak++;
+                    //         }
+                    //         currentStreak++;
+                    //     }
+                    // }
+                    // // Going from check to unchecked: decrement streak
+                    // else if (previousState === 1 || previousState === 3) {
+                    //     if (habitLog === 0 || habitLog === 2) {
+                    //         if (longestStreak === currentStreak) {
+                    //             if (longestStreak <= 0) {
+                    //                 longestStreak = 0;
+                    //             }
+                    //             else longestStreak--;
+                    //         }
+                    //         if (currentStreak <= 0) {
+                    //             currentStreak = 0;
+                    //         }
+                    //         else currentStreak--;
+                    //     }
+                    // }
+                    await Habit.updateOne({ _id: targetHabit._id }, {
+                        $set:
+                        {
+                            currentState: habitLog,
+                            currentStreak,
+                            longestStreak,
+                            pastWeek,
+                            pastMonth,
+                            pastYear,
+                        }
+                    },
                         err => { if (err) return console.error(err); });
                     return;
                 }
@@ -1749,7 +1937,7 @@ module.exports = {
 
         // Show all of the stats for each of the user's habits that are not archived
         else if (habitCommand === "today" || habitCommand === "tod" || habitCommand === "t" || habitCommand === "current"
-            || habitCommand === "now" || habitCommand === "stats" || habitCommand === "statistics" || habitCommand === "stat") {
+            || habitCommand === "now") {
             const userHabits = await Habit.find({ userID: authorID, archived: false, })
                 .sort({ createdAt: +1 });
             if (userHabits) if (userHabits.length) {
@@ -1757,9 +1945,10 @@ module.exports = {
                 var i = 0;
                 for (const habit of userHabits) {
                     i++;
-                    habitOutputArray.push(`__**Habit ${i}:**__ ${await habitDocumentToString(
-                        bot, habit, true, false, false, false
-                    )}`);
+                    habitOutputArray.push(`__**Habit ${i}:**__ `
+                        + await habitDocumentToString(
+                            bot, habit, true, false, false, false
+                        ));
                 }
                 if (habitOutputArray.length) {
                     const currentTimestamp = Date.now() + timezoneOffset * HOUR_IN_MS;
@@ -1775,17 +1964,97 @@ module.exports = {
         }
 
 
-        // Get the stats for the Past X Days
-        else if (habitCommand === "past") {
+        else if (habitCommand === "stats" || habitCommand === "statistics" || habitCommand === "stat") {
+            const userHabits = await Habit.find({ userID: authorID, archived: false, })
+                .sort({ createdAt: +1 });
+            if (userHabits) if (userHabits.length) {
+                var habitOutputArray = new Array();
+                var i = 0;
+                for (const habit of userHabits) {
+                    i++;
+                    habitOutputArray.push(`__**Habit ${i}:**__ `
+                        + await habitDocumentToString(
+                            bot, habit, true, true, false, true
+                        ));
+                }
+                if (habitOutputArray.length) {
+                    const currentTimestamp = Date.now() + timezoneOffset * HOUR_IN_MS;
+                    await fn.sendPaginationEmbed(
+                        bot, message.channel.id, authorID,
+                        fn.getEmbedArray(habitOutputArray, `Habits: Stats`, true,
+                            `Habits ${fn.timestampToDateString(currentTimestamp, false, false, true, true)}`, habitEmbedColour), true);
+                    return;
+                }
+            }
+            message.reply(`**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+            return;
+        }
 
+
+        // Get the stats for the Past X Days
+        // Show for ALL (non-archived) habits!
+        else if (habitCommand === "past") {
+            const userHabits = await Habit.find({ userID: authorID, archived: false, })
+                .sort({ createdAt: +1 });
+            if (userHabits) if (userHabits.length) {
+                const pastXDays = parseInt(habitType);
+                if (pastXDays) {
+                    var habitOutputArray = new Array();
+                    var i = 0;
+                    for (const habit of userHabits) {
+                        i++;
+                        habitOutputArray.push(`__**Habit ${i}:**__ `
+                            + await habitDocumentToString(
+                                bot, habit, true, true, false, false, pastXDays
+                            ));
+                    }
+                    if (habitOutputArray.length) {
+                        const currentTimestamp = Date.now() + timezoneOffset * HOUR_IN_MS;
+                        await fn.sendPaginationEmbed(
+                            bot, message.channel.id, authorID,
+                            fn.getEmbedArray(habitOutputArray, `Habits: Past ${pastXDays} Days Stats`,
+                                true, `Habits ${fn.timestampToDateString(currentTimestamp, false, false, true, true)}`, habitEmbedColour), true);
+                        return;
+                    }
+                }
+                message.reply(`**Please enter a number __> 0__**: \`${PREFIX}${commandUsed} ${habitCommand} <NUMBER>\``);
+                return;
+            }
+            message.reply(`**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`);
+            return;
         }
 
 
         // Set one or more reminders for a specific habit
         // Or get a weekly update like Track (screen time)
         else if (habitCommand === "reminder" || habitCommand === "remindme" || habitCommand === "remind"
-            || habitCommand === "remindme" || habitCommand === "rem" || habitCommand === "r") {
+            || habitCommand === "remindme") {
+            let habitEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\``
+                + `\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**`
+                + "\n\n`<recent?>`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**"
+                + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**";
+            habitEditUsageMessage = fn.getMessageEmbed(habitEditUsageMessage, `Habit: Reminder Help`, habitEmbedColour);
+            if (habitType === "help") return message.channel.send(habitEditUsageMessage);
 
+            var indexByRecency = false;
+            if (args[1 + archiveShift] !== undefined) {
+                if (args[1 + archiveShift].toLowerCase() === "recent") {
+                    indexByRecency = true;
+                }
+            }
+            var habitArray;
+            if (indexByRecency) habitArray = await Habit.find({ archived: isArchived, userID: authorID }).sort({ _id: -1 });
+            else habitArray = await Habit.find({ archived: isArchived, userID: authorID }).sort({ createdAt: +1 });
+            if (!habitArray.length) return message.reply(`**No ${isArchived ? "archived " : ""}habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`);
+
+
+            let targetHabit = await fn.getUserSelectedObject(bot, message, PREFIX, "__**Which habit would you like to set a recurring reminder for?**__",
+                `Habit${isArchived ? " Archive" : ""}: Select Habit For Reminder`, habitArray, "description", false, habitEmbedColour, 600000);
+            if (!targetHabit) return;
+            else targetHabit = targetHabit.object;
+            await setUserHabitReminder(bot, message, PREFIX, timezoneOffset, daylightSaving,
+                commandUsed, authorID, targetHabit);
+            return;
         }
 
 
@@ -1818,7 +2087,7 @@ module.exports = {
 
                 var targetHabit;
                 const selectedHabit = await fn.getUserSelectedObject(bot, message, PREFIX,
-                    "__**Which habit would you like to archive?:**__", `Habit${isArchived ? " Archive" : ""}: Archive Selection`,
+                    "__**Which habit would you like to archive?**__", `Habit${isArchived ? " Archive" : ""}: Archive Selection`,
                     habitArray, "description", false, habitEmbedColour, 600000, 0);
                 if (!selectedHabit) return;
                 else targetHabit = selectedHabit.object;

@@ -329,8 +329,8 @@ module.exports = {
         try {
             if (string && typeof string === "string") {
                 if (string.length > 0) {
-                    string = string.replace(/(.+?)([\s\n\/]+)/, (match, word, spacing, offset, string) => {
-                        return `${word[0].toUpperCase()}${word.slice(1)}${spacing}`;
+                    string = string.replace(/(.+?)([\s\n\/]+|$)/g, (match, word, separator, offset, string) => {
+                        return `${word[0].toUpperCase()}${word.slice(1)}${separator}`;
                     });
                     return string;
                 }
@@ -4251,11 +4251,14 @@ module.exports = {
     },
 
     getDateAndTimeEntry: async function (bot, message, PREFIX, timezoneOffset, daylightSetting,
-        instructions = `**__Enter a Date/Time__**:`, title = "Date and Time Entry", forceFutureTime = false, embedColour = this.defaultEmbedColour,
-        dataCollectDelay = 300000, errorReplyDelay = 60000, timeExamples = this.timeExamples,) {
+        instructions = `**__Enter a Date/Time__**:`, title = "Date and Time Entry", forceFutureTime = false,
+        embedColour = this.defaultEmbedColour, dataCollectDelay = 300000, errorReplyDelay = 60000,
+        timeExamples = this.timeExamples,) {
         var time;
         do {
-            time = await this.messageDataCollect(bot, message, PREFIX, `${instructions}${timeExamples ? `\n\n${timeExamples}` : ""}`, title, embedColour, dataCollectDelay, false);
+            time = await this.messageDataCollect(bot, message, PREFIX, `${instructions}${timeExamples ?
+                `\n\n${timeExamples === this.timeExamples && forceFutureTime ? this.futureTimeExamples : timeExamples}`
+                : ""}`, title, embedColour, dataCollectDelay, false);
             if (!time || time === "stop") return false;
             timeArgs = time.toLowerCase().split(/[\s\n]+/);
             let now = this.getCurrentUTCTimestampFlooredToSecond();
@@ -5243,19 +5246,21 @@ module.exports = {
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)**`
         + `\n- # Days of the Week **(mondays; tuesdays; wednesdays; thursdays; fridays; saturdays; sundays)** **`
         + `\n\ne.g. **5 days **|** 12.25 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years`
-        + `\n**|** 1y:2.75d:3h:30.5m:2s **|** 18.2h **|** 12m **|** 6m50s **|** 25.5m 5s **|** 7d:2h **|** 5y 15.1d 50.3h 20.7m 95s`
-        + `\n**|** friday **|** mon **|** 1 sat **|** 2 sun **|** tues at 6pm **|** wednesday at 4A **|** thurs at 12P PST**`,
+        + `\n**|** 1y:2.75d:3h:30.5m:2s **|** 18.2h **|** 12m **|** 6m50s **|** 25.5m 5s **|** 7d:2h`
+        + `\n**|** 5y 15.1d 50.3h 20.7m 95s **|** friday **|** mon **|** 1 sat **|** 2 sun **|** tues at 6pm`
+        + `\n**|** wednesday at 4A **|** thurs at 12P PST**`,
     intervalExamplesOver1Hour: `⏳ Any period longer than **1 hour** ⏳`
         + `\n\n**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)**`
         + `\n- # Days of the Week **(mondays; tuesdays; wednesdays; thursdays; fridays; saturdays; sundays)** **`
         + `\n\ne.g. **5 days **|** 12.25 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years`
-        + `\n**|** 1y:2.75d:3h:30.5m:2s **|** 18.2h **|** 12m **|** 6m50s **|** 25.5m 5s **|** 7d:2h **|** 5y 15.1d 50.3h 20.7m 95s`
-        + `\n**|** friday **|** mon **|** 1 sat **|** 2 sun **|** tues at 6pm **|** wednesday at 4A **|** thurs at 12P PST**`,
+        + `\n**|** 1y:2.75d:3h:30.5m:2s **|** 18.2h **|** 12m **|** 6m50s **|** 25.5m 5s **|** 7d:2h`
+        + `\n**|** 5y 15.1d 50.3h 20.7m 95s **|** friday **|** mon **|** 1 sat **|** 2 sun **|** tues at 6pm`
+        + `\n**|** wednesday at 4A **|** thurs at 12P PST**`,
     durationExamples: `**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**`
         + `\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)** **`
         + `\n\ne.g. **5 days **|** 12.25 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years`
-        + `\n**|** 1y:2.75d:3h:30.5m:2s **|** 18.2h **|** 12m **|** 6m50s **|** 25.5m 5s **|** 7d:2h **|** 5y 15.1d 50.3h 20.7m 95s**`,
+        + `\n**|** 1y:2.75d:3h:30.5m:2s **|** 18.2h **|** 12m **|** 6m50s **|** 25.5m 5s **|** 7d:2h\n**|** 5y 15.1d 50.3h 20.7m 95s**`,
     confirmationInstructions: "✅ Accept: \'Y\' \'yes\' \'1\'\n❌ Decline: \'N\' \'no\' \'0\' \'2\'",
     areasOfLifeEmojis: ['🥦', '🧠', '📚', '🙏', '🗣', '💼', '🎓', '💸', '🏠'],
     areasOfLife: ["Physical Health", "Mental/Mindset", "Personal Development", "Spiritual",
