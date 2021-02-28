@@ -1799,7 +1799,7 @@ module.exports = {
                     + `\n**Previously:** ${hb.getStateEmoji(targetHabit.currentState)}\n\n🎯 - __**Description:**__\n${targetHabit.description}`
                     + `${isCountType && (countValue || countValue === 0) ?
                         `\n__**${countMetric}:**__ Current Value (**${countValue}**) vs. ${countGoalTypeString} (**${countGoal}**)`
-                        : ""}${reflectionMessage ? `\n__**Reflection Message:**__ ${reflectionMessage}` : ""}`,
+                        : ""}${reflectionMessage ? `\n__**Reflection Message:**__\n${reflectionMessage}` : ""}`,
                     forceSkip, `Habit${isArchived ? " Archive" : ""}: Confirm Log?`);
                 if (confirmEnd) {
                     // 1. Check if there has already been a log for today.
