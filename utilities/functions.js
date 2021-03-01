@@ -5205,6 +5205,11 @@ module.exports = {
         }
     },
 
+    getAreaOfLifeString: function (areaOfLifeIndex) {
+        const areaOfLifeString = `${this.areasOfLifeEmojis[areaOfLifeIndex] ? `${this.areasOfLifeEmojis[areaOfLifeIndex]} ` : ""}${this.areasOfLife[areaOfLifeIndex] ? `__${this.areasOfLife[areaOfLifeIndex]}__` : ""}`;
+        return areaOfLifeString;
+    },
+
 
     getTierMaxMessage: function (PREFIX, commandUsed, thresholdValue, type, tier, supportsArchive = false) {
         return `You've ${supportsArchive ? "archived" : "created"} the **__maximum number of ${supportsArchive ? "archived " : ""}${type[0].toLowerCase()} entries__** (**${thresholdValue}**) `

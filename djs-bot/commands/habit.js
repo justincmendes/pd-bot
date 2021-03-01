@@ -9,6 +9,7 @@ const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 const hb = require("../../utilities/habit");
 const del = require("../../utilities/deletion");
+const { habitCron } = require("../../utilities/habit");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
@@ -190,7 +191,7 @@ async function habitDocumentToString(bot, habitDocument, showConnectedGoal = fal
             + `\n- **Average Missed:** ${averageMissedPercent || `0.00`}%`;
     }
     let currentStateString = `**Current Log:** ${hb.getStateEmoji(currentState)}`;
-    const areaOfLifeString = `${areasOfLifeEmojis[areaOfLife] ? `${areasOfLifeEmojis[areaOfLife]} ` : ""}${areasOfLife[areaOfLife] ? `__${areasOfLife[areaOfLife]}__` : ""}`;
+    const areaOfLifeString = fn.getAreaOfLifeString(areaOfLife);
 
     let outputString = `${archived ? "\*\***ARCHIVED**\*\*\n" : ""}${areaOfLifeString}`
         + `${description ? `\n👣 - **Description:**\n${description}` : ""}`
@@ -229,7 +230,7 @@ async function multipleHabitsToStringArray(bot, message, habitArray, numberOfHab
 async function getRecentHabit(bot, userID, isArchived, embedColour, showConnectedGoal = false,
     showRecentStats = false, showSettings = false, showTotalStats = false) {
     const recentHabitToString = `__**Habit ${await getRecentHabitIndex(userID, isArchived)}:**__`
-        + `${await habitDocumentToString(bot, await getOneHabitByRecency(userID, 0, isArchived), showConnectedGoal, showRecentStats, showSettings, showTotalStats)}`;
+        + `${await habitDocumentToString(bot, await hb.getOneHabitByRecency(userID, 0, isArchived), showConnectedGoal, showRecentStats, showSettings, showTotalStats)}`;
     const habitEmbed = fn.getMessageEmbed(recentHabitToString, `Habit: See Recent Habit`, embedColour);
     return habitEmbed;
 }
@@ -246,30 +247,6 @@ async function getHabitIndexByFunction(userID, habitID, totalHabits, archived, g
         i++;
     }
     return i + 1;
-}
-
-async function getOneHabitByRecency(userID, habitIndex, archived = undefined) {
-    const habit = await Habit
-        .findOne({ userID, archived })
-        .sort({ _id: -1 })
-        .skip(habitIndex)
-        .catch(err => {
-            console.log(err);
-            return false;
-        });
-    return habit;
-}
-
-async function getOneHabitByCreatedAt(userID, habitIndex, archived = undefined) {
-    const habit = await Habit
-        .findOne({ userID, archived })
-        .sort({ createdAt: +1, })
-        .skip(habitIndex)
-        .catch(err => {
-            console.log(err);
-            return false;
-        });
-    return habit;
 }
 
 async function getOneHabitByObjectID(habitID) {
@@ -321,20 +298,6 @@ async function getRecentHabitIndex(userID, archived) {
         console.log(err);
         return false;
     }
-}
-
-function getHabitReadOrDeleteHelp(PREFIX, commandUsed, crudCommand) {
-    return `**USAGE:**\n\`${PREFIX}${commandUsed} ${crudCommand} <archive?> past <PAST_#_OF_ENTRIES> <recent?> <force?>\``
-        + `\n\`${PREFIX}${commandUsed} ${crudCommand} <archive?> <ENTRY #> <recent?> <force?>\``
-        + `\n\`${PREFIX}${commandUsed} ${crudCommand} <archive?> many <MANY_ENTRIES> <recent?> <force?>\``
-        + `\n\`${PREFIX}${commandUsed} ${crudCommand} <archive?> <#_OF_ENTRIES> <recent?> past <STARTING_INDEX> <force?>\``
-        + `\n\n\`<PAST_#_OF_ENTRIES>\`: **recent; 5** (\\*any number); **all** \n(NOTE: ***__any number > 1__* will get more than 1 habit!**)`
-        + `\n\n\`<#_OF_ENTRIES>\` and \`<STARTING_INDEX>\`: **2** (\\**any number*)`
-        + `\n\n\`<ENTRY_#>\`: **all; recent; 3** (3rd most recent habit, \\**any number*)\n(NOTE: Gets just 1 habit - UNLESS \`all\`)`
-        + `\n\n\`<MANY_ENTRIES>\`: **3,5,recent,7,1,25**\n- **COMMA SEPARATED, NO SPACES:**\n1 being the most recent habit, 25 the 25th most recent, etc.`
-        + `\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**`
-        + `\n\n\`<recent?>\`: (OPT.) type **recent** at the indicated spot to sort the habits by **time created instead of the date created property!**`
-        + `\n\n\`<force?>\`: (OPT.) type **force** at the end of your command to **skip all of the confirmation windows!**`;
 }
 
 function getGoalTypeString(goalType) {
@@ -708,7 +671,7 @@ module.exports = {
                         console.log({ result });
                         await hb.habitCron(habitDocument, timezoneOffset, habitCron);
                         totalHabitNumber++;
-                        message.reply(`**Habit ${await getHabitIndexByFunction(authorID, habitDocument._id, totalHabitNumber, false, getOneHabitByCreatedAt)} Saved!**`);
+                        message.reply(`**Habit ${await getHabitIndexByFunction(authorID, habitDocument._id, totalHabitNumber, false, hb.getOneHabitByCreatedAt)} Saved!**`);
                     })
                     .catch(err => console.error(err));
 
@@ -731,7 +694,7 @@ module.exports = {
              * Allow them to delete any habits - archived or not
              */
 
-            let habitDeleteUsageMessage = getHabitReadOrDeleteHelp(PREFIX, commandUsed, habitCommand);
+            let habitDeleteUsageMessage = hb.getHabitReadOrDeleteHelp(PREFIX, commandUsed, habitCommand);
             habitDeleteUsageMessage = fn.getMessageEmbed(habitDeleteUsageMessage, "Habit: Delete Help", habitEmbedColour);
             const trySeeCommandMessage = `Try \`${PREFIX}${commandUsed} see ${isArchived ? `archive ` : ""}help\``;
 
@@ -827,10 +790,10 @@ module.exports = {
                     for (let i = 0; i < toDelete.length; i++) {
                         var habitView;
                         if (indexByRecency) {
-                            habitView = await getOneHabitByRecency(authorID, toDelete[i] - 1, isArchived);
+                            habitView = await hb.getOneHabitByRecency(authorID, toDelete[i] - 1, isArchived);
                         }
                         else {
-                            habitView = await getOneHabitByCreatedAt(authorID, toDelete[i] - 1, isArchived);
+                            habitView = await hb.getOneHabitByCreatedAt(authorID, toDelete[i] - 1, isArchived);
                         }
                         habitTargetIDs.push(habitView._id);
                         habitArray.push(`__**Habit ${toDelete[i]}:**__ ${await habitDocumentToString(bot, habitView, true, true, true, true)}`);
@@ -913,7 +876,7 @@ module.exports = {
             if (isNaN(args[1 + archiveShift])) {
                 const deleteType = habitType;
                 if (deleteType === "recent") {
-                    const habitView = await getOneHabitByRecency(authorID, 0, isArchived);
+                    const habitView = await hb.getOneHabitByRecency(authorID, 0, isArchived);
                     if (!habitView) return fn.sendErrorMessage(message, noHabitsMessage);
                     const habitTargetID = habitView._id;
                     console.log({ habitTargetID });
@@ -963,8 +926,8 @@ module.exports = {
                     }
                 }
                 var habitView;
-                if (indexByRecency) habitView = await getOneHabitByRecency(authorID, pastNumberOfEntriesIndex - 1, isArchived);
-                else habitView = await getOneHabitByCreatedAt(authorID, pastNumberOfEntriesIndex - 1, isArchived);
+                if (indexByRecency) habitView = await hb.getOneHabitByRecency(authorID, pastNumberOfEntriesIndex - 1, isArchived);
+                else habitView = await hb.getOneHabitByCreatedAt(authorID, pastNumberOfEntriesIndex - 1, isArchived);
                 if (!habitView) {
                     return fn.sendErrorMessageAndUsage(message, trySeeCommandMessage, `**${isArchived ? "ARCHIVED " : ""}GOAL DOES NOT EXIST**...`);
                 }
@@ -987,7 +950,7 @@ module.exports = {
 
 
         else if (habitCommand === "see" || habitCommand === "show") {
-            let habitSeeUsageMessage = getHabitReadOrDeleteHelp(PREFIX, commandUsed, habitCommand);
+            let habitSeeUsageMessage = hb.getHabitReadOrDeleteHelp(PREFIX, commandUsed, habitCommand);
             habitSeeUsageMessage = fn.getMessageEmbed(habitSeeUsageMessage, `Habit${isArchived ? ` Archive` : ""}: See Help`, habitEmbedColour);
 
             const seeCommands = ["past", "recent", "all"];
@@ -1153,8 +1116,8 @@ module.exports = {
                     }
                 }
                 var habitView;
-                if (indexByRecency) habitView = await getOneHabitByRecency(authorID, habitIndex - 1, isArchived);
-                else habitView = await getOneHabitByCreatedAt(authorID, habitIndex - 1, isArchived);
+                if (indexByRecency) habitView = await hb.getOneHabitByRecency(authorID, habitIndex - 1, isArchived);
+                else habitView = await hb.getOneHabitByCreatedAt(authorID, habitIndex - 1, isArchived);
                 console.log({ habitView });
                 if (!habitView) {
                     return fn.sendErrorMessage(message, `**${isArchived ? "ARCHIVED " : ""} HABIT ${habitIndex} DOES NOT EXIST **...`);
@@ -1210,8 +1173,8 @@ module.exports = {
                     }
                 }
                 var habitDocument;
-                if (indexByRecency) habitDocument = await getOneHabitByRecency(authorID, habitIndex - 1, isArchived);
-                else habitDocument = await getOneHabitByCreatedAt(authorID, habitIndex - 1, isArchived);
+                if (indexByRecency) habitDocument = await hb.getOneHabitByRecency(authorID, habitIndex - 1, isArchived);
+                else habitDocument = await hb.getOneHabitByCreatedAt(authorID, habitIndex - 1, isArchived);
                 if (!habitDocument) {
                     return fn.sendErrorMessageAndUsage(message, habitActionHelpMessage, `**${isArchived ? "ARCHIVED " : ""}HABIT ${habitIndex} DOES NOT EXIST**...`);
                 }
@@ -1449,7 +1412,34 @@ module.exports = {
                                                 fn.sendReplyThenDelete(message, `**INVALID TIME**... ${habitHelpMessage}`, 60000);
                                                 continueEdit = true;
                                             }
-                                            else targetLog.timestamp = userEdit;
+                                            else {
+                                                // Log date collisions
+                                                const collisionLog = hb.getHabitLogOnTimestampDay(logs, userEdit, userSettings.habitCron.daily);
+                                                if (!collisionLog) {
+                                                    targetLog.timestamp = userEdit;
+                                                    break;
+                                                }
+                                                const confirmOverwiteLog = await fn.getUserConfirmation(bot, message, PREFIX,
+                                                    `**Another habit log exists on your intended date** (based on habit reset time).`
+                                                    + `\n__${fn.timestampToDateString(userEdit, true, true, true, false)}__.`
+                                                    + `\n\n__**Would you like to overwrite the existing log with the one you are currently editing?**__`
+                                                    + `\n- If **no**, the current log will not be changed.`
+                                                    + `\n- If **yes**, the current log's timestamp will be changed to`
+                                                    + ` ${fn.timestampToDateString(userEdit, true, true, true, false)}, and **the other log will be deleted**`
+                                                    + `\n\n__**Current Log:**__ (Timestamp Unchanged)\n${hb.logDocumentToString(targetLog)}`
+                                                    + `\n\n__**Log to Overwrite:**__\n${hb.logDocumentToString(collisionLog)}`,
+                                                    false, `${type}: Overwrite Log (Timestamp Conflict)`, 300000);
+                                                if (confirmOverwiteLog) {
+                                                    await Log.deleteOne({ _id: collisionLog._id });
+                                                    targetLog.timestamp = userEdit;
+                                                    break;
+                                                }
+                                                else if (confirmOverwiteLog === null) return;
+                                                else {
+                                                    continueEdit = true;
+                                                    break;
+                                                }
+                                            }
                                             break;
                                         // State
                                         case 1:
@@ -1610,6 +1600,9 @@ module.exports = {
                             if (currentStreak > (longestStreak ? longestStreak : 0)) {
                                 longestStreak = currentStreak;
                             }
+                            const todaysLog = hb.getTodaysLog(currentLogs, timezoneOffset, habitCron.daily);
+                            if (todaysLog) currentState = todaysLog.state;
+                            else currentState = 0;
                             pastWeek = hb.getPastWeekStreak(currentLogs, timezoneOffset, habitCron, createdAt);
                             pastMonth = hb.getPastMonthStreak(currentLogs, timezoneOffset, habitCron, createdAt);
                             pastYear = hb.getPastYearStreak(currentLogs, timezoneOffset, habitCron, createdAt);
@@ -1651,8 +1644,8 @@ module.exports = {
                                 await hb.habitCron(habitDocument, timezoneOffset, habitCron);
 
                                 habitIndex = indexByRecency ?
-                                    await getHabitIndexByFunction(authorID, habitTargetID, isArchived ? totalArchiveNumber : totalHabitNumber, isArchived, getOneHabitByRecency)
-                                    : await getHabitIndexByFunction(authorID, habitTargetID, isArchived ? totalArchiveNumber : totalHabitNumber, isArchived, getOneHabitByCreatedAt);
+                                    await getHabitIndexByFunction(authorID, habitTargetID, isArchived ? totalArchiveNumber : totalHabitNumber, isArchived, hb.getOneHabitByRecency)
+                                    : await getHabitIndexByFunction(authorID, habitTargetID, isArchived ? totalArchiveNumber : totalHabitNumber, isArchived, hb.getOneHabitByCreatedAt);
                                 console.log({ habitDocument, habitTargetID, fieldToEditIndex });
                                 showHabit = await habitDocumentToString(bot, habitDocument, true, true, true, true);
                                 const continueEditMessage = `Do you want to continue **editing ${isArchived ? "Archived " : ""}Habit ${habitIndex}?**\n\n__**${isArchived ? "Archived " : ""}`
@@ -1673,8 +1666,8 @@ module.exports = {
                         habitDocument = await Habit.findById(habitTargetID);
                         if (habitDocument) {
                             habitIndex = indexByRecency ?
-                                await getHabitIndexByFunction(authorID, habitTargetID, isArchived ? totalArchiveNumber : totalHabitNumber, isArchived, getOneHabitByCreatedAt)
-                                : await getHabitIndexByFunction(authorID, habitTargetID, isArchived ? totalArchiveNumber : totalHabitNumber, isArchived, getOneHabitByRecency);
+                                await getHabitIndexByFunction(authorID, habitTargetID, isArchived ? totalArchiveNumber : totalHabitNumber, isArchived, hb.getOneHabitByCreatedAt)
+                                : await getHabitIndexByFunction(authorID, habitTargetID, isArchived ? totalArchiveNumber : totalHabitNumber, isArchived, hb.getOneHabitByRecency);
                             console.log({ habitDocument, habitTargetID, fieldToEditIndex });
                             showHabit = await habitDocumentToString(bot, habitDocument, true, true, true, true);
                         }
@@ -1718,12 +1711,12 @@ module.exports = {
             || habitCommand === "complete" || habitCommand === "end" || habitCommand === "e") {
             // (similar indexing to edit, recent or #) + archive
             // Make a list - similar to archive
-            let habitEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\``
+            let habitLogUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\``
                 + `\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**`
                 + "\n\n`<recent?>`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**"
                 + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**";
-            habitEditUsageMessage = fn.getMessageEmbed(habitEditUsageMessage, `Habit: Log Help`, habitEmbedColour);
-            if (habitType === "help") return message.channel.send(habitEditUsageMessage);
+            habitLogUsageMessage = fn.getMessageEmbed(habitLogUsageMessage, `Habit: Log Help`, habitEmbedColour);
+            if (habitType === "help") return message.channel.send(habitLogUsageMessage);
 
             var indexByRecency = false;
             if (args[1 + archiveShift] !== undefined) {
@@ -1755,7 +1748,8 @@ module.exports = {
                         `Enter your **${countMetric}** (${countGoalTypeString}: **${countGoal}**)`,
                         `Habit${isArchived ? " Archive" : ""}: ${countGoalTypeString}`,
                         true, true, true, undefined, undefined, habitEmbedColour);
-                    if (!countValue && countValue !== 0) countValue = undefined;
+                    if (countValue === null) return;
+                    else if (!countValue && countValue !== 0) countValue = undefined;
                 }
                 // Then based on the user's countValue (if any), show the suggested log based on their goal
                 const suggestedLogFromCountGoal = isCountType ?
@@ -1775,7 +1769,6 @@ module.exports = {
                 var currentReflection = "";
                 if (todaysLog) {
                     currentReflection = todaysLog.message || "";
-                    console.log({currentReflection})
                 }
                 var reflectionMessage;
                 const confirmReflection = await fn.getUserConfirmation(bot, message, PREFIX,
@@ -2034,12 +2027,12 @@ module.exports = {
         // Or get a weekly update like Track (screen time)
         else if (habitCommand === "reminder" || habitCommand === "remindme" || habitCommand === "remind"
             || habitCommand === "remindme") {
-            let habitEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\``
+            let habitReminderUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\``
                 + `\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**`
                 + "\n\n`<recent?>`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**"
                 + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**";
-            habitEditUsageMessage = fn.getMessageEmbed(habitEditUsageMessage, `Habit: Reminder Help`, habitEmbedColour);
-            if (habitType === "help") return message.channel.send(habitEditUsageMessage);
+            habitReminderUsageMessage = fn.getMessageEmbed(habitReminderUsageMessage, `Habit: Reminder Help`, habitEmbedColour);
+            if (habitType === "help") return message.channel.send(habitReminderUsageMessage);
 
             var indexByRecency = false;
             if (args[1 + archiveShift] !== undefined) {
@@ -2071,11 +2064,11 @@ module.exports = {
                 }
             }
             // Allows for archive - indexing by unarchived entries only!
-            let habitEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <recent?> <force?>\``
+            let habitArchiveUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <recent?> <force?>\``
                 + "\n\n`<recent?>`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**"
                 + "\n\n`<force?>`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**";
-            habitEditUsageMessage = fn.getMessageEmbed(habitEditUsageMessage, `Habit: Archive Help`, habitEmbedColour);
-            if (habitType === "help") return message.channel.send(habitEditUsageMessage);
+            habitArchiveUsageMessage = fn.getMessageEmbed(habitArchiveUsageMessage, `Habit: Archive Help`, habitEmbedColour);
+            if (habitType === "help") return message.channel.send(habitArchiveUsageMessage);
 
             var indexByRecency = false;
             if (args[1] !== undefined) {

@@ -36,6 +36,53 @@ module.exports = {
             + messageString + countString);
     },
 
+    habitDocumentDescription: function (habitDocument) {
+        console.log({ habitDocument });
+        const { archived, description, areaOfLife } = habitDocument;
+        const areaOfLifeString = fn.getAreaOfLifeString(areaOfLife);
+        const outputString = `${archived ? "\*\***ARCHIVED**\*\*\n" : ""}${areaOfLifeString}`
+            + `${description ? `\n👣 - **Description:**\n${description}` : ""}`;
+        return outputString;
+    },
+
+    getHabitReadOrDeleteHelp: function (PREFIX, commandUsed, crudCommand) {
+        return `**USAGE:**\n\`${PREFIX}${commandUsed} ${crudCommand} <archive?> past <PAST_#_OF_ENTRIES> <recent?> <force?>\``
+            + `\n\`${PREFIX}${commandUsed} ${crudCommand} <archive?> <ENTRY #> <recent?> <force?>\``
+            + `\n\`${PREFIX}${commandUsed} ${crudCommand} <archive?> many <MANY_ENTRIES> <recent?> <force?>\``
+            + `\n\`${PREFIX}${commandUsed} ${crudCommand} <archive?> <#_OF_ENTRIES> <recent?> past <STARTING_INDEX> <force?>\``
+            + `\n\n\`<PAST_#_OF_ENTRIES>\`: **recent; 5** (\\*any number); **all** \n(NOTE: ***__any number > 1__* will get more than 1 habit!**)`
+            + `\n\n\`<#_OF_ENTRIES>\` and \`<STARTING_INDEX>\`: **2** (\\**any number*)`
+            + `\n\n\`<ENTRY_#>\`: **all; recent; 3** (3rd most recent habit, \\**any number*)\n(NOTE: Gets just 1 habit - UNLESS \`all\`)`
+            + `\n\n\`<MANY_ENTRIES>\`: **3,5,recent,7,1,25**\n- **COMMA SEPARATED, NO SPACES:**\n1 being the most recent habit, 25 the 25th most recent, etc.`
+            + `\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**`
+            + `\n\n\`<recent?>\`: (OPT.) type **recent** at the indicated spot to sort the habits by **time created instead of the date created property!**`
+            + `\n\n\`<force?>\`: (OPT.) type **force** at the end of your command to **skip all of the confirmation windows!**`;
+    },
+
+    getOneHabitByRecency: async function (userID, habitIndex, archived = undefined) {
+        const habit = await Habit
+            .findOne({ userID, archived })
+            .sort({ _id: -1 })
+            .skip(habitIndex)
+            .catch(err => {
+                console.log(err);
+                return false;
+            });
+        return habit;
+    },
+
+    getOneHabitByCreatedAt: async function (userID, habitIndex, archived = undefined) {
+        const habit = await Habit
+            .findOne({ userID, archived })
+            .sort({ createdAt: +1, })
+            .skip(habitIndex)
+            .catch(err => {
+                console.log(err);
+                return false;
+            });
+        return habit;
+    },
+
     getNextDailyCronTimeUTC: function (timezoneOffset, dailyCron) {
         const now = Date.now() + timezoneOffset * HOUR_IN_MS;
         const currentDate = new Date(now);
@@ -522,6 +569,25 @@ module.exports = {
         // console.log({ nearestLog });
         if (nearestLog) return nearestLog;
         else return null;
+    },
+
+    getHabitLogOnTimestampDay: function (presentToPastSortedLogs, targetTimestamp, dailyCron) {
+            const targetDate = new Date(this.getActualDateLogged(targetTimestamp, dailyCron));
+            const nextCronDate = new Date(
+                targetDate.getUTCFullYear(),
+                targetDate.getUTCMonth(),
+                targetDate.getUTCDate() + 1
+            );
+            // console.log({ presentToPastSortedLogs, dailyCron });
+            // console.log(`Current Habit Date: ${fn.timestampToDateString(currentHabitDate.getTime())}`);
+            // console.log(`Next Habit Date: ${fn.timestampToDateString(nextHabitDate.getTime())}`);
+            const targetLog = presentToPastSortedLogs.find(
+                log => log.timestamp < nextCronDate.getTime() + dailyCron
+                    && log.timestamp >= targetDate.getTime() + dailyCron
+            );
+            // console.log({ nearestLog });
+            if (targetLog) return targetLog;
+            else return null;
     },
 
     getStateEmoji: function (state) {
