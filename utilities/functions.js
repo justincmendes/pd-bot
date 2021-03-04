@@ -5076,6 +5076,7 @@ module.exports = {
     },
 
     createVoiceChannelTrackingDocument: async function (userID, userVoiceChannelObject, targetChannelID) {
+        var finishedSession;
         if (userVoiceChannelObject.autoSendReport) {
             finishedSession = false;
             originalTimeTracked = userVoiceChannelObject.timeTracked;
