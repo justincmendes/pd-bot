@@ -196,7 +196,7 @@ async function getFastPostEmbedArray(bot, message, PREFIX, fastData, forceSkip =
 
         if (collectedMessage) {
             if (collectedMessage.startsWith(PREFIX) && collectedMessage !== PREFIX) {
-                message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**${collectedMessage}`);
+                message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__** ${collectedMessage}`);
                 return false;
             }
             // Spam Prevention:

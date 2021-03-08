@@ -89,7 +89,7 @@ module.exports = {
                 const isPrefixed = confirmationMessage.startsWith(PREFIX) && confirmationMessage !== PREFIX;
                 if (isTagged || isPrefixed) {
                     this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                    message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${isPrefixed ? PREFIX : tag}\n**__Command Entered:__**${confirmationMessage}`);
+                    message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${isPrefixed ? PREFIX : tag}\n**__Command Entered:__** ${confirmationMessage}`);
                     return null;
                 }
                 confirmationMessage = confirmationMessage ? confirmationMessage.toLowerCase() : false;
@@ -301,7 +301,7 @@ module.exports = {
                             const isPrefixed = finalMessage.startsWith(PREFIX) && finalMessage !== PREFIX;
                             if (isTagged || isPrefixed) {
                                 this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
-                                message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${isPrefixed ? PREFIX : tag}\n**__Command Entered:__**${finalMessage}`);
+                                message.reply(`Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${isPrefixed ? PREFIX : tag}\n**__Command Entered:__** ${finalMessage}`);
                                 return false;
                             }
                         }

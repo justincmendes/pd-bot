@@ -873,7 +873,7 @@ module.exports = {
             if (!channel || channel === "stop") return false;
             else if (channel) currentTimestamp = Date.now();
             else if (channel.startsWith(PREFIX) && channel !== PREFIX) {
-                message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__**${channel}`);
+                message.reply(`Any **command calls** while writing a message will **stop** the collection process.\n**__Command Entered:__** ${channel}`);
                 return false;
             }
             if (allowDMs && channel.toLowerCase() === "dm") return channel.toUpperCase();
