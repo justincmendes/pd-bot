@@ -3618,7 +3618,7 @@ module.exports = {
         var embed;
         if (Array.isArray(embedArray)) {
             let currentPage = 0;
-            const channel = bot.channels.cache.get(channelID);
+            const channel = bot.channels.cache.get(channelID) || bot.users.cache.get(channelID);
             embed = await channel.send(embedArray[currentPage]);
             if (embedArray.length) {
                 const left = '⬅';
@@ -3626,7 +3626,7 @@ module.exports = {
                 const cancel = '🗑️';
                 const file = '📎';
                 const withFile = embedArray[0].footer ?
-                    embedArray[0].footer.text.startsWith(this.fileFooterText) ?
+                    embedArray[0].footer.text.includes(this.fileFooterText) ?
                         true : false : false;
                 let emojis = embedArray.length > 1 ? [left, right] : [];
                 emojis = withDelete ? emojis.concat([cancel]) : emojis;
@@ -5076,7 +5076,8 @@ module.exports = {
     },
 
     createVoiceChannelTrackingDocument: async function (userID, userVoiceChannelObject, targetChannelID) {
-        var finishedSession, originalTimeTracked;
+        var finishedSession = undefined,
+            originalTimeTracked = undefined;
         if (userVoiceChannelObject.autoSendReport) {
             finishedSession = false;
             originalTimeTracked = userVoiceChannelObject.timeTracked;

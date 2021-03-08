@@ -6,7 +6,6 @@ const User = require("../djs-bot/database/schemas/user");
 const mongoose = require("mongoose");
 const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
-const reminder = require("../djs-bot/database/schemas/reminder");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
@@ -107,7 +106,8 @@ module.exports = {
             let { isDM, isRecurring, _id: reminderID, userID, channel, startTime,
                 endTime, message, title, connectedDocument, guildID, sendAsEmbed,
                 embedColour } = reminderObject;
-            // const userSettings = await User.findOne({ discordID: userID }, { _id: 1, timezone: 1 });
+            const originalMessage = message;
+            const userSettings = await User.findOne({ discordID: userID }, { _id: 1, timezone: 1 });
             const duration = endTime - startTime;
             const user = bot.users.cache.get(userID);
             const channelObject = isDM ? user : bot.channels.cache.get(channel);
@@ -117,7 +117,9 @@ module.exports = {
                 const username = isDM ? user ? user.username : "someone" : bot.guilds.cache.get(channelObject.guild.id).member(userID).displayName;
                 var titleOut = title;
                 if (reminderTypes.includes(title) && isRecurring) {
-                    titleOut = `Repeating ${title}`;
+                    if (title === "Reminder" && title === "Quote") {
+                        titleOut = `Repeating ${title}`;
+                    }
                 }
                 if (isDM && sendAsEmbed === undefined) {
                     sendAsEmbed = true;
@@ -156,11 +158,32 @@ module.exports = {
                         //     + ((usernameAndDiscriminator !== "someone") ? ` (${usernameAndDiscriminator})` : "");
                         reminderFooter = `A ${fn.millisecondsToTimeString(duration)} reminder set by ${username}`;
                     }
-                    message = new Discord.MessageEmbed()
-                        .setTitle(title !== "Quote" && title !== "Voice Channel Tracking" ? titleOut : title)
-                        .setDescription(message)
-                        .setFooter(reminderFooter, user.displayAvatarURL())
-                        .setColor(embedColour);
+
+                    const titleString = title !== "Quote" && title !== "Voice Channel Tracking" ? titleOut : title;
+
+                    // `${titleString}${userSettings ?
+                    //     ` ${fn.timestampToDateString(Date.now() + userSettings.timezone.offset * HOUR_IN_MS, false, false, true, true)}`
+                    //     + ` (${userSettings.timezone.name.toUpperCase()})` : ""}`
+                    message = fn.getEmbedArray(originalMessage, titleString, true,
+                        `${!title.startsWith("Mastermind: Weekly Goals") ?
+                            isRecurring && title === "Reminder" ? titleString : title
+                            : "Mastermind: Weekly Goals"}`
+                        + `${userSettings ? ` ${fn.timestampToDateString(Date.now() + userSettings.timezone.offset * HOUR_IN_MS, false, false, true, true)}`
+                            + ` (${userSettings.timezone.name.toUpperCase()})` : ""}`, embedColour);
+
+                    if (!message) {
+                        message = new Discord.MessageEmbed()
+                            .setTitle(title !== "Quote" && title !== "Voice Channel Tracking" ? titleOut : title)
+                            .setDescription(originalMessage)
+                            .setFooter(reminderFooter, user.displayAvatarURL())
+                            .setColor(embedColour);
+                    }
+                    else {
+                        for (embed of message) {
+                            embed.setFooter(`${reminderFooter}${embed.footer ? embed.footer.text ? `\n${embed.footer.text}` : "" : ""}`,
+                                user.displayAvatarURL());
+                        }
+                    }
                 }
                 else {
                     // Add a zero-width space between the @everyone/@here mentions for users who are not
@@ -232,26 +255,57 @@ module.exports = {
                                                 + `${updatedReminderObject.remainingOccurrences === 1 ? "" : "s"} left!`;
                                         }
                                         if (updatedReminderObject.sendAsEmbed) {
-                                            const { footer } = message;
                                             // 0 is allowed if there were occurrences left,
                                             // but the bot was down when the reminder should have sent.
                                             // Send it then delete it.
-                                            message = message.setFooter(footer.text + remainingOccurrencesMessage,
-                                                footer.iconURL);
+                                            if (Array.isArray(message)) {
+                                                for (embed of message) {
+                                                    embed.setFooter(`${embed.footer ? embed.footer.text ? `\n${embed.footer.text}` : "" : ""}`
+                                                        + remainingOccurrencesMessage, user.displayAvatarURL());
+                                                }
+                                            }
+                                            else {
+                                                const { footer } = message;
+                                                message = message.setFooter(
+                                                    footer.text + remainingOccurrencesMessage, footer.iconURL
+                                                );
+                                            }
+
                                         }
                                         else message += remainingOccurrencesMessage;
                                     }
                                     if (updatedReminderObject.title === "Voice Channel Tracking") {
                                         if (updatedReminderObject.sendAsEmbed) {
-                                            message.setDescription(updatedReminderObject.message);
+                                            if (Array.isArray(message)) {
+                                                for (embed of message) {
+                                                    embed.setDescription(updatedReminderObject.message);
+                                                }
+                                            }
+                                            else message = message.setDescription(updatedReminderObject.message);
                                         }
                                         else message = updatedReminderObject.message;
                                     }
-                                    channelObject.send(message);
-                                    await this.sendReminderByObject(bot, updatedReminderObject);
-                                    if (!isLastReminder) return;
+                                    if (updatedReminderObject.sendAsEmbed) {
+                                        if (Array.isArray(message)) {
+                                            for (const embed of message) {
+                                                await fn.sendPaginationEmbed(bot, channelObject.id,
+                                                    userID, [embed], true);
+                                            }
+                                        }
+                                        else {
+                                            await fn.sendPaginationEmbed(bot, channelObject.id,
+                                                userID, [message], true);
+                                        }
+                                    }
+                                    else channelObject.send(message);
+
+                                    if (!isLastReminder) {
+                                        await this.sendReminderByObject(bot, updatedReminderObject);
+                                        return;
+                                    }
                                 }
                             }
+                            this.cancelReminderById(reminderID);
                             await this.deleteOneReminderByObjectID(reminderID);
                             return;
                         }, reminderDelay),

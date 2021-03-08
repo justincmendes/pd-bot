@@ -315,60 +315,6 @@ function getGoalTypeString(goalType) {
     return goalTypeString;
 }
 
-async function setHabitReminder(bot, commandUsed, userID, endTime, interval, habitDescription,
-    habitID, countGoal = false, goalType = false, countMetric = false,) {
-    try {
-        const reminderMessage = `**__Reminder to track your habit__** 😁.\n\n**Habit:** ${habitDescription}`
-            + `${countGoal || countGoal === 0 ? `\n**Current${goalType ? ` ${fn.toTitleCase(getGoalTypeString(goalType))}` : ""}:**`
-                + ` ${countGoal}${countMetric ? ` (${countMetric})` : ""}` : ""}`
-            + `\n\nType** \`?${commandUsed} log\` **- to **track your habit**`;
-        const now = fn.getCurrentUTCTimestampFlooredToSecond();
-        // Delete currently running reminders!
-        if (habitID) {
-            rm.cancelReminderByConnectedDocument(habitID);
-            await Reminder.deleteMany({ userID, connectedDocument: habitID });
-        }
-        await rm.setNewDMReminder(bot, userID, now, endTime, reminderMessage,
-            "Habit", true, habitID, true, interval, false, habitEmbedColour);
-        return true;
-    }
-    catch (err) {
-        console.log(err);
-        return false;
-    }
-}
-
-async function setUserHabitReminder(bot, message, PREFIX, timezoneOffset, daylightSaving,
-    commandUsed, userID, habitDocument) {
-    try {
-        let interval = await rm.getInterval(bot, message, PREFIX, timezoneOffset, daylightSaving,
-            "__**Please enter the time you'd like in-between recurring reminders (interval):**__",
-            "Habit: Reminder Interval", habitEmbedColour);
-        if (!interval) return false;
-        let { duration: intervalDuration, args: intervalArgs } = interval;
-
-        let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSaving,
-            "**When** would you like to **get your first habit reminder?**",
-            "Habit: First Reminder Time", true, habitEmbedColour);
-        if (!endTime) return false;
-        endTime -= HOUR_IN_MS * timezoneOffset;
-
-        const successfullySetReminder = await setHabitReminder(bot, commandUsed, userID, endTime, intervalArgs, habitDocument.description,
-            habitDocument._id, habitDocument.settings.countGoal, habitDocument.settings.countGoalType, habitDocument.settings.countMetric);
-        if (successfullySetReminder) {
-            console.log("Habit log recurring reminder set.");
-            message.reply(`Habit log recurring reminder set!\n**__First Reminder:__**`
-                + ` **${fn.millisecondsToTimeString(endTime - fn.getCurrentUTCTimestampFlooredToSecond())}** from now`
-                + `\n**__Interval:__** **${fn.millisecondsToTimeString(intervalDuration)}**`);
-        }
-        return successfullySetReminder;
-    }
-    catch (err) {
-        console.log(err);
-        return false;
-    }
-}
-
 module.exports = {
     name: "habit",
     description: "Habit Tracker",
@@ -414,7 +360,7 @@ module.exports = {
 
         else if (habitCommand === "start" || habitCommand === "create" || habitCommand === "s" || habitCommand === "set"
             || habitCommand === "st" || habitCommand === "c" || habitCommand === "make" || habitCommand === "m"
-            || habitCommand === "add") {
+            || habitCommand === "add" || habitCommand === "a") {
             if (tier === 1) {
                 if (totalHabitNumber >= habitMax) {
                     return message.channel.send(fn.getMessageEmbed(fn.getTierMaxMessage(PREFIX, commandUsed, habitMax, ["Habit", "Habits"], 1, false),
@@ -679,7 +625,7 @@ module.exports = {
                     "Do you want to set a **recurring reminder** for when you want to **log/complete this habit?**"
                     + `\n\n${habitDescription}`, false, "Habit: Completion Reminder", 180000);
                 if (!confirmReminder) return;
-                await setUserHabitReminder(bot, message, PREFIX, timezoneOffset, daylightSaving,
+                await hb.setUserHabitReminder(bot, message, PREFIX, timezoneOffset, daylightSaving,
                     commandUsed, authorID, habitDocument);
                 return;
             }
@@ -1223,6 +1169,9 @@ module.exports = {
                     const goalTypeString = getGoalTypeString(countGoalType);
                     switch (fieldToEditIndex) {
                         case 0:
+                            // ADD support for Add/Delete options too!
+                            // List out all of the logs, if any, then
+                            // 1 add, 2 delete, 3 edit (if logs.length)
                             if (logs) if (logs.length) {
                                 let logList = `👣 - **__Habit Description:__**\n${habitDocument.description}\n\n`;
                                 logs.forEach((log, i) => {
@@ -1582,7 +1531,7 @@ module.exports = {
                                         rm.cancelReminderByConnectedDocument(habitTargetID);
                                         await Reminder.deleteMany({ connectedDocument: habitTargetID });
                                         currentHabitReminders.forEach(async reminder => {
-                                            await setHabitReminder(bot, commandUsed, userID, reminder.endTime, reminder.interval,
+                                            await hb.setHabitReminder(bot, commandUsed, userID, reminder.endTime, reminder.interval,
                                                 description, habitTargetID, countGoal, countGoalType, countMetric);
                                         });
                                     }
@@ -2050,7 +1999,7 @@ module.exports = {
                 `Habit${isArchived ? " Archive" : ""}: Select Habit For Reminder`, habitArray, "description", false, habitEmbedColour, 600000);
             if (!targetHabit) return;
             else targetHabit = targetHabit.object;
-            await setUserHabitReminder(bot, message, PREFIX, timezoneOffset, daylightSaving,
+            await hb.setUserHabitReminder(bot, message, PREFIX, timezoneOffset, daylightSaving,
                 commandUsed, authorID, targetHabit);
             return;
         }

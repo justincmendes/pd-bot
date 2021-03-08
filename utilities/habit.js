@@ -7,10 +7,12 @@ const Guild = require("../djs-bot/database/schemas/guildsettings");
 const User = require("../djs-bot/database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("./functions");
+const rm = require("./reminder");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
 const habitEmbedColour = fn.habitEmbedColour;
+const mastermindEmbedColour = fn.mastermindEmbedColour;
 const habits = new Discord.Collection();
 
 // Private Function Declarations
@@ -57,6 +59,160 @@ module.exports = {
             + `\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**`
             + `\n\n\`<recent?>\`: (OPT.) type **recent** at the indicated spot to sort the habits by **time created instead of the date created property!**`
             + `\n\n\`<force?>\`: (OPT.) type **force** at the end of your command to **skip all of the confirmation windows!**`;
+    },
+
+    setHabitReminder: async function (bot, commandUsed, userID, endTime, interval, habitDescription,
+        habitID, countGoal = false, goalType = false, countMetric = false,) {
+        try {
+            const reminderMessage = `**__Reminder to track your habit__** 😁.\n\n**Habit:** ${habitDescription}`
+                + `${countGoal || countGoal === 0 ? `\n**Current${goalType ? ` ${fn.toTitleCase(getGoalTypeString(goalType))}` : ""}:**`
+                    + ` ${countGoal}${countMetric ? ` (${countMetric})` : ""}` : ""}`
+                + `\n\nType** \`?${commandUsed} log\` **- to **track your habit**`;
+            const now = fn.getCurrentUTCTimestampFlooredToSecond();
+            // Delete currently running reminders!
+            if (habitID) {
+                rm.cancelReminderByConnectedDocument(habitID);
+                await Reminder.deleteMany({ userID, connectedDocument: habitID });
+            }
+            await rm.setNewDMReminder(bot, userID, now, endTime, reminderMessage,
+                "Habit", true, habitID, true, interval, false, habitEmbedColour);
+            return true;
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
+    setUserHabitReminder: async function (bot, message, PREFIX, timezoneOffset, daylightSaving,
+        commandUsed, userID, habitDocument, showHabitInConfirmation = false) {
+        try {
+            let interval = await rm.getInterval(bot, message, PREFIX, timezoneOffset, daylightSaving,
+                "__**Please enter the time you'd like in-between recurring reminders (interval):**__"
+                + `${showHabitInConfirmation ? `\n\n${this.habitDocumentDescription(habitDocument)}` : ""}`,
+                "Habit: Reminder Interval", habitEmbedColour);
+            if (!interval) return interval;
+            let { duration: intervalDuration, args: intervalArgs } = interval;
+
+            let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSaving,
+                "**When** would you like to **get your first habit reminder?**"
+                + `${showHabitInConfirmation ? `\n\n${this.habitDocumentDescription(habitDocument)}` : ""}`,
+                "Habit: First Reminder Time", true, habitEmbedColour);
+            if (!endTime && endTime !== 0) return endTime;
+            endTime -= HOUR_IN_MS * timezoneOffset;
+
+            const successfullySetReminder = await this.setHabitReminder(bot, commandUsed, userID, endTime, intervalArgs, habitDocument.description,
+                habitDocument._id, habitDocument.settings.countGoal, habitDocument.settings.countGoalType, habitDocument.settings.countMetric);
+            if (successfullySetReminder) {
+                console.log("Habit log recurring reminder set.");
+                message.reply(`Habit log recurring reminder set!`
+                    + `${showHabitInConfirmation ? `\n${this.habitDocumentDescription(habitDocument)}` : ""}`
+                    + `\n**__First Reminder:__** **${fn.millisecondsToTimeString(endTime - fn.getCurrentUTCTimestampFlooredToSecond())}** from now`
+                    + `\n**__Interval:__** **${fn.millisecondsToTimeString(intervalDuration)}**`);
+            }
+            return successfullySetReminder;
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
+    setMastermindHabits: async function (bot, message, PREFIX, commandUsed,
+        timezoneOffset, daylightSaving, mastermindDocument, userSettings) {
+        try {
+            var reset;
+            let mastermindGoals = [...mastermindDocument.journal.goals];
+            console.log({ mastermindGoals });
+            console.log(mastermindDocument.journal.goals);
+            let finalGoals = new Array();
+            do {
+                const someGoalsSelected = mastermindGoals.length !== mastermindDocument.journal.goals.length;
+                reset = false;
+
+                const selectedGoal = await fn.getUserSelectedObject(bot, message, PREFIX,
+                    "**Select the goal you'd like to make into a habit:**"
+                    + `${someGoalsSelected ? `\n(Type \`${mastermindGoals.length + 1}\` if you're done)` : ""}`,
+                    "Mastermind: Weekly Goal into Habit Selection", mastermindGoals, "description",
+                    false, mastermindEmbedColour, 600000, 0, null, someGoalsSelected ? ["**DONE**"] : [],
+                );
+                if (!selectedGoal) return selectedGoal;
+                else {
+                    if (selectedGoal.index !== mastermindGoals.length) {
+                        finalGoals.push(mastermindGoals[selectedGoal.index]);
+                        mastermindGoals.splice(selectedGoal.index, 1);
+                        const anotherHabit = await fn.getUserConfirmation(bot, message, PREFIX,
+                            "**Would you like to convert another goal into a habit?**"
+                            + `\n\n**If you want to setup Weekly Goal habits later**, type \`${PREFIX}${commandUsed} habit\``,
+                            false, "Mastermind: Weekly Goals into Habits");
+                        if (typeof anotherHabit === 'boolean') {
+                            if (anotherHabit === true) reset = true;
+                            else reset = false;
+                        }
+                        else return null;
+                    }
+                }
+                if (!mastermindGoals.length) reset = false;
+            }
+            while (reset)
+
+            const confirmConversion = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to convert the following goals into habits?**`
+                + `\n(Default settings will be applied: **daily habit, manual entry, no count value** - you can edit these using \`${PREFIX}habit edit\`)`
+                + `\n\n**If you want to setup Weekly Goal habits later**, type \`${PREFIX}${commandUsed} habit\``
+                + `\n\n${fn.goalArrayToString(finalGoals, "Weekly", true, false) || ""}`,
+                true, "Mastermind: Confirm Weekly Goals into Habits", 600000);
+            if (!confirmConversion) return confirmConversion;
+            else if (confirmConversion) {
+                const { habitCron } = userSettings;
+                const nextCron = this.getNextCronTimeUTC(timezoneOffset, habitCron, false, 1);
+
+                const confirmHabitReminders = await fn.getUserConfirmation(bot, message, PREFIX,
+                    `**Would you like to set a reminder to track your habit for __any__ of the habits you've created?**`,
+                    true, "Mastermind: Weekly Goal Habit Reminder", 300000);
+                var keepPromptingReminder = true;
+
+                for (const goal of finalGoals) {
+                    const habit = new Habit({
+                        _id: mongoose.Types.ObjectId(),
+                        userID: mastermindDocument.userID,
+                        createdAt: fn.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * timezoneOffset,
+                        archived: false,
+                        description: goal.description,
+                        areaOfLife: goal.type,
+                        reason: goal.reason,
+                        connectedGoal: goal.connectedGoal,
+                        nextCron,
+                        settings: {
+                            isCountType: false,
+                            isWeeklyType: false,
+                            cronPeriods: 1,
+                        },
+                        currentStreak: 0,
+                        currentState: 0,
+                        longestStreak: 0,
+                        pastWeek: 0,
+                        pastMonth: 0,
+                        pastYear: 0,
+                    });
+                    await habit.save()
+                        .then(result => console.log({ result }))
+                        .catch(err => console.error(err));
+                    await this.habitCron(habit, timezoneOffset, habitCron);
+
+                    if (confirmHabitReminders && keepPromptingReminder) {
+                        const setHabitReminder = await this.setUserHabitReminder(bot, message, PREFIX,
+                            timezoneOffset, daylightSaving, "habit", mastermindDocument.userID, habit, true);
+                        if (setHabitReminder === null) keepPromptingReminder = null;
+                    }
+                }
+                if(!keepPromptingReminder) return keepPromptingReminder;
+            }
+            return true;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
     },
 
     getOneHabitByRecency: async function (userID, habitIndex, archived = undefined) {
@@ -572,22 +728,22 @@ module.exports = {
     },
 
     getHabitLogOnTimestampDay: function (presentToPastSortedLogs, targetTimestamp, dailyCron) {
-            const targetDate = new Date(this.getActualDateLogged(targetTimestamp, dailyCron));
-            const nextCronDate = new Date(
-                targetDate.getUTCFullYear(),
-                targetDate.getUTCMonth(),
-                targetDate.getUTCDate() + 1
-            );
-            // console.log({ presentToPastSortedLogs, dailyCron });
-            // console.log(`Current Habit Date: ${fn.timestampToDateString(currentHabitDate.getTime())}`);
-            // console.log(`Next Habit Date: ${fn.timestampToDateString(nextHabitDate.getTime())}`);
-            const targetLog = presentToPastSortedLogs.find(
-                log => log.timestamp < nextCronDate.getTime() + dailyCron
-                    && log.timestamp >= targetDate.getTime() + dailyCron
-            );
-            // console.log({ nearestLog });
-            if (targetLog) return targetLog;
-            else return null;
+        const targetDate = new Date(this.getActualDateLogged(targetTimestamp, dailyCron));
+        const nextCronDate = new Date(
+            targetDate.getUTCFullYear(),
+            targetDate.getUTCMonth(),
+            targetDate.getUTCDate() + 1
+        );
+        // console.log({ presentToPastSortedLogs, dailyCron });
+        // console.log(`Current Habit Date: ${fn.timestampToDateString(currentHabitDate.getTime())}`);
+        // console.log(`Next Habit Date: ${fn.timestampToDateString(nextHabitDate.getTime())}`);
+        const targetLog = presentToPastSortedLogs.find(
+            log => log.timestamp < nextCronDate.getTime() + dailyCron
+                && log.timestamp >= targetDate.getTime() + dailyCron
+        );
+        // console.log({ nearestLog });
+        if (targetLog) return targetLog;
+        else return null;
     },
 
     getStateEmoji: function (state) {

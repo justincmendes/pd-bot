@@ -182,7 +182,8 @@ async function setMastermindWeeklyGoalReminder(bot, userID, reminderEndTime,
         recurrances || undefined, mastermindEmbedColour);
 }
 
-async function setUserMastermindReminder(bot, message, PREFIX, timezoneOffset, daylightSaving, mastermindDocument) {
+async function setUserMastermindReminder(bot, message, PREFIX,
+    timezoneOffset, daylightSaving, mastermindDocument) {
     let endTime = await fn.getDateAndTimeEntry(bot, message, PREFIX, timezoneOffset, daylightSaving,
         "**When** do you want your **first weekly goal reminder?**"
         + "\n(Recommended: \`tomorrow at 12pm\` or \`tom at 8a\`)",
@@ -203,7 +204,7 @@ async function setUserMastermindReminder(bot, message, PREFIX, timezoneOffset, d
         const confirmOverride = await fn.getUserConfirmation(bot, message, PREFIX,
             "Do you want to **cancel** any **older Mastermind reminders** that are **currently ongoing**?"
             + `\n(There are currently **${mastermindReminders.length} reminder(s)** ongoing)`,
-            forceSkip, "Mastermind: Weekly Goals Daily Reminder Override");
+            false, "Mastermind: Weekly Goals Daily Reminder Override");
         if (confirmOverride) {
             await deleteCurrentMastermindReminders(message.author.id);
         }
@@ -311,7 +312,7 @@ module.exports = {
 
         // Variable Declarations and Initializations
         let mastermindUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\``
-            + "\n\n\`<ACTION>\`: **start/s; delete/d; edit; post/p; template/t; reminder;r**"
+            + "\n\n\`<ACTION>\`: **start/s; delete/d; edit; post/p; template/t; reminder;r; habit/h**"
             + `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join('; ')}**`;
         mastermindUsageMessage = fn.getMessageEmbed(mastermindUsageMessage, "Mastermind: Help", mastermindEmbedColour);
         const mastermindHelpMessage = `Try \`${PREFIX}${commandUsed} help\`...`;
@@ -367,7 +368,7 @@ module.exports = {
             var targetUser;
             if (isInGuild) {
                 const guildSettings = await Guild.findOne({ guildID });
-                const mastermindRoles = guildSettings.mastermind.roles;
+                const mastermindRoles = guildSettings ? guildSettings.mastermind.roles : null;
                 if (mastermindRoles) {
                     const permissions = message.guild.member(authorID).roles.cache.some(role => mastermindRoles.includes(role));
                     if (permissions) {
@@ -576,8 +577,9 @@ module.exports = {
                     if (userWantsTemplate) {
                         const goalsToReminderConfirmation = await fn.getUserConfirmation(bot, message, PREFIX,
                             "Would you like to be **reminded** of your **Mastermind Weekly Goals** each day this upcoming week?"
-                            + "\n(If yes, you can choose if you want to be reminded of them for 7 days or more)", forceSkip,
-                            "Mastermind: Weekly Goals Daily Reminder");
+                            + "\n(If yes, you can choose if you want to be reminded of them for 7 days or more)"
+                            + `\n\n**If you want to setup Weekly Goal reminders later**, type \`${PREFIX}${commandUsed} reminder\``,
+                            forceSkip, "Mastermind: Weekly Goals Daily Reminder", 300000);
                         if (goalsToReminderConfirmation) {
                             await setUserMastermindReminder(bot, message, PREFIX,
                                 timezoneOffset, daylightSaving, mastermindDocument);
@@ -585,78 +587,13 @@ module.exports = {
 
                         const goalsToHabitConfirmation = await fn.getUserConfirmation(bot, message, PREFIX,
                             "**Would you like to set any of this week's goal(s) as a habit?:**"
-                            + `\n\n${fn.goalArrayToString(mastermindDocument.journal.goals, "Weekly", true, true) || ""}`,
-                            forceSkip, "Mastermind: Weekly Goals into Habits");
+                            + `\n\n${fn.goalArrayToString(mastermindDocument.journal.goals, "Weekly", true, true) || ""}`
+                            + `\n\n**If you want to setup Weekly Goal habits later**, type \`${PREFIX}${commandUsed} habit\``,
+                            forceSkip, "Mastermind: Weekly Goals into Habits", 600000);
                         if (goalsToHabitConfirmation) {
-                            var reset;
-                            let mastermindGoals = [...mastermindDocument.journal.goals];
-                            console.log({ mastermindGoals });
-                            console.log(mastermindDocument.journal.goals);
-                            let finalGoals = new Array();
-                            do {
-                                const someGoalsSelected = mastermindGoals.length !== mastermindDocument.journal.goals.length;
-                                reset = false;
-
-                                const selectedGoal = await fn.getUserSelectedObject(bot, message, PREFIX,
-                                    "**Select the goal you'd like to make into a habit!**"
-                                    + `${someGoalsSelected ? `\n(Type \`${mastermindGoals.length + 1}\` if you're done)` : ""}`,
-                                    "Mastermind: Weekly Goal into Habit Selection", mastermindGoals, "description",
-                                    false, mastermindEmbedColour, 600000, 0, null, someGoalsSelected ? ["**DONE**"] : [],
-                                );
-                                if (!selectedGoal) return;
-                                else {
-                                    if (selectedGoal.index !== mastermindGoals.length) {
-                                        finalGoals.push(mastermindGoals[selectedGoal.index]);
-                                        mastermindGoals.splice(selectedGoal.index, 1);
-                                        const anotherHabit = await fn.getUserConfirmation(bot, message, PREFIX,
-                                            "**Would you like to convert another goal into a habit?**",
-                                            false, "Mastermind: Weekly Goals into Habits");
-                                        if (typeof anotherHabit === 'boolean') {
-                                            if (anotherHabit === true) reset = true;
-                                            else reset = false;
-                                        }
-                                        else return;
-                                    }
-                                }
-                                if (!mastermindGoals.length) reset = false;
-                            }
-                            while (reset)
-
-                            const confirmConversion = await fn.getUserConfirmation(bot, message, PREFIX, `**Are you sure you want to convert the following goals into habits?**`
-                                + `\n(Default settings will be applied: **daily habit, manual entry, no count value** - you can edit this using \`${PREFIX}habit edit\`)`
-                                + `\n\n${fn.goalArrayToString(finalGoals, "Weekly", true, false) || ""}`, true, "Mastermind: Confirm Weekly Goals into Habits");
-                            if (!confirmConversion) return;
-                            const { habitCron } = targetUserSettings;
-                            const nextCron = hb.getNextCronTimeUTC(targetUserTimezoneOffset, habitCron, false, 1);
-
-                            finalGoals.forEach(async goal => {
-                                const habit = new Habit({
-                                    _id: mongoose.Types.ObjectId(),
-                                    userID: authorID,
-                                    createdAt: fn.getCurrentUTCTimestampFlooredToSecond() + HOUR_IN_MS * targetUserTimezoneOffset,
-                                    archived: false,
-                                    description: goal.description,
-                                    areaOfLife: goal.type,
-                                    reason: goal.reason,
-                                    connectedGoal: goal.connectedGoal,
-                                    nextCron,
-                                    settings: {
-                                        isCountType: false,
-                                        isWeeklyType: false,
-                                        cronPeriods: 1,
-                                    },
-                                    currentStreak: 0,
-                                    currentState: 0,
-                                    longestStreak: 0,
-                                    pastWeek: 0,
-                                    pastMonth: 0,
-                                    pastYear: 0,
-                                });
-                                await habit.save()
-                                    .then(result => console.log({ result }))
-                                    .catch(err => console.error(err));
-                                await hb.habitCron(habit, timezoneOffset, habitCron);
-                            });
+                            const successfullySetHabits = await hb.setMastermindHabits(bot, message, PREFIX, commandUsed,
+                                timezoneOffset, daylightSaving, mastermindDocument, userSettings);
+                            if (!successfullySetHabits) return;
                         }
 
                         // 6. Post    
@@ -1344,6 +1281,46 @@ module.exports = {
         }
 
 
+        else if (mastermindCommand === "habit" || mastermindCommand === "habits" || mastermindCommand === "hab"
+            || mastermindCommand === "hb" || mastermindCommand === "h") {
+            const userMasterminds = await Mastermind.find({ userID: authorID })
+                .sort({ _id: -1 });
+            if (userMasterminds) if (userMasterminds.length) {
+                var reset;
+                do {
+                    reset = false;
+                    var mastermindList = "";
+                    userMasterminds.forEach((mastermind, i) => {
+                        mastermindList += `\`${i + 1}\` - **__${fn.timestampToDateString(mastermind.createdAt, true, true, true)}__**`
+                            + `\n${fn.goalArrayToString(mastermind.journal.goals, "Weekly", false, true, false)}`;
+                        if (i !== userMasterminds.length - 1) {
+                            mastermindList += '\n\n';
+                        }
+                    });
+                    const targetMastermindIndex = await fn.userSelectFromList(bot, message, PREFIX,
+                        mastermindList, userMasterminds.length,
+                        "**Enter the number corresponding to the mastermind entry"
+                        + " for which you want to convert the weekly goals into habits:**\n",
+                        "Mastermind: Weekly Goals To Habits", mastermindEmbedColour, 600000);
+                    if (!targetMastermindIndex && targetMastermindIndex !== 0) return;
+                    else {
+                        const successfullySetHabits = await hb.setMastermindHabits(bot, message, PREFIX, commandUsed,
+                            timezoneOffset, daylightSaving, userMasterminds[targetMastermindIndex], userSettings);
+                        if (!successfullySetHabits) return;
+                    }
+                    const setMoreHabits = await fn.getUserConfirmation(bot, message, PREFIX,
+                        "Would you like to convert another mastermind weekly goal into a habit?", false,
+                        "Mastermind: Weekly Goal Convert Another Habit", 180000);
+                    if (!setMoreHabits) return;
+                    else reset = true;
+                }
+                while (reset)
+                return;
+            }
+            return message.reply(`**No mastermind entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
+        }
+
+
         else if (mastermindCommand === "reminder" || mastermindCommand === "reminders" || mastermindCommand === "remind"
             || mastermindCommand === "remindme" || mastermindCommand === "rem" || mastermindCommand === "re" || mastermindCommand === "r") {
             const userMasterminds = await Mastermind.find({ userID: authorID })
@@ -1361,7 +1338,9 @@ module.exports = {
                         }
                     });
                     const targetMastermindIndex = await fn.userSelectFromList(bot, message, PREFIX,
-                        mastermindList, userMasterminds.length, "**Enter the number corresponding to the mastermind entry you want weekly goal reminders for:**",
+                        mastermindList, userMasterminds.length,
+                        "**Enter the number corresponding to the mastermind entry"
+                        + " you want weekly goal reminders for:**\n",
                         "Mastermind: Weekly Goal Reminder", mastermindEmbedColour, 600000);
                     if (!targetMastermindIndex && targetMastermindIndex !== 0) return;
                     else {
@@ -1375,7 +1354,8 @@ module.exports = {
                         if (confirmSelection === false) break;
                         else if (confirmSelection === null) return;
                         else {
-                            const setReminder = await setUserMastermindReminder(bot, message, PREFIX, timezoneOffset, daylightSaving, targetMastermind);
+                            const setReminder = await setUserMastermindReminder(bot, message, PREFIX,
+                                timezoneOffset, daylightSaving, targetMastermind);
                             if (!setReminder) return;
                         }
                     }

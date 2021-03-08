@@ -608,7 +608,7 @@ module.exports = {
                             case 7:
                                 // If the remainingOccurrences is undefined, null, or false
                                 // - then it is repeating indefinitely 
-                                reminderEditMessagePrompt = `\n🔁 **Repeat indefinitely**\nOR\n🔢 **A fixed number of times**`
+                                reminderEditMessagePrompt = `\n🔁 **Repeat indefinitely**\n\n🔢 **A fixed number of times**`
                                     + `\n\n**__Current Remaining Occurrences:__** ${remainingOccurrences || remainingOccurrences === 0 ? remainingOccurrences : "Indefinite (keeps repeating)"}`;
                                 userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, reminderEditMessagePrompt,
                                     ['🔁', '🔢'], reminderType, true, reminderEmbedColour);
