@@ -4893,9 +4893,21 @@ module.exports = {
             else {
                 title = `Voice Channel Tracking${channel ? `: ${channel.name}` : ""}`
             }
-            voiceChannels[vcIndex].timeTracked = totalTimeTracked;
-            const autoReportMessage = await this.voiceChannelArrayToString(
-                bot, userID, [voiceChannels[vcIndex]], false, false, false, false);
+
+            var autoReportMessage = "";
+            // If auto-reset, do not show the all-time total time tracked (it'll be reset to 0)
+            // Change the time tracked to the total time tracked
+            if (voiceChannels[vcIndex].autoReset) {
+                voiceChannels[vcIndex].timeTracked = totalTimeTracked;
+                autoReportMessage = await this.voiceChannelArrayToString(
+                    bot, userID, [voiceChannels[vcIndex]], false, false, false, false);
+            }
+            // Otherwise show both the total tie tracked and today's session.
+            else {
+                autoReportMessage = await this.voiceChannelArrayToString(
+                    bot, userID, [voiceChannels[vcIndex]], false, false, false, false)
+                    + `\n- **Today's Session:** ⏳ **__${this.millisecondsToTimeString(totalTimeTracked)}__** ⏳`;
+            }
             const messageEmbed = this.getMessageEmbed(autoReportMessage, title, this.trackEmbedColour);
             user.send(messageEmbed);
             return true;

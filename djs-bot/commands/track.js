@@ -343,7 +343,7 @@ module.exports = {
                             break;
                         case 1:
                             if (targetVcObject) if (typeof targetVcObject === 'object') {
-                                await Track.updateOne({ userID: authorID, voiceChannelID: targetVcObject.voiceChannelID }, {
+                                await Track.updateOne({ userID: authorID, voiceChannelID: targetVcObject.id }, {
                                     $set: {
                                         start: fn.getCurrentUTCTimestampFlooredToSecond(),
                                         end: fn.getCurrentUTCTimestampFlooredToSecond(),
@@ -449,6 +449,14 @@ module.exports = {
                             if (typeof userEdit === "boolean") {
                                 if (targetVcObject) if (typeof targetVcObject === 'object') {
                                     targetVcObject.autoReset = userEdit;
+                                    // If Auto Reset: Send them their current value and reset!
+                                    if(targetVcObject.autoReset) {
+                                        if(targetVcObject.timeTracked !== 0) {
+                                            await fn.sendAutoSendReportToDM(bot, authorID, userSettings,
+                                                targetVcObject.id, targetVcObject.timeTracked);
+                                            targetVcObject.timeTracked = 0;
+                                        }
+                                    }
                                     userSettings = await User.findByIdAndUpdate(userSettings._id, {
                                         $set: { voiceChannels: userSettings.voiceChannels }
                                     }, { new: true });
