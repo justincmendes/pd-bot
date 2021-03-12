@@ -422,7 +422,7 @@ module.exports = {
 
                 userSettings = await User.findOne({ discordID: authorID });
                 let { habitCron } = userSettings;
-                const cronSettings = `**Daily Streak Reset Time:** ${fn.msToTimeFromMidnight(habitCron.daily)}`
+                let cronSettings = `**Daily Streak Reset Time:** ${fn.msToTimeFromMidnight(habitCron.daily)}`
                     + `\n**Weekly Reset Day:** ${fn.getDayOfWeekToString(habitCron.weekly)}`;
 
                 let cronType = await fn.userSelectFromList(bot, message, PREFIX, "\n`1` - **Daily Reset** 🌇\n`2` - **Weekly Reset** 📅", 2,
@@ -432,9 +432,13 @@ module.exports = {
                 let isWeeklyType = false;
                 if (cronType === 1) isWeeklyType = true;
 
+                cronSettings = isWeeklyType ?
+                    `**Weekly Reset Day:** ${fn.getDayOfWeekToString(habitCron.weekly)}`
+                    + ` at ${fn.msToTimeFromMidnight(habitCron.daily)}`
+                    : `**Daily Streak Reset Time:** ${fn.msToTimeFromMidnight(habitCron.daily)}`;
                 const advancedSettings = await fn.userSelectFromList(bot, message, PREFIX, "\n`1` - **Default Settings**\n`2` - **Advanced Settings**", 2,
                     `**__Would you like to use the default settings or change them?__** ⚙\n\n${cronSettings}`
-                    + `\n**Habit Streak Reset Time:** Every ${isWeeklyType ? "Week" : "Day"}`
+                    + `\n**Habit Streak Reset Period:** Every ${isWeeklyType ? "1 Week" : "1 Day"}`
                     + `\n**Includes Value to Count:** No\n- **Auto-Complete Based on Count:** No\n- **Auto-Complete as Streak:** No`,
                     "Habit: Creation - Settings", habitEmbedColour);
                 if (!advancedSettings && advancedSettings !== 0) return;
