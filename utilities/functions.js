@@ -3870,24 +3870,25 @@ module.exports = {
     },
 
     getIDArrayFromNames: function (nameString, allMembers, cachedGuild) {
-        let allMemberNames = new Array();
+        let allMemberDetails = new Array();
         allMembers.forEach(member => {
-            allMemberNames.push({
-                id: member.id,
-                username: member.username,
-                discriminator: member.discriminator,
-                nickname: cachedGuild.member(member.id).displayName,
+            allMemberDetails.push({
+                id: member.user.id,
+                username: member.user.username,
+                discriminator: member.user.discriminator,
+                nickname: cachedGuild.member(member.user.id).displayName,
+                roles: member.roles.cache,
             });
         });
-        if (!allMemberNames.length) return false;
-        console.log({ allMemberNames });
+        if (!allMemberDetails.length) return false;
+        console.log({ allMemberDetails });
         let targetIDs = new Array();
-        const searchNickname = allMemberNames.filter(member => nameString.includes(member.nickname.toLowerCase()));
+        const searchNickname = allMemberDetails.filter(member => nameString.includes(member.nickname.toLowerCase()));
         console.log({ searchNickname });
         if (searchNickname.length) {
             targetIDs = searchNickname.map(member => member.id);
         }
-        const searchUsername = allMemberNames.filter(member => nameString.includes(member.username.toLowerCase()));
+        const searchUsername = allMemberDetails.filter(member => nameString.includes(member.username.toLowerCase()));
         console.log({ searchUsername });
         if (searchUsername.length) {
             searchUsername.map(member => {
@@ -3898,7 +3899,7 @@ module.exports = {
                 else return null;
             }).filter(element => element !== null);
         }
-        const searchWithDiscriminator = allMemberNames.filter(member => nameString.includes(`${member.username.toLowerCase()}#${member.discriminator}`));
+        const searchWithDiscriminator = allMemberDetails.filter(member => nameString.includes(`${member.username.toLowerCase()}#${member.discriminator}`));
         console.log({ searchWithDiscriminator });
         if (searchWithDiscriminator.length) {
             searchWithDiscriminator.map(member => {
@@ -3909,10 +3910,21 @@ module.exports = {
                 else return null;
             }).filter(element => element !== null);
         }
-        const searchID = allMemberNames.filter(member => nameString.includes(member.id));
+        const searchID = allMemberDetails.filter(member => nameString.includes(member.id));
         console.log({ searchID });
         if (searchID.length) {
             searchID.map(member => {
+                if (!targetIDs.includes(member.id)) {
+                    targetIDs.push(member.id);
+                    return member.id;
+                }
+                else return null;
+            }).filter(element => element !== null);
+        }
+        const searchRole = allMemberDetails.filter(member => member.roles.find(role => nameString.includes(role.id)));
+        console.log({ searchRole });
+        if (searchRole.length) {
+            searchRole.map(member => {
                 if (!targetIDs.includes(member.id)) {
                     targetIDs.push(member.id);
                     return member.id;
