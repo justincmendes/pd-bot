@@ -9,7 +9,6 @@ const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 const hb = require("../../utilities/habit");
 const del = require("../../utilities/deletion");
-const { habitCron } = require("../../utilities/habit");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
@@ -1642,21 +1641,70 @@ module.exports = {
         // Only display the description, current streak, current state, today's count* (if any)
         // Of the non-archived ones
         else if (habitCommand === "post" || habitCommand === "p") {
-            let habits = await Habit.find({ userID: authorID, archived: false }).sort({ createdAt: +1 });
-            if (!habits) return message.reply(`**You don't have any habits**, try \`${PREFIX}${commandUsed} start\``);
-            const targetChannel = await fn.getTargetChannel(bot, message, PREFIX, `Habit`,
-                forceSkip, true, false, true, habitEmbedColour);
-            if (!targetChannel) return;
-            const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
-            const habitStringArray = await multipleHabitsToStringArray(bot, message, habits, totalHabitNumber, 0,
-                false, true, false, false, false);
-            if (habitStringArray.length) habitStringArray[0] = `<@!${authorID}>\n${habitStringArray[0]}`;
-            const posts = fn.getEmbedArray(habitStringArray, `${member ? `${member.displayName}'s` : ""} Habits`
-                + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, false, habitEmbedColour);
-            posts.forEach(async post => {
-                await fn.sendMessageToChannel(bot, post, targetChannel);
-            });
-            return;
+            if (isArchived) {
+                if (totalArchiveNumber <= 0) {
+                    return message.reply(`**No archived habit entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
+                }
+            }
+            else {
+                if (totalHabitNumber <= 0) {
+                    return message.reply(`**No habit entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
+                }
+            }
+
+            const userHabits = await Habit.find({ userID: authorID, archived: isArchived })
+                .sort({ createdAt: +1 });
+            if (userHabits) if (userHabits.length) {
+                const targetHabits = await hb.getSelectedPostHabits(bot, message, PREFIX, userHabits);
+                if (!targetHabits) return;
+                else {
+                    if (!targetHabits.length) return;
+                }
+                const targetChannel = await fn.getTargetChannel(bot, message, PREFIX, `Habit`,
+                    forceSkip, true, false, true, habitEmbedColour);
+                if (!targetChannel) return;
+                const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
+
+                let habitStringArray = new Array();
+                for (const habit of targetHabits) {
+                    // Get the index of the habit
+                    let habitIndex = 1;
+                    for (let i = 0; i < userHabits.length; i++) {
+                        if (userHabits[i]._id.toString() === habit._id.toString()) {
+                            break;
+                        }
+                        else habitIndex++;
+                    }
+                    habitStringArray.push(`**__Habit ${habitIndex}:__**`
+                        + ` ${await habitDocumentToString(bot, habit, true, false, false, false, false)}`);
+                }
+
+                if (habitStringArray.length) habitStringArray[0] = `<@!${authorID}>\n${habitStringArray[0]}`;
+                const posts = fn.getEmbedArray(habitStringArray, `${member ? `${member.displayName}'s` : ""} Habits`,
+                    true, false, habitEmbedColour);
+                posts.forEach(async post => {
+                    await fn.sendMessageToChannel(bot, post, targetChannel);
+                });
+                return;
+            }
+            return message.reply(`**No ${isArchived ? "archived " : ""}habit entries...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`);
+
+            // // For posting all of the user's current habits (not archived) to a channel.
+            // let habits = await Habit.find({ userID: authorID, archived: false }).sort({ createdAt: +1 });
+            // if (!habits) return message.reply(`**You don't have any habits**, try \`${PREFIX}${commandUsed} start\``);
+            // const targetChannel = await fn.getTargetChannel(bot, message, PREFIX, `Habit`,
+            //     forceSkip, true, false, true, habitEmbedColour);
+            // if (!targetChannel) return;
+            // const member = bot.channels.cache.get(targetChannel).guild.member(authorID);
+            // const habitStringArray = await multipleHabitsToStringArray(bot, message, habits, totalHabitNumber, 0,
+            //     false, true, false, false, false);
+            // if (habitStringArray.length) habitStringArray[0] = `<@!${authorID}>\n${habitStringArray[0]}`;
+            // const posts = fn.getEmbedArray(habitStringArray, `${member ? `${member.displayName}'s` : ""} Habits`
+            //     + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, false, habitEmbedColour);
+            // posts.forEach(async post => {
+            //     await fn.sendMessageToChannel(bot, post, targetChannel);
+            // });
+            // return;
         }
 
 

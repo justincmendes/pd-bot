@@ -8,6 +8,7 @@ const User = require("../djs-bot/database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("./functions");
 const rm = require("./reminder");
+const habit = require("../djs-bot/database/schemas/habit");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
@@ -118,6 +119,50 @@ module.exports = {
         }
     },
 
+    getSelectedPostHabits: async function (bot, message, PREFIX, habits) {
+        try {
+            console.log({ habits });
+            const originalLength = habits.length;
+            var reset;
+            let finalHabits = new Array();
+            do {
+                const someHabitsSelected = habits.length !== originalLength;
+                reset = false;
+
+                const selectedHabit = await fn.getUserSelectedObject(bot, message, PREFIX,
+                    `**Select the habit you'd like to post:**`
+                    + `${someHabitsSelected ? `\n(Type \`${habits.length + 1}\` if you're done)` : ""}`,
+                    "Habit: Post - Habit Selection", habits, "description",
+                    false, habitEmbedColour, 600000, 0, null, someHabitsSelected ? ["**DONE**"] : [],
+                );
+                if (!selectedHabit) return selectedHabit;
+                else {
+                    if (selectedHabit.index !== habits.length) {
+                        finalHabits.push(habits[selectedHabit.index]);
+                        habits.splice(selectedHabit.index, 1);
+                        if (habits.length) {
+                            const anotherHabit = await fn.getUserConfirmation(bot, message, PREFIX,
+                                "**Would you like to add another habit to be posted?**",
+                                false, "Habit: Weekly Goals into Habits");
+                            if (typeof anotherHabit === 'boolean') {
+                                if (anotherHabit === true) reset = true;
+                                else reset = false;
+                            }
+                            else return null;
+                        }
+                    }
+                }
+                if (!habits.length) reset = false;
+            }
+            while (reset)
+            return finalHabits;
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+    },
+
     setMastermindHabits: async function (bot, message, PREFIX, commandUsed,
         timezoneOffset, daylightSaving, mastermindDocument, userSettings) {
         try {
@@ -141,15 +186,17 @@ module.exports = {
                     if (selectedGoal.index !== mastermindGoals.length) {
                         finalGoals.push(mastermindGoals[selectedGoal.index]);
                         mastermindGoals.splice(selectedGoal.index, 1);
-                        const anotherHabit = await fn.getUserConfirmation(bot, message, PREFIX,
-                            "**Would you like to convert another goal into a habit?**"
-                            + `\n\n**If you want to setup Weekly Goal habits later**, type \`${PREFIX}${commandUsed} habit\``,
-                            false, "Mastermind: Weekly Goals into Habits");
-                        if (typeof anotherHabit === 'boolean') {
-                            if (anotherHabit === true) reset = true;
-                            else reset = false;
+                        if (mastermindGoals.length) {
+                            const anotherHabit = await fn.getUserConfirmation(bot, message, PREFIX,
+                                "**Would you like to convert another goal into a habit?**"
+                                + `\n\n**If you want to setup Weekly Goal habits later**, type \`${PREFIX}${commandUsed} habit\``,
+                                false, "Mastermind: Weekly Goals into Habits");
+                            if (typeof anotherHabit === 'boolean') {
+                                if (anotherHabit === true) reset = true;
+                                else reset = false;
+                            }
+                            else return null;
                         }
-                        else return null;
                     }
                 }
                 if (!mastermindGoals.length) reset = false;
@@ -205,7 +252,7 @@ module.exports = {
                         if (setHabitReminder === null) keepPromptingReminder = null;
                     }
                 }
-                if(!keepPromptingReminder) return keepPromptingReminder;
+                if (!keepPromptingReminder) return keepPromptingReminder;
             }
             return true;
         }
