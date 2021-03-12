@@ -3921,7 +3921,9 @@ module.exports = {
                 else return null;
             }).filter(element => element !== null);
         }
-        const searchRole = allMemberDetails.filter(member => member.roles.find(role => nameString.includes(role.id)));
+        const searchRole = allMemberDetails.filter(member => member.roles.find(
+            role => nameString.includes(`<@&${role.id}>`) || nameString.toLowerCase().includes(role.name.toLowerCase())
+        ));
         console.log({ searchRole });
         if (searchRole.length) {
             searchRole.map(member => {
