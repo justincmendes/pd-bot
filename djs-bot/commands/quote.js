@@ -152,6 +152,7 @@ module.exports = {
                                                     continueEdit = true;
                                                 }
                                                 else {
+                                                    interval = intervalArgs;
                                                     const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
                                                     currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
                                                     if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
@@ -202,8 +203,8 @@ module.exports = {
                                                 $set:
                                                 {
                                                     getQuote: userEdit,
-                                                    quoteInterval: intervalArgs.join(' '),
-                                                    nextQuote: firstQuote,
+                                                    quoteInterval: userEdit && interval ? interval.join(' ') : undefined,
+                                                    nextQuote: userEdit ? firstQuote : undefined,
                                                 }
                                             }, { new: true });
                                     }

@@ -149,29 +149,6 @@ module.exports = {
                         userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, userSettingsPrompt,
                             ['🙌', '⛔'], type, forceSkip, quoteEmbedColour);
                         break;
-                    case 5:
-                        if (userSettings.getQuote) {
-                            userSettingsPrompt = `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}`
-                                + "\n\nType `skip` to **start it now**"
-                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, quoteEmbedColour);
-                        }
-                        else {
-                            fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
-                            userEdit = "back";
-                            continueEdit = true;
-                        }
-                        break;
-                    case 6:
-                        if (userSettings.getQuote) {
-                            userSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
-                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, quoteEmbedColour);
-                        }
-                        else {
-                            fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
-                            userEdit = "back";
-                            continueEdit = true;
-                        }
-                        break;
                     case 7 - quoteAdjustment:
                         userSettingsPrompt = `Do you want me to delete your replies to my commands?\n(To keep servers/channels clean and/or hide your entries while typing in a server)`
                             + `\n\n👍 - **Yes**\n\n👎 - **No**`;
@@ -264,6 +241,30 @@ module.exports = {
                                 + ` for after you leave the voice channel - in case you come back within that time)`;
                             userEdit = await fn.getUserEditBoolean(bot, message, PREFIX, fieldToEdit, trackPrompt,
                                 ['0️⃣', '⛔'], `Track ${type}`, true, trackEmbedColour);
+                        }
+                        break;
+
+                    case 5:
+                        if (userSettings.getQuote) {
+                            userSettingsPrompt = `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}`
+                                + "\n\nType `skip` to **start it now**"
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, quoteEmbedColour);
+                        }
+                        else {
+                            fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
+                            userEdit = "back";
+                            continueEdit = true;
+                        }
+                        break;
+                    case 6:
+                        if (userSettings.getQuote) {
+                            userSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
+                            userEdit = await fn.getUserEditString(bot, message, PREFIX, fieldToEdit, userSettingsPrompt, type, forceSkip, quoteEmbedColour);
+                        }
+                        else {
+                            fn.sendReplyThenDelete(message, "Make sure you allow yourself to **Get Quotes** first, before then adjusting the interval", 60000);
+                            userEdit = "back";
+                            continueEdit = true;
                         }
                         break;
                 }
@@ -486,6 +487,7 @@ module.exports = {
                                                 continueEdit = true;
                                             }
                                             else {
+                                                interval = intervalInput;
                                                 userSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚\n${futureTimeExamples}`
                                                     + "\n\nType `skip` to **start it now**"
                                                 let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, quoteEmbedColour);
@@ -544,121 +546,13 @@ module.exports = {
                                                 $set:
                                                 {
                                                     getQuote: userEdit,
-                                                    quoteInterval: intervalInput.join(' '),
-                                                    nextQuote: firstQuote,
+                                                    quoteInterval: userEdit && interval ? interval.join(' ') : undefined,
+                                                    nextQuote: userEdit ? firstQuote : undefined,
                                                 }
                                             }, { new: true });
                                     }
                                 }
                                 else continueEdit = true;
-                            }
-                            break;
-                        case 5:
-                            {
-                                let nextQuote;
-                                const isCurrent = userEdit === "skip" || userEdit === "now";
-                                currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
-                                if (isCurrent) nextQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
-                                else {
-                                    userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
-                                    const timeArgs = userEdit[0] === "in" ? userEdit : ["in"].concat(userEdit);
-                                    nextQuote = fn.timeCommandHandlerToUTC(timeArgs, currentTimestamp, timezoneOffset, daylightSaving);
-                                }
-                                if (nextQuote) {
-                                    nextQuote -= HOUR_IN_MS * timezoneOffset;
-                                    if (nextQuote - currentTimestamp >= 0) {
-                                        userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
-                                            $set:
-                                            {
-                                                getQuote: true,
-                                                quoteInterval: userSettings.quoteInterval,
-                                                nextQuote,
-                                            }
-                                        }, { new: true });
-                                        continueEdit = false;
-                                    }
-                                    else {
-                                        fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
-                                        continueEdit = true;
-                                    }
-                                }
-                                else {
-                                    fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
-                                    continueEdit = true;
-                                }
-                            }
-                            break;
-                        case 6:
-                            {
-                                userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
-                                console.log({ userEdit });
-                                let currentTimestamp = Date.now();
-                                const intervalArgs = userEdit[0] === "in" ? userEdit : ["in"].concat(userEdit)
-                                let endInterval = fn.timeCommandHandlerToUTC(intervalArgs, currentTimestamp,
-                                    timezoneOffset, daylightSaving, true, true, true);
-                                if (!endInterval) {
-                                    fn.sendReplyThenDelete(message, `**INVALID TIME**... ${settingHelpMessage}`, 60000);
-                                    continueEdit = true;
-                                }
-                                else {
-                                    endInterval -= HOUR_IN_MS * timezoneOffset;
-                                    currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
-                                    const updatedInterval = endInterval - currentTimestamp;
-                                    if (updatedInterval < HOUR_IN_MS) {
-                                        fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
-                                        continueEdit = true;
-                                    }
-                                    else {
-                                        let { nextQuote } = userSettings;
-                                        nextQuote += HOUR_IN_MS * timezoneOffset;
-                                        userSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚`
-                                            + `${nextQuote ? !isNaN(nextQuote) ? `\n\n**Currently**: ${fn.timestampToDateString(nextQuote)}` : "" : ""}`
-                                            + `\n${futureTimeExamples}\n\nType \`same\` to **keep it the same**\nType \`skip\` to **start it now**`;
-                                        let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, quoteEmbedColour);
-                                        if (!quoteTrigger) return;
-                                        else if (quoteTrigger === "back") {
-                                            continueEdit = true;
-                                        }
-                                        else {
-                                            var firstQuote;
-                                            if (quoteTrigger === "same") {
-                                                firstQuote = nextQuote;
-                                            }
-                                            else {
-                                                const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
-                                                currentTimestamp = Date.now();
-                                                if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
-                                                else {
-                                                    quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
-                                                    const triggerArgs = quoteTrigger[0] === "in" ? quoteTrigger : ["in"].concat(quoteTrigger);
-                                                    firstQuote = fn.timeCommandHandlerToUTC(triggerArgs, currentTimestamp, timezoneOffset, daylightSaving);
-                                                }
-                                            }
-                                            if (firstQuote) {
-                                                firstQuote -= HOUR_IN_MS * timezoneOffset;
-                                                if (firstQuote - currentTimestamp >= 0) {
-                                                    userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
-                                                        $set:
-                                                        {
-                                                            getQuote: true,
-                                                            quoteInterval: userEdit.join(' '),
-                                                            nextQuote: firstQuote,
-                                                        }
-                                                    }, { new: true });
-                                                    continueEdit = false;
-                                                }
-                                                else {
-                                                    fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
-                                                    continueEdit = true;
-                                                }
-                                            }
-                                            else {
-                                                fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
-                                                continueEdit = true;
-                                            }
-                                        }
-                                    }
-                                }
                             }
                             break;
                         case 7 - quoteAdjustment:
@@ -997,6 +891,115 @@ module.exports = {
                             }
                             continueEdit = true;
                             break;
+
+                        case 5:
+                            {
+                                let nextQuote;
+                                const isCurrent = userEdit === "skip" || userEdit === "now";
+                                currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
+                                if (isCurrent) nextQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
+                                else {
+                                    userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
+                                    const timeArgs = userEdit[0] === "in" ? userEdit : ["in"].concat(userEdit);
+                                    nextQuote = fn.timeCommandHandlerToUTC(timeArgs, currentTimestamp, timezoneOffset, daylightSaving);
+                                }
+                                if (nextQuote) {
+                                    nextQuote -= HOUR_IN_MS * timezoneOffset;
+                                    if (nextQuote - currentTimestamp >= 0) {
+                                        userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
+                                            $set:
+                                            {
+                                                getQuote: true,
+                                                quoteInterval: userSettings.quoteInterval,
+                                                nextQuote,
+                                            }
+                                        }, { new: true });
+                                        continueEdit = false;
+                                    }
+                                    else {
+                                        fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
+                                        continueEdit = true;
+                                    }
+                                }
+                                else {
+                                    fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
+                                    continueEdit = true;
+                                }
+                            }
+                            break;
+                        case 6:
+                            {
+                                userEdit = userEdit.toLowerCase().split(/[\s\n]+/);
+                                console.log({ userEdit });
+                                let currentTimestamp = Date.now();
+                                const intervalArgs = userEdit[0] === "in" ? userEdit : ["in"].concat(userEdit)
+                                let endInterval = fn.timeCommandHandlerToUTC(intervalArgs, currentTimestamp,
+                                    timezoneOffset, daylightSaving, true, true, true);
+                                if (!endInterval) {
+                                    fn.sendReplyThenDelete(message, `**INVALID TIME**... ${settingHelpMessage}`, 60000);
+                                    continueEdit = true;
+                                }
+                                else {
+                                    endInterval -= HOUR_IN_MS * timezoneOffset;
+                                    currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
+                                    const updatedInterval = endInterval - currentTimestamp;
+                                    if (updatedInterval < HOUR_IN_MS) {
+                                        fn.sendReplyThenDelete(message, "Please enter an interval __**> 1 hour**__");
+                                        continueEdit = true;
+                                    }
+                                    else {
+                                        let { nextQuote } = userSettings;
+                                        nextQuote += HOUR_IN_MS * timezoneOffset;
+                                        userSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚`
+                                            + `${nextQuote ? !isNaN(nextQuote) ? `\n\n**Currently**: ${fn.timestampToDateString(nextQuote)}` : "" : ""}`
+                                            + `\n${futureTimeExamples}\n\nType \`same\` to **keep it the same**\nType \`skip\` to **start it now**`;
+                                        let quoteTrigger = await fn.getUserEditString(bot, message, PREFIX, "First Quote Time", userSettingsPrompt, type, forceSkip, quoteEmbedColour);
+                                        if (!quoteTrigger) return;
+                                        else if (quoteTrigger === "back") {
+                                            continueEdit = true;
+                                        }
+                                        else {
+                                            var firstQuote;
+                                            if (quoteTrigger === "same") {
+                                                firstQuote = nextQuote;
+                                            }
+                                            else {
+                                                const isCurrent = quoteTrigger === "skip" || quoteTrigger === "now";
+                                                currentTimestamp = Date.now();
+                                                if (isCurrent) firstQuote = currentTimestamp + HOUR_IN_MS * timezoneOffset;
+                                                else {
+                                                    quoteTrigger = quoteTrigger.toLowerCase().split(/[\s\n]+/);
+                                                    const triggerArgs = quoteTrigger[0] === "in" ? quoteTrigger : ["in"].concat(quoteTrigger);
+                                                    firstQuote = fn.timeCommandHandlerToUTC(triggerArgs, currentTimestamp, timezoneOffset, daylightSaving);
+                                                }
+                                            }
+                                            if (firstQuote) {
+                                                firstQuote -= HOUR_IN_MS * timezoneOffset;
+                                                if (firstQuote - currentTimestamp >= 0) {
+                                                    userSettings = await User.findOneAndUpdate({ discordID: authorID }, {
+                                                        $set:
+                                                        {
+                                                            getQuote: true,
+                                                            quoteInterval: userEdit.join(' '),
+                                                            nextQuote: firstQuote,
+                                                        }
+                                                    }, { new: true });
+                                                    continueEdit = false;
+                                                }
+                                                else {
+                                                    fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
+                                                    continueEdit = true;
+                                                }
+                                            }
+                                            else {
+                                                fn.sendReplyThenDelete(message, "Please enter a **proper trigger time in the future**");
+                                                continueEdit = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
                     }
                 }
                 else continueEdit = true;
@@ -1093,7 +1096,9 @@ module.exports = {
                     }
                 }
                 if (!continueEdit) {
-                    if ((fieldToEditIndex === 4 && userEdit === true) || fieldToEditIndex === 5 || fieldToEditIndex === 6) {
+                    if ((fieldToEditIndex === 4 && userEdit === true)
+                    || (fieldToEditIndex === 5 && userSettings.getQuote)
+                    || (fieldToEditIndex === 6 && userSettings.getQuote)) {
                         const now = fn.getCurrentUTCTimestampFlooredToSecond();
 
                         const reminderQuery = { userID: authorID, title: "Quote", isDM: true, isRecurring: true, };
