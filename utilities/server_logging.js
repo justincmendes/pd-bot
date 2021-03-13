@@ -13,7 +13,4 @@ const HOUR_IN_MS = fn.HOUR_IN_MS;
 
 // Private Function Declarations
 
-module.exports = {
-    
-
-};
+module.exports = {};

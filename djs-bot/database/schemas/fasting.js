@@ -2,14 +2,14 @@ const mongoose = require("mongoose");
 // const Reminder = require("./reminder");
 
 const fastSchema = new mongoose.Schema({
-    _id: mongoose.Schema.Types.ObjectId,
-    userID: String,
-    startTime: Number,
-    endTime: Number,
-    fastDuration: Number,
-    fastBreaker: String,
-    mood: Number,
-    reflection: String
+  _id: mongoose.Schema.Types.ObjectId,
+  userID: String,
+  startTime: Number,
+  endTime: Number,
+  fastDuration: Number,
+  fastBreaker: String,
+  mood: Number,
+  reflection: String,
 });
 
 // Middleware for deleteOne, findOneAndDelete, and deleteMany - "this" is not

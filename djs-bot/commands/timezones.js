@@ -9,15 +9,28 @@ const fn = require("../../utilities/functions");
 const timezoneInstructions = fn.timezoneInstructions;
 
 module.exports = {
-    name: "timezones",
-    description: "Timezone Instructions",
-    aliases: ["timezone", "tz"],
-    cooldown: 5,
-    args: false,
-    run: async function run(bot, message, commandUsed, args, PREFIX,
-        timezoneOffset, daylightSavings, forceSkip) {
-        await fn.sendPaginationEmbed(bot, message.channel.id, message.author.id,
-            fn.getEmbedArray(timezoneInstructions, "Timezone Instructions"), true);
-        return;
-    }
+  name: "timezones",
+  description: "Timezone Instructions",
+  aliases: ["timezone", "tz"],
+  cooldown: 5,
+  args: false,
+  run: async function run(
+    bot,
+    message,
+    commandUsed,
+    args,
+    PREFIX,
+    timezoneOffset,
+    daylightSavings,
+    forceSkip
+  ) {
+    await fn.sendPaginationEmbed(
+      bot,
+      message.channel.id,
+      message.author.id,
+      fn.getEmbedArray(timezoneInstructions, "Timezone Instructions"),
+      true
+    );
+    return;
+  },
 };

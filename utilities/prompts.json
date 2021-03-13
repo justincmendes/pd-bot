@@ -1,628 +1,628 @@
 {
-    "prompts": [
-        {
-            "message": "What would you do if you knew you couldn’t fail?"
-        },
-        {
-            "message": "What is your dream life?"
-        },
-        {
-            "message": "What advice would you give to someone in your situation?"
-        },
-        {
-            "message": "What has been your biggest lesson in the last year?"
-        },
-        {
-            "message": "How can you achieve your 5 year plan in 5 months?"
-        },
-        {
-            "message": "If you had all the time and money in the world, what would you do?"
-        },
-        {
-            "message": "What’s your biggest problem? How can you solve it?"
-        },
-        {
-            "message": "What change do you want to make?"
-        },
-        {
-            "message": "What are you afraid of?"
-        },
-        {
-            "message": "What three things are you most proud of?"
-        },
-        {
-            "message": "What has been the biggest lesson you’ve learned in the past week?"
-        },
-        {
-            "message": "What has been the biggest lesson you’ve learned in the past month?"
-        },
-        {
-            "message": "What has been the biggest lesson you’ve learned in the past year?"
-        },
-        {
-            "message": "What do you believe that no one else does?"
-        },
-        {
-            "message": "What makes you most excited?"
-        },
-        {
-            "message": "What does your dream day look like?"
-        },
-        {
-            "message": "What one thing could you stop doing that would completely change your life?"
-        },
-        {
-            "message": "What one thing could you start doing that would completely change your life?"
-        },
-        {
-            "message": "How do your close friends view you?"
-        },
-        {
-            "message": "How do you want them to view you?"
-        },
-        {
-            "message": "Who are you comparing yourself to?"
-        },
-        {
-            "message": "If nothing changed, what would your life look like in 10 years?"
-        },
-        {
-            "message": "Are you happy with how that life looks?"
-        },
-        {
-            "message": "What characteristics do you wish you had?"
-        },
-        {
-            "message": "How can you get the characteristics you wish you had?"
-        },
-        {
-            "message": "In under 100 words, what is your purpose?"
-        },
-        {
-            "message": "What was your best investment last month?"
-        },
-        {
-            "message": "When do you feel most yourself?"
-        },
-        {
-            "message": "When do you feel least yourself?"
-        },
-        {
-            "message": "What makes you happy?"
-        },
-        {
-            "message": "What are the 20% of tasks that give you 80% benefits?"
-        },
-        {
-            "message": "Are you happy with your diet?"
-        },
-        {
-            "message": "Are you happy with your fitness?"
-        },
-        {
-            "message": "Are you happy with your relationship?"
-        },
-        {
-            "message": "Are you happy with your job?"
-        },
-        {
-            "message": "Are you happy with your finances?"
-        },
-        {
-            "message": "Are you happy with your mental health?"
-        },
-        {
-            "message": "How could you get paid to do what you love?"
-        },
-        {
-            "message": "If you could only share one message with the world, what would it be?"
-        },
-        {
-            "message": "What is something you’d love to learn?"
-        },
-        {
-            "message": "If you achieved all of your life goals, how would you feel?"
-        },
-        {
-            "message": "Where could you add more fun to your life?"
-        },
-        {
-            "message": "How can you surprise your partner/friend/family?"
-        },
-        {
-            "message": "Where do you need some help?"
-        },
-        {
-            "message": "Where is fear holding you back?"
-        },
-        {
-            "message": "Who are your role models?"
-        },
-        {
-            "message": "What are the five or less things that you must do before you die?"
-        },
-        {
-            "message": "What is stopping you from being completely satisfied with what you already have?"
-        },
-        {
-            "message": "What is the purpose of your life?"
-        },
-        {
-            "message": "List 3 recent accomplishments and what you've learned from them."
-        },
-        {
-            "message": "What are 3 things that you can improve on in yourself and/or in the world around you?"
-        },
-        {
-            "message": "What do I need more of in my life?"
-        },
-        {
-            "message": "What do I need to let go of? (Fears, toxic energy, toxic relationships)"
-        },
-        {
-            "message": "What are some of my limiting beliefs that might be holding me back?"
-        },
-        {
-            "message": "What are 5-10 positive things about my life? (Things I absolutely love about my life)"
-        },
-        {
-            "message": "What are 5-10 ways that I can go out of my comfort zone this year?"
-        },
-        {
-            "message": "What are 7 things I am really good at?"
-        },
-        {
-            "message": "Write out 5-15 positive affirmations (ex: I can achieve anything I set my mind to.)"
-        },
-        {
-            "message": "If money wasn’t an issue, what would my ideal life be? (Where would I live, what would my career be, what would my family look like)"
-        },
-        {
-            "message": "What motivates me to keep going? "
-        },
-        {
-            "message": "How would I describe myself to someone who has never met me before?"
-        },
-        {
-            "message": "What are 3 of my life passions? (hobbies/things that set my soul on fire)"
-        },
-        {
-            "message": "Where is my favorite place to go? Why?"
-        },
-        {
-            "message": "Who is my biggest inspiration and why?"
-        },
-        {
-            "message": "Where will I be in 5 years?"
-        },
-        {
-            "message": "What does my ideal day look like?"
-        },
-        {
-            "message": "What unhealthy habits do I need to cut out?"
-        },
-        {
-            "message": "What do I love most about myself? (5 things)"
-        },
-        {
-            "message": "What is something I’ve been wanting to do but have been too afraid to try? (Why am I afraid?)"
-        },
-        {
-            "message": "What are my top 3 goals for this year and how can I achieve them?"
-        },
-        {
-            "message": "What do I struggle with the most? "
-        },
-        {
-            "message": "What are 5 words that describe me best and why?"
-        },
-        {
-            "message": "How can I add happiness to my daily life?"
-        },
-        {
-            "message": "What animal describes me as a person and why?"
-        },
-        {
-            "message": "What do I need to forgive myself for?"
-        },
-        {
-            "message": "What does success mean to me?"
-        },
-        {
-            "message": "How can I show myself more love? "
-        },
-        {
-            "message": "What am I going to achieve next month?"
-        },
-        {
-            "message": "What negative mindsets do I need to let go of?"
-        },
-        {
-            "message": "Write out 10-50 things that make me smile."
-        },
-        {
-            "message": "What would I do if I knew I could not fail?"
-        },
-        {
-            "message": "Write a letter to your future self."
-        },
-        {
-            "message": "Am I pushing myself to my fullest potential?"
-        },
-        {
-            "message": "What are my biggest fears in life?"
-        },
-        {
-            "message": "When I feel fear about moving forward in life do I listen to the fear and stop or push through it?"
-        },
-        {
-            "message": "What’s my dream job?"
-        },
-        {
-            "message": "Describe my perfect day in every single detail."
-        },
-        {
-            "message": "What would I like to accomplish in life?"
-        },
-        {
-            "message": "Do I compare myself to anyone? Am I jealous? Why?"
-        },
-        {
-            "message": "Where do I see myself in 6 months? One year? Five years? Ten years?"
-        },
-        {
-            "message": "Do I feel succesful in my life? If not, then what do I need to do to feel?"
-        },
-        {
-            "message": "Am I holding onto people, emotions or things that no longer serve me or make me feel good? Why?"
-        },
-        {
-            "message": "Do I use a lot of negative or positive self-talk throughout the day?"
-        },
-        {
-            "message": "If I could change one thing about myself, what would that be?"
-        },
-        {
-            "message": "What habit I would most like to break?"
-        },
-        {
-            "message": "What keeps me motivated?"
-        },
-        {
-            "message": "What do I love about myself?"
-        },
-        {
-            "message": "Do I feel physically healthy? Why or why not?"
-        },
-        {
-            "message": "Do I feel mentally healthy? Why or why not?"
-        },
-        {
-            "message": "What am I grateful for right now? Name 3-10 things."
-        },
-        {
-            "message": "If there were no limits in life, what would I do?"
-        },
-        {
-            "message": "Do I care about what other people think of me? Why?"
-        },
-        {
-            "message": "What do I need more in my life?"
-        },
-        {
-            "message": "What do I need less in my life?"
-        },
-        {
-            "message": "What are 2 things I can do daily to improve myself?"
-        },
-        {
-            "message": "What I believe in?"
-        },
-        {
-            "message": "Am I happy with where I live? If not, then what would I prefer?"
-        },
-        {
-            "message": "What brings me the most peace and balance in life?"
-        },
-        {
-            "message": "What is holding me back in life?"
-        },
-        {
-            "message": "Do I make decisions from love or from fear?"
-        },
-        {
-            "message": "Do I do things out of my comfort zone?"
-        },
-        {
-            "message": "Do I practice self-care daily?"
-        },
-        {
-            "message": "What are the hobbies I would like to do more of?"
-        },
-        {
-            "message": "Am I able to forgive others?"
-        },
-        {
-            "message": "What skills do I have that may create my dream life?"
-        },
-        {
-            "message": "Where am I putting in too much energy?"
-        },
-        {
-            "message": "Where am I not putting in enough energy?"
-        },
-        {
-            "message": "What would life look like for me if I created more balance?"
-        },
-        {
-            "message": "What needs healing?"
-        },
-        {
-            "message": "What needs releasing?"
-        },
-        {
-            "message": "What needs accepting?"
-        },
-        {
-            "message": "Are my current routines getting closer to my goals? If not what can I do to change them?"
-        },
-        {
-            "message": "What is one behavior holding me back from living my best life? (it can even be scrolling on social media)"
-        },
-        {
-            "message": "What do I value most in life?"
-        },
-        {
-            "message": "How am I moving toward achieving my biggest goals?"
-        },
-        {
-            "message": "Set a three-minute timer and write whatever comes to mind."
-        },
-        {
-            "message": "How do I contribute to the good of the world?"
-        },
-        {
-            "message": "How do I enjoy spending my free time?"
-        },
-        {
-            "message": "Am I a patient person? If not, what can I do to be more patient?"
-        },
-        {
-            "message": "Am I kind to myself? How can I be more kind to myself?"
-        },
-        {
-            "message": "What would make me happy right now?"
-        },
-        {
-            "message": "Do I hide my emotions? If so, why?"
-        },
-        {
-            "message": "Do I carry emotional baggage? How can I deal with that?"
-        },
-        {
-            "message": "Have I ever felt numb? What caused that?"
-        },
-        {
-            "message": "What do I belive I deserve in life?"
-        },
-        {
-            "message": "What do I think my mission in life is?"
-        },
-        {
-            "message": "Am I a people pleaser? Why? How can I change that?"
-        },
-        {
-            "message": "Am I being honest with myself in every situation?"
-        },
-        {
-            "message": "Do I feel happy with my health and wellness routine? Why or why not and how can I improve it?"
-        },
-        {
-            "message": "What are my thoughts and feelings about money?"
-        },
-        {
-            "message": "How much money do I want to make in the next year?"
-        },
-        {
-            "message": "How do I handle stressful situations in life?"
-        },
-        {
-            "message": "Am I being true to myself and living authentically? Why or why not?"
-        },
-        {
-            "message": "What word would I use to describe myself, and why?"
-        },
-        {
-            "message": "What makes me happy right now?"
-        },
-        {
-            "message": "What makes me sad right now? How can I change that?"
-        },
-        {
-            "message": "How do I deal with confrontation?"
-        },
-        {
-            "message": "Am I a good listener?"
-        },
-        {
-            "message": "How do I feel about my body? Would I change anything?"
-        },
-        {
-            "message": "Does stress affects my body? How can I address that?"
-        },
-        {
-            "message": "Do I have a healthy diet? What changes should I make?"
-        },
-        {
-            "message": "How often do I have me-time?"
-        },
-        {
-            "message": "Is there someone in my life I should be spending more time with?"
-        },
-        {
-            "message": "Do I find it easy to follow through on a plan I have made?"
-        },
-        {
-            "message": "What would give my life more meaning?"
-        },
-        {
-            "message": "What gifts do I want to share with the world?"
-        },
-        {
-            "message": "Describe your dream life. EVERY. SINGLE. DETAIL."
-        },
-        {
-            "message": "What direction do I have to shift into?"
-        },
-        {
-            "message": "What opinion do I have to unpack?"
-        },
-        {
-            "message": "What limiting beliefs do I have to eliminate?"
-        },
-        {
-            "message": "What experience do I have to honor?"
-        },
-        {
-            "message": "How can I appreciate my worth?"
-        },
-        {
-            "message": "What emotion do I have to prioritize?"
-        },
-        {
-            "message": "Who makes me laugh? Who reminds me of the lightheartedness that we all carry? Who helps me forget for a while?"
-        },
-        {
-            "message": "What habits, practices, routines and rituals do I have to be committed that is good for my well-being?"
-        },
-        {
-            "message": "How can I care for myself?"
-        },
-        {
-            "message": "What is my ignition?"
-        },
-        {
-            "message": "What will I spend my energy on?"
-        },
-        {
-            "message": "How can I create the life I desire?"
-        },
-        {
-            "message": "What will I cultivate and grow?"
-        },
-        {
-            "message": "What negative self-belief do I have to unlearn?"
-        },
-        {
-            "message": "How do I engage in radical acceptance?"
-        },
-        {
-            "message": "How do I create a safe space, support system that trust and take care of my needs?"
-        },
-        {
-            "message": "How do I navigate through change, uncertainty, the unknown, lack of control and shifting?"
-        },
-        {
-            "message": "How do I start over, honing my uniqueness, opportunities, and growth?"
-        },
-        {
-            "message": "How do I build a stronger connection?"
-        },
-        {
-            "message": "How do I work on shifting my inner narrative?"
-        },
-        {
-            "message": "How do I become more mindful of my feelings?"
-        },
-        {
-            "message": "How do I let myself to be imperfect without letting fear run the show without limitation(Yearn my uniqueness)"
-        },
-        {
-            "message": "How can I develop a more fulfilling life?"
-        },
-        {
-            "message": "How can I create an epic life?"
-        },
-        {
-            "message": "What steps do I need to take in order to change my life?"
-        },
-        {
-            "message": "What self-improvement tips do I need to adopt?"
-        },
-        {
-            "message": "Create a catalog of positivity, write down positive affirmation about yourself, create supportive mantras- read it daily!"
-        },
-        {
-            "message": "How have my darkest times and moments shaped me and how grateful am I for life trials and difficulties?"
-        },
-        {
-            "message": "Why do I have to embrace my challenges?"
-        },
-        {
-            "message": "Core reminder to encrypt:\n\nPatience is a practice; what we are watering now often doesn’t grow until later\nIt’s okay to not know\nLife is a collection of phases\nBe open\nLearning to carry our darkness stops it from carrying us\n\nWhich phrase stands out the most to you and why? How can you implement this into your life today?"
-        },
-        {
-            "message": "What do you need more of? Less of?"
-        },
-        {
-            "message": "What is my unique life purpose?"
-        },
-        {
-            "message": "What legacy do I want to enshrine into the depths of the earth?"
-        },
-        {
-            "message": "How many challenges am I willing to overcome and conquer to live my best life?"
-        },
-        {
-            "message": "How do I stay close to my truth and remember “my” why?"
-        },
-        {
-            "message": "How can I nourish myself and move forward?"
-        },
-        {
-            "message": "How do I find fulfillment?"
-        },
-        {
-            "message": "How do I validate my emotions?"
-        },
-        {
-            "message": "What do I need to add or subtract?"
-        },
-        {
-            "message": "What am I in control of in this moment?"
-        },
-        {
-            "message": "Jot down your inner narrative"
-        },
-        {
-            "message": "How can you hold yourself up to a higher standard in a loving way?"
-        },
-        {
-            "message": "Are you okay? Explain why."
-        },
-        {
-            "message": "When was the last time you've given up on yourself? How many times have you given up on yourself?"
-        },
-        {
-            "message": "How different would your life be if you never gave up on yourself?"
-        },
-        {
-            "message": "How close are you to your future self? Why?"
-        },
-        {
-            "message": "What does a typical day look like for your future self?"
-        },
-        {
-            "message": "What is your largest obstacle right now? Why?"
-        },
-        {
-            "message": "How can you close the gap between your present-self and your future-self even more?"
-        },
-        {
-            "message": "How can you become more cognizant and familiar with your future-self?"
-        },
-        {
-            "message": "Momentum is a double-edged sword. It can propel you to new heights or keep you locked into previous choices and old habits.\nWhere do I have healthy momentum right now? Where do I have unhealthy momentum?"
-        }
-    ]
+  "prompts": [
+    {
+      "message": "What would you do if you knew you couldn’t fail?"
+    },
+    {
+      "message": "What is your dream life?"
+    },
+    {
+      "message": "What advice would you give to someone in your situation?"
+    },
+    {
+      "message": "What has been your biggest lesson in the last year?"
+    },
+    {
+      "message": "How can you achieve your 5 year plan in 5 months?"
+    },
+    {
+      "message": "If you had all the time and money in the world, what would you do?"
+    },
+    {
+      "message": "What’s your biggest problem? How can you solve it?"
+    },
+    {
+      "message": "What change do you want to make?"
+    },
+    {
+      "message": "What are you afraid of?"
+    },
+    {
+      "message": "What three things are you most proud of?"
+    },
+    {
+      "message": "What has been the biggest lesson you’ve learned in the past week?"
+    },
+    {
+      "message": "What has been the biggest lesson you’ve learned in the past month?"
+    },
+    {
+      "message": "What has been the biggest lesson you’ve learned in the past year?"
+    },
+    {
+      "message": "What do you believe that no one else does?"
+    },
+    {
+      "message": "What makes you most excited?"
+    },
+    {
+      "message": "What does your dream day look like?"
+    },
+    {
+      "message": "What one thing could you stop doing that would completely change your life?"
+    },
+    {
+      "message": "What one thing could you start doing that would completely change your life?"
+    },
+    {
+      "message": "How do your close friends view you?"
+    },
+    {
+      "message": "How do you want them to view you?"
+    },
+    {
+      "message": "Who are you comparing yourself to?"
+    },
+    {
+      "message": "If nothing changed, what would your life look like in 10 years?"
+    },
+    {
+      "message": "Are you happy with how that life looks?"
+    },
+    {
+      "message": "What characteristics do you wish you had?"
+    },
+    {
+      "message": "How can you get the characteristics you wish you had?"
+    },
+    {
+      "message": "In under 100 words, what is your purpose?"
+    },
+    {
+      "message": "What was your best investment last month?"
+    },
+    {
+      "message": "When do you feel most yourself?"
+    },
+    {
+      "message": "When do you feel least yourself?"
+    },
+    {
+      "message": "What makes you happy?"
+    },
+    {
+      "message": "What are the 20% of tasks that give you 80% benefits?"
+    },
+    {
+      "message": "Are you happy with your diet?"
+    },
+    {
+      "message": "Are you happy with your fitness?"
+    },
+    {
+      "message": "Are you happy with your relationship?"
+    },
+    {
+      "message": "Are you happy with your job?"
+    },
+    {
+      "message": "Are you happy with your finances?"
+    },
+    {
+      "message": "Are you happy with your mental health?"
+    },
+    {
+      "message": "How could you get paid to do what you love?"
+    },
+    {
+      "message": "If you could only share one message with the world, what would it be?"
+    },
+    {
+      "message": "What is something you’d love to learn?"
+    },
+    {
+      "message": "If you achieved all of your life goals, how would you feel?"
+    },
+    {
+      "message": "Where could you add more fun to your life?"
+    },
+    {
+      "message": "How can you surprise your partner/friend/family?"
+    },
+    {
+      "message": "Where do you need some help?"
+    },
+    {
+      "message": "Where is fear holding you back?"
+    },
+    {
+      "message": "Who are your role models?"
+    },
+    {
+      "message": "What are the five or less things that you must do before you die?"
+    },
+    {
+      "message": "What is stopping you from being completely satisfied with what you already have?"
+    },
+    {
+      "message": "What is the purpose of your life?"
+    },
+    {
+      "message": "List 3 recent accomplishments and what you've learned from them."
+    },
+    {
+      "message": "What are 3 things that you can improve on in yourself and/or in the world around you?"
+    },
+    {
+      "message": "What do I need more of in my life?"
+    },
+    {
+      "message": "What do I need to let go of? (Fears, toxic energy, toxic relationships)"
+    },
+    {
+      "message": "What are some of my limiting beliefs that might be holding me back?"
+    },
+    {
+      "message": "What are 5-10 positive things about my life? (Things I absolutely love about my life)"
+    },
+    {
+      "message": "What are 5-10 ways that I can go out of my comfort zone this year?"
+    },
+    {
+      "message": "What are 7 things I am really good at?"
+    },
+    {
+      "message": "Write out 5-15 positive affirmations (ex: I can achieve anything I set my mind to.)"
+    },
+    {
+      "message": "If money wasn’t an issue, what would my ideal life be? (Where would I live, what would my career be, what would my family look like)"
+    },
+    {
+      "message": "What motivates me to keep going? "
+    },
+    {
+      "message": "How would I describe myself to someone who has never met me before?"
+    },
+    {
+      "message": "What are 3 of my life passions? (hobbies/things that set my soul on fire)"
+    },
+    {
+      "message": "Where is my favorite place to go? Why?"
+    },
+    {
+      "message": "Who is my biggest inspiration and why?"
+    },
+    {
+      "message": "Where will I be in 5 years?"
+    },
+    {
+      "message": "What does my ideal day look like?"
+    },
+    {
+      "message": "What unhealthy habits do I need to cut out?"
+    },
+    {
+      "message": "What do I love most about myself? (5 things)"
+    },
+    {
+      "message": "What is something I’ve been wanting to do but have been too afraid to try? (Why am I afraid?)"
+    },
+    {
+      "message": "What are my top 3 goals for this year and how can I achieve them?"
+    },
+    {
+      "message": "What do I struggle with the most? "
+    },
+    {
+      "message": "What are 5 words that describe me best and why?"
+    },
+    {
+      "message": "How can I add happiness to my daily life?"
+    },
+    {
+      "message": "What animal describes me as a person and why?"
+    },
+    {
+      "message": "What do I need to forgive myself for?"
+    },
+    {
+      "message": "What does success mean to me?"
+    },
+    {
+      "message": "How can I show myself more love? "
+    },
+    {
+      "message": "What am I going to achieve next month?"
+    },
+    {
+      "message": "What negative mindsets do I need to let go of?"
+    },
+    {
+      "message": "Write out 10-50 things that make me smile."
+    },
+    {
+      "message": "What would I do if I knew I could not fail?"
+    },
+    {
+      "message": "Write a letter to your future self."
+    },
+    {
+      "message": "Am I pushing myself to my fullest potential?"
+    },
+    {
+      "message": "What are my biggest fears in life?"
+    },
+    {
+      "message": "When I feel fear about moving forward in life do I listen to the fear and stop or push through it?"
+    },
+    {
+      "message": "What’s my dream job?"
+    },
+    {
+      "message": "Describe my perfect day in every single detail."
+    },
+    {
+      "message": "What would I like to accomplish in life?"
+    },
+    {
+      "message": "Do I compare myself to anyone? Am I jealous? Why?"
+    },
+    {
+      "message": "Where do I see myself in 6 months? One year? Five years? Ten years?"
+    },
+    {
+      "message": "Do I feel succesful in my life? If not, then what do I need to do to feel?"
+    },
+    {
+      "message": "Am I holding onto people, emotions or things that no longer serve me or make me feel good? Why?"
+    },
+    {
+      "message": "Do I use a lot of negative or positive self-talk throughout the day?"
+    },
+    {
+      "message": "If I could change one thing about myself, what would that be?"
+    },
+    {
+      "message": "What habit I would most like to break?"
+    },
+    {
+      "message": "What keeps me motivated?"
+    },
+    {
+      "message": "What do I love about myself?"
+    },
+    {
+      "message": "Do I feel physically healthy? Why or why not?"
+    },
+    {
+      "message": "Do I feel mentally healthy? Why or why not?"
+    },
+    {
+      "message": "What am I grateful for right now? Name 3-10 things."
+    },
+    {
+      "message": "If there were no limits in life, what would I do?"
+    },
+    {
+      "message": "Do I care about what other people think of me? Why?"
+    },
+    {
+      "message": "What do I need more in my life?"
+    },
+    {
+      "message": "What do I need less in my life?"
+    },
+    {
+      "message": "What are 2 things I can do daily to improve myself?"
+    },
+    {
+      "message": "What I believe in?"
+    },
+    {
+      "message": "Am I happy with where I live? If not, then what would I prefer?"
+    },
+    {
+      "message": "What brings me the most peace and balance in life?"
+    },
+    {
+      "message": "What is holding me back in life?"
+    },
+    {
+      "message": "Do I make decisions from love or from fear?"
+    },
+    {
+      "message": "Do I do things out of my comfort zone?"
+    },
+    {
+      "message": "Do I practice self-care daily?"
+    },
+    {
+      "message": "What are the hobbies I would like to do more of?"
+    },
+    {
+      "message": "Am I able to forgive others?"
+    },
+    {
+      "message": "What skills do I have that may create my dream life?"
+    },
+    {
+      "message": "Where am I putting in too much energy?"
+    },
+    {
+      "message": "Where am I not putting in enough energy?"
+    },
+    {
+      "message": "What would life look like for me if I created more balance?"
+    },
+    {
+      "message": "What needs healing?"
+    },
+    {
+      "message": "What needs releasing?"
+    },
+    {
+      "message": "What needs accepting?"
+    },
+    {
+      "message": "Are my current routines getting closer to my goals? If not what can I do to change them?"
+    },
+    {
+      "message": "What is one behavior holding me back from living my best life? (it can even be scrolling on social media)"
+    },
+    {
+      "message": "What do I value most in life?"
+    },
+    {
+      "message": "How am I moving toward achieving my biggest goals?"
+    },
+    {
+      "message": "Set a three-minute timer and write whatever comes to mind."
+    },
+    {
+      "message": "How do I contribute to the good of the world?"
+    },
+    {
+      "message": "How do I enjoy spending my free time?"
+    },
+    {
+      "message": "Am I a patient person? If not, what can I do to be more patient?"
+    },
+    {
+      "message": "Am I kind to myself? How can I be more kind to myself?"
+    },
+    {
+      "message": "What would make me happy right now?"
+    },
+    {
+      "message": "Do I hide my emotions? If so, why?"
+    },
+    {
+      "message": "Do I carry emotional baggage? How can I deal with that?"
+    },
+    {
+      "message": "Have I ever felt numb? What caused that?"
+    },
+    {
+      "message": "What do I belive I deserve in life?"
+    },
+    {
+      "message": "What do I think my mission in life is?"
+    },
+    {
+      "message": "Am I a people pleaser? Why? How can I change that?"
+    },
+    {
+      "message": "Am I being honest with myself in every situation?"
+    },
+    {
+      "message": "Do I feel happy with my health and wellness routine? Why or why not and how can I improve it?"
+    },
+    {
+      "message": "What are my thoughts and feelings about money?"
+    },
+    {
+      "message": "How much money do I want to make in the next year?"
+    },
+    {
+      "message": "How do I handle stressful situations in life?"
+    },
+    {
+      "message": "Am I being true to myself and living authentically? Why or why not?"
+    },
+    {
+      "message": "What word would I use to describe myself, and why?"
+    },
+    {
+      "message": "What makes me happy right now?"
+    },
+    {
+      "message": "What makes me sad right now? How can I change that?"
+    },
+    {
+      "message": "How do I deal with confrontation?"
+    },
+    {
+      "message": "Am I a good listener?"
+    },
+    {
+      "message": "How do I feel about my body? Would I change anything?"
+    },
+    {
+      "message": "Does stress affects my body? How can I address that?"
+    },
+    {
+      "message": "Do I have a healthy diet? What changes should I make?"
+    },
+    {
+      "message": "How often do I have me-time?"
+    },
+    {
+      "message": "Is there someone in my life I should be spending more time with?"
+    },
+    {
+      "message": "Do I find it easy to follow through on a plan I have made?"
+    },
+    {
+      "message": "What would give my life more meaning?"
+    },
+    {
+      "message": "What gifts do I want to share with the world?"
+    },
+    {
+      "message": "Describe your dream life. EVERY. SINGLE. DETAIL."
+    },
+    {
+      "message": "What direction do I have to shift into?"
+    },
+    {
+      "message": "What opinion do I have to unpack?"
+    },
+    {
+      "message": "What limiting beliefs do I have to eliminate?"
+    },
+    {
+      "message": "What experience do I have to honor?"
+    },
+    {
+      "message": "How can I appreciate my worth?"
+    },
+    {
+      "message": "What emotion do I have to prioritize?"
+    },
+    {
+      "message": "Who makes me laugh? Who reminds me of the lightheartedness that we all carry? Who helps me forget for a while?"
+    },
+    {
+      "message": "What habits, practices, routines and rituals do I have to be committed that is good for my well-being?"
+    },
+    {
+      "message": "How can I care for myself?"
+    },
+    {
+      "message": "What is my ignition?"
+    },
+    {
+      "message": "What will I spend my energy on?"
+    },
+    {
+      "message": "How can I create the life I desire?"
+    },
+    {
+      "message": "What will I cultivate and grow?"
+    },
+    {
+      "message": "What negative self-belief do I have to unlearn?"
+    },
+    {
+      "message": "How do I engage in radical acceptance?"
+    },
+    {
+      "message": "How do I create a safe space, support system that trust and take care of my needs?"
+    },
+    {
+      "message": "How do I navigate through change, uncertainty, the unknown, lack of control and shifting?"
+    },
+    {
+      "message": "How do I start over, honing my uniqueness, opportunities, and growth?"
+    },
+    {
+      "message": "How do I build a stronger connection?"
+    },
+    {
+      "message": "How do I work on shifting my inner narrative?"
+    },
+    {
+      "message": "How do I become more mindful of my feelings?"
+    },
+    {
+      "message": "How do I let myself to be imperfect without letting fear run the show without limitation(Yearn my uniqueness)"
+    },
+    {
+      "message": "How can I develop a more fulfilling life?"
+    },
+    {
+      "message": "How can I create an epic life?"
+    },
+    {
+      "message": "What steps do I need to take in order to change my life?"
+    },
+    {
+      "message": "What self-improvement tips do I need to adopt?"
+    },
+    {
+      "message": "Create a catalog of positivity, write down positive affirmation about yourself, create supportive mantras- read it daily!"
+    },
+    {
+      "message": "How have my darkest times and moments shaped me and how grateful am I for life trials and difficulties?"
+    },
+    {
+      "message": "Why do I have to embrace my challenges?"
+    },
+    {
+      "message": "Core reminder to encrypt:\n\nPatience is a practice; what we are watering now often doesn’t grow until later\nIt’s okay to not know\nLife is a collection of phases\nBe open\nLearning to carry our darkness stops it from carrying us\n\nWhich phrase stands out the most to you and why? How can you implement this into your life today?"
+    },
+    {
+      "message": "What do you need more of? Less of?"
+    },
+    {
+      "message": "What is my unique life purpose?"
+    },
+    {
+      "message": "What legacy do I want to enshrine into the depths of the earth?"
+    },
+    {
+      "message": "How many challenges am I willing to overcome and conquer to live my best life?"
+    },
+    {
+      "message": "How do I stay close to my truth and remember “my” why?"
+    },
+    {
+      "message": "How can I nourish myself and move forward?"
+    },
+    {
+      "message": "How do I find fulfillment?"
+    },
+    {
+      "message": "How do I validate my emotions?"
+    },
+    {
+      "message": "What do I need to add or subtract?"
+    },
+    {
+      "message": "What am I in control of in this moment?"
+    },
+    {
+      "message": "Jot down your inner narrative"
+    },
+    {
+      "message": "How can you hold yourself up to a higher standard in a loving way?"
+    },
+    {
+      "message": "Are you okay? Explain why."
+    },
+    {
+      "message": "When was the last time you've given up on yourself? How many times have you given up on yourself?"
+    },
+    {
+      "message": "How different would your life be if you never gave up on yourself?"
+    },
+    {
+      "message": "How close are you to your future self? Why?"
+    },
+    {
+      "message": "What does a typical day look like for your future self?"
+    },
+    {
+      "message": "What is your largest obstacle right now? Why?"
+    },
+    {
+      "message": "How can you close the gap between your present-self and your future-self even more?"
+    },
+    {
+      "message": "How can you become more cognizant and familiar with your future-self?"
+    },
+    {
+      "message": "Momentum is a double-edged sword. It can propel you to new heights or keep you locked into previous choices and old habits.\nWhere do I have healthy momentum right now? Where do I have unhealthy momentum?"
+    }
+  ]
 }

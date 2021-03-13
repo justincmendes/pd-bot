@@ -863,7 +863,6 @@ module.exports = {
     for (let i = 0; i < sortedLogs.length; i++) {
       if (sortedLogs[i]) {
         const latestLog = sortedLogs[i];
-        // console.log({ latestLog });
         if (sortedLogs[i + 1]) {
           const previousLog = sortedLogs[i + 1];
           const latestTimestamp = latestLog.timestamp;
@@ -910,6 +909,22 @@ module.exports = {
           // console.log(fn.timestampToDateString(latestTimestamp));
           // console.log(fn.timestampToDateString(previousCron));
           // console.log(fn.timestampToDateString(latestCron));
+          console.log(
+            `Latest Timestamp: ${fn.timestampToDateString(latestTimestamp)}`
+          );
+          console.log(
+            `Previous Timestamp: ${fn.timestampToDateString(previousTimestamp)}`
+          );
+          console.log(
+            `Latest Cron Day: ${fn.timestampToDateString(
+              adjustedLatestCronDay
+            )}`
+          );
+          console.log(
+            `Previous Cron Day: ${fn.timestampToDateString(
+              adjustedPreviousCronDay
+            )}\n`
+          );
           if (isWeeklyType) {
             if (
               (latestLog.state === 1 || latestLog.state === 3) &&
@@ -950,57 +965,14 @@ module.exports = {
               } while (true);
             }
           } else {
-            console.log(fn.timestampToDateString(lastCheckedDay));
-            console.log(fn.timestampToDateString(adjustedLatestDay));
+            // console.log(fn.timestampToDateString(lastCheckedDay));
+            // console.log(fn.timestampToDateString(adjustedLatestDay));
             const daysDifference = fn.getDaysInBetweenTimestamps(
               lastCheckedDay,
               adjustedLatestDay
             );
-            console.log(`First Check for Days Difference: ${daysDifference}`);
+            // console.log(`First Check for Days Difference: ${daysDifference}`);
             if (latestLog.state === 1 || latestLog.state === 3) {
-              // console.log({
-              //   currentStreak,
-              //   latestLog,
-              //   previousLog,
-              //   daysDifference,
-              //   streakReset,
-              // });
-              var previousCheckedLog;
-              // const previousCheckedLog = sortedLogs.find((log, idx) => {
-              //   if (idx > i + 1) {
-              //     const adjustedSecondCheckedDay = this.getActualDateLogged(
-              //       log.timestamp,
-              //       dailyCron
-              //     );
-              //     // console.log(fn.timestampToDateString(adjustedLatestDay));
-              //     // console.log(
-              //     //   fn.timestampToDateString(adjustedPreviousCheckedDay)
-              //     // );
-              //     const latestAndSecondCheckedDifference = fn.getDaysInBetweenTimestamps(
-              //       adjustedLatestDay,
-              //       adjustedSecondCheckedDay
-              //     );
-              //     // console.log({
-              //     //   log,
-              //     //   previousLog,
-              //     //   latestAndPreviousCheckedDifference,
-              //     //   streakReset,
-              //     // });
-              //     if (
-              //       (log.state === 1 || log.state === 3) &&
-              //       latestAndSecondCheckedDifference <= streakReset
-              //     ) {
-              //       return true;
-              //     }
-              //   }
-              //   return false;
-              // });
-              // console.log({ previousCheckedLog });
-              // if (previousCheckedLog) {
-              //   console.log(
-              //     fn.timestampToDateString(previousCheckedLog.timestamp)
-              //   );
-              // }
               // console.log({
               //   latestLog,
               //   lastCheckedLog,
@@ -1012,10 +984,10 @@ module.exports = {
                 (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) &&
                 daysDifference <= streakReset
               ) {
-                console.log(`Streak Before: ${currentStreak}`);
+                // console.log(`Streak Before: ${currentStreak}`);
                 if (!currentStreak) currentStreak = 1;
                 currentStreak++;
-                console.log(`Streak After: ${currentStreak}`);
+                // console.log(`Streak After: ${currentStreak}`);
                 // console.log(
                 //   `Prev Last Checked: ${fn.timestampToDateString(
                 //     lastCheckedDay
@@ -1031,34 +1003,9 @@ module.exports = {
               } else {
                 if (!currentStreak) currentStreak = 1;
                 if (daysDifference > streakReset) break;
-                // else break;
               }
-              // } else if (daysDifference > streakReset) break;
             }
           }
-
-          // //? If the difference between the last checked day and next day back (previous) in sequence is less than the streakReset, then the streak can possibly continue!
-          // console.log(fn.timestampToDateString(lastCheckedDay));
-          // console.log(fn.timestampToDateString(adjustedPreviousDay));
-          // const updatedDaysDifference = fn.getDaysInBetweenTimestamps(
-          //   lastCheckedDay,
-          //   adjustedPreviousDay
-          // );
-          // console.log(
-          //   `Last Check for Days Difference: ${updatedDaysDifference}\n`
-          // );
-          // if (updatedDaysDifference > streakReset) break;
-
-          // console.log(fn.timestampToDateString(lastCheckedDay));
-          // console.log(fn.timestampToDateString(adjustedPreviousDay));
-          // const checkDaysDifference = fn.getDaysInBetweenTimestamps(
-          //   lastCheckedDay,
-          //   adjustedPreviousDay
-          // );
-          // console.log(
-          //   `Last Check for Days Difference: ${checkDaysDifference}\n`
-          // );
-          // if (checkDaysDifference > streakReset) break;
         } else if (
           (latestLog.state === 1 || latestLog.state === 3) &&
           sortedLogs.length === 1

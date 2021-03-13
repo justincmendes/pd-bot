@@ -10,51 +10,50 @@ const mongoose = require("mongoose");
  * 🧘‍♂️ __Personal Development__
  * */
 
-
 const goalSchema = mongoose.Schema({
-    _id: mongoose.Schema.Types.ObjectId,
-    userID: {
-        type: String,
-        required: true,
-    },
-    completed: {
-        type: Boolean,
-        required: true,
-        default: false,
-    },
-    archived: {
-        type: Boolean,
-        required: true,
-        default: false,
-    },
-    type: {
-        type: Number,
-        required: true,
-    },
-    description: {
-        type: String,
-        required: true,
-    },
-    reason: {
-        type: String,
-        required: false,
-    },
-    steps: {
-        type: String,
-        required: false,
-    },
-    checkpoints: {
-        type: String,
-        required: false,
-    },
-    start: {
-        type: Number,
-        required: false,
-    },
-    end: {
-        type: Number,
-        required: false,
-    },
+  _id: mongoose.Schema.Types.ObjectId,
+  userID: {
+    type: String,
+    required: true,
+  },
+  completed: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
+  archived: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
+  type: {
+    type: Number,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  reason: {
+    type: String,
+    required: false,
+  },
+  steps: {
+    type: String,
+    required: false,
+  },
+  checkpoints: {
+    type: String,
+    required: false,
+  },
+  start: {
+    type: Number,
+    required: false,
+  },
+  end: {
+    type: Number,
+    required: false,
+  },
 });
 
 module.exports = mongoose.model("Goal", goalSchema, "goals");
