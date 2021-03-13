@@ -1212,7 +1212,8 @@ module.exports = {
                                     // Reflection
                                     case 2:
                                         habitEditMessagePrompt = "\n__**Please enter the reflection message you'd like to enter for this log:**__ ✍\n(Within 1000 characters)";
-                                        userEdit = await fn.getUserEditString(bot, message, PREFIX, "Reflection Message", habitEditMessagePrompt, type, forceSkip, habitEmbedColour, 1000);
+                                        userEdit = await fn.getUserMultilineEditString(bot, message, PREFIX, "Reflection Message",
+                                            habitEditMessagePrompt, type, forceSkip, habitEmbedColour, 1000);
                                         break;
                                     // Count
                                     case 3:
