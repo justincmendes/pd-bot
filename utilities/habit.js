@@ -727,61 +727,42 @@ module.exports = {
       countGoal,
       integration,
     } = settings;
-    // autoLogType = 1;
-    const logs = await Log.find({ connectedDocument: habitID }).sort({
-      timestamp: -1,
-    });
-    // console.log({ logs })
-    // let logs = [
-    //   {
-    //     timestamp: new Date(2021, 2, 14, 4).getTime(),
-    //     state: 3,
-    //   },
-    //   {
-    //     timestamp: new Date(2021, 2, 13, 0).getTime(),
-    //     state: 2,
-    //   },
-    //   {
-    //     timestamp: new Date(2021, 2, 12, 4).getTime(),
-    //     state: 1,
-    //   },
-    //   {
-    //     timestamp: new Date(2021, 2, 3, 4).getTime(),
-    //     state: 1,
-    //   },
-    //   {
-    //     timestamp: new Date(2021, 2, 2, 4).getTime(),
-    //     state: 1,
-    //   },
-    //   {
-    //     timestamp: new Date(2021, 2, 1, 4).getTime(),
-    //     state: 1,
-    //   },
-    //   {
-    //     timestamp: new Date(2021, 2, 0, 4).getTime(),
-    //     state: 1,
-    //   },
-    // ];
-    // pastWeek = this.getPastWeekStreak(
-    //   logs,
-    //   timezoneOffset,
-    //   habitCron,
-    //   createdAt
-    // );
-    // pastMonth = this.getPastMonthStreak(
-    //   logs,
-    //   timezoneOffset,
-    //   habitCron,
-    //   createdAt
-    // );
-    // pastYear = this.getPastYearStreak(
-    //   logs,
-    //   timezoneOffset,
-    //   habitCron,
-    //   createdAt
-    // );
     // Streak - Setup New Log
     if (autoLogType === 1) {
+      // console.log({ logs })
+      // let logs = [
+      //   {
+      //     timestamp: new Date(2021, 2, 14, 4).getTime(),
+      //     state: 3,
+      //   },
+      //   {
+      //     timestamp: new Date(2021, 2, 13, 0).getTime(),
+      //     state: 2,
+      //   },
+      //   {
+      //     timestamp: new Date(2021, 2, 12, 4).getTime(),
+      //     state: 1,
+      //   },
+      //   {
+      //     timestamp: new Date(2021, 2, 3, 4).getTime(),
+      //     state: 1,
+      //   },
+      //   {
+      //     timestamp: new Date(2021, 2, 2, 4).getTime(),
+      //     state: 1,
+      //   },
+      //   {
+      //     timestamp: new Date(2021, 2, 1, 4).getTime(),
+      //     state: 1,
+      //   },
+      //   {
+      //     timestamp: new Date(2021, 2, 0, 4).getTime(),
+      //     state: 1,
+      //   },
+      // ];
+      const logs = await Log.find({ connectedDocument: habitID }).sort({
+        timestamp: -1,
+      });
       let todaysLog = this.getTodaysLog(logs, timezoneOffset, habitCron.daily);
       console.log({ todaysLog });
       if (!todaysLog) {
@@ -796,43 +777,10 @@ module.exports = {
           connectedDocument: habitID,
         });
         await todaysLog.save().catch((err) => console.error(err));
-
-        // // Find the correct spot to insert today's new log.
-        // // The logs are currently sorted from newest to oldest (timestamp)
-        // // Taking the index of the first log that has a timestamp older than today
-        // // allows proper placement of today's log right after the one just older than it - to maintain the sorted order.
-        // const todaysIndex = logs.findIndex(
-        //   (log) => todaysLog.timestamp >= log.timestamp
-        // );
-        // // console.log({ todaysLog, logs, todaysIndex });
-
-        // // If no success finding a log older than today's log, today is the oldest log.
-        // //* Or [todaysLog, ...logs]
-        // if (todaysIndex === -1) logs = [todaysLog].concat(logs);
-        // else logs.splice(todaysIndex, 0, todaysLog);
-        // // console.log({ logs });
       }
     }
-    // Count Goals and Regular Goals
     //* NOTE: Count Goals logging will be handled in the commands
-    // else currentState = 0;
     await this.updateHabitStats(habit, timezoneOffset, habitCron);
-    // console.log({ currentState });
-    // if (logs.length) {
-    //   currentStreak = this.calculateCurrentStreak(
-    //     logs,
-    //     timezoneOffset,
-    //     habitCron,
-    //     isWeeklyType,
-    //     cronPeriods
-    //   );
-    // } else currentStreak = 0;
-    // // console.log({ currentStreak });
-    // if (currentStreak > (longestStreak || 0)) {
-    //   longestStreak = currentStreak;
-    // }
-    // console.log({ currentStreak, longestStreak });
-
     nextCron = this.getNextCronTimeUTC(
       timezoneOffset,
       habitCron,
