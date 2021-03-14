@@ -657,7 +657,7 @@ module.exports = {
     );
     if (todaysLog) {
       currentState = todaysLog.state;
-    }
+    } else currentState = 0;
     currentStreak = this.calculateCurrentStreak(
       currentLogs,
       timezoneOffset,
@@ -729,44 +729,13 @@ module.exports = {
     } = settings;
     // Streak - Setup New Log
     if (autoLogType === 1) {
-      // console.log({ logs })
-      // let logs = [
-      //   {
-      //     timestamp: new Date(2021, 2, 14, 4).getTime(),
-      //     state: 3,
-      //   },
-      //   {
-      //     timestamp: new Date(2021, 2, 13, 0).getTime(),
-      //     state: 2,
-      //   },
-      //   {
-      //     timestamp: new Date(2021, 2, 12, 4).getTime(),
-      //     state: 1,
-      //   },
-      //   {
-      //     timestamp: new Date(2021, 2, 3, 4).getTime(),
-      //     state: 1,
-      //   },
-      //   {
-      //     timestamp: new Date(2021, 2, 2, 4).getTime(),
-      //     state: 1,
-      //   },
-      //   {
-      //     timestamp: new Date(2021, 2, 1, 4).getTime(),
-      //     state: 1,
-      //   },
-      //   {
-      //     timestamp: new Date(2021, 2, 0, 4).getTime(),
-      //     state: 1,
-      //   },
-      // ];
       const logs = await Log.find({ connectedDocument: habitID }).sort({
         timestamp: -1,
       });
       let todaysLog = this.getTodaysLog(logs, timezoneOffset, habitCron.daily);
       console.log({ todaysLog });
       if (!todaysLog) {
-        currentState = 1; //* Reset current state to ✅
+        currentState = 1; //* Reset current state to ✅ (1)
         todaysLog = new Log({
           _id: mongoose.Types.ObjectId(),
           timestamp:
@@ -779,7 +748,7 @@ module.exports = {
         await todaysLog.save().catch((err) => console.error(err));
       }
     }
-    //* NOTE: Count Goals logging will be handled in the commands
+    //* NOTE: Count Goals logging will be handled in the habit/log commands
     await this.updateHabitStats(habit, timezoneOffset, habitCron);
     nextCron = this.getNextCronTimeUTC(
       timezoneOffset,
