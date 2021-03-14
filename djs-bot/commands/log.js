@@ -108,7 +108,7 @@ module.exports = {
     const habitHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
     const logCommand = args[0].toLowerCase();
     const logActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${logCommand} help\``;
-    const logActionUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${logCommand} <archive?> <HABIT #?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**\n\n\`<HABIT #?>:\` (OPT.) type the (index) **number of the habit which contains the logs** you'd like to apply the command to! (i.e. \`1\` \`3\` \`4\` \`10\`)\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+    const logActionUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${logCommand} <archive?> <HABIT #?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**\n\n\`<HABIT #?>:\` (OPT.) type the (index) **number of the habit which contains the logs** or **recent** you'd like to apply the command to! (i.e. \`recent\` \`1\` \`3\` \`4\` \`10\`)\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
     let logType = args[1] ? args[1].toLowerCase() : false;
     let totalStreakNumber = await Habit.find({
       userID: authorID,
