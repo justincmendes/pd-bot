@@ -349,7 +349,7 @@ function multipleLogsToStringArray(
       );
       break;
     }
-    const logString = hb.logDocumentToString(logArray[i]);
+    const logString = hb.logDocumentToString(logArray[i], true, true);
     logsToString.push(logString);
   }
   if (toString) logsToString = logsToString.join("\n\n");
@@ -412,18 +412,17 @@ async function getOneHabitByObjectID(habitID) {
   return habit;
 }
 
-async function getLogsByCreatedAt(
-  userID,
+async function getLogsByTimestamp(
+  connectedDocument,
   entryIndex,
-  numberOfEntries = 1,
-  archived = undefined
+  numberOfEntries = 1
 ) {
   try {
-    const habits = await Habit.find({ userID, archived })
-      .sort({ createdAt: +1 })
+    const logs = await Log.find({ connectedDocument })
+      .sort({ timestamp: -1 })
       .limit(numberOfEntries)
       .skip(entryIndex);
-    return habits;
+    return logs;
   } catch (err) {
     console.log(err);
     return false;
@@ -518,6 +517,7 @@ module.exports = {
     const habitHelpMessage = `Try \`${PREFIX}${commandUsed} help\``;
     const logCommand = args[0].toLowerCase();
     const habitActionHelpMessage = `Try \`${PREFIX}${commandUsed} ${logCommand} help\``;
+    const logActionUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${logCommand} <archive?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
     let logType = args[1] ? args[1].toLowerCase() : false;
     let totalStreakNumber = await Habit.find({
       userID: authorID,
@@ -553,9 +553,8 @@ module.exports = {
     ) {
       // (similar indexing to edit, recent or #) + archive
       // Make a list - similar to archive
-      let logStartUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${logCommand} <archive?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
-      logStartUsageMessage = fn.getMessageEmbed(
-        logStartUsageMessage,
+      const logStartUsageMessage = fn.getMessageEmbed(
+        logActionUsageMessage,
         `Log: Start Help`,
         habitEmbedColour
       );
@@ -804,13 +803,13 @@ module.exports = {
             logTimestamp,
             habitCron.daily
           );
-          const overwriteLog = !!existingLog;
-          const isTodaysLog = !!hb.getTodaysLog(
-            currentLogs,
-            timezoneOffset,
-            habitCron.daily
-          );
-          console.log({ existingLog, isTodaysLog });
+          // const overwriteLog = !!existingLog;
+          // const isTodaysLog = !!hb.getTodaysLog(
+          //   currentLogs,
+          //   timezoneOffset,
+          //   habitCron.daily
+          // );
+          console.log({ existingLog });
           if (existingLog) {
             console.log("Includes logs");
             // const recentLog = await Log.findOne({ connectedDocument: targetHabit._id })
@@ -863,58 +862,11 @@ module.exports = {
           }
 
           console.log({ targetHabit });
-          var {
-            currentState,
-            currentStreak,
-            longestStreak,
-            pastWeek,
-            pastMonth,
-            pastYear,
-          } = targetHabit;
-          currentStreak = hb.calculateCurrentStreak(
-            currentLogs,
+          await hb.updateHabitStats(
+            targetHabit,
             timezoneOffset,
-            habitCron,
-            targetHabit.settings.isWeeklyType,
-            targetHabit.settings.cronPeriods
-          );
-          if (currentStreak > (longestStreak ? longestStreak : 0)) {
-            longestStreak = currentStreak;
-          }
-          pastWeek = hb.getPastWeekStreak(
-            currentLogs,
-            timezoneOffset,
-            habitCron,
-            targetHabit.createdAt
-          );
-          pastMonth = hb.getPastMonthStreak(
-            currentLogs,
-            timezoneOffset,
-            habitCron,
-            targetHabit.createdAt
-          );
-          pastYear = hb.getPastYearStreak(
-            currentLogs,
-            timezoneOffset,
-            habitCron,
-            targetHabit.createdAt
-          );
-          await Habit.updateOne(
-            { _id: targetHabit._id },
-            {
-              $set: {
-                currentState:
-                  isTodaysLog && !overwriteLog ? currentState : habitLog,
-                currentStreak,
-                longestStreak,
-                pastWeek,
-                pastMonth,
-                pastYear,
-              },
-            },
-            (err) => {
-              if (err) return console.error(err);
-            }
+            habitCron
+            // isTodaysLog && !overwriteLog
           );
           return;
         } else return;
@@ -928,815 +880,250 @@ module.exports = {
       logCommand === "rem" ||
       logCommand === "r"
     ) {
-      /**
-       * Allow them to delete any habits - archived or not
-       */
-
-      let habitDeleteUsageMessage = hb.getHabitReadOrDeleteHelp(
-        PREFIX,
-        commandUsed,
-        logCommand
-      );
-      habitDeleteUsageMessage = fn.getMessageEmbed(
-        habitDeleteUsageMessage,
-        "Log: Delete Help",
+      const logDeleteUsageMessage = fn.getMessageEmbed(
+        logActionUsageMessage,
+        `Log: Start Help`,
         habitEmbedColour
       );
-      const trySeeCommandMessage = `Try \`${PREFIX}${commandUsed} see ${
-        isArchived ? `archive ` : ""
-      }help\``;
+      if (logType === "help")
+        return message.channel.send(logDeleteUsageMessage);
 
-      if (logType) {
-        if (logType === "help") {
-          return message.channel.send(habitDeleteUsageMessage);
-        }
-        if (!totalHabitNumber && !isArchived) {
-          return message.reply(
-            `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
-          );
-        } else if (!totalArchiveNumber && isArchived) {
-          return message.reply(
-            `**NO ARCHIVED HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
-          );
-        }
-      } else return message.reply(habitActionHelpMessage);
+      if (!totalHabitNumber && !isArchived) {
+        return message.reply(
+          `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
+        );
+      } else if (!totalArchiveNumber && isArchived) {
+        return message.reply(
+          `**NO ARCHIVED HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
+        );
+      }
 
-      // delete past #:
-      if (args[2 + archiveShift] !== undefined) {
-        const deleteType = args[1 + archiveShift]
-          ? args[1 + archiveShift].toLowerCase()
-          : false;
-        if (deleteType === "past") {
-          // If the following argument is not a number, exit!
-          if (isNaN(args[2 + archiveShift])) {
-            return fn.sendErrorMessageAndUsage(message, habitActionHelpMessage);
-          }
-          var numberArg = parseInt(args[2 + archiveShift]);
-          if (numberArg <= 0) {
-            return fn.sendErrorMessageAndUsage(message, habitActionHelpMessage);
-          }
-          let indexByRecency = false;
-          if (args[3 + archiveShift] !== undefined) {
-            if (args[3 + archiveShift].toLowerCase() === "recent") {
-              indexByRecency = true;
-            }
-          }
-          const sortType = indexByRecency ? "By Recency" : "By Date Created";
-          var habitCollection;
-          if (indexByRecency)
-            habitCollection = await fn.getEntriesByRecency(
-              Habit,
-              { userID: authorID, archived: isArchived },
-              0,
-              numberArg
-            );
-          else
-            habitCollection = await getLogsByCreatedAt(
-              authorID,
-              0,
-              numberArg,
-              isArchived
-            );
-          const habitArray = fn.getEmbedArray(
-            multipleLogsToStringArray(
-              message,
-              habitCollection,
-              numberArg,
-              0,
-              false
-            ),
-            "",
-            true,
-            false,
-            habitEmbedColour
-          );
-          const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} habits?**`;
-          const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
-            bot,
-            message,
-            PREFIX,
-            habitArray,
-            multipleDeleteMessage,
-            forceSkip,
-            `Log${
-              isArchived ? ` Archive` : ""
-            }: Delete Past ${numberArg} Logs (${sortType})`,
-            600000
-          );
-          if (!multipleDeleteConfirmation) return;
-          const targetIDs = await habitCollection.map((entry) => entry._id);
-          console.log(
-            `Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Logs (${sortType})`
-          );
-          targetIDs.forEach(async (id) => {
-            hb.cancelHabitById(id);
-          });
-          await del.deleteManyByIDAndConnectedReminders(Habit, targetIDs);
-          return;
-        }
-        if (deleteType === "many") {
-          if (args[2 + archiveShift] === undefined) {
-            return message.reply(habitActionHelpMessage);
-          }
-          // Get the arguments after keyword MANY
-          // Filter out the empty inputs and spaces due to multiple commas (e.g. ",,,, ,,, ,   ,")
-          // Convert String of Numbers array into Integer array
-          // Check which habits exist, remove/don't add those that don't
-          let toDelete = args[2 + archiveShift].split(",").filter((index) => {
-            if (!isNaN(index)) {
-              numberIndex = parseInt(index);
-              if (numberIndex > 0 && numberIndex <= totalHabitNumber) {
-                return numberIndex;
-              }
-            } else if (index === "recent") {
-              return true;
-            }
-          });
-          const recentIndex = await getRecentHabitIndex(authorID, isArchived);
-          toDelete = Array.from(
-            new Set(
-              toDelete.map((number) => {
-                if (number === "recent") {
-                  if (recentIndex !== -1) return recentIndex;
-                } else return +number;
-              })
-            )
-          );
-          console.log({ toDelete });
-          // Send error message if none of the given reminders exist
-          if (!toDelete.length) {
-            return fn.sendErrorMessage(
-              message,
-              `All of these **${
-                isArchived ? "archived " : ""
-              }habits DO NOT exist**...`
-            );
-          }
-          var indexByRecency = false;
-          if (args[3 + archiveShift] !== undefined) {
-            if (args[3 + archiveShift].toLowerCase() === "recent") {
-              indexByRecency = true;
-            }
-          }
-          var habitTargetIDs = new Array();
-          var habitArray = new Array();
-          for (let i = 0; i < toDelete.length; i++) {
-            var habitView;
-            if (indexByRecency) {
-              habitView = await hb.getOneHabitByRecency(
-                authorID,
-                toDelete[i] - 1,
-                isArchived
-              );
-            } else {
-              habitView = await hb.getOneHabitByCreatedAt(
-                authorID,
-                toDelete[i] - 1,
-                isArchived
-              );
-            }
-            habitTargetIDs.push(habitView._id);
-            const habitLogs = await Log.find({
-              connectedDocument: habitView._id,
-            });
-            if (habitLogs)
-              if (habitLogs.length) {
-                habitArray.push(
-                  `__**Habit ${toDelete[i]}:**__ ${hb.habitDocumentDescription(
-                    habitView
-                  )}`
-                );
-                habitLogs.forEach((log) => {
-                  habitArray.push(hb.logDocumentToString(habit));
-                });
-              }
-          }
-          const deleteConfirmMessage = `Are you sure you want to **delete logs for habits ${toDelete.toString()}?**`;
-          const sortType = indexByRecency ? "By Recency" : "By Date Created";
-          habitArray = fn.getEmbedArray(
-            habitArray,
-            "",
-            true,
-            false,
-            habitEmbedColour
-          );
-          const confirmDeleteMany = await fn.getPaginatedUserConfirmation(
-            bot,
-            message,
-            PREFIX,
-            habitArray,
-            deleteConfirmMessage,
-            forceSkip,
-            `Log${
-              isArchived ? ` Archive` : ""
-            }: Delete Logs ${toDelete} (${sortType})`,
-            600000
-          );
-          if (confirmDeleteMany) {
-            console.log(
-              `Deleting ${authorID}'s Logs ${toDelete} (${sortType})`
-            );
-            habitTargetIDs.forEach(async (id) => {
-              hb.cancelHabitById(id);
-            });
-            await del.deleteManyByIDAndConnectedReminders(
-              Habit,
-              habitTargetIDs
-            );
-            return;
-          } else return;
-        } else {
-          var shiftIndex;
-          let indexByRecency = false;
-          if (args[2 + archiveShift].toLowerCase() === "past") {
-            shiftIndex = 0;
-            indexByRecency = false;
-          } else if (args[2 + archiveShift].toLowerCase() === "recent") {
-            shiftIndex = 1;
-            indexByRecency = true;
-          }
-          console.log({ shiftIndex });
-          if (args[2 + archiveShift + shiftIndex]) {
-            if (args[2 + archiveShift + shiftIndex].toLowerCase() === "past") {
-              var skipEntries;
-              if (isNaN(args[3 + archiveShift + shiftIndex])) {
-                if (
-                  args[3 + archiveShift + shiftIndex].toLowerCase() === "recent"
-                ) {
-                  skipEntries = await getRecentHabitIndex(authorID, isArchived);
-                } else return message.reply(habitActionHelpMessage);
-              } else
-                skipEntries = parseInt(args[3 + archiveShift + shiftIndex]);
-              const pastNumberOfEntries = parseInt(args[1 + archiveShift]);
-              if (pastNumberOfEntries <= 0 || skipEntries < 0) {
-                return fn.sendErrorMessageAndUsage(
-                  message,
-                  habitActionHelpMessage
-                );
-              }
-              var habitCollection;
-              if (indexByRecency)
-                habitCollection = await fn.getEntriesByRecency(
-                  Habit,
-                  { userID: authorID, archived: isArchived },
-                  skipEntries,
-                  pastNumberOfEntries
-                );
-              else
-                habitCollection = await getLogsByCreatedAt(
-                  authorID,
-                  skipEntries,
-                  pastNumberOfEntries,
-                  isArchived
-                );
-              const habitArray = fn.getEmbedArray(
-                multipleLogsToStringArray(
-                  message,
-                  habitCollection,
-                  pastNumberOfEntries,
-                  skipEntries,
-                  false
-                ),
-                "",
-                true,
-                false,
-                habitEmbedColour
-              );
-              if (skipEntries >= totalHabitNumber) return;
-              const sortType = indexByRecency
-                ? "By Recency"
-                : "By Date Created";
-              const multipleDeleteMessage = `Are you sure you want to **delete ${habitCollection.length} habits past habit ${skipEntries}?**`;
-              const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
-                bot,
-                message,
-                PREFIX,
-                habitArray,
-                multipleDeleteMessage,
-                forceSkip,
-                `Log${
-                  isArchived ? ` Archive` : ""
-                }: Multiple Delete Warning! (${sortType})`
-              );
-              console.log({ multipleDeleteConfirmation });
-              if (!multipleDeleteConfirmation) return;
-              const targetIDs = await habitCollection.map((entry) => entry._id);
-              console.log(
-                `Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} habits past ${skipEntries} (${sortType})`
-              );
-              targetIDs.forEach(async (id) => {
-                hb.cancelHabitById(id);
-              });
-              await del.deleteManyByIDAndConnectedReminders(Habit, targetIDs);
-              return;
-            }
-
-            // They haven't specified the field for the habit delete past function
-            else if (deleteType === "past")
-              return message.reply(habitActionHelpMessage);
-            else return message.reply(habitActionHelpMessage);
-          }
+      var indexByRecency = false;
+      if (args[1 + archiveShift] !== undefined) {
+        if (args[1 + archiveShift].toLowerCase() === "recent") {
+          indexByRecency = true;
         }
       }
-      // Next: HABIT DELETE ALL
-      // Next: HABIT DELETE MANY
-      // Next: HABIT DELETE
 
-      // habit delete <NUMBER/RECENT/ALL>
-      const noLogsMessage = `**NO ${
-        isArchived ? "ARCHIVED " : ""
-      }HABITS**... try \`${PREFIX}${commandUsed} start help\``;
-      if (isNaN(args[1 + archiveShift])) {
-        const deleteType = logType;
-        if (deleteType === "recent") {
-          const habitView = await hb.getOneHabitByRecency(
-            authorID,
-            0,
-            isArchived
-          );
-          if (!habitView) return fn.sendErrorMessage(message, noLogsMessage);
-          const habitTargetID = habitView._id;
-          console.log({ habitTargetID });
-          const habitIndex = await getRecentHabitIndex(authorID, isArchived);
-          const habitEmbed = fn.getEmbedArray(
-            hb.logDocumentToString(habitView),
-            `Log${isArchived ? " Archive" : ""}: Delete Recent Habit`,
-            true,
-            false,
-            habitEmbedColour
-          );
-          const deleteConfirmMessage = `Are you sure you want to **delete your most recent habit?**`;
-          const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(
-            bot,
-            message,
-            PREFIX,
-            habitEmbed,
-            deleteConfirmMessage,
-            forceSkip,
-            `Log${isArchived ? " Archive" : ""}: Delete Recent Habit`,
-            600000
-          );
-          if (deleteIsConfirmed) {
-            hb.cancelHabitById(habitTargetID);
-            await del.deleteOneByIDAndConnectedReminders(Habit, habitTargetID);
-            return;
-          }
-        } else if (deleteType === "all") {
-          const confirmDeleteAllMessage = `Are you sure you want to **delete all** of your recorded habits?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
-          const pastNumberOfEntriesIndex = totalHabitNumber;
-          if (pastNumberOfEntriesIndex === 0) {
-            return fn.sendErrorMessage(message, noLogsMessage);
-          }
-          let confirmDeleteAll = await fn.getUserConfirmation(
-            bot,
-            message,
-            PREFIX,
-            confirmDeleteAllMessage,
-            forceSkip,
-            `Log${isArchived ? ` Archive` : ""}: Delete All Logs WARNING!`
-          );
-          if (!confirmDeleteAll) return;
-          const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR HABITS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
-          let finalConfirmDeleteAll = await fn.getUserConfirmation(
-            bot,
-            message,
-            PREFIX,
-            finalDeleteAllMessage,
-            `Log${isArchived ? ` Archive` : ""}: Delete ALL Logs FINAL Warning!`
-          );
-          if (!finalConfirmDeleteAll) return;
-
-          console.log(
-            `Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Logs`
-          );
-          const reminderQuery = { userID: authorID };
-          const userLogs = await Reminder.find(reminderQuery);
-          userLogs.forEach(async (habit) => {
-            hb.cancelHabitById(habit._id);
-          });
-          await del.deleteManyAndConnectedReminders(Habit, reminderQuery);
-          return;
-        } else return message.reply(habitActionHelpMessage);
-      } else {
-        const pastNumberOfEntriesIndex = parseInt(args[1 + archiveShift]);
-        let indexByRecency = false;
-        if (args[2 + archiveShift] !== undefined) {
-          if (args[2 + archiveShift].toLowerCase() === "recent") {
-            indexByRecency = true;
-          }
-        }
-        var habitView;
-        if (indexByRecency)
-          habitView = await hb.getOneHabitByRecency(
-            authorID,
-            pastNumberOfEntriesIndex - 1,
-            isArchived
-          );
-        else
-          habitView = await hb.getOneHabitByCreatedAt(
-            authorID,
-            pastNumberOfEntriesIndex - 1,
-            isArchived
-          );
-        if (!habitView) {
-          return fn.sendErrorMessageAndUsage(
-            message,
-            trySeeCommandMessage,
-            `**${isArchived ? "ARCHIVED " : ""}GOAL DOES NOT EXIST**...`
-          );
-        }
-        const habitTargetID = habitView._id;
-        const sortType = indexByRecency ? "By Recency" : "By Date Created";
-        const habitEmbed = fn.getEmbedArray(
-          `__**Habit ${pastNumberOfEntriesIndex}:**__ ${await habitDocumentToString(
-            bot,
-            habitView,
-            true,
-            true,
-            true,
-            true
-          )}`,
-          `Log${
-            isArchived ? ` Archive` : ""
-          }: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`,
-          true,
-          false,
-          habitEmbedColour
+      var habitArray;
+      if (indexByRecency)
+        habitArray = await Habit.find({
+          archived: isArchived,
+          userID: authorID,
+        }).sort({ _id: -1 });
+      else
+        habitArray = await Habit.find({
+          archived: isArchived,
+          userID: authorID,
+        }).sort({ createdAt: +1 });
+      if (!habitArray.length)
+        return message.reply(
+          `**No ${
+            isArchived ? "archived " : ""
+          }habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`
         );
-        const deleteConfirmMessage = `Are you sure you want to **delete Habit ${pastNumberOfEntriesIndex}?**`;
-        const deleteConfirmation = await fn.getPaginatedUserConfirmation(
+
+      var targetHabitIndex;
+      let targetHabit = await fn.getUserSelectedObject(
+        bot,
+        message,
+        PREFIX,
+        "__**Which habit has the log**(**s**)** you want to delete?**__",
+        `Log${isArchived ? " Archive" : ""}: Select Habit To Delete Logs`,
+        habitArray,
+        "description",
+        false,
+        habitEmbedColour,
+        600000
+      );
+      if (!targetHabit) return;
+      else {
+        targetHabitIndex = targetHabit.index;
+        targetHabit = targetHabit.object;
+      }
+
+      let habitLogs = await Log.find({
+        connectedDocument: targetHabit._id,
+      }).sort({ timestamp: -1 });
+      const originalLength = habitLogs.length;
+      var reset;
+      let targetLogs = new Array();
+
+      do {
+        const someLogsSelected = habitLogs.length !== originalLength;
+        reset = false;
+
+        let logList = `👣 - **__Habit Description:__**\n${targetHabit.description}\n\n`;
+        habitLogs.forEach((log, i) => {
+          logList += `\`${i + 1}\`\: ${hb.logDocumentToString(log)}\n`;
+        });
+        if (someLogsSelected) {
+          logList += `\`${habitLogs.length + 1}\`: **DONE**`;
+        }
+        const targetLogIndex = await fn.userSelectFromList(
           bot,
           message,
           PREFIX,
-          habitEmbed,
-          deleteConfirmMessage,
-          forceSkip,
-          `Log${
-            isArchived ? ` Archive` : ""
-          }: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`,
-          600000
+          `\n${logList}`,
+          habitLogs.length + 1,
+          `**Please enter the number corresponding to the log you'd like to delete.**${
+            someLogsSelected
+              ? `\n(Type \`${habitLogs.length + 1}\` if you're done)`
+              : ""
+          }`,
+          `Log${isArchived ? " Archive" : ""}: Select Log to Delete`,
+          habitEmbedColour,
+          600000,
+          0
         );
-        if (deleteConfirmation) {
-          console.log(
-            `Deleting ${authorUsername}'s (${authorID}) Habit ${sortType}`
-          );
-          hb.cancelHabitById(habitTargetID);
-          await del.deleteOneByIDAndConnectedReminders(Habit, habitTargetID);
-          return;
+        if (!targetLogIndex && targetLogIndex !== 0) return;
+        else {
+          if (targetLogIndex !== habitLogs.length) {
+            targetLogs.push(habitLogs[targetLogIndex]);
+            habitLogs.splice(targetLogIndex, 1);
+            if (habitLogs.length) {
+              const anotherLog = await fn.getUserConfirmation(
+                bot,
+                message,
+                PREFIX,
+                "**Would you like to delete another log?**",
+                false,
+                `Log${
+                  isArchived ? " Archive" : ""
+                }: Select More Logs to Delete?`
+              );
+              if (typeof anotherLog === "boolean") {
+                if (anotherLog === true) reset = true;
+                else reset = false;
+              } else return;
+            }
+          }
+        }
+        if (!habitLogs.length) reset = false;
+      } while (reset);
+      console.log({ targetLogs });
+      const finalLogsString = targetLogs
+        .map((log) => {
+          return hb.logDocumentToString(log);
+        })
+        .join("\n");
+      const confirmDeletion = await fn.getUserConfirmation(
+        bot,
+        message,
+        PREFIX,
+        `**__Are you sure you want to delete the following habit logs?__**\n${hb.habitDocumentDescription(
+          targetHabit
+        )}\n\n**__Logs to be Deleted:__**\n${finalLogsString}`,
+        false,
+        `Log${isArchived ? " Archive" : ""}: Confirm Logs to Delete`,
+        600000
+      );
+      if (!confirmDeletion) return;
+      else {
+        const targetLogIds = targetLogs.map((log) => log._id);
+        await Log.deleteMany({ _id: { $in: targetLogIds } });
+        const userSettings = await User.findOne({ discordID: authorID });
+        if (userSettings) {
+          const { habitCron } = userSettings;
+          await hb.updateHabitStats(targetHabit, timezoneOffset, habitCron);
         }
       }
+      return;
     } else if (logCommand === "see" || logCommand === "show") {
-      let habitSeeUsageMessage = hb.getHabitReadOrDeleteHelp(
-        PREFIX,
-        commandUsed,
-        logCommand
-      );
-      habitSeeUsageMessage = fn.getMessageEmbed(
-        habitSeeUsageMessage,
-        `Log${isArchived ? ` Archive` : ""}: See Help`,
+      logSeeUsageMessage = fn.getMessageEmbed(
+        logActionUsageMessage,
+        `Log: Start Help`,
         habitEmbedColour
       );
+      if (logType === "help") return message.channel.send(logSeeUsageMessage);
 
-      const seeCommands = ["past", "recent", "all"];
-
-      if (logType) {
-        if (logType === "help") {
-          return message.channel.send(habitSeeUsageMessage);
-        }
-        if (!totalHabitNumber && !isArchived) {
-          return message.reply(
-            `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
-          );
-        } else if (!totalArchiveNumber && isArchived) {
-          return message.reply(
-            `**NO ARCHIVED HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
-          );
-        } else if (
-          (args[1 + archiveShift]
-            ? args[1 + archiveShift].toLowerCase()
-            : false) === "number"
-        ) {
-          if (isArchived)
-            return message.reply(
-              `You have **${totalArchiveNumber} archived habits entries** on record.`
-            );
-          else
-            return message.reply(
-              `You have **${totalHabitNumber} habits entries** on record.`
-            );
-        }
-      } else return message.reply(habitActionHelpMessage);
-
-      // Show the user the last habit with the most recent end time (by sorting from largest to smallest end time and taking the first):
-      // When a $sort immediately precedes a $limit, the optimizer can coalesce the $limit into the $sort.
-      // This allows the sort operation to only maintain the top n results as it progresses, where n is the specified limit, and MongoDB only needs to store n items in memory.
-      if (
-        !seeCommands.includes(logType) &&
-        !archiveRegex.test(logType) &&
-        isNaN(logType)
-      ) {
-        return message.reply(habitActionHelpMessage);
+      if (!totalHabitNumber && !isArchived) {
+        return message.reply(
+          `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
+        );
+      } else if (!totalArchiveNumber && isArchived) {
+        return message.reply(
+          `**NO ARCHIVED HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
+        );
       }
-      // Do not show the most recent habit embed, when a valid command is called
-      // it will be handled properly later based on the values passed in!
+
+      var indexByRecency = false;
+      if (args[1 + archiveShift] !== undefined) {
+        if (args[1 + archiveShift].toLowerCase() === "recent") {
+          indexByRecency = true;
+        }
+      }
+      const sortType = indexByRecency ? "By Recency" : "By Timestamp";
+
+      var habitArray;
+      if (indexByRecency)
+        habitArray = await Habit.find({
+          archived: isArchived,
+          userID: authorID,
+        }).sort({ _id: -1 });
+      else
+        habitArray = await Habit.find({
+          archived: isArchived,
+          userID: authorID,
+        }).sort({ createdAt: +1 });
+      if (!habitArray.length)
+        return message.reply(
+          `**No ${
+            isArchived ? "archived " : ""
+          }habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`
+        );
+
+      var targetHabitIndex;
+      let targetHabit = await fn.getUserSelectedObject(
+        bot,
+        message,
+        PREFIX,
+        "__**Which habit do you want to see logs for?**__",
+        `Log${isArchived ? " Archive" : ""}: Select Habit To See Logs`,
+        habitArray,
+        "description",
+        false,
+        habitEmbedColour,
+        600000
+      );
+      if (!targetHabit) return;
       else {
-        const seeType = logType;
-        var pastFunctionality, habitIndex;
-        let indexByRecency = false;
-        // To check if the given argument is a number!
-        // If it's not a number and has passed the initial
-        // filter, then use the "past" functionality
-        // Handling Argument 1:
-        const isNumberArg = !isNaN(args[1 + archiveShift]);
-        if (seeType === "recent") {
-          return message.channel.send(
-            await getRecentHabit(
-              bot,
-              authorID,
-              isArchived,
-              habitEmbedColour,
-              true,
-              true
-            )
-          );
-        } else if (seeType === "all") {
-          if (isArchived) {
-            if (totalArchiveNumber) {
-              habitIndex = totalArchiveNumber;
-            }
-          } else {
-            if (totalHabitNumber) {
-              habitIndex = totalHabitNumber;
-            }
-          }
-          pastFunctionality = true;
-          if (habitIndex === undefined) {
-            return fn.sendErrorMessageAndUsage(
-              message,
-              habitActionHelpMessage,
-              `**You have NO ${isArchived ? "ARCHIVED " : ""}HABITS**...`
-            );
-          }
-        } else if (isNumberArg) {
-          habitIndex = parseInt(args[1 + archiveShift]);
-          if (habitIndex <= 0) {
-            return fn.sendErrorMessageAndUsage(
-              message,
-              habitActionHelpMessage,
-              `** ${isArchived ? "ARCHIVED " : ""}HABIT DOES NOT EXIST **...`
-            );
-          } else pastFunctionality = false;
-        } else if (seeType === "past") {
-          pastFunctionality = true;
-        }
-        // After this filter:
-        // If the first argument after "see" is not past, then it is not a valid call
-        else return message.reply(habitActionHelpMessage);
-        console.log({
-          pastNumberOfEntriesIndex: habitIndex,
-          pastFunctionality,
-        });
-        if (pastFunctionality) {
-          // Loop through all of the given fields, account for aliases and update fields
-          // Find Logs, toArray, store data in meaningful output
-          if (args[3 + archiveShift] !== undefined) {
-            if (args[3 + archiveShift].toLowerCase() === "recent") {
-              indexByRecency = true;
-            }
-          }
-          const sortType = indexByRecency ? "By Recency" : "By Date Created";
-          if (args[2 + archiveShift] !== undefined) {
-            // If the next argument is NotaNumber, invalid "past" command call
-            if (isNaN(args[2 + archiveShift]))
-              return message.reply(habitActionHelpMessage);
-            if (parseInt(args[2 + archiveShift]) <= 0)
-              return message.reply(habitActionHelpMessage);
-            const confirmSeeMessage = `Are you sure you want to ** see ${
-              args[2 + archiveShift]
-            } habits?** `;
-            let confirmSeeLogs = await fn.getUserConfirmation(
-              bot,
-              message,
-              PREFIX,
-              confirmSeeMessage,
-              forceSkip,
-              `Log${isArchived ? ` Archive` : ""}: See ${
-                args[2 + archiveShift]
-              } Logs(${sortType})`
-            );
-            if (!confirmSeeLogs) return;
-          } else {
-            // If the next argument is undefined, implied "see all" command call unless "all" was not called:
-            // => empty "past" command call
-            if (seeType !== "all") return message.reply(habitActionHelpMessage);
-            const confirmSeeAllMessage =
-              "Are you sure you want to **see all** of your habit history?";
-            let confirmSeeAll = await fn.getUserConfirmation(
-              bot,
-              message,
-              PREFIX,
-              confirmSeeAllMessage,
-              forceSkip,
-              `Log${isArchived ? ` Archive` : ""}: See All Logs`
-            );
-            if (!confirmSeeAll) return;
-          }
-          // To assign pastNumberOfEntriesIndex the argument value if not already see "all"
-          if (habitIndex === undefined) {
-            habitIndex = parseInt(args[2 + archiveShift]);
-          }
-          var habitView;
-          if (indexByRecency)
-            habitView = await fn.getEntriesByRecency(
-              Habit,
-              { userID: authorID, archived: isArchived },
-              0,
-              habitIndex
-            );
-          else
-            habitView = await getLogsByCreatedAt(
-              authorID,
-              0,
-              habitIndex,
-              isArchived
-            );
-          console.log({ habitView, pastNumberOfEntriesIndex: habitIndex });
-          const habitArray = multipleLogsToStringArray(
-            message,
-            habitView,
-            habitIndex,
-            0,
-            false
-          );
-          await fn.sendPaginationEmbed(
-            bot,
-            message.channel.id,
-            authorID,
-            fn.getEmbedArray(
-              habitArray,
-              `Log${
-                isArchived ? ` Archive` : ""
-              }: See ${habitIndex} Logs(${sortType})`,
-              true,
-              `Logs ${fn.timestampToDateString(
-                Date.now() + timezoneOffset * HOUR_IN_MS,
-                false,
-                false,
-                true,
-                true
-              )}`,
-              habitEmbedColour
-            )
-          );
-          return;
-        }
-        // see <PAST_#_OF_ENTRIES> <recent> past <INDEX>
-        if (args[2 + archiveShift] !== undefined) {
-          var shiftIndex;
-          if (args[2 + archiveShift].toLowerCase() === "past") {
-            shiftIndex = 0;
-            indexByRecency = false;
-          } else if (args[2 + archiveShift].toLowerCase() === "recent") {
-            shiftIndex = 1;
-            indexByRecency = true;
-          }
-          if (args[2 + archiveShift + shiftIndex]) {
-            if (args[2 + archiveShift + shiftIndex].toLowerCase() === "past") {
-              if (args[3 + archiveShift + shiftIndex] !== undefined) {
-                const sortType = indexByRecency
-                  ? "By Recency"
-                  : "By Date Created";
-                var entriesToSkip;
-                // If the argument after past is a number, valid command call!
-                if (!isNaN(args[3 + archiveShift + shiftIndex])) {
-                  entriesToSkip = parseInt(args[3 + archiveShift + shiftIndex]);
-                } else if (
-                  args[3 + archiveShift + shiftIndex].toLowerCase() === "recent"
-                ) {
-                  entriesToSkip = await getRecentHabit(
-                    bot,
-                    authorID,
-                    isArchived,
-                    habitEmbedColour,
-                    true,
-                    true
-                  );
-                } else return message.reply(habitActionHelpMessage);
-                if (entriesToSkip < 0 || entriesToSkip > totalHabitNumber) {
-                  return fn.sendErrorMessageAndUsage(
-                    message,
-                    habitActionHelpMessage,
-                    `** ${
-                      isArchived ? "ARCHIVED " : ""
-                    } HABITS(S) DO NOT EXIST **...`
-                  );
-                }
-                const confirmSeePastMessage = `Are you sure you want to ** see ${
-                  args[1 + archiveShift]
-                } entries past ${entriesToSkip}?** `;
-                const confirmSeePast = await fn.getUserConfirmation(
-                  bot,
-                  message,
-                  PREFIX,
-                  confirmSeePastMessage,
-                  forceSkip,
-                  `Log${isArchived ? ` Archive` : ""}: See ${
-                    args[1 + archiveShift]
-                  } Logs Past ${entriesToSkip} (${sortType})`
-                );
-                if (!confirmSeePast) return;
-                var habitView;
-                if (indexByRecency)
-                  habitView = await fn.getEntriesByRecency(
-                    Habit,
-                    { userID: authorID, archived: isArchived },
-                    entriesToSkip,
-                    habitIndex
-                  );
-                else
-                  habitView = await getLogsByCreatedAt(
-                    authorID,
-                    entriesToSkip,
-                    habitIndex,
-                    isArchived
-                  );
-                console.log({ habitView });
-                const habitStringArray = multipleLogsToStringArray(
-                  message,
-                  habitView,
-                  habitIndex,
-                  entriesToSkip,
-                  false
-                );
-                await fn.sendPaginationEmbed(
-                  bot,
-                  message.channel.id,
-                  authorID,
-                  fn.getEmbedArray(
-                    habitStringArray,
-                    `Log${
-                      isArchived ? ` Archive` : ""
-                    }: See ${habitIndex} Logs Past ${entriesToSkip} (${sortType})`,
-                    true,
-                    `Logs ${fn.timestampToDateString(
-                      Date.now() + timezoneOffset * HOUR_IN_MS,
-                      false,
-                      false,
-                      true,
-                      true
-                    )}`,
-                    habitEmbedColour
-                  )
-                );
-                return;
-              }
-            }
-          }
-        }
-        if (args[2 + archiveShift] !== undefined) {
-          if (args[2 + archiveShift].toLowerCase() === "recent") {
-            indexByRecency = true;
-          }
-        }
-        var habitView;
-        if (indexByRecency)
-          habitView = await hb.getOneHabitByRecency(
-            authorID,
-            habitIndex - 1,
-            isArchived
-          );
-        else
-          habitView = await hb.getOneHabitByCreatedAt(
-            authorID,
-            habitIndex - 1,
-            isArchived
-          );
-        console.log({ habitView });
-        if (!habitView) {
-          return fn.sendErrorMessage(
-            message,
-            `**${
-              isArchived ? "ARCHIVED " : ""
-            } HABIT ${habitIndex} DOES NOT EXIST **...`
-          );
-        }
-        // NOT using the past functionality:
-        const sortType = indexByRecency ? "By Recency" : "By Date Created";
-        const habitString = `__ ** Habit ${habitIndex}:** __ ${await habitDocumentToString(
-          bot,
-          habitView,
+        targetHabitIndex = targetHabit.index;
+        targetHabit = targetHabit.object;
+      }
+
+      // Show all of the logs for the given habit
+      const totalLogs = await Log.find({
+        connectedDocument: targetHabit._id,
+      }).countDocuments();
+      var logView;
+      if (indexByRecency)
+        logView = await fn.getEntriesByRecency(
+          Log,
+          { connectedDocument: targetHabit._id },
+          0,
+          totalLogs
+        );
+      else logView = await getLogsByTimestamp(targetHabit._id, 0, totalLogs);
+      console.log({ logView, totalLogs });
+      const logArray = multipleLogsToStringArray(
+        message,
+        logView,
+        totalLogs,
+        0,
+        false
+      );
+      await fn.sendPaginationEmbed(
+        bot,
+        message.channel.id,
+        authorID,
+        fn.getEmbedArray(
+          logArray,
+          `Habit${isArchived ? ` Archive` : ""} ${
+            targetHabitIndex + 1
+          }: All ${totalLogs} Logs (${sortType})`,
           true,
-          false,
-          false,
-          false
-        )} `;
-        const habitEmbed = fn.getEmbedArray(
-          habitString,
-          `Log${
-            isArchived ? ` Archive` : ""
-          }: See Habit ${habitIndex} (${sortType})`,
-          true,
-          `Habit ${fn.timestampToDateString(
+          `Logs ${fn.timestampToDateString(
             Date.now() + timezoneOffset * HOUR_IN_MS,
             false,
             false,
@@ -1744,14 +1131,9 @@ module.exports = {
             true
           )}`,
           habitEmbedColour
-        );
-        await fn.sendPaginationEmbed(
-          bot,
-          message.channel.id,
-          authorID,
-          habitEmbed
-        );
-      }
+        )
+      );
+      return;
     } else if (
       logCommand === "edit" ||
       logCommand === "change" ||

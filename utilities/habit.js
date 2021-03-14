@@ -19,18 +19,33 @@ const habits = new Discord.Collection();
 // Private Function Declarations
 
 module.exports = {
-  logDocumentToString: function (log) {
+  logDocumentToString: function (
+    log,
+    boldTimestamp = false,
+    underlineTimestamp = false
+  ) {
     const state = this.getStateEmoji(log.state);
     var messageString = log.message ? `\n**Message:** ${log.message}` : "";
     const countString = this.countArrayToString(log.count);
-    return (
-      `${state} - ${fn.timestampToDateString(log.timestamp)}` +
-      messageString +
-      countString
-    );
+    var timestampString = fn.timestampToDateString(log.timestamp);
+    let timeComma = timestampString.lastIndexOf(",");
+    if (underlineTimestamp) {
+      timestampString = `__${timestampString.substring(
+        0,
+        timeComma
+      )}__${timestampString.substring(timeComma, timestampString.length)}`;
+      timeComma = timestampString.lastIndexOf(",");
+    }
+    if (boldTimestamp) {
+      timestampString = `**${timestampString.substring(
+        0,
+        timeComma
+      )}**${timestampString.substring(timeComma, timestampString.length)}`;
+    }
+    return `${state} - ${timestampString}` + messageString + countString;
   },
 
-  countArrayToString: function(countArray) {
+  countArrayToString: function (countArray) {
     var countString = "";
     if (countArray) {
       if (countArray.length) {
@@ -623,6 +638,71 @@ module.exports = {
     return;
   },
 
+  updateHabitStats: async function (habitDocument, timezoneOffset, habitCron) {
+    var {
+      currentState,
+      currentStreak,
+      longestStreak,
+      pastWeek,
+      pastMonth,
+      pastYear,
+    } = habitDocument;
+    const currentLogs = await Log.find({
+      connectedDocument: habitDocument._id,
+    }).sort({ timestamp: -1 });
+    const todaysLog = await this.getTodaysLog(
+      currentLogs,
+      timezoneOffset,
+      habitCron.daily
+    );
+    if (todaysLog) {
+      currentState = todaysLog.state;
+    }
+    currentStreak = this.calculateCurrentStreak(
+      currentLogs,
+      timezoneOffset,
+      habitCron,
+      habitDocument.settings.isWeeklyType,
+      habitDocument.settings.cronPeriods
+    );
+    if (currentStreak > (longestStreak ? longestStreak : 0)) {
+      longestStreak = currentStreak;
+    }
+    pastWeek = this.getPastWeekStreak(
+      currentLogs,
+      timezoneOffset,
+      habitCron,
+      habitDocument.createdAt
+    );
+    pastMonth = this.getPastMonthStreak(
+      currentLogs,
+      timezoneOffset,
+      habitCron,
+      habitDocument.createdAt
+    );
+    pastYear = this.getPastYearStreak(
+      currentLogs,
+      timezoneOffset,
+      habitCron,
+      habitDocument.createdAt
+    );
+    const updatedHabit = await Habit.findOneAndUpdate(
+      { _id: habitDocument._id },
+      {
+        $set: {
+          currentState,
+          currentStreak,
+          longestStreak,
+          pastWeek,
+          pastMonth,
+          pastYear,
+        },
+      },
+      { new: true }
+    );
+    return updatedHabit;
+  },
+
   updateHabit: async function (habit, timezoneOffset, habitCron) {
     let { _id: habitID } = habit;
     let {
@@ -682,32 +762,30 @@ module.exports = {
     //     state: 1,
     //   },
     // ];
-    pastWeek = this.getPastWeekStreak(
-      logs,
-      timezoneOffset,
-      habitCron,
-      createdAt
-    );
-    pastMonth = this.getPastMonthStreak(
-      logs,
-      timezoneOffset,
-      habitCron,
-      createdAt
-    );
-    pastYear = this.getPastYearStreak(
-      logs,
-      timezoneOffset,
-      habitCron,
-      createdAt
-    );
-    // Streak
+    // pastWeek = this.getPastWeekStreak(
+    //   logs,
+    //   timezoneOffset,
+    //   habitCron,
+    //   createdAt
+    // );
+    // pastMonth = this.getPastMonthStreak(
+    //   logs,
+    //   timezoneOffset,
+    //   habitCron,
+    //   createdAt
+    // );
+    // pastYear = this.getPastYearStreak(
+    //   logs,
+    //   timezoneOffset,
+    //   habitCron,
+    //   createdAt
+    // );
+    // Streak - Setup New Log
     if (autoLogType === 1) {
       let todaysLog = this.getTodaysLog(logs, timezoneOffset, habitCron.daily);
       console.log({ todaysLog });
-      if (todaysLog) {
-        currentState = todaysLog.state || 0;
-      } else {
-        currentState = 1; // Reset current state to ✅
+      if (!todaysLog) {
+        currentState = 1; //* Reset current state to ✅
         todaysLog = new Log({
           _id: mongoose.Types.ObjectId(),
           timestamp:
@@ -719,39 +797,42 @@ module.exports = {
         });
         await todaysLog.save().catch((err) => console.error(err));
 
-        // Find the correct spot to insert today's new log.
-        // The logs are currently sorted from newest to oldest (timestamp)
-        // Taking the index of the first log that has a timestamp older than today
-        // allows proper placement of today's log right after the one just older than it - to maintain the sorted order.
-        const todaysIndex = logs.findIndex(
-          (log) => todaysLog.timestamp >= log.timestamp
-        );
-        // console.log({ todaysLog, logs, todaysIndex });
+        // // Find the correct spot to insert today's new log.
+        // // The logs are currently sorted from newest to oldest (timestamp)
+        // // Taking the index of the first log that has a timestamp older than today
+        // // allows proper placement of today's log right after the one just older than it - to maintain the sorted order.
+        // const todaysIndex = logs.findIndex(
+        //   (log) => todaysLog.timestamp >= log.timestamp
+        // );
+        // // console.log({ todaysLog, logs, todaysIndex });
 
-        // If no success finding a log older than today's log, today is the oldest log.
-        if (todaysIndex === -1) logs = [todaysLog].concat(logs);
-        else logs.splice(todaysIndex, 0, todaysLog);
-        // console.log({ logs });
+        // // If no success finding a log older than today's log, today is the oldest log.
+        // //* Or [todaysLog, ...logs]
+        // if (todaysIndex === -1) logs = [todaysLog].concat(logs);
+        // else logs.splice(todaysIndex, 0, todaysLog);
+        // // console.log({ logs });
       }
     }
     // Count Goals and Regular Goals
     //* NOTE: Count Goals logging will be handled in the commands
-    else currentState = 0;
-    console.log({ currentState });
-    if (logs.length) {
-      currentStreak = this.calculateCurrentStreak(
-        logs,
-        timezoneOffset,
-        habitCron,
-        isWeeklyType,
-        cronPeriods
-      );
-    } else currentStreak = 0;
-    // console.log({ currentStreak });
-    if (currentStreak > (longestStreak || 0)) {
-      longestStreak = currentStreak;
-    }
-    console.log({ currentStreak, longestStreak });
+    // else currentState = 0;
+    await this.updateHabitStats(habit, timezoneOffset, habitCron);
+    // console.log({ currentState });
+    // if (logs.length) {
+    //   currentStreak = this.calculateCurrentStreak(
+    //     logs,
+    //     timezoneOffset,
+    //     habitCron,
+    //     isWeeklyType,
+    //     cronPeriods
+    //   );
+    // } else currentStreak = 0;
+    // // console.log({ currentStreak });
+    // if (currentStreak > (longestStreak || 0)) {
+    //   longestStreak = currentStreak;
+    // }
+    // console.log({ currentStreak, longestStreak });
+
     nextCron = this.getNextCronTimeUTC(
       timezoneOffset,
       habitCron,
@@ -762,17 +843,8 @@ module.exports = {
     console.log({ nextCron });
     const updatedHabit = await Habit.findOneAndUpdate(
       { _id: habitID },
-      {
-        $set: {
-          currentState,
-          currentStreak,
-          longestStreak,
-          pastWeek,
-          pastMonth,
-          pastYear,
-          nextCron,
-        },
-      }
+      { $set: { nextCron } },
+      { new: true }
     );
     return updatedHabit;
   },
@@ -1018,7 +1090,7 @@ module.exports = {
   getPastStreak: function (
     sortedLogs,
     timezoneOffset,
-    habitCron, 
+    habitCron,
     startTimestamp,
     endTimestamp,
     createdAt = undefined
