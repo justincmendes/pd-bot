@@ -434,7 +434,7 @@ module.exports = {
           return;
         } else if (deleteType === "all") {
           const confirmDeleteAllMessage =
-            `Are you sure you want to **delete all** of your recorded recurring reminders?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
+            `Are you sure you want to **delete all** of your recorded recurring reminders?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           const pastNumberOfEntriesIndex = totalReminderNumber;
           if (pastNumberOfEntriesIndex === 0) {
             return fn.sendErrorMessage(message, noRemindersMessage);
@@ -449,7 +449,7 @@ module.exports = {
           );
           if (!confirmDeleteAll) return;
           const finalDeleteAllMessage =
-            `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR RECURRING REMINDERS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
+            `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR RECURRING REMINDERS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
             message,

@@ -239,7 +239,9 @@ module.exports = {
             PREFIX,
             `__**You already have a habit log on this day, are you sure you would like to overwrite it?**__\n*If yes, you can start creating the new log which will replace the old one.\nOtherwise, it will exit the log creation.*\n(**You can edit it instead using: \`${PREFIX}habit edit${
               targetHabitIndex || targetHabitIndex === 0
-                ? ` ${targetHabitIndex + 1}`
+                ? indexByRecency
+                  ? ` ${targetHabitIndex + 1} recent`
+                  : ` ${targetHabitIndex + 1}`
                 : ""
             }\`**)\n\n**Old Log:** ${hb.logDocumentToString(
               existingLog
@@ -1269,6 +1271,6 @@ module.exports = {
         }
       } while (continueEdit === true);
       return;
-    } else return message.reply(logActionUsageMessage);
+    } else return message.reply(logUsageMessage);
   },
 };

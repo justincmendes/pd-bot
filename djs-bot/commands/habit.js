@@ -322,7 +322,7 @@ module.exports = {
           PREFIX,
           "\n`1` - **Daily Reset** 🌇\n`2` - **Weekly Reset** 📅",
           2,
-          `**__When do you want this habit's streaks to reset?__** ⌚\n(You can specify after how many reset days or weeks the streak should reset in the next window)\n\n${cronSettings}\n\nType** \`${PREFIX}user edit\` **later - to change the settings shown above`,
+          `**__When do you want this habit's streaks to reset?__** ⌚\n(You can specify after how many reset days or weeks the streak should reset in the next window)\n\n${cronSettings}\n\nType** \`${PREFIX}user edit\` **after finishing creating this habit - to change the settings shown above`,
           "Habit: Creation - Streak Reset",
           habitEmbedColour
         );
@@ -1023,7 +1023,7 @@ module.exports = {
             return;
           }
         } else if (deleteType === "all") {
-          const confirmDeleteAllMessage = `Are you sure you want to **delete all** of your recorded habits?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
+          const confirmDeleteAllMessage = `Are you sure you want to **delete all** of your recorded habits?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           const pastNumberOfEntriesIndex = totalHabitNumber;
           if (pastNumberOfEntriesIndex === 0) {
             return fn.sendErrorMessage(message, noHabitsMessage);
@@ -1037,7 +1037,7 @@ module.exports = {
             `Habit${isArchived ? ` Archive` : ""}: Delete All Habits WARNING!`
           );
           if (!confirmDeleteAll) return;
-          const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR HABITS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
+          const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR HABITS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
             message,
