@@ -4,16 +4,22 @@ const Reminder = require("../djs-bot/database/schemas/reminder");
 const Habit = require("../djs-bot/database/schemas/habit");
 const Log = require("../djs-bot/database/schemas/habittracker");
 const Guild = require("../djs-bot/database/schemas/guildsettings");
+const Goal = require("../djs-bot/database/schemas/longtermgoals");
 const User = require("../djs-bot/database/schemas/user");
 const mongoose = require("mongoose");
 const fn = require("./functions");
 const rm = require("./reminder");
-const habit = require("../djs-bot/database/schemas/habit");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
 const habitEmbedColour = fn.habitEmbedColour;
 const mastermindEmbedColour = fn.mastermindEmbedColour;
+const areasOfLifeEmojis = fn.areasOfLifeEmojis;
+const areasOfLife = fn.areasOfLife;
+const areasOfLifeCombinedEmoji = fn.getAreasOfLifeEmojiCombinedArray();
+const areasOfLifeList = fn.getAreasOfLifeList().join("\n");
+const checkMissedSkipList =
+  "\n`1` - **Check** ✅\n`2` - **Missed** ❌\n`3` - **Skip** ⏭ (still counts as a check)";
 const habits = new Discord.Collection();
 
 // Private Function Declarations
@@ -60,6 +66,25 @@ module.exports = {
     return countString;
   },
 
+  getGoalTypeString: function (goalType) {
+    var goalTypeString;
+    switch (goalType) {
+      case 1:
+        goalTypeString = "daily goal";
+        break;
+      case 2:
+        goalTypeString = "weekly goal";
+        break;
+      case 3:
+        goalTypeString = "total/cumulative goal";
+        break;
+      default:
+        goalTypeString = "goal";
+        break;
+    }
+    return goalTypeString;
+  },
+
   habitDocumentDescription: function (habitDocument) {
     console.log({ habitDocument });
     const { archived, description, areaOfLife } = habitDocument;
@@ -70,6 +95,360 @@ module.exports = {
       description ? `\n👣 - **Description:**\n${description}` : ""
     }`;
     return outputString;
+  },
+
+  habitDocumentToString: async function (
+    bot,
+    habitDocument,
+    showConnectedGoal = false,
+    showRecentStats = false,
+    showSettings = false,
+    showTotalStats = false,
+    showPastXDays = 0
+  ) {
+    console.log({ habitDocument });
+    const {
+      _id: habitID,
+      userID,
+      createdAt,
+      archived,
+      description,
+      areaOfLife,
+      reason,
+      currentStreak,
+      currentState,
+      longestStreak,
+      connectedGoal,
+      settings,
+      pastWeek,
+      pastMonth,
+      pastYear,
+      nextCron,
+    } = habitDocument;
+    const userSettings = await User.findOne(
+      { discordID: userID },
+      { _id: 0, habitCron: 1, "timezone.offset": 1 }
+    );
+    const { habitCron, timezone } = userSettings;
+    const { offset: timezoneOffset } = timezone;
+    console.log({ userSettings, timezoneOffset });
+    let connectedGoalString = "";
+    if (showConnectedGoal) {
+      const goalDocument = await Goal.findById(connectedGoal);
+      if (goalDocument)
+        if (
+          goalDocument.description &&
+          (goalDocument.type || goalDocument.type === 0)
+        ) {
+          connectedGoalString = `\n🎯 - **Associated Goal:** ${
+            areasOfLifeEmojis[goalDocument.type]
+              ? `${areasOfLifeEmojis[goalDocument.type]} `
+              : ""
+          }${
+            areasOfLife[goalDocument.type]
+              ? `__${areasOfLife[goalDocument.type]}__`
+              : ""
+          }\n${goalDocument.description}`;
+        }
+    }
+    let statsString = "";
+    if (showRecentStats) {
+      statsString = "\n";
+      const currentDate = new Date(Date.now() + HOUR_IN_MS * timezoneOffset);
+      if (habitCron)
+        if (habitCron.weekly || habitCron.weekly === 0) {
+          const pastWeekTotal =
+            ((6 - (habitCron.weekly - currentDate.getUTCDay())) % 7) + 1 ||
+            " N/A";
+          const pastWeekPercentage = !isNaN(pastWeekTotal)
+            ? ` (${(((pastWeek || 0) / pastWeekTotal) * 100).toFixed(2)}%)`
+            : "";
+          statsString += `**Past Week:** ${
+            pastWeek || 0
+          }/${pastWeekTotal}${pastWeekPercentage}\n`;
+        }
+
+      const pastMonthTotal =
+        fn.getDayFromStartOfMonthAndCreatedAt(
+          currentDate.getTime(),
+          createdAt
+        ) || " N/A";
+      const pastMonthPercentage = !isNaN(pastMonthTotal)
+        ? ` (${(((pastMonth || 0) / pastMonthTotal) * 100).toFixed(2)}%)`
+        : "";
+      statsString += `**Past Month:** ${
+        pastMonth || 0
+      }/${pastMonthTotal}${pastMonthPercentage}`;
+
+      const createdDate = new Date(createdAt);
+      var pastYearTotal;
+      if (currentDate.getUTCFullYear() === createdDate.getUTCFullYear()) {
+        pastYearTotal =
+          fn.getDayOfYear(currentDate.getTime()) +
+          1 -
+          fn.getDayOfYear(createdAt);
+        pastYearTotal = pastYearTotal > 0 ? pastYearTotal : " N/A";
+      } else {
+        pastYearTotal = fn.getDayOfYear(currentDate.getTime());
+      }
+      const pastYearPercentage = !isNaN(pastYearTotal)
+        ? ` (${(((pastYear || 0) / pastYearTotal) * 100).toFixed(2)}%)`
+        : "";
+      statsString += `\n**Past Year:** ${
+        pastYear || 0
+      }/${pastYearTotal}${pastYearPercentage}`;
+    }
+
+    let pastXDaysString = "";
+    if (showPastXDays)
+      if (typeof showPastXDays === "number") {
+        showPastXDays = parseInt(showPastXDays);
+        // Gather all of the logs
+        let logs = await Log.find({ connectedDocument: habitID }).sort({
+          timestamp: -1,
+        });
+        if (logs)
+          if (logs.length) {
+            // Find all of the logs between today's next cron
+            // & x days before
+            const pastXDaysFinal = this.getPastDaysStreak(
+              logs,
+              timezoneOffset,
+              habitCron,
+              showPastXDays
+            );
+            const pastXDaysPercentage = `${(
+              (pastXDaysFinal / showPastXDays) *
+              100
+            ).toFixed(2)}%`;
+            pastXDaysString += `\n**Past ${showPastXDays} Days:** ${pastXDaysFinal}/${showPastXDays} (${pastXDaysPercentage})`;
+
+            // const todaysCronTimestamp = new Date(
+            //     currentDate.getUTCFullYear(), currentDate.getUTCMonth(),
+            //     currentDate.getUTCDay()).getTime() + habitCron.daily;
+            // const pastCronTimestamp = new Date(
+            //     currentDate.getUTCFullYear(), currentDate.getUTCMonth(),
+            //     currentDate.getUTCDay() - showPastXDays).getTime() + habitCron.daily;
+            // logs = logs.map(log => {
+            //     const { timestamp } = log;
+            //     if (timestamp || timestamp === 0) {
+            //         if (timestamp >= pastCronTimestamp
+            //             && timestamp < todaysCronTimestamp) {
+            //             return log;
+            //         }
+            //     }
+            //     return null;
+            // })
+            //     // Take note of only the logs that have values of skips or checks!
+            //     .filter(log => log !== null).filter(log => log.state !== 0 && log.state !== 2);
+
+            // const pastXDaysPercentage = `${((logs.length / showPastXDays) * 100).toFixed(2)}%`;
+            // statsString += `\n**Past ${showPastXDays} Days:** ${logs.length}/${showPastXDays} (${pastXDaysPercentage})`;
+          }
+      }
+
+    let settingsString = "";
+    if (showSettings && settings) {
+      settingsString = "\n";
+      const cronString = `**Habit Reset Time:** Every ${
+        settings.cronPeriods === 1
+          ? `${settings.isWeeklyType ? "week" : "day"}`
+          : `${settings.cronPeriods || 1} ${
+              settings.isWeeklyType ? "week(s)" : "day(s)"
+            }`
+      } at ${fn.msToTimeFromMidnight(habitCron.daily)}`;
+      let countGoalString = "";
+      switch (settings.countGoalType) {
+        case 1:
+          countGoalString = `\n- **Daily Goal:** ${
+            settings.countGoal || "None"
+          }`;
+          break;
+        case 2:
+          countGoalString = `\n- **Weekly Goal:** ${
+            settings.countGoal || "None"
+          }`;
+          break;
+        case 3:
+          countGoalString = `\n- **Total/Cumulative Goal:** ${
+            settings.countGoal || "None"
+          }`;
+          break;
+      }
+      let autoLogString = "No";
+      switch (settings.autoLogType) {
+        case 1:
+          autoLogString = "Streak";
+          break;
+        case 2:
+          autoLogString = "Based on Count Goal";
+          break;
+      }
+      settingsString += `${cronString}\n**Habit Count Value:** ${
+        settings.isCountType
+          ? `Yes\n- **Metric:** ${settings.countMetric || "N/A"}` +
+            countGoalString
+          : "No"
+      }\n**Auto Complete:** ${autoLogString}`;
+      // let integrationType = "";
+      // if (settings.integration) {
+      //     if (settings.integration.name) {
+      //         integrationType = `**Connected Type:** ${fn.toTitleCase(settings.integration.name)}`;
+      //         if (settings.integration.type) {
+      //             /**
+      //              * 1. Check in at least once a day or once a week (Mastermind)
+      //              * 2.
+      //              */
+      //             integrationType += "\n- **Explanation:** ";
+      //             switch (settings.integration.name) {
+      //                 case 'Fast': {
+      //                     switch (settings.integration.type) {
+      //                         case 1: integrationType += "Complete a fast at least once a day";
+      //                             break;
+      //                         case 2: integrationType += "";
+      //                             break;
+      //                     }
+      //                 }
+      //                     break;
+      //                 case 'Journal': {
+      //                     switch (settings.integration.type) {
+      //                         case 1: integrationType += "Create at least 1 journal entry once a day";
+      //                             break;
+      //                         case 2: integrationType += "";
+      //                             break;
+      //                     }
+      //                 }
+      //                     break;
+      //                 case 'Mastermind': {
+      //                     switch (settings.integration.type) {
+      //                         case 1: integrationType += "Create at least 1 mastermind entry once a week";
+      //                             break;
+      //                         case 2: integrationType += "";
+      //                             break;
+      //                     }
+      //                 }
+      //                     break;
+      //             }
+      //         }
+      //     }
+    }
+    var totalStatsString = "";
+    if (showTotalStats && habitID) {
+      totalStatsString = "\n";
+      const totalEntries = await Log.find({
+        connectedDocument: habitID,
+      }).countDocuments();
+      const totalChecked = await Log.find({
+        connectedDocument: habitID,
+        state: 1,
+      }).countDocuments();
+      const totalMissed = await Log.find({
+        connectedDocument: habitID,
+        state: 2,
+      }).countDocuments();
+      const totalSkipped = await Log.find({
+        connectedDocument: habitID,
+        state: 3,
+      }).countDocuments();
+      const totalTracked = totalEntries - totalMissed;
+      const averageCheckedPercent = totalEntries
+        ? ((totalTracked / totalEntries) * 100).toFixed(2)
+        : 0.0;
+      const averageMissedPercent = totalEntries
+        ? (100 - averageCheckedPercent).toFixed(2)
+        : 0.0;
+      totalStatsString += `**Total Logged Entries:** ${
+        totalEntries || 0
+      }\n- **Checked ✅:** ${totalChecked || 0}\n- **Missed ❌:** ${
+        totalMissed || 0
+      }\n- **Skipped ⏭:** ${
+        totalSkipped || 0
+      }\n- **Average Checked (includes skips):** ${
+        averageCheckedPercent || `0.00`
+      }%\n- **Average Missed:** ${averageMissedPercent || `0.00`}%`;
+    }
+    let currentStateString = `**Current Log:** ${this.getStateEmoji(
+      currentState
+    )}`;
+    const areaOfLifeString = fn.getAreaOfLifeString(areaOfLife);
+
+    let outputString =
+      `${archived ? "****ARCHIVED****\n" : ""}${areaOfLifeString}${
+        description ? `\n👣 - **Description:**\n${description}` : ""
+      }${
+        reason ? `\n💭 - **Reason:**\n${reason}` : ""
+      }${connectedGoalString}\n${currentStateString}\n**Current Streak:** ${
+        currentStreak || 0
+      }\n**Longest Streak:** ${longestStreak || 0}${
+        createdAt || createdAt === 0
+          ? `\n**Created At:** ${fn.timestampToDateString(
+              createdAt,
+              true,
+              true,
+              true
+            )}`
+          : ""
+      }${
+        nextCron || nextCron === 0
+          ? `\n**Next Streak Reset:** ${fn.timestampToDateString(
+              nextCron + timezoneOffset * HOUR_IN_MS,
+              true,
+              true,
+              true
+            )}`
+          : ""
+      }` +
+      statsString +
+      pastXDaysString +
+      settingsString +
+      totalStatsString;
+
+    outputString = fn.getRoleMentionToTextString(bot, outputString);
+    return outputString;
+  },
+
+  getHabitIndexByFunction: async function (
+    userID,
+    habitID,
+    totalHabits,
+    archived,
+    getOneHabit
+  ) {
+    let i = 0;
+    while (true) {
+      let habit = await getOneHabit(userID, i, archived);
+      console.log({ habit, habitID, userID, i, archived, totalHabits });
+      if (!habit && i >= totalHabits) {
+        return false;
+      } else if (habit._id.toString() === habitID.toString()) break;
+      i++;
+    }
+    return i + 1;
+  },
+
+  getRecentHabitIndex: async function (userID, archived) {
+    try {
+      var index;
+      const entries = await Habit.find({ userID, archived }).sort({
+        createdAt: +1,
+      });
+      if (entries.length) {
+        let targetID = await Habit.findOne({ userID, archived }).sort({
+          _id: -1,
+        });
+        targetID = targetID._id.toString();
+        console.log({ targetID });
+        for (let i = 0; i < entries.length; i++) {
+          if (entries[i]._id.toString() === targetID) {
+            index = i + 1;
+            return index;
+          }
+        }
+      } else return -1;
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
   },
 
   getHabitReadOrDeleteHelp: function (PREFIX, commandUsed, crudCommand) {
@@ -92,7 +471,9 @@ module.exports = {
       const reminderMessage = `**__Reminder to track your habit__** 😁.\n\n**Habit:** ${habitDescription}${
         countGoal || countGoal === 0
           ? `\n**Current${
-              goalType ? ` ${fn.toTitleCase(getGoalTypeString(goalType))}` : ""
+              goalType
+                ? ` ${fn.toTitleCase(this.getGoalTypeString(goalType))}`
+                : ""
             }:**` + ` ${countGoal}${countMetric ? ` (${countMetric})` : ""}`
           : ""
       }\n\nType** \`?${commandUsed} log\` **- to **track your habit**`;
@@ -801,18 +1182,6 @@ module.exports = {
     return getAllHabits;
   },
 
-  getOneHabitByObjectID: async function (habitID) {
-    if (habitID) {
-      console.log({ habitID });
-      const reminder = await Habit.findById(habitID).catch((err) => {
-        console.error(err);
-        return false;
-      });
-      console.log({ reminder });
-      return reminder;
-    } else return null;
-  },
-
   getActualDateLogged: function (timestamp, dailyCron) {
     // If the timestamp is on the intended day of the cron
     // i.e. If it's a cron at 12:00AM Midnight, then the reset is intended for the
@@ -1269,5 +1638,13 @@ module.exports = {
         break;
     }
     return stateEmoji;
+  },
+
+  getOneHabitByObjectID: async function (habitID) {
+    const habit = await Habit.findById(habitID).catch((err) => {
+      console.log(err);
+      return false;
+    });
+    return habit;
   },
 };

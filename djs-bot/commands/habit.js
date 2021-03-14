@@ -25,308 +25,6 @@ const checkMissedSkipList =
   "\n`1` - **Check** ✅\n`2` - **Missed** ❌\n`3` - **Skip** ⏭ (still counts as a check)";
 
 // Private Function Declarations
-async function habitDocumentToString(
-  bot,
-  habitDocument,
-  showConnectedGoal = false,
-  showRecentStats = false,
-  showSettings = false,
-  showTotalStats = false,
-  showPastXDays = 0
-) {
-  console.log({ habitDocument });
-  const {
-    _id: habitID,
-    userID,
-    createdAt,
-    archived,
-    description,
-    areaOfLife,
-    reason,
-    currentStreak,
-    currentState,
-    longestStreak,
-    connectedGoal,
-    settings,
-    pastWeek,
-    pastMonth,
-    pastYear,
-    nextCron,
-  } = habitDocument;
-  const userSettings = await User.findOne(
-    { discordID: userID },
-    { _id: 0, habitCron: 1, "timezone.offset": 1 }
-  );
-  const { habitCron, timezone } = userSettings;
-  const { offset: timezoneOffset } = timezone;
-  console.log({ userSettings, timezoneOffset });
-  let connectedGoalString = "";
-  if (showConnectedGoal) {
-    const goalDocument = await Goal.findById(connectedGoal);
-    if (goalDocument)
-      if (
-        goalDocument.description &&
-        (goalDocument.type || goalDocument.type === 0)
-      ) {
-        connectedGoalString = `\n🎯 - **Associated Goal:** ${
-          areasOfLifeEmojis[goalDocument.type]
-            ? `${areasOfLifeEmojis[goalDocument.type]} `
-            : ""
-        }${
-          areasOfLife[goalDocument.type]
-            ? `__${areasOfLife[goalDocument.type]}__`
-            : ""
-        }\n${goalDocument.description}`;
-      }
-  }
-  let statsString = "";
-  if (showRecentStats) {
-    statsString = "\n";
-    const currentDate = new Date(Date.now() + HOUR_IN_MS * timezoneOffset);
-    if (habitCron)
-      if (habitCron.weekly || habitCron.weekly === 0) {
-        const pastWeekTotal =
-          ((6 - (habitCron.weekly - currentDate.getUTCDay())) % 7) + 1 ||
-          " N/A";
-        const pastWeekPercentage = !isNaN(pastWeekTotal)
-          ? ` (${(((pastWeek || 0) / pastWeekTotal) * 100).toFixed(2)}%)`
-          : "";
-        statsString += `**Past Week:** ${
-          pastWeek || 0
-        }/${pastWeekTotal}${pastWeekPercentage}\n`;
-      }
-
-    const pastMonthTotal =
-      fn.getDayFromStartOfMonthAndCreatedAt(currentDate.getTime(), createdAt) ||
-      " N/A";
-    const pastMonthPercentage = !isNaN(pastMonthTotal)
-      ? ` (${(((pastMonth || 0) / pastMonthTotal) * 100).toFixed(2)}%)`
-      : "";
-    statsString += `**Past Month:** ${
-      pastMonth || 0
-    }/${pastMonthTotal}${pastMonthPercentage}`;
-
-    const createdDate = new Date(createdAt);
-    var pastYearTotal;
-    if (currentDate.getUTCFullYear() === createdDate.getUTCFullYear()) {
-      pastYearTotal =
-        fn.getDayOfYear(currentDate.getTime()) + 1 - fn.getDayOfYear(createdAt);
-      pastYearTotal = pastYearTotal > 0 ? pastYearTotal : " N/A";
-    } else {
-      pastYearTotal = fn.getDayOfYear(currentDate.getTime());
-    }
-    const pastYearPercentage = !isNaN(pastYearTotal)
-      ? ` (${(((pastYear || 0) / pastYearTotal) * 100).toFixed(2)}%)`
-      : "";
-    statsString += `\n**Past Year:** ${
-      pastYear || 0
-    }/${pastYearTotal}${pastYearPercentage}`;
-  }
-
-  let pastXDaysString = "";
-  if (showPastXDays)
-    if (typeof showPastXDays === "number") {
-      showPastXDays = parseInt(showPastXDays);
-      // Gather all of the logs
-      let logs = await Log.find({ connectedDocument: habitID }).sort({
-        timestamp: -1,
-      });
-      if (logs)
-        if (logs.length) {
-          // Find all of the logs between today's next cron
-          // & x days before
-          const pastXDaysFinal = hb.getPastDaysStreak(
-            logs,
-            timezoneOffset,
-            habitCron,
-            showPastXDays
-          );
-          const pastXDaysPercentage = `${(
-            (pastXDaysFinal / showPastXDays) *
-            100
-          ).toFixed(2)}%`;
-          pastXDaysString += `\n**Past ${showPastXDays} Days:** ${pastXDaysFinal}/${showPastXDays} (${pastXDaysPercentage})`;
-
-          // const todaysCronTimestamp = new Date(
-          //     currentDate.getUTCFullYear(), currentDate.getUTCMonth(),
-          //     currentDate.getUTCDay()).getTime() + habitCron.daily;
-          // const pastCronTimestamp = new Date(
-          //     currentDate.getUTCFullYear(), currentDate.getUTCMonth(),
-          //     currentDate.getUTCDay() - showPastXDays).getTime() + habitCron.daily;
-          // logs = logs.map(log => {
-          //     const { timestamp } = log;
-          //     if (timestamp || timestamp === 0) {
-          //         if (timestamp >= pastCronTimestamp
-          //             && timestamp < todaysCronTimestamp) {
-          //             return log;
-          //         }
-          //     }
-          //     return null;
-          // })
-          //     // Take note of only the logs that have values of skips or checks!
-          //     .filter(log => log !== null).filter(log => log.state !== 0 && log.state !== 2);
-
-          // const pastXDaysPercentage = `${((logs.length / showPastXDays) * 100).toFixed(2)}%`;
-          // statsString += `\n**Past ${showPastXDays} Days:** ${logs.length}/${showPastXDays} (${pastXDaysPercentage})`;
-        }
-    }
-
-  let settingsString = "";
-  if (showSettings && settings) {
-    settingsString = "\n";
-    const cronString = `**Habit Reset Time:** Every ${
-      settings.cronPeriods === 1
-        ? `${settings.isWeeklyType ? "week" : "day"}`
-        : `${settings.cronPeriods || 1} ${
-            settings.isWeeklyType ? "week(s)" : "day(s)"
-          }`
-    } at ${fn.msToTimeFromMidnight(habitCron.daily)}`;
-    let countGoalString = "";
-    switch (settings.countGoalType) {
-      case 1:
-        countGoalString = `\n- **Daily Goal:** ${settings.countGoal || "None"}`;
-        break;
-      case 2:
-        countGoalString = `\n- **Weekly Goal:** ${
-          settings.countGoal || "None"
-        }`;
-        break;
-      case 3:
-        countGoalString = `\n- **Total/Cumulative Goal:** ${
-          settings.countGoal || "None"
-        }`;
-        break;
-    }
-    let autoLogString = "No";
-    switch (settings.autoLogType) {
-      case 1:
-        autoLogString = "Streak";
-        break;
-      case 2:
-        autoLogString = "Based on Count Goal";
-        break;
-    }
-    settingsString += `${cronString}\n**Habit Count Value:** ${
-      settings.isCountType
-        ? `Yes\n- **Metric:** ${settings.countMetric || "N/A"}` +
-          countGoalString
-        : "No"
-    }\n**Auto Complete:** ${autoLogString}`;
-    // let integrationType = "";
-    // if (settings.integration) {
-    //     if (settings.integration.name) {
-    //         integrationType = `**Connected Type:** ${fn.toTitleCase(settings.integration.name)}`;
-    //         if (settings.integration.type) {
-    //             /**
-    //              * 1. Check in at least once a day or once a week (Mastermind)
-    //              * 2.
-    //              */
-    //             integrationType += "\n- **Explanation:** ";
-    //             switch (settings.integration.name) {
-    //                 case 'Fast': {
-    //                     switch (settings.integration.type) {
-    //                         case 1: integrationType += "Complete a fast at least once a day";
-    //                             break;
-    //                         case 2: integrationType += "";
-    //                             break;
-    //                     }
-    //                 }
-    //                     break;
-    //                 case 'Journal': {
-    //                     switch (settings.integration.type) {
-    //                         case 1: integrationType += "Create at least 1 journal entry once a day";
-    //                             break;
-    //                         case 2: integrationType += "";
-    //                             break;
-    //                     }
-    //                 }
-    //                     break;
-    //                 case 'Mastermind': {
-    //                     switch (settings.integration.type) {
-    //                         case 1: integrationType += "Create at least 1 mastermind entry once a week";
-    //                             break;
-    //                         case 2: integrationType += "";
-    //                             break;
-    //                     }
-    //                 }
-    //                     break;
-    //             }
-    //         }
-    //     }
-  }
-  var totalStatsString = "";
-  if (showTotalStats && habitID) {
-    totalStatsString = "\n";
-    const totalEntries = await Log.find({
-      connectedDocument: habitID,
-    }).countDocuments();
-    const totalChecked = await Log.find({
-      connectedDocument: habitID,
-      state: 1,
-    }).countDocuments();
-    const totalMissed = await Log.find({
-      connectedDocument: habitID,
-      state: 2,
-    }).countDocuments();
-    const totalSkipped = await Log.find({
-      connectedDocument: habitID,
-      state: 3,
-    }).countDocuments();
-    const totalTracked = totalEntries - totalMissed;
-    const averageCheckedPercent = totalEntries
-      ? ((totalTracked / totalEntries) * 100).toFixed(2)
-      : 0.0;
-    const averageMissedPercent = totalEntries
-      ? (100 - averageCheckedPercent).toFixed(2)
-      : 0.0;
-    totalStatsString += `**Total Logged Entries:** ${
-      totalEntries || 0
-    }\n- **Checked ✅:** ${totalChecked || 0}\n- **Missed ❌:** ${
-      totalMissed || 0
-    }\n- **Skipped ⏭:** ${
-      totalSkipped || 0
-    }\n- **Average Checked (includes skips):** ${
-      averageCheckedPercent || `0.00`
-    }%\n- **Average Missed:** ${averageMissedPercent || `0.00`}%`;
-  }
-  let currentStateString = `**Current Log:** ${hb.getStateEmoji(currentState)}`;
-  const areaOfLifeString = fn.getAreaOfLifeString(areaOfLife);
-
-  let outputString =
-    `${archived ? "****ARCHIVED****\n" : ""}${areaOfLifeString}${
-      description ? `\n👣 - **Description:**\n${description}` : ""
-    }${
-      reason ? `\n💭 - **Reason:**\n${reason}` : ""
-    }${connectedGoalString}\n${currentStateString}\n**Current Streak:** ${
-      currentStreak || 0
-    }\n**Longest Streak:** ${longestStreak || 0}${
-      createdAt || createdAt === 0
-        ? `\n**Created At:** ${fn.timestampToDateString(
-            createdAt,
-            true,
-            true,
-            true
-          )}`
-        : ""
-    }${
-      nextCron || nextCron === 0
-        ? `\n**Next Streak Reset:** ${fn.timestampToDateString(
-            nextCron + timezoneOffset * HOUR_IN_MS,
-            true,
-            true,
-            true
-          )}`
-        : ""
-    }` +
-    statsString +
-    pastXDaysString +
-    settingsString +
-    totalStatsString;
-
-  outputString = fn.getRoleMentionToTextString(bot, outputString);
-  return outputString;
-}
-
 async function multipleHabitsToStringArray(
   bot,
   message,
@@ -353,7 +51,7 @@ async function multipleHabitsToStringArray(
     }
     const habitString = `__**Habit ${
       i + entriesToSkip + 1
-    }:**__ ${await habitDocumentToString(
+    }:**__ ${await hb.habitDocumentToString(
       bot,
       habitArray[i],
       showConnectedGoal,
@@ -378,10 +76,10 @@ async function getRecentHabit(
   showSettings = false,
   showTotalStats = false
 ) {
-  const recentHabitToString = `__**Habit ${await getRecentHabitIndex(
+  const recentHabitToString = `__**Habit ${await hb.getRecentHabitIndex(
     userID,
     isArchived
-  )}:**__${await habitDocumentToString(
+  )}:**__${await hb.habitDocumentToString(
     bot,
     await hb.getOneHabitByRecency(userID, 0, isArchived),
     showConnectedGoal,
@@ -395,33 +93,6 @@ async function getRecentHabit(
     embedColour
   );
   return habitEmbed;
-}
-
-async function getHabitIndexByFunction(
-  userID,
-  habitID,
-  totalHabits,
-  archived,
-  getOneHabit
-) {
-  let i = 0;
-  while (true) {
-    let habit = await getOneHabit(userID, i, archived);
-    console.log({ habit, habitID, userID, i, archived, totalHabits });
-    if (!habit && i >= totalHabits) {
-      return false;
-    } else if (habit._id.toString() === habitID.toString()) break;
-    i++;
-  }
-  return i + 1;
-}
-
-async function getOneHabitByObjectID(habitID) {
-  const habit = await Habit.findById(habitID).catch((err) => {
-    console.log(err);
-    return false;
-  });
-  return habit;
 }
 
 async function getHabitsByCreatedAt(
@@ -440,50 +111,6 @@ async function getHabitsByCreatedAt(
     console.log(err);
     return false;
   }
-}
-
-async function getRecentHabitIndex(userID, archived) {
-  try {
-    var index;
-    const entries = await Habit.find({ userID, archived }).sort({
-      createdAt: +1,
-    });
-    if (entries.length) {
-      let targetID = await Habit.findOne({ userID, archived }).sort({
-        _id: -1,
-      });
-      targetID = targetID._id.toString();
-      console.log({ targetID });
-      for (let i = 0; i < entries.length; i++) {
-        if (entries[i]._id.toString() === targetID) {
-          index = i + 1;
-          return index;
-        }
-      }
-    } else return -1;
-  } catch (err) {
-    console.log(err);
-    return false;
-  }
-}
-
-function getGoalTypeString(goalType) {
-  var goalTypeString;
-  switch (goalType) {
-    case 1:
-      goalTypeString = "daily goal";
-      break;
-    case 2:
-      goalTypeString = "weekly goal";
-      break;
-    case 3:
-      goalTypeString = "total/cumulative goal";
-      break;
-    default:
-      goalTypeString = "goal";
-      break;
-  }
-  return goalTypeString;
 }
 
 module.exports = {
@@ -587,7 +214,7 @@ module.exports = {
        * Iteratively create new habits until the user is finished!
        */
 
-      // message.channel.send(await habitDocumentToString(bot, await Habit.findOne({ userID: authorID, archived: false, }), true, true));
+      // message.channel.send(await hb.habitDocumentToString(bot, await Habit.findOne({ userID: authorID, archived: false, }), true, true));
       var habitDocument, reset;
       const additionalInstructions = `Type \`reset\` to **reset** your current habit entry`;
       const additionalKeywords = ["reset"];
@@ -804,7 +431,7 @@ module.exports = {
             );
             if (!countGoalType && countGoalType !== 0) return;
             else countGoalType++;
-            goalTypeString = getGoalTypeString(countGoalType);
+            goalTypeString = hb.getGoalTypeString(countGoalType);
             countGoal = await fn.getNumberEntry(
               bot,
               message,
@@ -987,7 +614,7 @@ module.exports = {
             await hb.habitCron(habitDocument, timezoneOffset, habitCron);
             totalHabitNumber++;
             message.reply(
-              `**Habit ${await getHabitIndexByFunction(
+              `**Habit ${await hb.getHabitIndexByFunction(
                 authorID,
                 habitDocument._id,
                 totalHabitNumber,
@@ -1158,7 +785,7 @@ module.exports = {
               return true;
             }
           });
-          const recentIndex = await getRecentHabitIndex(authorID, isArchived);
+          const recentIndex = await hb.getRecentHabitIndex(authorID, isArchived);
           toDelete = Array.from(
             new Set(
               toDelete.map((number) => {
@@ -1203,7 +830,7 @@ module.exports = {
             }
             habitTargetIDs.push(habitView._id);
             habitArray.push(
-              `__**Habit ${toDelete[i]}:**__ ${await habitDocumentToString(
+              `__**Habit ${toDelete[i]}:**__ ${await hb.habitDocumentToString(
                 bot,
                 habitView,
                 true,
@@ -1265,7 +892,7 @@ module.exports = {
                 if (
                   args[3 + archiveShift + shiftIndex].toLowerCase() === "recent"
                 ) {
-                  skipEntries = await getRecentHabitIndex(authorID, isArchived);
+                  skipEntries = await hb.getRecentHabitIndex(authorID, isArchived);
                 } else return message.reply(habitActionHelpMessage);
               } else
                 skipEntries = parseInt(args[3 + archiveShift + shiftIndex]);
@@ -1364,9 +991,9 @@ module.exports = {
           if (!habitView) return fn.sendErrorMessage(message, noHabitsMessage);
           const habitTargetID = habitView._id;
           console.log({ habitTargetID });
-          const habitIndex = await getRecentHabitIndex(authorID, isArchived);
+          const habitIndex = await hb.getRecentHabitIndex(authorID, isArchived);
           const habitEmbed = fn.getEmbedArray(
-            `__**Habit ${habitIndex}:**__ ${await habitDocumentToString(
+            `__**Habit ${habitIndex}:**__ ${await hb.habitDocumentToString(
               bot,
               habitView,
               true,
@@ -1464,7 +1091,7 @@ module.exports = {
         const habitTargetID = habitView._id;
         const sortType = indexByRecency ? "By Recency" : "By Date Created";
         const habitEmbed = fn.getEmbedArray(
-          `__**Habit ${pastNumberOfEntriesIndex}:**__ ${await habitDocumentToString(
+          `__**Habit ${pastNumberOfEntriesIndex}:**__ ${await hb.habitDocumentToString(
             bot,
             habitView,
             true,
@@ -1848,7 +1475,7 @@ module.exports = {
         }
         // NOT using the past functionality:
         const sortType = indexByRecency ? "By Recency" : "By Date Created";
-        const habitString = `__ ** Habit ${habitIndex}:** __ ${await habitDocumentToString(
+        const habitString = `__ ** Habit ${habitIndex}:** __ ${await hb.habitDocumentToString(
           bot,
           habitView,
           true,
@@ -1920,7 +1547,7 @@ module.exports = {
       if (habitType) {
         var habitIndex;
         if (habitType === "recent") {
-          habitIndex = await getRecentHabitIndex(authorID, isArchived);
+          habitIndex = await hb.getRecentHabitIndex(authorID, isArchived);
         } else {
           habitIndex = parseInt(habitType);
           if (habitIndex <= 0) {
@@ -2019,10 +1646,13 @@ module.exports = {
             });
           }
           var goals = await Goal.find({ userID: authorID });
-          const checkHabit = await getOneHabitByObjectID(habitTargetID);
-          if (!checkHabit) return;
+          const checkHabit = await hb.getOneHabitByObjectID(habitTargetID);
+          if (!checkHabit)
+            return message.channel.send(
+              `Habit ${targetHabitIndex + 1} does not exist anymore!`
+            );
           continueEdit = false;
-          showHabit = await habitDocumentToString(
+          showHabit = await hb.habitDocumentToString(
             bot,
             habitDocument,
             true,
@@ -2060,7 +1690,7 @@ module.exports = {
 
           var userEdit,
             habitEditMessagePrompt = "";
-          const goalTypeString = getGoalTypeString(countGoalType);
+          const goalTypeString = hb.getGoalTypeString(countGoalType);
           switch (fieldToEditIndex) {
             case 0:
               // ADD support for Add/Delete options too!
@@ -2081,7 +1711,7 @@ module.exports = {
                     `\n${logList}`,
                     logs.length,
                     "**Please enter the number corresponding to the habit log you'd like to edit.**",
-                    `${type}: Log Field`,
+                    `${type}: Select Log To Edit`,
                     habitEmbedColour,
                     600000,
                     0
@@ -2097,7 +1727,7 @@ module.exports = {
                     message,
                     PREFIX,
                     "**Please enter the number corresponding to the field you'd like to edit.**",
-                    `${type}: Log Field`,
+                    `${type}: Log Edit Field`,
                     logFields,
                     null,
                     false,
@@ -2135,7 +1765,7 @@ module.exports = {
                         habitEditMessagePrompt,
                         3,
                         `**Current State:** ${currentStateEmoji}`,
-                        `${type}: Log Field`,
+                        `${type}: Edit Log State`,
                         habitEmbedColour
                       );
                       break;
@@ -2164,7 +1794,7 @@ module.exports = {
                           message,
                           PREFIX,
                           "**Please enter the number corresponding to the count value you'd like to edit.**",
-                          `${type}: Log Count Value Edit`,
+                          `${type}: Edit Log Count Value`,
                           logs[targetLogIndex].count,
                           null,
                           false,
@@ -2506,25 +2136,25 @@ module.exports = {
                           bot,
                           message,
                           PREFIX,
-                          `**Another habit log exists on your intended date** (based on habit reset time).\n__${fn.timestampToDateString(
+                          `**Another habit log exists on your intended date** (based on habit reset time).\n__**${fn.timestampToDateString(
                             userEdit,
                             true,
                             true,
                             true,
                             false
-                          )}__.\n\n__**Would you like to overwrite the existing log with the one you are currently editing?**__\n- If **no**, the current log will not be changed.\n- If **yes**, the current log's timestamp will be changed to ${fn.timestampToDateString(
+                          )}**__.\n\n__**Would you like to overwrite the existing log with the one you are currently editing?**__\n*If **no**, the current log will not be changed.\nIf **yes**, the current log's timestamp will be changed to ${fn.timestampToDateString(
                             userEdit,
                             true,
                             true,
                             true,
                             false
-                          )}, and **the other log will be deleted**\n\n__**Current Log:**__ (Timestamp Unchanged)\n${hb.logDocumentToString(
+                          )}, and **the other log will be deleted***\n\n__**Current Log:**__ (Timestamp Unchanged)\n${hb.logDocumentToString(
                             targetLog
                           )}\n\n__**Log to Overwrite:**__\n${hb.logDocumentToString(
                             collisionLog
                           )}`,
                           false,
-                          `${type}: Overwrite Log (Timestamp Conflict)`,
+                          `${type}: Overwrite Log? (Date Conflict)`,
                           300000
                         );
                         if (confirmOverwiteLog) {
@@ -2825,14 +2455,14 @@ module.exports = {
                 await hb.habitCron(habitDocument, timezoneOffset, habitCron);
 
                 habitIndex = indexByRecency
-                  ? await getHabitIndexByFunction(
+                  ? await hb.getHabitIndexByFunction(
                       authorID,
                       habitTargetID,
                       isArchived ? totalArchiveNumber : totalHabitNumber,
                       isArchived,
                       hb.getOneHabitByRecency
                     )
-                  : await getHabitIndexByFunction(
+                  : await hb.getHabitIndexByFunction(
                       authorID,
                       habitTargetID,
                       isArchived ? totalArchiveNumber : totalHabitNumber,
@@ -2840,7 +2470,13 @@ module.exports = {
                       hb.getOneHabitByCreatedAt
                     );
                 console.log({ habitDocument, habitTargetID, fieldToEditIndex });
-                showHabit = await habitDocumentToString(
+                const showEditedLog =
+                  fieldToEditIndex === 0
+                    ? `\n\n__**Edited Log:**__\n${hb.logDocumentToString(
+                        logs[targetLogIndex]
+                      )}`
+                    : "";
+                showHabit = await hb.habitDocumentToString(
                   bot,
                   habitDocument,
                   true,
@@ -2852,13 +2488,7 @@ module.exports = {
                   isArchived ? "Archived " : ""
                 }Habit ${habitIndex}?**\n\n__**${
                   isArchived ? "Archived " : ""
-                }Habit ${habitIndex}:**__ ${showHabit}${
-                  fieldToEditIndex === 0
-                    ? `\n\n__**Edited Log:**__\n${hb.logDocumentToString(
-                        logs[targetLogIndex]
-                      )}`
-                    : ""
-                }`;
+                }Habit ${habitIndex}:**__ ${showHabit}${showEditedLog}`;
                 continueEdit = await fn.getUserConfirmation(
                   bot,
                   message,
@@ -2884,14 +2514,14 @@ module.exports = {
             habitDocument = await Habit.findById(habitTargetID);
             if (habitDocument) {
               habitIndex = indexByRecency
-                ? await getHabitIndexByFunction(
+                ? await hb.getHabitIndexByFunction(
                     authorID,
                     habitTargetID,
                     isArchived ? totalArchiveNumber : totalHabitNumber,
                     isArchived,
                     hb.getOneHabitByCreatedAt
                   )
-                : await getHabitIndexByFunction(
+                : await hb.getHabitIndexByFunction(
                     authorID,
                     habitTargetID,
                     isArchived ? totalArchiveNumber : totalHabitNumber,
@@ -2899,7 +2529,7 @@ module.exports = {
                     hb.getOneHabitByRecency
                   );
               console.log({ habitDocument, habitTargetID, fieldToEditIndex });
-              showHabit = await habitDocumentToString(
+              showHabit = await hb.habitDocumentToString(
                 bot,
                 habitDocument,
                 true,
@@ -2980,7 +2610,7 @@ module.exports = {
               } else habitIndex++;
             }
             habitStringArray.push(
-              `**__Habit ${habitIndex}:__** ${await habitDocumentToString(
+              `**__Habit ${habitIndex}:__** ${await hb.habitDocumentToString(
                 bot,
                 habit,
                 true,
@@ -3117,7 +2747,7 @@ module.exports = {
         } = settings;
         var countValue;
         const countGoalTypeString = fn.toTitleCase(
-          getGoalTypeString(countGoalType)
+          hb.getGoalTypeString(countGoalType)
         );
 
         let currentLogs = await Log.find({
@@ -3428,7 +3058,7 @@ module.exports = {
             i++;
             habitOutputArray.push(
               `__**Habit ${i}:**__ ` +
-                (await habitDocumentToString(
+                (await hb.habitDocumentToString(
                   bot,
                   habit,
                   true,
@@ -3490,7 +3120,7 @@ module.exports = {
             i++;
             habitOutputArray.push(
               `__**Habit ${i}:**__ ` +
-                (await habitDocumentToString(
+                (await hb.habitDocumentToString(
                   bot,
                   habit,
                   true,
@@ -3547,7 +3177,7 @@ module.exports = {
               i++;
               habitOutputArray.push(
                 `__**Habit ${i}:**__ ` +
-                  (await habitDocumentToString(
+                  (await hb.habitDocumentToString(
                     bot,
                     habit,
                     true,
