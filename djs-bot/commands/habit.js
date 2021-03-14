@@ -520,7 +520,9 @@ module.exports = {
     const { tier } = userSettings;
     let habitUsageMessage =
       `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\`` +
-      `\n\n\`<ACTION>\`: **add; see; log/end; delete; edit; archive; post; today; stats/statistics; past (stats on past x days);**\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join("; ")}**`;
+      `\n\n\`<ACTION>\`: **add; see; log/end; delete; edit; archive; post; today; stats/statistics; past (stats on past x days);**\n\n*__ALIASES:__* **${
+        this.name
+      } - ${this.aliases.join("; ")}**`;
     habitUsageMessage = fn.getMessageEmbed(
       habitUsageMessage,
       "Habit: Help",
@@ -1394,8 +1396,7 @@ module.exports = {
             return;
           }
         } else if (deleteType === "all") {
-          const confirmDeleteAllMessage =
-            `Are you sure you want to **delete all** of your recorded habits?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
+          const confirmDeleteAllMessage = `Are you sure you want to **delete all** of your recorded habits?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
           const pastNumberOfEntriesIndex = totalHabitNumber;
           if (pastNumberOfEntriesIndex === 0) {
             return fn.sendErrorMessage(message, noHabitsMessage);
@@ -1409,8 +1410,7 @@ module.exports = {
             `Habit${isArchived ? ` Archive` : ""}: Delete All Habits WARNING!`
           );
           if (!confirmDeleteAll) return;
-          const finalDeleteAllMessage =
-            `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR HABITS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
+          const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR HABITS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *or* \`${PREFIX}${commandUsed} archive all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
             message,
@@ -2325,10 +2325,9 @@ module.exports = {
               else userEdit--; // Minus 1 for array offset
               break;
             case 7:
-              habitEditMessagePrompt =
-                `\n**__When do you want this habit's streaks to reset?__** ⌚\n**Currently:** ${
-                  isWeeklyType ? "Weekly" : "Daily"
-                }\n\n🌇 - **Daily Reset**\n📅 - **Weekly Reset**`;
+              habitEditMessagePrompt = `\n**__When do you want this habit's streaks to reset?__** ⌚\n**Currently:** ${
+                isWeeklyType ? "Weekly" : "Daily"
+              }\n\n🌇 - **Daily Reset**\n📅 - **Weekly Reset**`;
               userEdit = await fn.getUserEditBoolean(
                 bot,
                 message,
@@ -3039,8 +3038,7 @@ module.exports = {
     ) {
       // (similar indexing to edit, recent or #) + archive
       // Make a list - similar to archive
-      let habitLogUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      let habitLogUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       habitLogUsageMessage = fn.getMessageEmbed(
         habitLogUsageMessage,
         `Habit: Log Help`,
@@ -3074,6 +3072,7 @@ module.exports = {
         );
 
       do {
+        var targetHabitIndex;
         let targetHabit = await fn.getUserSelectedObject(
           bot,
           message,
@@ -3087,10 +3086,26 @@ module.exports = {
           600000
         );
         if (!targetHabit) return;
-        else targetHabit = targetHabit.object;
+        else {
+          targetHabitIndex = targetHabit.index;
+          targetHabit = targetHabit.object;
+        }
+
+        const logTimestamp = await fn.getDateAndTimeEntry(
+          bot,
+          message,
+          PREFIX,
+          timezoneOffset,
+          daylightSaving,
+          "**__When do you want to log this habit for?__**",
+          `Habit${isArchived ? " Archive" : ""}: Log Timestamp`,
+          false,
+          habitEmbedColour,
+          600000
+        );
+        if (!logTimestamp && logTimestamp !== 0) return;
 
         // If it is a count habit, get the count input first.
-
         const { habitCron } = userSettings;
         const { settings } = targetHabit;
         const {
@@ -3104,12 +3119,59 @@ module.exports = {
         const countGoalTypeString = fn.toTitleCase(
           getGoalTypeString(countGoalType)
         );
+
+        let currentLogs = await Log.find({
+          connectedDocument: targetHabit._id,
+        }).sort({ timestamp: -1 });
+        let existingLog = hb.getHabitLogOnTimestampDay(
+          currentLogs,
+          logTimestamp,
+          habitCron.daily
+        );
+        if (existingLog && autoLogType !== 1) {
+          const confirmOverwiteLog = await fn.getUserConfirmation(
+            bot,
+            message,
+            PREFIX,
+            `__**You already have a habit log on this day, are you sure you would like to overwrite it?**__\n*If yes, you can start creating the new log which will replace the old one.\nOtherwise, it will exit the log creation.*\n(**You can edit it instead using: \`${PREFIX}habit edit${
+              targetHabitIndex || targetHabitIndex === 0
+                ? ` ${targetHabitIndex + 1}`
+                : ""
+            }\`**)\n\n**Old Log:** ${hb.logDocumentToString(
+              existingLog
+            )}\n\n**Desired Timestamp:** ${fn.timestampToDateString(
+              logTimestamp
+            )}`,
+            false,
+            `Habit${
+              isArchived ? " Archive" : ""
+            }: Overwrite Log? (Date Conflict)`,
+            600000
+          );
+          if (!confirmOverwiteLog) return;
+        }
+
+        const logTimestampString = existingLog
+          ? `\n**Previous Timestamp:** ${fn.timestampToDateString(
+              existingLog.timestamp
+            )}\n**Current Timestamp:** ${fn.timestampToDateString(
+              logTimestamp
+            )}`
+          : `\n**Current Timestamp:** ${fn.timestampToDateString(
+              logTimestamp
+            )}`;
+        const previousCountTypeString = existingLog
+          ? `**Previous ${countMetric}:** ${hb.countArrayToString(
+              existingLog.count
+            )}`
+          : "";
+
         if (isCountType) {
           countValue = await fn.getNumberEntry(
             bot,
             message,
             PREFIX,
-            `Enter your **${countMetric}** (${countGoalTypeString}: **${countGoal}**)`,
+            `Enter your **${countMetric}** (${countGoalTypeString}: **${countGoal}**)\n${logTimestampString}\n${previousCountTypeString}`,
             `Habit${isArchived ? " Archive" : ""}: ${countGoalTypeString}`,
             true,
             true,
@@ -3118,8 +3180,7 @@ module.exports = {
             undefined,
             habitEmbedColour
           );
-          if (countValue === null) return;
-          else if (!countValue && countValue !== 0) countValue = undefined;
+          if (!countValue && countValue !== 0) countValue = undefined;
         }
         // Then based on the user's countValue (if any), show the suggested log based on their goal
         const suggestedLogFromCountGoal = isCountType
@@ -3134,10 +3195,10 @@ module.exports = {
           PREFIX,
           checkMissedSkipList,
           3,
-          `__**What will you set the status of your habit to?**__\n**Currently:** ${hb.getStateEmoji(
-            targetHabit.currentState
+          `__**What will you set the status of your habit to?**__\n${logTimestampString}\n**Currently:** ${hb.getStateEmoji(
+            existingLog ? existingLog.state : 0
           )}${suggestedLogFromCountGoal}`,
-          `Habit${isArchived ? " Archive" : ""}: Log`,
+          `Habit${isArchived ? " Archive" : ""}: Log Status`,
           habitEmbedColour,
           600000,
           0
@@ -3145,18 +3206,13 @@ module.exports = {
         if (!habitLog && habitLog !== 0) return;
         habitLog++;
 
-        let currentLogs = await Log.find({
-          connectedDocument: targetHabit._id,
-        }).sort({ timestamp: -1 });
-        let todaysLog = hb.getTodaysLog(
-          currentLogs,
-          timezoneOffset,
-          habitCron.daily
-        );
         var currentReflection = "";
-        if (todaysLog) {
-          currentReflection = todaysLog.message || "";
+        if (existingLog) {
+          currentReflection = existingLog.message || "";
         }
+        const currentReflectionString = `**Current Reflection Message:**${
+          currentReflection ? `\n${currentReflection}` : " N/A"
+        }`;
         var reflectionMessage;
         const confirmReflection = await fn.getUserConfirmation(
           bot,
@@ -3164,11 +3220,9 @@ module.exports = {
           PREFIX,
           `Would you like to **__add a${
             currentReflection ? " new" : ""
-          } reflection message__** to go with your habit log?\n(**If yes, you will type in your reflection in the next window!**)\n\n**Current Log: ${hb.getStateEmoji(
+          } reflection message__** to go with your habit log?\n*If yes, you will type in your reflection in the next window!\nOtherwise, the reflection will not be changed.*\n${logTimestampString}\n**Current Log: ${hb.getStateEmoji(
             habitLog
-          )}**\n**Current Reflection Message:**${
-            currentReflection ? `\n${currentReflection}` : " N/A"
-          }`,
+          )}**\n${currentReflectionString}`,
           forceSkip,
           `Habit${
             isArchived ? " Archive" : ""
@@ -3197,59 +3251,79 @@ module.exports = {
           PREFIX,
           `**__Are you sure you want to log this habit as:__** ${hb.getStateEmoji(
             habitLog
-          )}\n**Previously:** ${hb.getStateEmoji(
-            targetHabit.currentState
-          )}\n\n🎯 - __**Description:**__\n${targetHabit.description}${
+          )}\n**Previous State:** ${hb.getStateEmoji(
+            existingLog ? existingLog.state : 0
+          )}${
+            existingLog
+              ? `\n**Previous Timestamp:** ${fn.timestampToDateString(
+                  existingLog.timestamp
+                )}`
+              : ""
+          }${
+            isCountType ? `\n${previousCountTypeString}` : ""
+          }\n**Previous Reflection:** ${
+            currentReflection ? `\n${currentReflection}` : " N/A"
+          }\n\n__**New Log:**__\n**State:** ${hb.getStateEmoji(
+            habitLog
+          )}\n**Timestamp:** ${fn.timestampToDateString(logTimestamp)}${
             isCountType && (countValue || countValue === 0)
-              ? `\n__**${countMetric}:**__ Current Value (**${countValue}**) vs. ${countGoalTypeString} (**${countGoal}**)`
+              ? `\n**${countMetric}:** Current Value (**${countValue}**) vs. ${countGoalTypeString} (**${countGoal}**)`
               : ""
           }${
             reflectionMessage
-              ? `\n__**Reflection Message:**__\n${reflectionMessage}`
+              ? `\n**Reflection Message:**\n${reflectionMessage}`
               : ""
           }`,
           forceSkip,
-          `Habit${isArchived ? " Archive" : ""}: Confirmation`
+          `Habit${isArchived ? " Archive" : ""}: Log Confirmation`,
+          600000
         );
         if (confirmEnd) {
-          // 1. Check if there has already been a log for today.
+          // 1. Check if there has already been a log for the given date.
           // 2. If so, find it and edit it, otherwise create a new one with the desired log
           // If no logs
           currentLogs = await Log.find({
             connectedDocument: targetHabit._id,
           }).sort({ timestamp: -1 });
-          todaysLog = hb.getTodaysLog(
+          existingLog = hb.getHabitLogOnTimestampDay(
+            currentLogs,
+            logTimestamp,
+            habitCron.daily
+          );
+          const overwriteLog = !!existingLog;
+          const isTodaysLog = !!hb.getTodaysLog(
             currentLogs,
             timezoneOffset,
             habitCron.daily
           );
-          console.log({ todaysLog });
-          if (todaysLog) {
+          console.log({ existingLog, isTodaysLog });
+          if (existingLog) {
             console.log("Includes logs");
             // const recentLog = await Log.findOne({ connectedDocument: targetHabit._id })
             //     .sort({ _id: -1 });
             // if (!recentLog) return;
-            todaysLog = await Log.findOneAndUpdate(
-              { _id: todaysLog._id },
+
+            existingLog = await Log.findOneAndUpdate(
+              { _id: existingLog._id },
               {
                 $set: {
-                  timestamp:
-                    fn.getCurrentUTCTimestampFlooredToSecond() +
-                    timezoneOffset * HOUR_IN_MS,
+                  timestamp: logTimestamp,
                   state: habitLog,
                   message: reflectionMessage,
                 },
               },
               { new: true }
             );
+            currentLogs = await Log.find({
+              connectedDocument: targetHabit._id,
+            }).sort({ timestamp: -1 });
+
             // else return console.error(`Today's Log has no connectedDocument!`);
           } else {
             console.log("No logs");
             const newLog = new Log({
               _id: mongoose.Types.ObjectId(),
-              timestamp:
-                fn.getCurrentUTCTimestampFlooredToSecond() +
-                timezoneOffset * HOUR_IN_MS,
+              timestamp: logTimestamp,
               state: habitLog,
               message: reflectionMessage,
               connectedDocument: targetHabit._id,
@@ -3262,26 +3336,27 @@ module.exports = {
                 console.error(err);
                 return;
               });
-            todaysLog = newLog;
+            existingLog = newLog;
+            currentLogs = await Log.find({
+              connectedDocument: targetHabit._id,
+            }).sort({ timestamp: -1 });
           }
           if (isCountType && (countValue || countValue === 0)) {
             await Log.updateOne(
-              { _id: todaysLog._id },
+              { _id: existingLog._id },
               { $push: { count: countValue } }
             );
           }
 
           console.log({ targetHabit });
           var {
+            currentState,
             currentStreak,
             longestStreak,
             pastWeek,
             pastMonth,
             pastYear,
           } = targetHabit;
-          currentLogs = await Log.find({
-            connectedDocument: targetHabit._id,
-          }).sort({ timestamp: -1 });
           currentStreak = hb.calculateCurrentStreak(
             currentLogs,
             timezoneOffset,
@@ -3310,35 +3385,12 @@ module.exports = {
             habitCron,
             targetHabit.createdAt
           );
-          // // Going from unchecked to check: increment streak
-          // if (previousState === 0 || previousState === 2) {
-          //     if (habitLog === 1 || habitLog === 3) {
-          //         if (longestStreak === currentStreak) {
-          //             longestStreak++;
-          //         }
-          //         currentStreak++;
-          //     }
-          // }
-          // // Going from check to unchecked: decrement streak
-          // else if (previousState === 1 || previousState === 3) {
-          //     if (habitLog === 0 || habitLog === 2) {
-          //         if (longestStreak === currentStreak) {
-          //             if (longestStreak <= 0) {
-          //                 longestStreak = 0;
-          //             }
-          //             else longestStreak--;
-          //         }
-          //         if (currentStreak <= 0) {
-          //             currentStreak = 0;
-          //         }
-          //         else currentStreak--;
-          //     }
-          // }
           await Habit.updateOne(
             { _id: targetHabit._id },
             {
               $set: {
-                currentState: habitLog,
+                currentState:
+                  isTodaysLog && !overwriteLog ? currentState : habitLog,
                 currentStreak,
                 longestStreak,
                 pastWeek,
@@ -3351,44 +3403,8 @@ module.exports = {
             }
           );
           return;
-        } else continue;
+        } else return;
       } while (true);
-
-      // This function: updateCountLog
-      // switch (countGoalType) {
-      //     // Daily
-      //     case 1: {
-      //         const todaysLog = this.getLogToday(logs, timezoneOffset, dailyCron);
-      //         if (!todaysLog) currentState = 0;
-      //         else {
-      //             const { count } = todaysLog;
-      //             if (count) if (count.length) {
-      //                 const finalCount = count[count.length - 1];
-      //                 if (finalCount >= countGoal) {
-      //                     const targetIndex = logs.findIndex(
-      //                         log => log._id.toString() === todaysLog._id.toString());
-      //                     if (targetIndex >= 0) {
-      //                         logs[targetIndex].state = 1;
-      //                         await Log.updateOne({ _id: logs[targetIndex]._id },
-      //                             { $set: { state: 1 } });
-      //                     }
-      //                 }
-      //             }
-      //         }
-      //     }
-      //         break;
-      //     // Weekly
-      //     case 2: {
-
-      //     }
-      //         break;
-      //     // Total
-      //     case 3: {
-
-      //     }
-      //         break;
-      // }
-
       return;
     }
 
@@ -3459,7 +3475,8 @@ module.exports = {
     } else if (
       habitCommand === "stats" ||
       habitCommand === "statistics" ||
-      habitCommand === "stat"
+      habitCommand === "stat" ||
+      habitCommand === "status"
     ) {
       const userHabits = await Habit.find({
         userID: authorID,
@@ -3584,8 +3601,7 @@ module.exports = {
       habitCommand === "remind" ||
       habitCommand === "remindme"
     ) {
-      let habitReminderUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      let habitReminderUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       habitReminderUsageMessage = fn.getMessageEmbed(
         habitReminderUsageMessage,
         `Habit: Reminder Help`,
@@ -3669,8 +3685,7 @@ module.exports = {
         }
       }
       // Allows for archive - indexing by unarchived entries only!
-      let habitArchiveUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <recent?> <force?>\`\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      let habitArchiveUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <recent?> <force?>\`\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       habitArchiveUsageMessage = fn.getMessageEmbed(
         habitArchiveUsageMessage,
         `Habit: Archive Help`,

@@ -22,23 +22,27 @@ module.exports = {
   logDocumentToString: function (log) {
     const state = this.getStateEmoji(log.state);
     var messageString = log.message ? `\n**Message:** ${log.message}` : "";
+    const countString = this.countArrayToString(log.count);
+    return (
+      `${state} - ${fn.timestampToDateString(log.timestamp)}` +
+      messageString +
+      countString
+    );
+  },
+
+  countArrayToString: function(countArray) {
     var countString = "";
-    if (log.count) {
-      const count = log.count;
-      if (count.length) {
-        count.forEach((value, i) => {
-          if (i === count.length - 1 && count.length > 1) {
+    if (countArray) {
+      if (countArray.length) {
+        countArray.forEach((value, i) => {
+          if (i === countArray.length - 1 && countArray.length > 1) {
             countString = `\~\~${countString}\~\~ ${value}`;
           } else countString += `${value} `;
         });
         countString = `\n**Count:** ${countString}`;
       }
     }
-    return (
-      `${state} - ${fn.timestampToDateString(log.timestamp)}` +
-      messageString +
-      countString
-    );
+    return countString;
   },
 
   habitDocumentDescription: function (habitDocument) {
@@ -837,6 +841,25 @@ module.exports = {
     return finalDate.getTime();
   },
 
+  getLogsFromTodayAndThePast: function (
+    pastToPresentSortedLogs,
+    timezoneOffset,
+    habitCron
+  ) {
+    let upcomingCron = this.getNextCronTimeUTC(
+      timezoneOffset,
+      habitCron,
+      false,
+      1
+    );
+    if (!upcomingCron && upcomingCron !== 0) return false;
+    else upcomingCron += timezoneOffset * HOUR_IN_MS;
+    const sortedLogs = pastToPresentSortedLogs.filter(
+      (log) => log.timestamp < upcomingCron
+    );
+    return sortedLogs;
+  },
+
   calculateCurrentStreak: function (
     sortedLogs,
     timezoneOffset,
@@ -847,17 +870,14 @@ module.exports = {
     const dailyCron = habitCron.daily;
     let streakReset = cronPeriods;
     var currentStreak = 0;
-    // Filter all of the future logs (i.e. the logs beyond today's cron)
+
+    //* Filter all of the future logs (i.e. the logs beyond today's cron)
     // Get the cron time of today (end of day)
-    let upcomingCron = this.getNextCronTimeUTC(
+    sortedLogs = this.getLogsFromTodayAndThePast(
+      sortedLogs,
       timezoneOffset,
-      habitCron,
-      false,
-      1
+      habitCron
     );
-    if (!upcomingCron && upcomingCron !== 0) return false;
-    else upcomingCron += timezoneOffset * HOUR_IN_MS;
-    sortedLogs = sortedLogs.filter((log) => log.timestamp < upcomingCron);
 
     var lastCheckedDay, lastCheckedLog, lastCheckedCronDay;
     for (let i = 0; i < sortedLogs.length; i++) {
@@ -893,10 +913,6 @@ module.exports = {
             lastCheckedLog = latestLog;
             lastCheckedCronDay = adjustedLatestCronDay;
           }
-          // console.log(fn.timestampToDateString(previousTimestamp));
-          // console.log(fn.timestampToDateString(latestTimestamp));
-          // console.log(fn.timestampToDateString(previousCron));
-          // console.log(fn.timestampToDateString(latestCron));
           // console.log(
           //   `\nLatest Timestamp: ${fn.timestampToDateString(latestTimestamp)}`
           // );
@@ -915,6 +931,7 @@ module.exports = {
           //     lastCheckedCronDay
           //   )}`
           // );
+
           /** //* Weekly Streak Calculation Steps
            * 1. Check if there is an entry for this week.
            * 2. If there is, that entry becomes the lastCheckedDay, lastCheckedLog and, lastCheckedCronDay = adjustedLatestCronDay. + Increase the streak!
@@ -927,17 +944,17 @@ module.exports = {
               lastCheckedCronDay,
               adjustedLatestCronDay
             );
-            console.log({ cronDifference });
+            // console.log({ cronDifference });
             if (latestLog.state === 1 || latestLog.state === 3) {
               if (
                 lastCheckedLog._id.toString() !== latestLog._id.toString() &&
                 (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) &&
                 cronDifference < 7 * 2 * streakReset
               ) {
-                console.log(`Streak Before: ${currentStreak}`);
+                // console.log(`Streak Before: ${currentStreak}`);
                 if (!currentStreak) currentStreak = 1;
                 currentStreak++;
-                console.log(`Streak After: ${currentStreak}`);
+                // console.log(`Streak After: ${currentStreak}`);
                 // console.log(
                 //   `Prev Last Checked: ${fn.timestampToDateString(
                 //     lastCheckedDay
@@ -951,54 +968,9 @@ module.exports = {
                 //     lastCheckedDay
                 //   )}`
                 // );
-              } else {
-                if (!currentStreak) currentStreak = 1;
-                if (cronDifference >= 7 * 2 * streakReset) break;
-              }
+              } else if (cronDifference >= 7 * 2 * streakReset) break;
             }
-          }
-
-          // if (isWeeklyType) {
-          //   if (
-          //     (latestLog.state === 1 || latestLog.state === 3) &&
-          //     fn.getDaysInBetweenTimestamps(
-          //       adjustedLatestDay,
-          //       adjustedPreviousCronDay
-          //     ) >= 0 &&
-          //     fn.getDaysInBetweenTimestamps(
-          //       adjustedLatestCronDay,
-          //       adjustedLatestDay
-          //     ) >= 0
-          //   ) {
-          //     if (!currentStreak) currentStreak = 1;
-          //     var scanIndex = 1;
-          //     do {
-          //       if (sortedLogs[i + scanIndex]) {
-          //         const check = sortedLogs[i + scanIndex];
-          //         const checkDay = this.getActualDateLogged(
-          //           check.timestamp,
-          //           dailyCron
-          //         );
-          //         const daysBetweenCrons = fn.getDaysInBetweenTimestamps(
-          //           adjustedLatestCronDay,
-          //           adjustedPreviousCronDay
-          //         );
-          //         if (
-          //           checkDay < adjustedPreviousCronDay &&
-          //           (check.state === 1 || check.state === 3) &&
-          //           daysBetweenCrons === cronPeriods * 7
-          //         ) {
-          //           currentStreak++;
-          //           // console.log(`Check: ${fn.timestampToDateString(checkDay)}`);
-          //           // console.log(`Prev Cron: ${fn.timestampToDateString(adjustedPreviousCronDay)}`);
-          //           // console.log(`Next Cron: ${fn.timestampToDateString(adjustedLatestCronDay)}`);
-          //           break;
-          //         } else scanIndex++;
-          //       } else break;
-          //     } while (true);
-          //   }
-          // }
-          else {
+          } else {
             // console.log(fn.timestampToDateString(lastCheckedDay));
             // console.log(fn.timestampToDateString(adjustedLatestDay));
             const daysDifference = fn.getDaysInBetweenTimestamps(
@@ -1034,10 +1006,7 @@ module.exports = {
                 //     lastCheckedDay
                 //   )}`
                 // );
-              } else {
-                if (!currentStreak) currentStreak = 1;
-                if (daysDifference > streakReset) break;
-              }
+              } else if (daysDifference > streakReset) break;
             }
           }
         }
@@ -1048,10 +1017,17 @@ module.exports = {
 
   getPastStreak: function (
     sortedLogs,
+    timezoneOffset,
+    habitCron, 
     startTimestamp,
     endTimestamp,
     createdAt = undefined
   ) {
+    sortedLogs = this.getLogsFromTodayAndThePast(
+      sortedLogs,
+      timezoneOffset,
+      habitCron
+    );
     // Have the createdAt there just to make sure that if the
     // streak we are calculating for is partial due to the habit being
     // created in the middle of the given start and end time period
@@ -1129,6 +1105,8 @@ module.exports = {
     console.log(fn.timestampToDateString(lastDayOfPastDays));
     const pastDaysStreak = this.getPastStreak(
       sortedLogs,
+      timezoneOffset,
+      habitCron,
       firstDayOfPastDays,
       lastDayOfPastDays,
       createdAt
@@ -1154,6 +1132,8 @@ module.exports = {
     console.log(fn.timestampToDateString(lastDayOfYear));
     const pastYearStreak = this.getPastStreak(
       sortedLogs,
+      timezoneOffset,
+      habitCron,
       firstDayOfYear,
       lastDayOfYear,
       createdAt
@@ -1183,6 +1163,8 @@ module.exports = {
     console.log(fn.timestampToDateString(lastDayOfMonth));
     const pastMonthStreak = this.getPastStreak(
       sortedLogs,
+      timezoneOffset,
+      habitCron,
       firstDayOfMonth,
       lastDayOfMonth,
       createdAt
@@ -1226,6 +1208,8 @@ module.exports = {
     console.log(fn.timestampToDateString(lastDayOfPastWeek));
     const pastWeekStreak = this.getPastStreak(
       sortedLogs,
+      timezoneOffset,
+      habitCron,
       firstDayOfPastWeek,
       lastDayOfPastWeek,
       createdAt
@@ -1264,20 +1248,17 @@ module.exports = {
     const targetDate = new Date(
       this.getActualDateLogged(targetTimestamp, dailyCron)
     );
+    console.log(fn.timestampToDateString(targetDate.getTime()));
     const nextCronDate = new Date(
       targetDate.getUTCFullYear(),
       targetDate.getUTCMonth(),
       targetDate.getUTCDate() + 1
     );
-    // console.log({ presentToPastSortedLogs, dailyCron });
-    // console.log(`Current Habit Date: ${fn.timestampToDateString(currentHabitDate.getTime())}`);
-    // console.log(`Next Habit Date: ${fn.timestampToDateString(nextHabitDate.getTime())}`);
     const targetLog = presentToPastSortedLogs.find(
       (log) =>
         log.timestamp < nextCronDate.getTime() + dailyCron &&
         log.timestamp >= targetDate.getTime() + dailyCron
     );
-    // console.log({ nearestLog });
     if (targetLog) return targetLog;
     else return null;
   },
