@@ -727,8 +727,8 @@ module.exports = {
       countGoal,
       integration,
     } = settings;
-    autoLogType = 1;
-    let logs = await Log.find({ connectedDocument: habitID }).sort({
+    // autoLogType = 1;
+    const logs = await Log.find({ connectedDocument: habitID }).sort({
       timestamp: -1,
     });
     // console.log({ logs })
