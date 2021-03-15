@@ -12,11 +12,11 @@
 require("dotenv").config();
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.DASHBOARD_CLIENT_ID;
-const DEFAULT_PREFIX = '?';
+const DEFAULT_PREFIX = "?";
 const Discord = require("discord.js");
 const bot = new Discord.Client({
-    partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
-    ws: { intents: Discord.Intents.PRIVILEDGED }
+  partials: ["MESSAGE", "CHANNEL", "REACTION"],
+  ws: { intents: Discord.Intents.PRIVILEDGED },
 });
 const fn = require("../utilities/functions");
 const rm = require("../utilities/reminder");
@@ -33,180 +33,251 @@ const Guild = require("./database/schemas/guildsettings");
 const User = require("./database/schemas/user");
 const Reminder = require("./database/schemas/reminder");
 const Habit = require("./database/schemas/habit");
+const Log = require("./database/schemas/habittracker");
 const Track = require("./database/schemas/track");
 bot.mongoose = require("../utilities/mongoose");
 
 const pdBotTag = `<@!${CLIENT_ID}>`;
-const timeoutDurations = [60000, 180000, 540000, 900000] // in ms, max level: 4
+const timeoutDurations = [60000, 180000, 540000, 900000]; // in ms, max level: 4
 const COMMAND_SPAM_NUMBER = 15;
 const CLOSE_COMMAND_SPAM_NUMBER = fn.CLOSE_COMMAND_SPAM_NUMBER;
 const REFRESH_SPAM_DELAY = fn.REFRESH_COMMAND_SPAM_DELAY;
 const CLOSE_COMMAND_DELAY = fn.CLOSE_COMMAND_DELAY;
 
-
 fs.readdir("./djs-bot/commands", (err, files) => {
-    //This shouldn't happen, this would be on Node.js
-    if (err) console.error(err);
+  //! This (err) shouldn't happen, this would be on Node.js
+  if (err) console.error(err);
 
-    //to get the file extension .js
-    let jsFiles = files.filter(file => file.split(".").pop() === "js");
-    if (jsFiles.length <= 0) {
-        return console.log("No commands to load!");
-    }
+  //to get the file extension .js
+  let jsFiles = files.filter((file) => file.split(".").pop() === "js");
+  if (jsFiles.length <= 0) {
+    return console.log("No commands to load!");
+  }
 
-    console.log(`Loading ${jsFiles.length} commands!`);
+  console.log(`Loading ${jsFiles.length} commands!`);
 
-    jsFiles.forEach((file, i) => {
-        let props = require(`./commands/${file}`);
-        console.log(`${i + 1}: ${file} loaded`);
-        bot.commands.set(props.name, props);
-    });
+  jsFiles.forEach((file, i) => {
+    let props = require(`./commands/${file}`);
+    console.log(`${i + 1}: ${file} loaded`);
+    bot.commands.set(props.name, props);
+  });
 });
 
 bot.mongoose.init();
 
 bot.on("ready", async () => {
-    const userCount = await User.find({}).countDocuments()
-        .catch(err => console.error(err));
-    console.log(`${bot.user.username} is now online!`);
+  const userCount = await User.find({})
+    .countDocuments()
+    .catch((err) => console.error(err));
+  console.log(`${bot.user.username} is now online!`);
 
-    bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
+  bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, {
+    type: "WATCHING",
+  });
 
-    // DO NOT have this activated when testing
-    // - it will delete all of the guildsettings data
-    await gu.updateGuilds(bot);
+  //! DO NOT have this activated when testing - it will delete all of the guildsettings data
+  await gu.updateGuilds(bot);
 
-    await fn.updateAllUsers(bot);
-    await fn.rescheduleAllDST();
-    await rm.resetReminders(bot);
-    await hb.resetAllHabitCrons();
-    await fn.resetAllVoiceChannelTracking(bot);
+  //! Avoid having this one on when not testing voice - it will alter other user's tracking data!
+  await fn.resetAllVoiceChannelTracking(bot);
 
-    // For Testing
-    // if (message.author.id === "208829852583723008") {
-    //     const directory = `utilities/file_storage/208829852583723008`;
-    //     const path = `${directory}/${fn.timestampToDateString(Date.now(), true, true, true, true)}.txt`;
-    //     const outputString = "Yay!\nThis works!\n\n\n\n\n\nLots of \\n";
-    //     if (outputString) {
-    //         fs.appendFileSync(path, outputString);
-    //         const fileOut = fs.readFileSync(path, 'utf-8');
-    //         const userObject = bot.users.cache.get("208829852583723008");
-    //         if (userObject && fileOut) {
-    //             await userObject.send({ files: [path] });
-    //             console.log("true");
-    //         }
-    //         fs.unlink(path, (err) => {
-    //             console.error(err);
-    //             return;
-    //         });
-    //     }
-    // }
+  await fn.updateAllUsers(bot);
+  await fn.rescheduleAllDST();
+  await rm.resetReminders(bot);
+  await hb.resetAllHabitCrons();
 
-    // console.log(fn.timestampToDateString(fn.getStartOfWeekTimestamp(Date.now() - 5 * HOUR_IN_MS, -5, true, false)));
+  //* For Testing
+  // let logs = [
+  //   {
+  //     _id: 10,
+  //     timestamp: new Date(2021, 2, 15, 4).getTime(),
+  //     state: 1,
+  //   },
+  //   {
+  //     _id: 9,
+  //     timestamp: new Date(2021, 2, 14, 4).getTime(),
+  //     state: 3,
+  //   },
+  //   {
+  //     _id: 8,
+  //     timestamp: new Date(2021, 2, 13, 0).getTime(),
+  //     state: 1,
+  //   },
+  //   {
+  //     _id: 7,
+  //     timestamp: new Date(2021, 2, 12, 4).getTime(),
+  //     state: 2,
+  //   },
+  //   {
+  //     _id: 6,
+  //     timestamp: new Date(2021, 2, 11, 4).getTime(),
+  //     state: 2,
+  //   },
+  //   {
+  //     _id: 5,
+  //     timestamp: new Date(2021, 2, 10, 4).getTime(),
+  //     state: 1,
+  //   },
+  //   {
+  //     _id: 4,
+  //     timestamp: new Date(2021, 2, 4, 4).getTime(),
+  //     state: 2,
+  //   },
+  //   {
+  //     _id: 3,
+  //     timestamp: new Date(2021, 2, 3, 4).getTime(),
+  //     state: 2,
+  //   },
+  //   {
+  //     _id: 2,
+  //     timestamp: new Date(2021, 2, 2, 4).getTime(),
+  //     state: 2,
+  //   },
+  //   {
+  //     _id: 1,
+  //     timestamp: new Date(2021, 2, -13, 4).getTime(),
+  //     state: 1,
+  //   },
+  // ];
+  // logs = await Log.find({
+  //   connectedDocument: "6039f503812977313c2f8ec6",
+  // }).sort({ timestamp: -1 });
+  // console.log(
+  //   hb.calculateCurrentStreak(logs, -5, { daily: 0, weekly: 0 }, true, 2)
+  // );
+  // console.log(
+  //   hb.calculateCurrentStreak(logs, -5, { daily: 0, weekly: 0 }, false, 3)
+  // );
+  // console.log(hb.getHabitLogOnTimestampDay(logs, new Date(2021, 2, 14, 4), 0));
 
-    // const result = await rm.cancelReminder("208829852583723008", "5f9647410dd2ff1eb497d05d");
-    // console.log({ result });
+  // await hb.updateHabit(
+  //   await Habit.findOne({ userID: message.author.id }).sort({ timestamp: -1 }),
+  //   -5,
+  //   { daily: 0, weekly: 0 }
+  // );
 
-    // await hb.habitCron(await Habit.findById("5f9711afa1b3d3321c142504"), -5, { daily: 10800000, weekly: 0 });
-    // console.log(fn.timestampToDateString(1605513600000));
-    // console.log(fn.getCurrentUTCTimestampFlooredToSecond());
-    // console.log(hb.getPastDaysStreak([
-    //     {
-    //         timestamp: new Date(2020, 10, 8, 4).getTime(),
-    //         state: 1
-    //     },
-    //     {
-    //         timestamp: new Date(2020, 10, 7, 4).getTime(),
-    //         state: 1
-    //     },
-    //     {
-    //         timestamp: new Date(2020, 10, 5, 4).getTime(),
-    //         state: 1
-    //     },
-    //     {
-    //         timestamp: new Date(2020, 10, 3, 4).getTime(),
-    //         state: 1
-    //     },
-    //     {
-    //         timestamp: new Date(2020, 10, 2, 4).getTime(),
-    //         state: 1
-    //     },
-    //     {
-    //         timestamp: new Date(2020, 10, 0, 4).getTime(),
-    //         state: 1
-    //     },
-    // ], -5, { daily: 10800000, weekly: 0 }, 3, new Date(2020, 10, 1, 4).getTime()));
-    // await hb.habitCron(bot, '208829852583723008');
-    // hb.calculateCurrentStreak([
-    // {
-    //     timestamp: new Date(2020, 11, 8, 4).getTime(),
-    //     state: 1
-    // },
-    // {
-    //     timestamp: new Date(2020, 11, 2, 4).getTime(),
-    //     state: 1
-    // },
-    // {
-    //     timestamp: new Date(2020, 10, 25, 4).getTime(),
-    //     state: 1
-    // },
-    // {
-    //     timestamp: new Date(2020, 10, 21, 4).getTime(),
-    //     state: 1
-    // },
-    // {
-    //     timestamp: new Date(2020, 10, 12, 4).getTime(),
-    //     state: 1
-    // },
+  // if (message.author.id === "208829852583723008") {
+  //     const directory = `utilities/file_storage/208829852583723008`;
+  //     const path = `${directory}/${fn.timestampToDateString(Date.now(), true, true, true, true)}.txt`;
+  //     const outputString = "Yay!\nThis works!\n\n\n\n\n\nLots of \\n";
+  //     if (outputString) {
+  //         fs.appendFileSync(path, outputString);
+  //         const fileOut = fs.readFileSync(path, 'utf-8');
+  //         const userObject = bot.users.cache.get("208829852583723008");
+  //         if (userObject && fileOut) {
+  //             await userObject.send({ files: [path] });
+  //             console.log("true");
+  //         }
+  //         fs.unlink(path, (err) => {
+  //             console.error(err);
+  //             return;
+  //         });
+  //     }
+  // }
 
+  // console.log(fn.timestampToDateString(fn.getStartOfWeekTimestamp(Date.now() - 5 * HOUR_IN_MS, -5, true, false)));
 
-    // {
-    //     timestamp: new Date(2020, 10, 28, 4).getTime(),
-    //     state: 1
-    // },
-    // {
-    //     timestamp: new Date(2020, 10, 26, 4).getTime(),
-    //     state: 1
-    // },
-    // {
-    //     timestamp: new Date(2020, 10, 24, 4).getTime(),
-    //     state: 1
-    // },
-    // {
-    //     timestamp: new Date(2020, 10, 23, 4).getTime(),
-    //     state: 1
-    // },
-    // {
-    //     timestamp: new Date(2020, 10, 22, 4).getTime(),
-    //     state: 1
-    // },
-    // ], -5, { daily: 10800000, weekly: 0 }, false, 2, hb.getNextCronTimeUTC(-5, { daily: 10800000, weekly: 0 }, true, 2,
-    //     new Date(2020, 9, 29, 12).getTime() - 5 * 8.64e+7) - 5 * 8.64e+7);
-    // console.log(fn.timestampToDateString(hb.getNextCronTimeUTC(-5, { daily: 10800000, weekly: 0 }, true, 2,
-    //     new Date(2020, 9, 30, 12).getTime() - 5 * 8.64e+7) - 5 * 8.64e+7));
+  // const result = await rm.cancelReminder("208829852583723008", "5f9647410dd2ff1eb497d05d");
+  // console.log({ result });
 
+  // await hb.habitCron(await Habit.findById("5f9711afa1b3d3321c142504"), -5, { daily: 10800000, weekly: 0 });
+  // console.log(fn.timestampToDateString(1605513600000));
+  // console.log(fn.getCurrentUTCTimestampFlooredToSecond());
+  // console.log(hb.getPastDaysStreak([
+  //     {
+  //         timestamp: new Date(2020, 10, 8, 4).getTime(),
+  //         state: 1
+  //     },
+  //     {
+  //         timestamp: new Date(2020, 10, 7, 4).getTime(),
+  //         state: 1
+  //     },
+  //     {
+  //         timestamp: new Date(2020, 10, 5, 4).getTime(),
+  //         state: 1
+  //     },
+  //     {
+  //         timestamp: new Date(2020, 10, 3, 4).getTime(),
+  //         state: 1
+  //     },
+  //     {
+  //         timestamp: new Date(2020, 10, 2, 4).getTime(),
+  //         state: 1
+  //     },
+  //     {
+  //         timestamp: new Date(2020, 10, 0, 4).getTime(),
+  //         state: 1
+  //     },
+  // ], -5, { daily: 10800000, weekly: 0 }, 3, new Date(2020, 10, 1, 4).getTime()));
+  // await hb.habitCron(bot, '208829852583723008');
+  // hb.calculateCurrentStreak([
+  // {
+  //     timestamp: new Date(2020, 11, 8, 4).getTime(),
+  //     state: 1
+  // },
+  // {
+  //     timestamp: new Date(2020, 11, 2, 4).getTime(),
+  //     state: 1
+  // },
+  // {
+  //     timestamp: new Date(2020, 10, 25, 4).getTime(),
+  //     state: 1
+  // },
+  // {
+  //     timestamp: new Date(2020, 10, 21, 4).getTime(),
+  //     state: 1
+  // },
+  // {
+  //     timestamp: new Date(2020, 10, 12, 4).getTime(),
+  //     state: 1
+  // },
 
-    // //Generating Link
-    //Method 1:
-    // bot.generateInvite([126016]).then(link => 
-    // {
-    //     console.log(link);
-    // }).catch(err => 
-    // {
-    //     console.log(err.stack);
-    // });
+  // {
+  //     timestamp: new Date(2020, 10, 28, 4).getTime(),
+  //     state: 1
+  // },
+  // {
+  //     timestamp: new Date(2020, 10, 26, 4).getTime(),
+  //     state: 1
+  // },
+  // {
+  //     timestamp: new Date(2020, 10, 24, 4).getTime(),
+  //     state: 1
+  // },
+  // {
+  //     timestamp: new Date(2020, 10, 23, 4).getTime(),
+  //     state: 1
+  // },
+  // {
+  //     timestamp: new Date(2020, 10, 22, 4).getTime(),
+  //     state: 1
+  // },
+  // ], -5, { daily: 10800000, weekly: 0 }, false, 2, hb.getNextCronTimeUTC(-5, { daily: 10800000, weekly: 0 }, true, 2,
+  //     new Date(2020, 9, 29, 12).getTime() - 5 * 8.64e+7) - 5 * 8.64e+7);
+  // console.log(fn.timestampToDateString(hb.getNextCronTimeUTC(-5, { daily: 10800000, weekly: 0 }, true, 2,
+  //     new Date(2020, 9, 30, 12).getTime() - 5 * 8.64e+7) - 5 * 8.64e+7));
 
-    // //Method 2: Async - Handling Promises
-    // //When using await it "pauses" code until the promise is fulfilled
-    // //It is good practice to put it into a try-catch block
-    // try 
-    // {
-    //     let link = await bot.generateInvite([126016]);
-    // } 
-    // catch(e) 
-    // {
-    //     console.log(e.stack);
-    // }
+  // //Generating Link
+  //Method 1:
+  // bot.generateInvite([126016]).then(link =>
+  // {
+  //     console.log(link);
+  // }).catch(err =>
+  // {
+  //     console.log(err.stack);
+  // });
+
+  // //Method 2: Async - Handling Promises
+  // //When using await it "pauses" code until the promise is fulfilled
+  // //It is good practice to put it into a try-catch block
+  // try
+  // {
+  //     let link = await bot.generateInvite([126016]);
+  // }
+  // catch(e)
+  // {
+  //     console.log(e.stack);
+  // }
 });
 
 // To deal with reactions to bot messages
@@ -217,196 +288,238 @@ bot.on("ready", async () => {
 //     }
 // });
 
-bot.on("message", async message => {
-    // If the user is blocked from typing commands - 1 minute timeout, make this a global statement
-    // If their name is part of the timeouts Array List!
-    // If the message is from a bot, ignore
-    if (message.author.bot) return;
-    else if (spamRecords.has(message.author.id)) {
-        const userSpamCheck = spamRecords.get(message.author.id);
-        if (userSpamCheck.isRateLimited) return;
+bot.on("message", async (message) => {
+  // If the user is blocked from typing commands - 1 minute timeout, make this a global statement
+  // If their name is part of the timeouts Array List!
+  // If the message is from a bot, ignore
+  if (message.author.bot) return;
+  else if (spamRecords.has(message.author.id)) {
+    const userSpamCheck = spamRecords.get(message.author.id);
+    if (userSpamCheck.isRateLimited) return;
+  }
+
+  var PREFIX;
+  if (message.channel.type === "dm") {
+    PREFIX = DEFAULT_PREFIX;
+  } else {
+    const guildID = message.guild.id;
+    const guildSettings = await Guild.findOne({ guildID });
+    PREFIX = guildSettings ? guildSettings.prefix : DEFAULT_PREFIX;
+  }
+  const isMention = message.content.startsWith(pdBotTag);
+  // PREFIX = '?'; //* For Testing
+
+  // When the message does not start with prefix, do nothing
+  if (!message.content.startsWith(PREFIX) && !isMention) return;
+
+  // Args/Arguments:
+  // .slice to remove the first part of message containing the prefix
+  // .split to section off multiple parts of the command (i.e. "?fast start now")
+  // .shift() takes the first elements of the array
+  // args will give all of the arguments passed in from the user
+  const messageArray = message.content.split(/ +/);
+  // For @mention prefix command calls, check if the @mention is separated by
+  // a space or not
+  const isSplit = isMention
+    ? messageArray[0] === pdBotTag
+      ? true
+      : false
+    : false;
+
+  // Get the command (Word after prefix)
+  const commandName = isMention
+    ? isSplit
+      ? messageArray[1]
+        ? messageArray[1].toLowerCase()
+        : false
+      : messageArray[0].slice(pdBotTag.length).toLowerCase()
+    : messageArray[0].slice(PREFIX.length).toLowerCase();
+  // Get all of the arguments after the initial command
+  let args = isSplit ? messageArray.slice(2) : messageArray.slice(1);
+
+  // Otherwise, begin checking if the message is a viable command!
+  // With ALIASES
+  const command =
+    bot.commands.get(commandName) ||
+    bot.commands.find(
+      (cmd) => cmd.aliases && cmd.aliases.includes(commandName)
+    );
+  if (!command) return;
+
+  console.log(
+    `%c User Command: ${commandName} ${args.join(" ")}`,
+    "color: green; font-weight: bold;"
+  );
+
+  // Spam Prevention:
+  const spamDetails = spamRecords.get(message.author.id);
+  if (spamDetails) {
+    spamDetails.messageCount++;
+    const messageSendDelay =
+      message.createdTimestamp - (spamDetails.lastTimestamp || 0);
+    spamDetails.lastTimestamp = message.createdTimestamp;
+    if (messageSendDelay < CLOSE_COMMAND_DELAY) {
+      spamDetails.closeMessageCount++;
     }
-
-    var PREFIX;
-    if (message.channel.type === 'dm') {
-        PREFIX = DEFAULT_PREFIX;
-    }
-    else {
-        const guildID = message.guild.id;
-        const guildSettings = await Guild.findOne({ guildID });
-        PREFIX = guildSettings ? guildSettings.prefix : DEFAULT_PREFIX;
-    }
-    const isMention = message.content.startsWith(pdBotTag);
-    // PREFIX = '?'; // For Testing
-
-    // When the message does not start with prefix, do nothing
-    if (!message.content.startsWith(PREFIX) && !isMention) return;
-
-    // Args/Arguments:
-    // .slice to remove the first part of message containing the prefix
-    // .split to section off multiple parts of the command (i.e. "?fast start now")
-    // .shift() takes the first elements of the array
-    // args will give all of the arguments passed in from the user
-    const messageArray = message.content.split(/ +/);
-    // For @mention prefix command calls, check if the @mention is separated by
-    // a space or not
-    const isSplit = isMention ? messageArray[0] === pdBotTag ? true : false : false;
-    // Get the command (Word after prefix)
-    const commandName = isMention ? isSplit ? messageArray[1] ? messageArray[1].toLowerCase() : false
-        : messageArray[0].slice(pdBotTag.length).toLowerCase()
-        : messageArray[0].slice(PREFIX.length).toLowerCase();
-    // Get all of the arguments after the initial command
-    let args = isSplit ? messageArray.slice(2) : messageArray.slice(1);
-
-    // Otherwise, begin checking if the message is a viable command!
-    // With ALIASES
-    const command = bot.commands.get(commandName)
-        || bot.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
-    if (!command) return;
-
-    console.log(`%c User Command: ${commandName} ${args.join(' ')}`, 'color: green; font-weight: bold;');
-
-    // Spam Prevention:
-    const spamDetails = spamRecords.get(message.author.id);
-    if (spamDetails) {
-        spamDetails.messageCount++;
-        const messageSendDelay = message.createdTimestamp - (spamDetails.lastTimestamp || 0);
-        spamDetails.lastTimestamp = message.createdTimestamp;
-        if (messageSendDelay < CLOSE_COMMAND_DELAY) {
-            spamDetails.closeMessageCount++;
+    if (
+      spamDetails.closeMessageCount >= CLOSE_COMMAND_SPAM_NUMBER ||
+      spamDetails.messageCount >= COMMAND_SPAM_NUMBER
+    ) {
+      const timeout =
+        timeoutDurations[spamDetails.timeoutLevel - 1] ||
+        fn.getTimeScaleToMultiplyInMs("minute");
+      const userDM = bot.users.cache.get(message.author.id);
+      spamDetails.isRateLimited = true;
+      setTimeout(() => {
+        if (spamDetails) {
+          spamDetails.closeMessageCount = 0;
+          spamDetails.messageCount = 1;
+          spamDetails.isRateLimited = false;
+          if (spamDetails.timeoutLevel < 4) spamDetails.timeoutLevel++;
         }
-        if (spamDetails.closeMessageCount >= CLOSE_COMMAND_SPAM_NUMBER || spamDetails.messageCount >= COMMAND_SPAM_NUMBER) {
-            const timeout = timeoutDurations[spamDetails.timeoutLevel - 1] || fn.getTimeScaleToMultiplyInMs('minute');
-            const userDM = bot.users.cache.get(message.author.id);
-            spamDetails.isRateLimited = true;
-            setTimeout(() => {
-                if (spamDetails) {
-                    spamDetails.closeMessageCount = 0;
-                    spamDetails.messageCount = 1;
-                    spamDetails.isRateLimited = false;
-                    if (spamDetails.timeoutLevel < 4) spamDetails.timeoutLevel++;
-                }
-                // if (userDM) userDM.send("**You may now enter my commands again**, please don't spam again - you will be ratelimited for longer!");
-            }, timeout);
-            if (userDM) userDM.send(`**Please don't spam me 🥺**, I will have to stop responding to your commands `
-                + `for at least **__${timeout / fn.getTimeScaleToMultiplyInMs('minute')} minute(s)__.**`);
-            return;
-        }
-        if (spamDetails.messageCount === 2) {
-            setTimeout(() => {
-                if (spamDetails) {
-                    spamDetails.messageCount = 1;
-                    spamDetails.closeMessageCount = 0;
-                }
-            }, REFRESH_SPAM_DELAY);
-        }
+        // if (userDM) userDM.send("**You may now enter my commands again**, please don't spam again - you will be ratelimited for longer!");
+      }, timeout);
+      if (userDM)
+        userDM.send(
+          `**Please don't spam me 🥺**, I will have to stop responding to your commands for at least **__${
+            timeout / fn.getTimeScaleToMultiplyInMs("minute")
+          } minute(s)__.**`
+        );
+      return;
     }
-    else {
+    if (spamDetails.messageCount === 2) {
+      setTimeout(() => {
+        if (spamDetails) {
+          spamDetails.messageCount = 1;
+          spamDetails.closeMessageCount = 0;
+        }
+      }, REFRESH_SPAM_DELAY);
+    }
+  } else {
+    setTimeout(() => {
+      if (spamDetails.isRateLimited) {
         setTimeout(() => {
-            if (spamDetails.isRateLimited) {
-                setTimeout(() => {
-                    spamRecords.delete(message.author.id);
-                }, (timeoutDurations[spamDetails.timeoutLevel - 1] || fn.getTimeScaleToMultiplyInMs('minute'))
-                + fn.getTimeScaleToMultiplyInMs("hour") * 4);
-            }
-            else spamRecords.delete(message.author.id);
-        }, fn.getTimeScaleToMultiplyInMs("day") / 2);
-        spamRecords.set(message.author.id, {
-            lastTimestamp: message.createdTimestamp,
-            messageCount: 1,
-            closeMessageCount: 0,
-            isRateLimited: false,
-            timeoutLevel: 1,
-        });
-    }
+          spamRecords.delete(message.author.id);
+        }, (timeoutDurations[spamDetails.timeoutLevel - 1] || fn.getTimeScaleToMultiplyInMs("minute")) + fn.getTimeScaleToMultiplyInMs("hour") * 4);
+      } else spamRecords.delete(message.author.id);
+    }, fn.getTimeScaleToMultiplyInMs("day") / 2);
+    spamRecords.set(message.author.id, {
+      lastTimestamp: message.createdTimestamp,
+      messageCount: 1,
+      closeMessageCount: 0,
+      isRateLimited: false,
+      timeoutLevel: 1,
+    });
+  }
 
-    // Cooldowns:
-    if (!cooldowns.has(command.name)) {
-        cooldowns.set(command.name, new Discord.Collection());
-    }
-    const now = Date.now();
-    const cooldownUsers = cooldowns.get(command.name);
-    const cooldownAmount = (command.cooldown) * 1000;
-    if (cooldownUsers.has(message.author.id)) {
-        const cooldownDetails = cooldownUsers.get(message.author.id);
-        if (cooldownDetails.sentCooldownMessage === false) {
-            const expirationTime = cooldownDetails.endTime + cooldownAmount;
-            if (now < expirationTime) {
-                const timeLeft = (expirationTime - now) / 1000;
-                fn.sendReplyThenDelete(message, `Please **wait ${timeLeft.toFixed(1)} more second(s)** before reusing the **\`${command.name}\` command**`, timeLeft * 1000);
-                if (cooldownUsers.has(message.author.id)) {
-                    cooldownDetails.sentCooldownMessage = true;
-                }
-            }
+  // Cooldowns:
+  if (!cooldowns.has(command.name)) {
+    cooldowns.set(command.name, new Discord.Collection());
+  }
+  const now = Date.now();
+  const cooldownUsers = cooldowns.get(command.name);
+  const cooldownAmount = command.cooldown * 1000;
+  if (cooldownUsers.has(message.author.id)) {
+    const cooldownDetails = cooldownUsers.get(message.author.id);
+    if (cooldownDetails.sentCooldownMessage === false) {
+      const expirationTime = cooldownDetails.endTime + cooldownAmount;
+      if (now < expirationTime) {
+        const timeLeft = (expirationTime - now) / 1000;
+        fn.sendReplyThenDelete(
+          message,
+          `Please **wait ${timeLeft.toFixed(
+            1
+          )} more second(s)** before reusing the **\`${
+            command.name
+          }\` command**`,
+          timeLeft * 1000
+        );
+        if (cooldownUsers.has(message.author.id)) {
+          cooldownDetails.sentCooldownMessage = true;
         }
-        return;
+      }
     }
-    else {
-        cooldownUsers.set(message.author.id, {
-            endTime: now,
-            sentCooldownMessage: false,
-        });
-        setTimeout(() => cooldownUsers.delete(message.author.id), cooldownAmount);
-    }
+    return;
+  } else {
+    cooldownUsers.set(message.author.id, {
+      endTime: now,
+      sentCooldownMessage: false,
+    });
+    setTimeout(() => cooldownUsers.delete(message.author.id), cooldownAmount);
+  }
 
-    if (commandName !== "ping") {
-        const user = message.author;
-        let userSettings = await User.findOne({ discordID: user.id });
-        // Update the Guild Settings
-        // Pull from the guild settings from the initial user settings
-        var timezoneOffset, daylightSavingSetting;
-        if (!userSettings) {
-            const timezone = await fn.getNewUserTimezoneSettings(bot, message, PREFIX, user.id);
-            if (!timezone) return;
-            const userInfo = await fn.createUserSettings(bot, user.id, timezone);
-            if (!userInfo) return message.reply("**Sorry, I could not setup your user settings, contact the developer for more information!**"
-                + "\n(https://discord.gg/Czc3CSy)");
-            userSettings = userInfo;
-            daylightSavingSetting = timezone.daylightSaving;
-            timezoneOffset = timezone.offset;
-            const userCount = await User.find({}).countDocuments()
-                .catch(err => console.error(err));
-            bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, { type: "WATCHING" });
-        }
-        else {
-            // Future: Try a mixture of an event listener + a initial check on start-up to save resources
-            // on checking whether a user has changed their credentials each time! ✅
-
-            // const guildMap = userSettings.guilds.map(guild => guild.id);
-            // const thisGuildIncluded = guildMap.includes(message.guild.id);
-            // let updateQuery = {
-            //     discordTag: `${user.username}#${user.discriminator}`,
-            //     avatar: user.avatar,
-            // };
-            // const update = await User.findOneAndUpdate({ discordID: message.author.id }, updateQuery, { new: true });
-            // console.log({ update });
-            // userSettings = update;
-            timezoneOffset = userSettings.timezone.offset;
-            daylightSavingSetting = userSettings.daylightSaving;
-        }
-
-        // Help: If command requires args send help message
-        if (!args.length && command.args) {
-            return message.reply(`Try** \`${PREFIX}${commandName} help\` **`);
-        }
-
-        // Check if user wants to skip confirmation windows
-        var forceSkip;
-        const lastArg = args[args.length - 1];
-        if (lastArg == "force") {
-            forceSkip = true;
-            args = args.slice(0, -1);
-        }
-        else forceSkip = false;
+  if (commandName !== "ping") {
+    const user = message.author;
+    let userSettings = await User.findOne({ discordID: user.id });
+    // Update the Guild Settings
+    // Pull from the guild settings from the initial user settings
+    var timezoneOffset, daylightSavingSetting;
+    if (!userSettings) {
+      const timezone = await fn.getNewUserTimezoneSettings(
+        bot,
+        message,
+        PREFIX,
+        user.id
+      );
+      if (!timezone) return;
+      const userInfo = await fn.createUserSettings(bot, user.id, timezone);
+      if (!userInfo)
+        return message.reply(
+          `**Sorry, I could not setup your user settings, contact the developer for more information!**\n(https://discord.gg/Czc3CSy)`
+        );
+      userSettings = userInfo;
+      daylightSavingSetting = timezone.daylightSaving;
+      timezoneOffset = timezone.offset;
+      const userCount = await User.find({})
+        .countDocuments()
+        .catch((err) => console.error(err));
+      bot.user.setActivity(`${userCount ? userCount : "you"} thrive! | ?help`, {
+        type: "WATCHING",
+      });
+    } else {
+      // TODO - Future: Try a mixture of an event listener + a initial check on start-up to save resources on checking whether a user has changed their credentials each time! ✅
+      // const guildMap = userSettings.guilds.map(guild => guild.id);
+      // const thisGuildIncluded = guildMap.includes(message.guild.id);
+      // let updateQuery = {
+      //     discordTag: `${user.username}#${user.discriminator}`,
+      //     avatar: user.avatar,
+      // };
+      // const update = await User.findOneAndUpdate({ discordID: message.author.id }, updateQuery, { new: true });
+      // console.log({ update });
+      // userSettings = update;
+      timezoneOffset = userSettings.timezone.offset;
+      daylightSavingSetting = userSettings.daylightSaving;
     }
 
-    try {
-        command.run(bot, message, commandName, args, PREFIX,
-            timezoneOffset, daylightSavingSetting, forceSkip);
-    } catch (err) {
-        console.error(err);
-        return message.reply("There was an error trying to execute that command!");
+    // Help: If command requires args send help message
+    if (!args.length && command.args) {
+      return message.reply(`Try** \`${PREFIX}${commandName} help\` **`);
     }
+
+    // Check if user wants to skip confirmation windows
+    var forceSkip;
+    const lastArg = args[args.length - 1];
+    if (lastArg == "force") {
+      forceSkip = true;
+      args = args.slice(0, -1);
+    } else forceSkip = false;
+  }
+
+  try {
+    command.run(
+      bot,
+      message,
+      commandName,
+      args,
+      PREFIX,
+      timezoneOffset,
+      daylightSavingSetting,
+      forceSkip
+    );
+  } catch (err) {
+    console.error(err);
+    return message.reply("There was an error trying to execute that command!");
+  }
 });
 
 // bot.on("messageReactionAdd", async (reaction, user) => {
@@ -437,112 +550,134 @@ bot.on("message", async message => {
 // For dynamic bot settings per guild
 // Will help with handling unique prefixes!
 bot.on("guildCreate", async (guild) => {
-    await fn.resetAllVoiceChannelTracking(bot);
-    await gu.setupNewGuild(bot, guild.id, guild.name);
-    return;
+  await fn.resetAllVoiceChannelTracking(bot);
+  await gu.setupNewGuild(bot, guild.id, guild.name);
+  return;
 });
 
 // Remove the settings and preset data if PD is removed from guild
-bot.on('guildDelete', async (guild) => {
-    // console.log([...guild.channels.cache.values()]);
-    await gu.deleteGuild(guild.id, guild.name, guild.channels.cache).array();
-    return;
+bot.on("guildDelete", async (guild) => {
+  // console.log([...guild.channels.cache.values()]);
+  await gu.deleteGuild(guild.id, guild.name, guild.channels.cache).array();
+  return;
 });
 
-bot.on('guildMemberUpdate', async (member) => {
-    const user = member.user;
-    await fn.updateUser(user);
-    return;
+bot.on("guildMemberUpdate", async (member) => {
+  const user = member.user;
+  await fn.updateUser(user);
+  return;
 });
 
-// Check if the new channelID joined is part of the list, 
+// Check if the new channelID joined is part of the list,
 // if it is, then start the interval
 
-// Check if the new channelID is null (implies that they left), 
+// Check if the new channelID is null (implies that they left),
 // then update the tracked duration by the difference
 // and cancel the interval if there is any
 
-// Each interval update the tracked duration 
+// Each interval update the tracked duration
 // by the time per interval period
 
-bot.on('voiceStateUpdate', async (oldState, newState) => {
-    const userID = oldState.member.id;
-    const oldChannelID = oldState.channelID;
-    const newChannelID = newState.channelID;
-    console.log(`Old Channel ID: ${oldChannelID}`
-        + ` - New Channel ID: ${newChannelID}`);
+bot.on("voiceStateUpdate", async (oldState, newState) => {
+  const userID = oldState.member.id;
+  const oldChannelID = oldState.channelID;
+  const newChannelID = newState.channelID;
+  console.log(
+    `Old Channel ID: ${oldChannelID} - New Channel ID: ${newChannelID}`
+  );
 
-    if (!fn.voiceTrackingHasUser(userID) && !fn.autoSendTrackReportHasUser(userID)) {
-        const vcInformation = await fn.getTargetVoiceChannelAndUserSettings(
-            bot, userID, newChannelID
+  if (
+    !fn.voiceTrackingHasUser(userID) &&
+    !fn.autoSendTrackReportHasUser(userID)
+  ) {
+    const vcInformation = await fn.getTargetVoiceChannelAndUserSettings(
+      bot,
+      userID,
+      newChannelID
+    );
+    if (!vcInformation) return;
+    const setup = await fn.setupVoiceChannelTracking(
+      bot,
+      userID,
+      newChannelID,
+      vcInformation
+    );
+    if (!setup) return;
+  } else if (oldChannelID !== newChannelID) {
+    // If they left the voice channel:
+    // Stop tracking and clear + delete interval.
+    const trackingDocument = await Track.findOne({
+      userID,
+      voiceChannelID: oldChannelID,
+    });
+    const autoSendReportEnabled = !!trackingDocument
+      ? typeof trackingDocument.finishedSession === "boolean"
+      : false;
+    console.log({ autoSendReportEnabled });
+    if (trackingDocument) {
+      if (autoSendReportEnabled) {
+        await fn.voiceTrackingSetAutoSendTrackReport(
+          bot,
+          userID,
+          trackingDocument,
+          false
         );
-        if (!vcInformation) return;
-        const setup = await fn.setupVoiceChannelTracking(bot, userID,
-            newChannelID, vcInformation);
-        if (!setup) return;
+      } else {
+        await fn.updateVoiceChannelTimeTracked(
+          bot,
+          userID,
+          oldChannelID,
+          fn.getCurrentUTCTimestampFlooredToSecond() - trackingDocument.start,
+          true
+        );
+      }
     }
-    else if (oldChannelID !== newChannelID) {
-        // If they left the voice channel:
-        // Stop tracking and clear + delete interval.
-        const trackingDocument = await Track.findOne({
-            userID, voiceChannelID: oldChannelID
-        });
-        const autoSendReportEnabled = !!trackingDocument ?
-            typeof trackingDocument.finishedSession === 'boolean'
-            : false;
-        console.log({ autoSendReportEnabled });
-        if (trackingDocument) {
-            if (autoSendReportEnabled) {
-                await fn.voiceTrackingSetAutoSendTrackReport(bot, userID, trackingDocument, false);
-            }
-            else {
-                await fn.updateVoiceChannelTimeTracked(bot, userID, oldChannelID,
-                    fn.getCurrentUTCTimestampFlooredToSecond() - trackingDocument.start,
-                    true,
-                );
-            }
-        }
-        fn.voiceTrackingUserClearChannelInterval(userID, oldChannelID);
-        fn.voiceTrackingUserDeleteChannel(userID, oldChannelID);
-        if (!autoSendReportEnabled) {
-            await Track.deleteOne({ userID, voiceChannelID: oldChannelID, });
-            // await rm.updateTrackingReportReminder(bot, userID);
-        }
+    fn.voiceTrackingUserClearChannelInterval(userID, oldChannelID);
+    fn.voiceTrackingUserDeleteChannel(userID, oldChannelID);
+    if (!autoSendReportEnabled) {
+      await Track.deleteOne({ userID, voiceChannelID: oldChannelID });
+      // await rm.updateTrackingReportReminder(bot, userID);
+    }
 
-        // If they transferred to a new channel:
-        // Delete old interval.
-        // Then check if this new channel also needs to be tracked
-        // and setup the tracking if so, otherwise delete interval and return
-        if (newChannelID) {
-            const vcInformation = await fn.getTargetVoiceChannelAndUserSettings(
-                bot, userID, newChannelID
-            );
-            if (!vcInformation) return;
-            const setup = await fn.setupVoiceChannelTracking(bot, userID,
-                newChannelID, vcInformation);
-            if (!setup) return;
-        }
+    // If they transferred to a new channel:
+    // Delete old interval.
+    // Then check if this new channel also needs to be tracked
+    // and setup the tracking if so, otherwise delete interval and return
+    if (newChannelID) {
+      const vcInformation = await fn.getTargetVoiceChannelAndUserSettings(
+        bot,
+        userID,
+        newChannelID
+      );
+      if (!vcInformation) return;
+      const setup = await fn.setupVoiceChannelTracking(
+        bot,
+        userID,
+        newChannelID,
+        vcInformation
+      );
+      if (!setup) return;
     }
-    return;
+  }
+  return;
 });
 
-bot.on('channelDelete', async (channel) => {
-    // If a user tracked voice channel gets deleted,
-    // make the channel name as the id and store the guildName
-    await tr.unlinkVoiceChannelTracking(channel);
+bot.on("channelDelete", async (channel) => {
+  // If a user tracked voice channel gets deleted,
+  // make the channel name as the id and store the guildName
+  await tr.unlinkVoiceChannelTracking(channel);
 });
 
 // To ensure that the MongoDB is connected before logging in
 // the bot as the "ready" even resets lingering reminders
 // which relies on MongoDB to be online!
 const ensureDB = setInterval(() => {
-    if (mongoose.connection.readyState === 1) {
-        bot.login(TOKEN);
-        clearInterval(ensureDB);
-    }
-    else {
-        console.log("Waiting for MongoDB to connect...");
-    }
+  if (mongoose.connection.readyState === 1) {
+    bot.login(TOKEN);
+    clearInterval(ensureDB);
+  } else {
+    console.log("Waiting for MongoDB to connect...");
+  }
 }, 600);
 
-module.exports = { bot: bot, };
+module.exports = { bot: bot };
