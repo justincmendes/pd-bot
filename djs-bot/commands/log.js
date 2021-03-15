@@ -152,11 +152,13 @@ module.exports = {
       if (logType === "help") return message.channel.send(logStartUsageMessage);
 
       var indexByRecency = false;
-      if (args[1 + archiveShift] !== undefined) {
-        if (args[1 + archiveShift].toLowerCase() === "recent") {
+      if (args[2 + archiveShift] !== undefined) {
+        if (args[2 + archiveShift].toLowerCase() === "recent") {
           indexByRecency = true;
         }
       }
+      const sortType = indexByRecency ? "By Recency" : "By Date Created";
+
       var habitArray;
       if (indexByRecency)
         habitArray = await Habit.find({
@@ -175,24 +177,57 @@ module.exports = {
           }habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`
         );
 
+      var onFirst = true;
       do {
-        var targetHabitIndex;
-        let targetHabit = await fn.getUserSelectedObject(
-          bot,
-          message,
-          PREFIX,
-          "__**Which habit would you like to log?**__",
-          `Log${isArchived ? " Archive" : ""}: Select Habit To Log`,
-          habitArray,
-          "description",
-          false,
-          habitEmbedColour,
-          600000
-        );
-        if (!targetHabit) return;
-        else {
-          targetHabitIndex = targetHabit.index;
-          targetHabit = targetHabit.object;
+        var targetHabit, targetHabitIndex;
+        // If the user entered an index, use that, otherwise let them select from a list.
+        if (onFirst && logType) {
+          if (!isNaN(logType)) {
+            targetHabitIndex = parseInt(logType);
+            if (targetHabitIndex <= 0 || targetHabitIndex > habitArray.length) {
+              return message.reply(
+                `**${isArchived ? "Archived " : ""}Habit ${parseInt(
+                  logType
+                )}** does not exist... Try \`${PREFIX}${commandUsed} ${logCommand} help\` for help!`
+              );
+            } else {
+              targetHabitIndex--;
+              targetHabit = habitArray[targetHabitIndex];
+            }
+          } else if (logType === "recent") {
+            const recentHabit = await Habit.findOne({ userID: authorID }).sort({
+              _id: -1,
+            });
+            if (recentHabit) {
+              const recentHabitId = recentHabit._id.toString();
+              const recentHabitIndex = habitArray.findIndex(
+                (habit) => habit._id.toString() === recentHabitId
+              );
+              if (recentHabitIndex === -1) return;
+              targetHabit = habitArray[recentHabitIndex];
+              targetHabitIndex = recentHabitIndex;
+            }
+          }
+        }
+
+        if (targetHabitIndex === undefined) {
+          targetHabit = await fn.getUserSelectedObject(
+            bot,
+            message,
+            PREFIX,
+            "__**Which habit would you like to log?**__",
+            `Log${isArchived ? " Archive" : ""}: Select Habit To Log`,
+            habitArray,
+            "description",
+            false,
+            habitEmbedColour,
+            600000
+          );
+          if (!targetHabit) return;
+          else {
+            targetHabitIndex = targetHabit.index;
+            targetHabit = targetHabit.object;
+          }
         }
 
         const logTimestamp = await fn.getDateAndTimeEntry(
@@ -201,8 +236,12 @@ module.exports = {
           PREFIX,
           timezoneOffset,
           daylightSaving,
-          "**__When do you want to log this habit for?__**",
-          `Log${isArchived ? " Archive" : ""}: Timestamp`,
+          `**__When do you want to log this habit for?__**\n\n**__Habit ${
+            targetHabitIndex + 1
+          } (${sortType}):__**\n${hb.habitDocumentDescription(targetHabit)}`,
+          `Log${isArchived ? " Archive" : ""}:${
+            onFirst ? ` Habit ${targetHabitIndex + 1}` : ""
+          } Timestamp`,
           false,
           habitEmbedColour,
           600000
@@ -461,6 +500,7 @@ module.exports = {
             habitCron
             // isTodaysLog && !overwriteLog
           );
+          onFirst = false;
           return;
         } else return;
       } while (true);
@@ -492,11 +532,12 @@ module.exports = {
       }
 
       var indexByRecency = false;
-      if (args[1 + archiveShift] !== undefined) {
-        if (args[1 + archiveShift].toLowerCase() === "recent") {
+      if (args[2 + archiveShift] !== undefined) {
+        if (args[2 + archiveShift].toLowerCase() === "recent") {
           indexByRecency = true;
         }
       }
+      const sortType = indexByRecency ? "By Recency" : "By Date Created";
 
       var habitArray;
       if (indexByRecency)
@@ -518,16 +559,35 @@ module.exports = {
 
       // If the user entered an index, use that, otherwise let them select from a list.
       var targetHabit, targetHabitIndex;
-      if (logType && !isNaN(logType)) {
-        targetHabitIndex = parseInt(logType);
-        if (targetHabitIndex <= 0 || targetHabitIndex > habitArray.length) {
-          return message.reply(
-            `**${isArchived ? "Archived " : ""}Habit ${parseInt(
-              logType
-            )}** does not exist... Try \`${PREFIX}${commandUsed} ${logCommand} help\` for help!`
-          );
+      if (logType) {
+        if (!isNaN(logType)) {
+          targetHabitIndex = parseInt(logType);
+          if (targetHabitIndex <= 0 || targetHabitIndex > habitArray.length) {
+            return message.reply(
+              `**${isArchived ? "Archived " : ""}Habit ${parseInt(
+                logType
+              )}** does not exist... Try \`${PREFIX}${commandUsed} ${logCommand} help\` for help!`
+            );
+          } else {
+            targetHabitIndex--;
+            targetHabit = habitArray[targetHabitIndex];
+          }
+        } else if (logType === "recent") {
+          const recentHabit = await Habit.findOne({ userID: authorID }).sort({
+            _id: -1,
+          });
+          if (recentHabit) {
+            const recentHabitId = recentHabit._id.toString();
+            const recentHabitIndex = habitArray.findIndex(
+              (habit) => habit._id.toString() === recentHabitId
+            );
+            if (recentHabitIndex === -1) return;
+            targetHabit = habitArray[recentHabitIndex];
+            targetHabitIndex = recentHabitIndex;
+          }
         }
       }
+
       if (targetHabitIndex === undefined) {
         targetHabit = await fn.getUserSelectedObject(
           bot,
@@ -546,9 +606,6 @@ module.exports = {
           targetHabitIndex = targetHabit.index;
           targetHabit = targetHabit.object;
         }
-      } else {
-        targetHabitIndex--;
-        targetHabit = habitArray[targetHabitIndex];
       }
 
       let habitLogs = await Log.find({
@@ -562,7 +619,9 @@ module.exports = {
         const someLogsSelected = habitLogs.length !== originalLength;
         reset = false;
 
-        let logList = `👣 - **__Habit Description:__**\n${targetHabit.description}\n\n`;
+        let logList = `**__Habit ${
+          targetHabitIndex + 1
+        } (${sortType}):__**\n${hb.habitDocumentDescription(targetHabit)}\n\n`;
         habitLogs.forEach((log, i) => {
           logList += `\`${i + 1}\`\: ${hb.logDocumentToString(log)}\n`;
         });
@@ -657,12 +716,12 @@ module.exports = {
       }
 
       var indexByRecency = false;
-      if (args[1 + archiveShift] !== undefined) {
-        if (args[1 + archiveShift].toLowerCase() === "recent") {
+      if (args[2 + archiveShift] !== undefined) {
+        if (args[2 + archiveShift].toLowerCase() === "recent") {
           indexByRecency = true;
         }
       }
-      const sortType = indexByRecency ? "By Recency" : "By Timestamp";
+      const sortType = indexByRecency ? "By Recency" : "By Date Created";
 
       var habitArray;
       if (indexByRecency)
@@ -684,16 +743,35 @@ module.exports = {
 
       // If the user entered an index, use that, otherwise let them select from a list.
       var targetHabit, targetHabitIndex;
-      if (logType && !isNaN(logType)) {
-        targetHabitIndex = parseInt(logType);
-        if (targetHabitIndex <= 0 || targetHabitIndex > habitArray.length) {
-          return message.reply(
-            `**${isArchived ? "Archived " : ""}Habit ${parseInt(
-              logType
-            )}** does not exist... Try \`${PREFIX}${commandUsed} ${logCommand} help\` for help!`
-          );
+      if (logType) {
+        if (!isNaN(logType)) {
+          targetHabitIndex = parseInt(logType);
+          if (targetHabitIndex <= 0 || targetHabitIndex > habitArray.length) {
+            return message.reply(
+              `**${isArchived ? "Archived " : ""}Habit ${parseInt(
+                logType
+              )}** does not exist... Try \`${PREFIX}${commandUsed} ${logCommand} help\` for help!`
+            );
+          } else {
+            targetHabitIndex--;
+            targetHabit = habitArray[targetHabitIndex];
+          }
+        } else if (logType === "recent") {
+          const recentHabit = await Habit.findOne({ userID: authorID }).sort({
+            _id: -1,
+          });
+          if (recentHabit) {
+            const recentHabitId = recentHabit._id.toString();
+            const recentHabitIndex = habitArray.findIndex(
+              (habit) => habit._id.toString() === recentHabitId
+            );
+            if (recentHabitIndex === -1) return;
+            targetHabit = habitArray[recentHabitIndex];
+            targetHabitIndex = recentHabitIndex;
+          }
         }
       }
+
       if (targetHabitIndex === undefined) {
         targetHabit = await fn.getUserSelectedObject(
           bot,
@@ -712,9 +790,6 @@ module.exports = {
           targetHabitIndex = targetHabit.index;
           targetHabit = targetHabit.object;
         }
-      } else {
-        targetHabitIndex--;
-        targetHabit = habitArray[targetHabitIndex];
       }
 
       // Show all of the logs for the given habit
@@ -738,6 +813,12 @@ module.exports = {
         0,
         false
       );
+      // Add the habit to the top of the display.
+      logArray.unshift([
+        `**__Habit ${
+          targetHabitIndex + 1
+        } (${sortType}):__**\n${hb.habitDocumentDescription(targetHabit)}`,
+      ]);
       await fn.sendPaginationEmbed(
         bot,
         message.channel.id,
@@ -746,7 +827,7 @@ module.exports = {
           logArray,
           `Habit${isArchived ? ` Archive` : ""} ${
             targetHabitIndex + 1
-          }: All ${totalLogs} Logs (${sortType})`,
+          }: All ${totalLogs} Logs`,
           true,
           `Logs ${fn.timestampToDateString(
             Date.now() + timezoneOffset * HOUR_IN_MS,
@@ -786,11 +867,12 @@ module.exports = {
       }
 
       var indexByRecency = false;
-      if (args[1 + archiveShift] !== undefined) {
-        if (args[1 + archiveShift].toLowerCase() === "recent") {
+      if (args[2 + archiveShift] !== undefined) {
+        if (args[2 + archiveShift].toLowerCase() === "recent") {
           indexByRecency = true;
         }
       }
+      const sortType = indexByRecency ? "By Recency" : "By Date Created";
 
       var habitArray;
       if (indexByRecency)
@@ -812,16 +894,35 @@ module.exports = {
 
       // If the user entered an index, use that, otherwise let them select from a list.
       var targetHabit, targetHabitIndex;
-      if (logType && !isNaN(logType)) {
-        targetHabitIndex = parseInt(logType);
-        if (targetHabitIndex <= 0 || targetHabitIndex > habitArray.length) {
-          return message.reply(
-            `**${isArchived ? "Archived " : ""}Habit ${parseInt(
-              logType
-            )}** does not exist... Try \`${PREFIX}${commandUsed} ${logCommand} help\` for help!`
-          );
+      if (logType) {
+        if (!isNaN(logType)) {
+          targetHabitIndex = parseInt(logType);
+          if (targetHabitIndex <= 0 || targetHabitIndex > habitArray.length) {
+            return message.reply(
+              `**${isArchived ? "Archived " : ""}Habit ${parseInt(
+                logType
+              )}** does not exist... Try \`${PREFIX}${commandUsed} ${logCommand} help\` for help!`
+            );
+          } else {
+            targetHabitIndex--;
+            targetHabit = habitArray[targetHabitIndex];
+          }
+        } else if (logType === "recent") {
+          const recentHabit = await Habit.findOne({ userID: authorID }).sort({
+            _id: -1,
+          });
+          if (recentHabit) {
+            const recentHabitId = recentHabit._id.toString();
+            const recentHabitIndex = habitArray.findIndex(
+              (habit) => habit._id.toString() === recentHabitId
+            );
+            if (recentHabitIndex === -1) return;
+            targetHabit = habitArray[recentHabitIndex];
+            targetHabitIndex = recentHabitIndex;
+          }
         }
       }
+
       if (targetHabitIndex === undefined) {
         targetHabit = await fn.getUserSelectedObject(
           bot,
@@ -840,9 +941,6 @@ module.exports = {
           targetHabitIndex = targetHabit.index;
           targetHabit = targetHabit.object;
         }
-      } else {
-        targetHabitIndex--;
-        targetHabit = habitArray[targetHabitIndex];
       }
 
       let logs = await Log.find({ connectedDocument: targetHabit._id }).sort({
@@ -855,7 +953,9 @@ module.exports = {
         );
       }
 
-      let logList = `👣 - **__Habit Description:__**\n${targetHabit.description}\n\n`;
+      let logList = `**__Habit ${
+        targetHabitIndex + 1
+      } (${sortType}):__**\n${hb.habitDocumentDescription(targetHabit)}\n\n`;
       logs.forEach((log, i) => {
         logList += `\`${i + 1}\`\: ${hb.logDocumentToString(log)}\n`;
       });
@@ -903,7 +1003,7 @@ module.exports = {
           countGoal,
           integration,
         } = settings;
-        const sortType = indexByRecency ? "By Recency" : "By Timestamp";
+        const sortType = indexByRecency ? "By Recency" : "By Date Created";
 
         var logFields = ["Timestamp", "State", "Reflection"];
         if (isCountType) {
@@ -930,7 +1030,7 @@ module.exports = {
         const fieldToEditInstructions = "**Which field do you want to edit?**";
         const fieldToEditAdditionalMessage = `__**Log ${
           targetLogIndex + 1
-        } (${sortType}):**__\n${hb.logDocumentToString(logs[targetLogIndex])}`;
+        }:**__\n${hb.logDocumentToString(logs[targetLogIndex])}`;
         const fieldToEditTitle = `${type}: Edit Field`;
         var fieldToEdit, fieldToEditIndex;
 
@@ -1149,9 +1249,9 @@ module.exports = {
           try {
             const { timestamp, state, message: logMessage, count } = targetLog;
             console.log(
-              `Editing ${authorID}'s Log ${
-                targetLogIndex + 1
-              } (${sortType}) of Habit ${targetHabitIndex + 1}`
+              `Editing ${authorID}'s Log ${targetLogIndex + 1} of Habit ${
+                targetHabitIndex + 1
+              } (${sortType})`
             );
             targetLog = await Log.findOneAndUpdate(
               { _id: targetLog._id },

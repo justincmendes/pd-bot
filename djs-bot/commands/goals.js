@@ -2137,8 +2137,8 @@ module.exports = {
         return message.channel.send(goalEditUsageMessage);
 
       var indexByRecency = false;
-      if (args[1 + archiveShift] !== undefined) {
-        if (args[1 + archiveShift].toLowerCase() === "recent") {
+      if (args[2 + archiveShift] !== undefined) {
+        if (args[2 + archiveShift].toLowerCase() === "recent") {
           indexByRecency = true;
         }
       }

@@ -785,7 +785,10 @@ module.exports = {
               return true;
             }
           });
-          const recentIndex = await hb.getRecentHabitIndex(authorID, isArchived);
+          const recentIndex = await hb.getRecentHabitIndex(
+            authorID,
+            isArchived
+          );
           toDelete = Array.from(
             new Set(
               toDelete.map((number) => {
@@ -892,7 +895,10 @@ module.exports = {
                 if (
                   args[3 + archiveShift + shiftIndex].toLowerCase() === "recent"
                 ) {
-                  skipEntries = await hb.getRecentHabitIndex(authorID, isArchived);
+                  skipEntries = await hb.getRecentHabitIndex(
+                    authorID,
+                    isArchived
+                  );
                 } else return message.reply(habitActionHelpMessage);
               } else
                 skipEntries = parseInt(args[3 + archiveShift + shiftIndex]);
@@ -1226,7 +1232,7 @@ module.exports = {
             return fn.sendErrorMessageAndUsage(
               message,
               habitActionHelpMessage,
-              `** ${isArchived ? "ARCHIVED " : ""}HABIT DOES NOT EXIST **...`
+              `**${isArchived ? "ARCHIVED " : ""}HABIT DOES NOT EXIST **...`
             );
           } else pastFunctionality = false;
         } else if (seeType === "past") {
@@ -1693,9 +1699,7 @@ module.exports = {
           const goalTypeString = hb.getGoalTypeString(countGoalType);
           switch (fieldToEditIndex) {
             case 0:
-              // ADD support for Add/Delete options too!
-              // List out all of the logs, if any, then
-              // 1 add, 2 delete, 3 edit (if logs.length)
+              //// ADD support for Add/Delete options too! List out all of the logs, if any, then 1 add, 2 delete, 3 edit (if logs.length)
               if (logs)
                 if (logs.length) {
                   let logList = `👣 - **__Habit Description:__**\n${habitDocument.description}\n\n`;
@@ -2678,11 +2682,13 @@ module.exports = {
         return message.channel.send(habitLogUsageMessage);
 
       var indexByRecency = false;
-      if (args[1 + archiveShift] !== undefined) {
-        if (args[1 + archiveShift].toLowerCase() === "recent") {
+      if (args[2 + archiveShift] !== undefined) {
+        if (args[2 + archiveShift].toLowerCase() === "recent") {
           indexByRecency = true;
         }
       }
+      const sortType = indexByRecency ? "By Recency" : "By Date Created";
+
       var habitArray;
       if (indexByRecency)
         habitArray = await Habit.find({
@@ -2701,24 +2707,59 @@ module.exports = {
           }habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`
         );
 
+      var onFirst = true;
       do {
-        var targetHabitIndex;
-        let targetHabit = await fn.getUserSelectedObject(
-          bot,
-          message,
-          PREFIX,
-          "__**Which habit would you like to log?**__",
-          `Habit${isArchived ? " Archive" : ""}: Select Habit To Log`,
-          habitArray,
-          "description",
-          false,
-          habitEmbedColour,
-          600000
-        );
-        if (!targetHabit) return;
-        else {
-          targetHabitIndex = targetHabit.index;
-          targetHabit = targetHabit.object;
+        var targetHabit, targetHabitIndex;
+        // If the user entered an index, use that, otherwise let them select from a list.
+        if (onFirst && habitType) {
+          if (!isNaN(habitType)) {
+            targetHabitIndex = parseInt(habitType);
+            if (targetHabitIndex <= 0 || targetHabitIndex > habitArray.length) {
+              return message.reply(
+                `**${isArchived ? "Archived " : ""}Habit ${parseInt(
+                  habitType
+                )}** does not exist... Try \`${PREFIX}${commandUsed} ${logCommand} help\` for help!`
+              );
+            } else {
+              targetHabitIndex--;
+              targetHabit = habitArray[targetHabitIndex];
+            }
+          } else if (habitType === "recent") {
+            const recentHabit = await Habit.findOne({ userID: authorID }).sort({
+              _id: -1,
+            });
+            if (recentHabit) {
+              const recentHabitId = recentHabit._id.toString();
+              const recentHabitIndex = habitArray.findIndex(
+                (habit) => habit._id.toString() === recentHabitId
+              );
+              if (recentHabitIndex === -1) return;
+              targetHabit = habitArray[recentHabitIndex];
+              targetHabitIndex = recentHabitIndex;
+            }
+          }
+        }
+
+        if (targetHabitIndex === undefined) {
+          targetHabit = await fn.getUserSelectedObject(
+            bot,
+            message,
+            PREFIX,
+            "__**Which habit would you like to log?**__",
+            `Habit${
+              isArchived ? " Archive" : ""
+            }: Select Habit To Log (${sortType})`,
+            habitArray,
+            "description",
+            false,
+            habitEmbedColour,
+            600000
+          );
+          if (!targetHabit) return;
+          else {
+            targetHabitIndex = targetHabit.index;
+            targetHabit = targetHabit.object;
+          }
         }
 
         const logTimestamp = await fn.getDateAndTimeEntry(
@@ -2727,8 +2768,12 @@ module.exports = {
           PREFIX,
           timezoneOffset,
           daylightSaving,
-          "**__When do you want to log this habit for?__**",
-          `Habit${isArchived ? " Archive" : ""}: Log Timestamp`,
+          `**__When do you want to log this habit for?__**\n\n**__Habit ${
+            targetHabitIndex + 1
+          } (${sortType}):__**\n${hb.habitDocumentDescription(targetHabit)}`,
+          `Habit ${targetHabitIndex + 1}${
+            isArchived ? " Archive" : ""
+          }: Log Timestamp`,
           false,
           habitEmbedColour,
           600000
@@ -3108,56 +3153,111 @@ module.exports = {
       habitCommand === "stat" ||
       habitCommand === "status"
     ) {
-      const userHabits = await Habit.find({
-        userID: authorID,
-        archived: false,
-      }).sort({ createdAt: +1 });
-      if (userHabits)
-        if (userHabits.length) {
-          var habitOutputArray = new Array();
-          var i = 0;
-          for (const habit of userHabits) {
-            i++;
-            habitOutputArray.push(
-              `__**Habit ${i}:**__ ` +
-                (await hb.habitDocumentToString(
-                  bot,
-                  habit,
-                  true,
-                  true,
-                  false,
-                  true
-                ))
+      var habitIndex;
+      let indexByRecency = false;
+      if (args[2 + archiveShift] !== undefined) {
+        if (args[2 + archiveShift].toLowerCase() === "recent") {
+          indexByRecency = true;
+        }
+      }
+      const sortType = indexByRecency ? "By Recency" : "By Date Created";
+
+      var userHabits;
+      if (indexByRecency)
+        userHabits = await Habit.find({
+          archived: isArchived,
+          userID: authorID,
+        }).sort({ _id: -1 });
+      else
+        userHabits = await Habit.find({
+          archived: isArchived,
+          userID: authorID,
+        }).sort({ createdAt: +1 });
+      if (!userHabits)
+        return message.reply(
+          `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
+        );
+      if (!userHabits.length)
+        return message.reply(
+          `**No ${
+            isArchived ? "archived " : ""
+          }habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`
+        );
+
+      // If the user enters "recent" or a number, only show information for that one specific habit, otherwise show stats for all habits!
+      if (habitType) {
+        const isNumberArg = !isNaN(args[1 + archiveShift]);
+        if (habitType === "recent") {
+          const recentHabit = await Habit.findOne({ userID: authorID }).sort({
+            _id: -1,
+          });
+          if (recentHabit) {
+            const recentHabitId = recentHabit._id.toString();
+            const recentHabitIndex = userHabits.findIndex(
+              (habit) => habit._id.toString() === recentHabitId
             );
+            if (recentHabitIndex === -1) return;
+            userHabits = [userHabits[recentHabitIndex]];
+            habitIndex = recentHabitIndex;
           }
-          if (habitOutputArray.length) {
-            const currentTimestamp = Date.now() + timezoneOffset * HOUR_IN_MS;
-            await fn.sendPaginationEmbed(
-              bot,
-              message.channel.id,
-              authorID,
-              fn.getEmbedArray(
-                habitOutputArray,
-                `Habits: Stats`,
-                true,
-                `Habits ${fn.timestampToDateString(
-                  currentTimestamp,
-                  false,
-                  false,
-                  true,
-                  true
-                )}`,
-                habitEmbedColour
-              ),
-              true
+        } else if (isNumberArg) {
+          habitIndex = parseInt(args[1 + archiveShift]);
+          if (habitIndex <= 0 || habitIndex > userHabits.length) {
+            return fn.sendErrorMessageAndUsage(
+              message,
+              habitActionHelpMessage,
+              `**${
+                isArchived ? "Archived " : ""
+              }Habit ${habitIndex} does not exist **...`
             );
-            return;
+          } else {
+            habitIndex--;
+            userHabits = [userHabits[habitIndex]];
           }
         }
-      message.reply(
-        `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
-      );
-      return;
+      }
+
+      var habitOutputArray = new Array();
+      var i = habitIndex || 0;
+      for (const habit of userHabits) {
+        i++;
+        habitOutputArray.push(
+          `__**Habit ${i}:**__ ` +
+            (await hb.habitDocumentToString(
+              bot,
+              habit,
+              true,
+              true,
+              false,
+              true
+            ))
+        );
+      }
+      if (habitOutputArray.length) {
+        const currentTimestamp = Date.now() + timezoneOffset * HOUR_IN_MS;
+        await fn.sendPaginationEmbed(
+          bot,
+          message.channel.id,
+          authorID,
+          fn.getEmbedArray(
+            habitOutputArray,
+            habitOutputArray.length === 1
+              ? `Habit ${i}: Stats (${sortType})`
+              : `Habits: Stats (${sortType})`,
+            true,
+            `Habits ${fn.timestampToDateString(
+              currentTimestamp,
+              false,
+              false,
+              true,
+              true
+            )}`,
+            habitEmbedColour
+          ),
+          true
+        );
+        return;
+      }
     }
 
     // Get the stats for the Past X Days
@@ -3241,8 +3341,8 @@ module.exports = {
         return message.channel.send(habitReminderUsageMessage);
 
       var indexByRecency = false;
-      if (args[1 + archiveShift] !== undefined) {
-        if (args[1 + archiveShift].toLowerCase() === "recent") {
+      if (args[2 + archiveShift] !== undefined) {
+        if (args[2 + archiveShift].toLowerCase() === "recent") {
           indexByRecency = true;
         }
       }
