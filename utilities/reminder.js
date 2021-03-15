@@ -697,7 +697,8 @@ module.exports = {
           await this.updateUserReminders(
             bot,
             user.discordID,
-            timezoneDifference
+            //* * -1 because if the timezone is earlier, the reminder should be earlier => a soon start/end time => subtrack from the start/end times
+            timezoneDifference * -1
           );
         }
       }
@@ -708,9 +709,6 @@ module.exports = {
     } else return false;
   },
 
-  /**
-   * hourChange <=> timezoneDifference
-   */
   updateUserReminders: async function (
     bot,
     userID,

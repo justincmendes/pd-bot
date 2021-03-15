@@ -84,10 +84,20 @@ bot.on("ready", async () => {
   await rm.resetReminders(bot);
   await hb.resetAllHabitCrons();
 
-  //* For adjusting EST user's from EST to EDT! (Should not need to be used, will happen automatically now)
-  // const estUsers = await User.find({ "timezone.name": "EST" });
+  // For adjusting EST user's from EST to EDT! (Should not need to be used, will happen automatically now)
+  // const estUsers = await User.find({
+  //   discordID: {
+  //     $nin: [
+  //       "208829852583723008",
+  //       "208829852583723008",
+  //       "635266254109802508",
+  //       "633117006874542110",
+  //     ],
+  //   },
+  //   "timezone.name": "EST",
+  // });
   // for (const estUser of estUsers) {
-  //   await rm.updateUserReminders(bot, estUser.discordID, +1, true, true);
+  //    await rm.updateUserReminders(bot, estUser.discordID, -1, true, true);
   // }
 
   //* For Testing

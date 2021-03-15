@@ -1695,7 +1695,8 @@ module.exports = {
             await rm.updateUserReminders(
               bot,
               authorID,
-              timezoneDifference,
+              //* * -1 because if the timezone is earlier, the reminder should be earlier => a soon start/end time => subtrack from the start/end times 
+              timezoneDifference * -1,
               updateDmReminders,
               updateGuildReminders
             );
