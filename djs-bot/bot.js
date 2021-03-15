@@ -2,10 +2,8 @@
  * @author Justin Mendes
  * @license MIT
  * Date Created: July 18, 2020
- * Last Updated: September 1, 2020
+ * Last Updated: March 03, 2020
  */
-
-// TO-DO ALIASES ON COMMANDS!
 
 // To keep the sensitive information in a separate folder
 // and allow for environment variables when hosting
@@ -82,9 +80,15 @@ bot.on("ready", async () => {
   await fn.resetAllVoiceChannelTracking(bot);
 
   await fn.updateAllUsers(bot);
-  await fn.rescheduleAllDST();
+  await rm.rescheduleAllDST(bot);
   await rm.resetReminders(bot);
   await hb.resetAllHabitCrons();
+
+  //* For adjusting EST user's from EST to EDT! (Should not need to be used, will happen automatically now)
+  // const estUsers = await User.find({ "timezone.name": "EST" });
+  // for (const estUser of estUsers) {
+  //   await rm.updateUserReminders(bot, estUser.discordID, +1, true, true);
+  // }
 
   //* For Testing
   // let logs = [
@@ -477,7 +481,7 @@ bot.on("message", async (message) => {
         type: "WATCHING",
       });
     } else {
-      // TODO - Future: Try a mixture of an event listener + a initial check on start-up to save resources on checking whether a user has changed their credentials each time! ✅
+      // TODO - Future: Try a mixture of an event listener + a initial check on start-up to save resources on checking whether a user has changed their credentials each time! ✅ (DONE!)
       // const guildMap = userSettings.guilds.map(guild => guild.id);
       // const thisGuildIncluded = guildMap.includes(message.guild.id);
       // let updateQuery = {
@@ -488,7 +492,7 @@ bot.on("message", async (message) => {
       // console.log({ update });
       // userSettings = update;
       timezoneOffset = userSettings.timezone.offset;
-      daylightSavingSetting = userSettings.daylightSaving;
+      daylightSavingSetting = userSettings.timezone.daylightSaving;
     }
 
     // Help: If command requires args send help message
