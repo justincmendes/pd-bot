@@ -107,7 +107,9 @@ module.exports = {
     const settingCommand = args[0] ? args[0].toLowerCase() : false;
     let settingUsageMessage =
       `**USAGE**\n\`${PREFIX}${commandUsed}\` - **(to see your settings)**\n\`${PREFIX}${commandUsed} <ACTION> <force?>\`` +
-      `\n\n\`<ACTION>\`: **edit/change**\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join("; ")}**`;
+      `\n\n\`<ACTION>\`: **edit/change**\n\n*__ALIASES:__* **${
+        this.name
+      } - ${this.aliases.join("; ")}**`;
     settingUsageMessage = fn.getMessageEmbed(
       settingUsageMessage,
       "User Settings: Help",
@@ -246,7 +248,9 @@ module.exports = {
             );
             break;
           case 2:
-            userSettingsPrompt = `Enter the **time of day** (i.e. 1a, 3:30AM, etc.) you would like your **habits to reset daily:**`;
+            userSettingsPrompt = `Enter the **__time of day__** (i.e. 1a, 3:30AM, etc.) you would like your **habits to reset daily.**\n\n**__Currently:__** ${fn.msToTimeFromMidnight(
+              userSettings.habitCron.daily
+            )}`;
             userEdit = await fn.getUserEditString(
               bot,
               message,
@@ -259,7 +263,9 @@ module.exports = {
             );
             break;
           case 3:
-            userSettingsPrompt = `Enter the number corresponding to the __**day of the week**__ when you would like your **weekly habits counter to reset:**`;
+            userSettingsPrompt = `Enter the number corresponding to the __**day of the week**__ when you would like your **weekly habits counter to reset.**\n\n**__Currently:__** ${fn.getDayOfWeekToString(
+              userSettings.habitCron.weekly
+            )}`;
             userEdit = await fn.getUserEditNumber(
               bot,
               message,
@@ -484,8 +490,7 @@ module.exports = {
 
           case 5:
             if (userSettings.getQuote) {
-              userSettingsPrompt =
-                `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}\n\nType \`skip\` to **start it now**`;
+              userSettingsPrompt = `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}\n\nType \`skip\` to **start it now**`;
               userEdit = await fn.getUserEditString(
                 bot,
                 message,
@@ -537,7 +542,11 @@ module.exports = {
             case 0:
               {
                 updatedTimezoneOffset = fn.getTimezoneOffset(userEdit);
-                console.log({ updatedTimezoneOffset });
+                console.log({
+                  updatedTimezoneOffset,
+                  updatedDaylightSaving,
+                  daylightSaving,
+                });
                 if (updatedTimezoneOffset || updatedTimezoneOffset === 0) {
                   updatedTimezone = userEdit;
                   if (updatedDaylightSaving) {
@@ -601,198 +610,171 @@ module.exports = {
                 if (!ensureTime) {
                   fn.sendReplyThenDelete(message, errorMessage, 30000);
                   continueEdit = true;
-                } else {
-                  const startTimestamp = new Date(Date.now());
-                  let endTime = fn.timeCommandHandlerToUTC(
-                    timeArgs[0] !== "today"
-                      ? ["today"].concat(timeArgs)
-                      : timeArgs,
-                    startTimestamp.getTime(),
-                    timezoneOffset,
-                    daylightSaving
-                  );
-                  if (!endTime) {
-                    fn.sendReplyThenDelete(message, errorMessage, 30000);
-                    continueEdit = true;
-                  } else {
-                    const todayMidnight = new Date(
-                      startTimestamp.getUTCFullYear(),
-                      startTimestamp.getUTCMonth(),
-                      startTimestamp.getUTCDate()
-                    ).setUTCHours(0);
-                    // Should not need to modulus the difference, but in case
-                    // the logic above fails..
-                    const DAY_IN_MS = fn.getTimeScaleToMultiplyInMs("day");
-                    var timeAfterMidnight =
-                      endTime - todayMidnight < 0
-                        ? userSettings.habitCron.daily
-                        : (endTime - todayMidnight) % DAY_IN_MS;
-                    console.log({ endTime, startTimestamp, todayMidnight });
-                    console.log({ timeAfterMidnight });
-                    const oldDailyCron = userSettings.habitCron.daily;
-                    // Prompt user if they want to adapt their logs to this new timestamp (i.e. bring the later logs back into the next day)
-                    // If yes, bring the logs which are between midnight and the old cron time, and move them backwards
-                    // Otherwise, if the new cron time is later, find all of the entries between the old cron time and the new cron time
-                    // and bring the cron times in the other section backwards
-                    if (oldDailyCron !== timeAfterMidnight) {
-                      userSettings = await User.findOneAndUpdate(
-                        { discordID: authorID },
-                        { $set: { "habitCron.daily": timeAfterMidnight } },
-                        { new: true }
-                      );
-                      const habits = await Habit.find({ userID: authorID });
-                      if (habits)
-                        if (habits.length) {
-                          const newCronIsAfterOldCron =
-                            oldDailyCron < timeAfterMidnight;
-                          if (
-                            (!newCronIsAfterOldCron && oldDailyCron >= 1000) ||
-                            newCronIsAfterOldCron
-                          ) {
-                            let confirmationMessage =
-                              "**Would you like to adjust your habit logs to fall within the __same day as they previously were?__**";
-                            if (newCronIsAfterOldCron) {
-                              confirmationMessage += `\n\ne.g. If you had a habit entry on **Monday** between **${fn.msToTimeFromMidnight(
-                                oldDailyCron
-                              )} and ${fn.msToTimeFromMidnight(
-                                timeAfterMidnight
-                              )}**, it should still correspond to **Monday, instead of Sunday** - since the entry would now be *before the new reset time (${fn.msToTimeFromMidnight(
-                                timeAfterMidnight
-                              )}) for Sunday*`;
-                            } else if (
-                              !newCronIsAfterOldCron &&
-                              oldDailyCron >= 1000
-                            ) {
-                              confirmationMessage += `\n\ne.g. If you had a habit entry on **Monday** between **${fn.msToTimeFromMidnight(
-                                timeAfterMidnight
-                              )} and ${fn.msToTimeFromMidnight(
-                                oldDailyCron
-                              )}**, it should still correspond to **Sunday, instead of Monday** - since the entry would now be *after the new reset time (${fn.msToTimeFromMidnight(
-                                timeAfterMidnight
-                              )}) for Sunday*`;
-                            } else break;
-                            const confirmAdjust = await fn.getUserConfirmation(
-                              bot,
-                              message,
-                              PREFIX,
-                              confirmationMessage,
-                              false,
-                              `${type}: Adjust Previous Habit Times`,
-                              600000
-                            );
-                            // If it's null, the user did not type anything automatically adjust
-                            if (confirmAdjust || confirmAdjust === null) {
-                              const habitIDs = habits
-                                .map((habit) => habit._id)
-                                .filter((habitID) => habitID !== undefined);
-                              const logs = await Log.find(
-                                { connectedDocument: { $in: habitIDs } },
-                                { timestamp: 1 }
-                              );
-                              if (logs)
-                                if (logs.length) {
-                                  logs.forEach(async (log) => {
-                                    if (log.timestamp) {
-                                      var needsUpdate = false;
-                                      let { timestamp } = log;
-                                      const timestampsTimePastMidnight = fn.getTimePastMidnightInMs(
-                                        timestamp
-                                      );
-                                      console.log(
-                                        `Timestamp: ${fn.timestampToDateString(
-                                          timestamp
-                                        )}`
-                                      );
-                                      const date = new Date(timestamp);
-                                      const year = date.getUTCFullYear();
-                                      const month = date.getUTCMonth();
-                                      const day = date.getUTCDate();
-                                      if (newCronIsAfterOldCron) {
-                                        if (
-                                          timestampsTimePastMidnight >=
-                                            oldDailyCron &&
-                                          timestampsTimePastMidnight <
-                                            timeAfterMidnight
-                                        ) {
-                                          timestamp =
-                                            new Date(
-                                              year,
-                                              month,
-                                              day
-                                            ).getTime() + timeAfterMidnight;
-                                          console.log(
-                                            `New Timestamp: ${fn.timestampToDateString(
-                                              timestamp
-                                            )}`
-                                          );
-                                          needsUpdate = true;
-                                        }
-                                      } else {
-                                        if (
-                                          timestampsTimePastMidnight >=
-                                            timeAfterMidnight &&
-                                          timestampsTimePastMidnight <
-                                            oldDailyCron
-                                        ) {
-                                          // One second before, because on or over the cron time corresponds to the next day
-                                          timestamp =
-                                            new Date(
-                                              year,
-                                              month,
-                                              day
-                                            ).getTime() +
-                                            timeAfterMidnight -
-                                            1000;
-                                          console.log(
-                                            `New Timestamp: ${fn.timestampToDateString(
-                                              timestamp
-                                            )}`
-                                          );
-                                          needsUpdate = true;
-                                        }
-                                      }
-                                      if (needsUpdate) {
-                                        console.log("UPDATING TIMESTAMP!\n");
-                                        const { connectedDocument } = log;
-                                        await Log.updateOne(
-                                          { connectedDocument },
-                                          { $set: { timestamp } }
-                                        );
-                                      }
-                                    }
-                                  });
-                                }
-                            } else if (confirmAdjust === false) {
-                              let {
-                                habitCron: updatedHabitCron,
-                              } = userSettings;
-                              if (habits)
-                                if (habits.length) {
-                                  habits.forEach(async (habit) => {
-                                    if (habit) {
-                                      const updatedHabit = await hb.updateHabit(
-                                        habit,
-                                        timezoneOffset,
-                                        updatedHabitCron
-                                      );
-                                      hb.cancelHabitById(habit._id);
-                                      await hb.habitCron(
-                                        updatedHabit,
-                                        timezoneOffset,
-                                        updatedHabitCron
-                                      );
-                                    }
-                                  });
-                                }
-                            }
-                          }
-                        }
-                    }
-                    // WITH Time collection
-                    // Allow bot to make a new locked channel which will show the time based on the user settings - (ticking every 5 secs) then
-                    // upon start up deletes all remaining timer channels if any - 3 per server/guild! (Allows for pomodoro!)
-                  }
+                  break;
                 }
+                const startTimestamp = new Date(Date.now());
+                let endTime = fn.timeCommandHandlerToUTC(
+                  timeArgs[0] !== "today"
+                    ? ["today"].concat(timeArgs)
+                    : timeArgs,
+                  startTimestamp.getTime(),
+                  timezoneOffset,
+                  daylightSaving
+                );
+                if (!endTime) {
+                  fn.sendReplyThenDelete(message, errorMessage, 30000);
+                  continueEdit = true;
+                  break;
+                }
+                const todayMidnight = new Date(
+                  startTimestamp.getUTCFullYear(),
+                  startTimestamp.getUTCMonth(),
+                  startTimestamp.getUTCDate(),
+                  0
+                ).getTime();
+                // Should not need to modulus the difference, but in case the logic above fails..
+                const DAY_IN_MS = fn.getTimeScaleToMultiplyInMs("day");
+                const newDailyCron =
+                  endTime - todayMidnight < 0
+                    ? userSettings.habitCron.daily
+                    : (endTime - todayMidnight) % DAY_IN_MS;
+                console.log({ endTime, startTimestamp, todayMidnight });
+                console.log({ newDailyCron });
+                const oldDailyCron = userSettings.habitCron.daily;
+                //* Adjust their habit logs accordingly so that they fall under the same habit reset day!
+                //! Prompt user if they want to adapt their logs to this new timestamp (i.e. bring the later logs back into the next day)
+                //! Case I: If yes, bring the logs which are between midnight and the old cron time, and move them backwards
+                //! Case II: Otherwise, if the new cron time is later, find all of the entries between the old cron time and the new cron time and bring the cron times in the other section backwards
+                //? Case I: i.e. if a habit log corresponds to Sunday (Monday at 3AM, Old Cron Time: 4AM), and it is now after the new cron time (Monday at 3AM, NEW Cron Time: 2AM) (i.e. it now corresponds to Monday), move that log timestamp 1000ms before to the new cron time (Monday at 1:59AM, NEW Cron Time: 2AM), so that it remain as the log for Sunday.
+                //? Case II: i.e. if a habit log corresponds to Monday (Monday at 5AM, Old Cron Time: 4AM), and it is now before the new cron time (Monday at 5AM, NEW Cron Time: 6AM) (i.e. it now corresponds to Sunday), move that log timestamp to the new cron time (Monday at 6AM, NEW Cron Time: 6AM), so that it remains as the log for Monday.
+                if (oldDailyCron === newDailyCron) break;
+                userSettings = await User.findOneAndUpdate(
+                  { discordID: authorID },
+                  { $set: { "habitCron.daily": newDailyCron } },
+                  { new: true }
+                );
+                const habits = await Habit.find({ userID: authorID });
+                if (!habits) break;
+                if (!habits.length) break;
+                const newCronIsAfterOldCron = oldDailyCron < newDailyCron;
+                // The case where the oldDailyCron is 0 (i.e. 12AM) and the new cron is before the old cron should have already been dealt with, with: if (oldDailyCron === newDailyCron) break;. But if not, it will here.
+                if (
+                  (!newCronIsAfterOldCron && oldDailyCron >= 1000) ||
+                  newCronIsAfterOldCron
+                ) {
+                  let confirmationMessage =
+                    "**Would you like to adjust your habit logs to fall on the __same day as they previously were?__**";
+                  if (newCronIsAfterOldCron) {
+                    confirmationMessage += `\n\ne.g. If you had a habit log that corresponds to **Monday** (Monday at 5AM, Old Cron Time: 4AM), and the new cron time makes the log correspond to **Sunday** (Monday at 5AM, NEW Cron Time: 6AM), the habit log will be moved (forward) to the new cron time (Monday at 6AM, NEW Cron Time: 6AM), so that it is **still a log for Monday**`;
+                  } else if (!newCronIsAfterOldCron && oldDailyCron >= 1000) {
+                    confirmationMessage += `\n\ne.g. If you had a habit log that corresponds to **Sunday** (Monday at 3AM, Old Cron Time: 4AM), and the new cron time makes the log correspond to **Monday** (Monday at 3AM, NEW Cron Time: 2AM), the habit log will be moved (backward) to 1 second before the new cron time (Monday at 1:59AM, NEW Cron Time: 2AM), so that it is **still a log for Sunday**`;
+                  } else break;
+                  confirmationMessage += `\n\nRecommendation: \`Yes\``;
+                  //* I set forceSkip to true, to force this shift to happen. Otherwise there will be more conflicts that the user will have trouble fixing in the future.
+                  const confirmAdjust = await fn.getUserConfirmation(
+                    bot,
+                    message,
+                    PREFIX,
+                    confirmationMessage,
+                    true,
+                    `${type}: Adjust Previous Habit Times`,
+                    600000
+                  );
+                  // If it's null, the user did not type anything automatically adjust
+                  if (!confirmAdjust && confirmAdjust !== null) break;
+                  // else if (confirmAdjust === false) {
+                  //   let {
+                  //     habitCron: updatedHabitCron,
+                  //   } = userSettings;
+                  //   habits.forEach(async (habit) => {
+                  //     if (habit) {
+                  //       const updatedHabit = await hb.updateHabit(
+                  //         habit,
+                  //         timezoneOffset,
+                  //         updatedHabitCron
+                  //       );
+                  //       hb.cancelHabitById(habit._id);
+                  //       await hb.habitCron(
+                  //         updatedHabit,
+                  //         timezoneOffset,
+                  //         updatedHabitCron
+                  //       );
+                  //     }
+                  //   });
+                  // }
+                  const habitIDs = habits
+                    .map((habit) => habit._id)
+                    .filter((habitID) => habitID !== undefined);
+                  const logs = await Log.find(
+                    { connectedDocument: { $in: habitIDs } },
+                    { timestamp: 1 }
+                  );
+                  if (!logs) break;
+                  if (!logs.length) break;
+
+                  logs.forEach(async (log) => {
+                    if (log.timestamp) {
+                      var needsUpdate = false;
+                      let { timestamp } = log;
+                      const timestampsTimePastMidnight = fn.getTimePastMidnightInMs(
+                        timestamp
+                      );
+                      console.log(
+                        `Timestamp: ${fn.timestampToDateString(timestamp)}`
+                      );
+                      const date = new Date(timestamp);
+                      const year = date.getUTCFullYear();
+                      const month = date.getUTCMonth();
+                      const day = date.getUTCDate();
+                      if (newCronIsAfterOldCron) {
+                        if (
+                          timestampsTimePastMidnight >= oldDailyCron &&
+                          timestampsTimePastMidnight < newDailyCron
+                        ) {
+                          timestamp =
+                            new Date(year, month, day).getTime() + newDailyCron;
+                          console.log(
+                            `New Timestamp: ${fn.timestampToDateString(
+                              timestamp
+                            )}`
+                          );
+                          needsUpdate = true;
+                        }
+                      } else {
+                        if (
+                          timestampsTimePastMidnight >= newDailyCron &&
+                          timestampsTimePastMidnight < oldDailyCron
+                        ) {
+                          // One second before, because on or over the cron time corresponds to the next day
+                          timestamp =
+                            new Date(year, month, day).getTime() +
+                            newDailyCron -
+                            1000;
+                          console.log(
+                            `New Timestamp: ${fn.timestampToDateString(
+                              timestamp
+                            )}`
+                          );
+                          needsUpdate = true;
+                        }
+                      }
+                      if (needsUpdate) {
+                        console.log(
+                          `Updating Timestamp at ${fn.msToTimeFromMidnight(
+                            timestampsTimePastMidnight
+                          )}!\n`
+                        );
+                        await Log.updateOne(
+                          { _id: log._id },
+                          { $set: { timestamp } }
+                        );
+                      }
+                    }
+                  });
+                }
+                // WITH Time collection
+                // Allow bot to make a new locked channel which will show the time based on the user settings - (ticking every 5 secs) then
+                // upon start up deletes all remaining timer channels if any - 3 per server/guild! (Allows for pomodoro!)
               }
               break;
             case 3:
@@ -882,8 +864,7 @@ module.exports = {
                         continueEdit = true;
                       } else {
                         interval = intervalInput;
-                        userSettingsPrompt =
-                          `\n__**When do you intend to start the first quote?**__ ⌚\n${futureTimeExamples}\n\nType \`skip\` to **start it now**`;
+                        userSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚\n${futureTimeExamples}\n\nType \`skip\` to **start it now**`;
                         let quoteTrigger = await fn.getUserEditString(
                           bot,
                           message,
@@ -1047,8 +1028,8 @@ module.exports = {
                       if (userSettings.voiceChannels.length >= 2 * tier) {
                         message.reply(
                           `**You cannot track another voice channel because you don't have any more spots!**\n(**__Tier:__ ${tier}** = ${
-                              2 * tier
-                            } voice channels allowed in total)`
+                            2 * tier
+                          } voice channels allowed in total)`
                         );
                         continueEdit = true;
                         break;
@@ -1673,85 +1654,52 @@ module.exports = {
               break;
           }
         } else continueEdit = true;
-        if (fieldToEditIndex === 0 || fieldToEditIndex === 1) {
+        const isTimezoneChange =
+          fieldToEditIndex === 0 || fieldToEditIndex === 1;
+        const isHabitResetTimeChange =
+          fieldToEditIndex === 2 || fieldToEditIndex === 3;
+        if (isTimezoneChange) {
           const timezoneDifference = updatedTimezoneOffset - timezoneOffset;
-          let reminderQuery = {
-            userID: authorID,
-          };
+          let updateDmReminders = true,
+            updateGuildReminders = true;
           const confirmUpdateReminders = await fn.userSelectFromList(
             bot,
             message,
             PREFIX,
-            "\`1\` - Adjust **ALL** of your reminders\n\`2\` - Adjust only your **DM** reminders\n\`3\` - Adjust only your **server** reminders\n\`4\` - NONE",
+            "`1` - Adjust **ALL** of your reminders\n`2` - Adjust only your **DM** reminders\n`3` - Adjust only your **server** reminders\n`4` - NONE",
             4,
-            `**__Would you like to adjust your reminders to this new timezone?__**\n- From **${originalTimezone}, ${fn.hoursToUTCOffset(
-                timezoneOffset
-              )} - ${
-                daylightSaving ? "NO DST" : "considering DST"
-              }** -to- **${updatedTimezone}, ${fn.hoursToUTCOffset(
-                updatedTimezoneOffset
-              )} - ${updatedDaylightSaving ? "NO DST" : "considering DST"}**\n(Type \`4\` to leave your reminders adjusted to your old timezone)\n(Your habit reset time, if any, will automatically be adapted regardless of your choice here)`,
+            `**Would you like to adjust your reminders to this new timezone?**\n\n**__Previous:__** **${originalTimezone}, ${fn.hoursToUTCOffset(
+              timezoneOffset
+            )}** ${
+              daylightSaving ? "considering DST" : "NO DST"
+            }\n**__New:__** **${updatedTimezone}, ${fn.hoursToUTCOffset(
+              updatedTimezoneOffset
+            )}** ${
+              updatedDaylightSaving ? "considering DST" : "NO DST"
+            }\n\n(Type \`4\` to leave your reminders adjusted to your old timezone)\n\n*Your habit reset time, if any, will automatically be adapted regardless of your choice here*\n`,
             `${showUserSettings.title}: Reminder Adjustment Confirmation`,
             userEmbedColour
           );
           if (!confirmUpdateReminders && confirmUpdateReminders !== 0) break;
           switch (confirmUpdateReminders) {
             case 1:
-              reminderQuery.isDM = true;
+              updateDmReminders = true;
+              updateGuildReminders = false;
               break;
             case 2:
-              reminderQuery.isDM = false;
+              updateDmReminders = false;
+              updateGuildReminders = true;
               break;
           }
           if (confirmUpdateReminders !== 3) {
-            let userReminders = await Reminder.find(reminderQuery);
-            if (userReminders)
-              if (userReminders.length) {
-                userReminders.forEach(async (reminder) => {
-                  let { startTime, endTime } = reminder;
-                  startTime += timezoneDifference * HOUR_IN_MS;
-                  endTime += timezoneDifference * HOUR_IN_MS;
-                  reminder = await Reminder.updateOne(
-                    { _id: reminder._id },
-                    {
-                      $set: {
-                        startTime,
-                        endTime,
-                      },
-                    }
-                  );
-                  rm.cancelReminderById(reminder._id);
-                  await rm.sendReminderByObject(bot, reminder);
-                });
-              }
+            await rm.updateUserReminders(
+              bot,
+              authorID,
+              timezoneDifference,
+              updateDmReminders,
+              updateGuildReminders
+            );
           }
-          let userHabits = await Habit.find({ userID: authorID });
-          if (userHabits)
-            if (userHabits.length) {
-              userHabits.forEach(async (habit) => {
-                let { nextCron, settings } = habit;
-                const { isWeeklyType, cronPeriods } = settings;
-                nextCron = hb.getNextCronTimeUTC(
-                  updatedTimezoneOffset,
-                  habitCron,
-                  isWeeklyType,
-                  cronPeriods
-                );
-                await Habit.updateOne(
-                  { _id: habit._id },
-                  {
-                    $set: {
-                      nextCron,
-                    },
-                  }
-                );
-              });
-              userHabits.forEach(async (habit) => {
-                hb.cancelHabitById(habit._id);
-              });
-              await hb.habitCronUser(authorID);
-            }
-
           timezoneOffset = updatedTimezoneOffset;
           daylightSaving = updatedDaylightSaving;
           userSettings = await User.findOneAndUpdate(
@@ -1768,37 +1716,10 @@ module.exports = {
             { new: true }
           );
           console.log({ userSettings });
-        } else if (fieldToEditIndex === 2 || fieldToEditIndex === 3) {
-          let userHabits = await Habit.find({ userID: authorID });
-          if (userHabits)
-            if (userHabits.length) {
-              userHabits.forEach(async (habit) => {
-                let { nextCron, settings } = habit;
-                let { isWeeklyType, cronPeriods } = settings;
-                const now = Date.now();
-                do {
-                  nextCron = await hb.getNextCronTimeUTC(
-                    timezoneOffset,
-                    habitCron,
-                    isWeeklyType,
-                    cronPeriods,
-                    nextCron
-                  );
-                } while (nextCron < now);
-                await Habit.updateOne(
-                  { _id: habit._id },
-                  {
-                    $set: {
-                      nextCron,
-                    },
-                  }
-                );
-              });
-              userHabits.forEach(async (habit) => {
-                hb.cancelHabitById(habit._id);
-              });
-              await hb.habitCronUser(authorID);
-            }
+        }
+        if (isTimezoneChange || isHabitResetTimeChange) {
+          //* Update the user's habit reset times, if any!
+          await hb.updateUserHabitCrons(authorID, timezoneOffset, userSettings);
         }
         if (!continueEdit) {
           if (

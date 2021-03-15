@@ -549,6 +549,225 @@ module.exports = {
     return success;
   },
 
+  // Create another function called schedule all dst
+  // Then make this a scheduler for a single DST given the dstSettings object
+  rescheduleAllDST: async function (bot) {
+    // Start by getting all of the users to get the time until their DST time
+    // Set a unique offset for each (make the loop outside)
+    let dstSettings = await Dst.find({});
+    if (!dstSettings.length) {
+      dstSettings = new Array();
+      const dstTimezones = fn.daylightSavingTimezones;
+      dstTimezones.forEach(async (timezone) => {
+        const currentOffset = fn.getTimezoneOffset(timezone);
+        const newSettings = new Dst({
+          _id: mongoose.Types.ObjectId(),
+          isDST: fn.isDaylightSavingTime(
+            Date.now() + HOUR_IN_MS * currentOffset,
+            timezone,
+            true
+          ),
+          timezone: timezone.toLowerCase(),
+        });
+        dstSettings.push(newSettings);
+        await newSettings
+          .save()
+          .then((result) => console.log(result))
+          .catch((err) => console.error(err));
+      });
+    }
+    dstSettings.forEach(async (dstSettings) => {
+      await this.scheduleOneDST(bot, dstSettings);
+    });
+    return;
+  },
+
+  scheduleOneDST: async function (bot, dstSetting) {
+    let { isDST, timezone } = dstSetting;
+    let timezoneOffset =
+      fn.getTimezoneOffset(timezone) +
+      (isDST ? fn.getTimezoneDaylightOffset(timezone) : 0);
+    let dstEndingYearOffset = 0;
+    let now = Date.now() + timezoneOffset * HOUR_IN_MS;
+    if (fn.isSouthernHemisphereDSTTimezone(timezone)) {
+      dstEndingYearOffset = new Date(now).getUTCMonth() < 6 ? 1 : 0;
+    }
+    let daylightSavingTimeArray = fn.getDSTStartAndEndTimeUTC(now, timezone);
+    if (!daylightSavingTimeArray) return false;
+    let [
+      daylightStartTimestamp,
+      daylightEndTimestamp,
+    ] = daylightSavingTimeArray;
+
+    // To handle the case when the client is down for an extended period of time
+
+    // Mostly for Southern Hemisphere timezones: If it's past DST for this year
+    // Then it is not DST and the next start time is in the next year
+    if (now >= daylightEndTimestamp) {
+      isDST = false;
+      const currentYear = new Date(now);
+      const nextYear = new Date(
+        currentYear.getUTCFullYear() - dstEndingYearOffset + 1,
+        currentYear.getUTCMonth(),
+        currentYear.getUTCDate(),
+        currentYear.getUTCHours(),
+        currentYear.getUTCMinutes(),
+        currentYear.getUTCSeconds(),
+        currentYear.getUTCMilliseconds()
+      );
+      daylightSavingTimeArray = fn.getDSTStartAndEndTimeUTC(
+        nextYear.getTime(),
+        timezone
+      ); // Get start time for next year
+      if (!daylightSavingTimeArray) return false;
+      [daylightStartTimestamp, daylightEndTimestamp] = daylightSavingTimeArray;
+    } else if (now >= daylightStartTimestamp && now < daylightEndTimestamp) {
+      isDST = true;
+    }
+
+    // Then update the dst object and reset the scheduling process
+    timezoneOffset =
+      fn.getTimezoneOffset(timezone) +
+      (isDST ? fn.getTimezoneDaylightOffset(timezone) : 0);
+    now = Date.now() + timezoneOffset * HOUR_IN_MS;
+    let timeToDST = isDST
+      ? daylightEndTimestamp - now
+      : daylightStartTimestamp - now;
+    console.log({
+      timezone,
+      isDST,
+      daylightStartTimestamp,
+      daylightEndTimestamp,
+    });
+    // console.log(new Date(daylightStartTimestamp));
+    // console.log(new Date(daylightEndTimestamp));
+    console.log(
+      `DST Start: ${fn.timestampToDateString(
+        daylightStartTimestamp + HOUR_IN_MS * timezoneOffset
+      )}`
+    );
+    console.log(
+      `DST End: ${fn.timestampToDateString(
+        daylightEndTimestamp + HOUR_IN_MS * timezoneOffset
+      )}`
+    );
+    console.log(`Now: ${fn.timestampToDateString(now)}`);
+    console.log(
+      `Time to DST switch: ${fn.millisecondsToTimeString(timeToDST)}`
+    );
+    await Dst.updateOne({ timezone }, { $set: { isDST } });
+
+    await this.updateDstOffset(bot, isDST, timezone);
+    fn.setLongTimeout(async () => {
+      dstSetting = await Dst.findOne({ timezone });
+      await this.scheduleOneDST(bot, dstSetting);
+      return;
+    }, timeToDST);
+    return;
+  },
+
+  updateDstOffset: async function (bot, isDST, timezone) {
+    if (timezone) timezone = timezone.toUpperCase();
+    else return false;
+    const query = {
+      "timezone.name": timezone,
+      "timezone.daylightSaving": true,
+    };
+    const projection = { "timezone.offset": 1 };
+    const allDSTGuilds = await Guild.find(query, projection);
+    const allDSTUsers = await User.find(query, projection);
+    if (allDSTUsers.length || allDSTGuilds.length) {
+      let { offset } = allDSTUsers[0]
+        ? allDSTUsers[0].timezone.offset
+        : allDSTGuilds[0]
+        ? allDSTGuilds[0].timezone.offset
+        : false;
+      if (!offset && offset !== 0) return false;
+      let initialOffset = fn.getTimezoneOffset(timezone);
+      console.log({ timezone, initialOffset, isDST });
+      offset = isDST
+        ? isNaN(timezone)
+          ? initialOffset + fn.getTimezoneDaylightOffset(timezone)
+          : initialOffset++
+        : initialOffset;
+      const timezoneDifference = offset - initialOffset;
+      console.log({ offset, timezoneDifference });
+      if (allDSTUsers.length) {
+        for (const user of allDSTUsers) {
+          await this.updateUserReminders(
+            bot,
+            user.discordID,
+            timezoneDifference
+          );
+        }
+      }
+      await Dst.updateOne({ timezone }, { $set: { isDST } });
+      await User.updateMany(query, { $set: { "timezone.offset": offset } });
+      await Guild.updateMany(query, { $set: { "timezone.offset": offset } });
+      return true;
+    } else return false;
+  },
+
+  /**
+   * hourChange <=> timezoneDifference
+   */
+  updateUserReminders: async function (
+    bot,
+    userID,
+    hourChange,
+    changeDmReminders = true,
+    changeGuildReminder = true
+  ) {
+    try {
+      const userSettings = await User.findOne({ discordID: userID });
+      if (userSettings) {
+        const userReminders = await Reminder.find({ userID });
+        if (userReminders) {
+          if (userReminders.length) {
+            for (const reminder of userReminders) {
+              if (
+                (reminder.isDM && changeDmReminders) ||
+                (!reminder.isDM && changeGuildReminder)
+              ) {
+                const updatedStartTime =
+                  reminder.startTime + hourChange * HOUR_IN_MS;
+                const updatedEndTime =
+                  reminder.endTime + hourChange * HOUR_IN_MS;
+                console.log(
+                  `Current Start Time (UTC): ${fn.timestampToDateString(
+                    reminder.startTime
+                  )}\nCurrent End Time (UTC): ${fn.timestampToDateString(
+                    reminder.endTime
+                  )}\nUpdated Start Time (UTC): ${fn.timestampToDateString(
+                    updatedStartTime
+                  )}\nUpdated End Time (UTC): ${fn.timestampToDateString(
+                    updatedEndTime
+                  )}`
+                );
+                const updatedReminder = await Reminder.findOneAndUpdate(
+                  { _id: reminder._id },
+                  {
+                    $set: {
+                      startTime: updatedStartTime,
+                      endTime: updatedEndTime,
+                    },
+                  },
+                  { new: true }
+                );
+                this.cancelReminderById(updatedReminder._id);
+                await this.sendReminderByObject(bot, updatedReminder);
+              }
+            }
+          }
+        }
+      }
+      return true;
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
+  },
+
   resetReminders: async function (bot) {
     const allReminders = await this.getAllReminders();
     console.log("Reinitializing all reminders.");

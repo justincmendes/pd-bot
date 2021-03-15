@@ -1121,8 +1121,7 @@ module.exports = {
           _id: mongoose.Types.ObjectId(),
           timestamp:
             fn.getCurrentUTCTimestampFlooredToSecond() +
-            timezoneOffset * HOUR_IN_MS +
-            1000,
+            timezoneOffset * HOUR_IN_MS,
           state: 1,
           connectedDocument: habitID,
         });
@@ -1145,6 +1144,57 @@ module.exports = {
       { new: true }
     );
     return updatedHabit;
+  },
+
+  setNewHabitCron: async function (habit, timezoneOffset, habitCron) {
+    let { nextCron, settings } = habit;
+    const { isWeeklyType, cronPeriods } = settings;
+    console.log({
+      timezoneOffset,
+      habitCron,
+      isWeeklyType,
+      cronPeriods,
+    });
+    console.log(`Old Habit Cron (UTC): ${fn.timestampToDateString(nextCron)}`);
+    nextCron = this.getNextCronTimeUTC(
+      timezoneOffset,
+      habitCron,
+      isWeeklyType,
+      cronPeriods
+    );
+    console.log(`New Habit Cron (UTC): ${fn.timestampToDateString(nextCron)}`);
+    habit = await Habit.findOneAndUpdate(
+      { _id: habit._id },
+      { $set: { nextCron } },
+      { new: true }
+    );
+    this.cancelHabitById(habit._id);
+    await this.habitCron(habit, timezoneOffset, habitCron);
+  },
+
+  updateUserHabitCrons: async function (
+    userID,
+    updatedTimezoneOffset,
+    userSettings
+  ) {
+    try {
+      const userHabits = await Habit.find({ userID });
+      if (userHabits)
+        if (userHabits.length) {
+          const { habitCron } = userSettings;
+          for (const habit of userHabits) {
+            this.setNewHabitCron(habit, updatedTimezoneOffset, habitCron);
+          }
+        }
+      return true;
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
+  },
+
+  adjustHabitLogEntries: async function (userID) {
+    
   },
 
   /**
