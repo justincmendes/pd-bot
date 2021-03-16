@@ -25,78 +25,6 @@ const habits = new Discord.Collection();
 // Private Function Declarations
 
 module.exports = {
-  logDocumentToString: function (
-    log,
-    boldTimestamp = false,
-    underlineTimestamp = false
-  ) {
-    const state = this.getStateEmoji(log.state);
-    var messageString = log.message ? `\n**Message:** ${log.message}` : "";
-    const countString = this.countArrayToString(log.count);
-    var timestampString = fn.timestampToDateString(log.timestamp);
-    let timeComma = timestampString.lastIndexOf(",");
-    if (underlineTimestamp) {
-      timestampString = `__${timestampString.substring(
-        0,
-        timeComma
-      )}__${timestampString.substring(timeComma, timestampString.length)}`;
-      timeComma = timestampString.lastIndexOf(",");
-    }
-    if (boldTimestamp) {
-      timestampString = `**${timestampString.substring(
-        0,
-        timeComma
-      )}**${timestampString.substring(timeComma, timestampString.length)}`;
-    }
-    return `${state} - ${timestampString}` + messageString + countString;
-  },
-
-  countArrayToString: function (countArray) {
-    var countString = "";
-    if (countArray) {
-      if (countArray.length) {
-        countArray.forEach((value, i) => {
-          if (i === countArray.length - 1 && countArray.length > 1) {
-            countString = `\~\~${countString}\~\~ ${value}`;
-          } else countString += `${value} `;
-        });
-        countString = `\n**Count:** ${countString}`;
-      }
-    }
-    return countString;
-  },
-
-  getGoalTypeString: function (goalType) {
-    var goalTypeString;
-    switch (goalType) {
-      case 1:
-        goalTypeString = "daily goal";
-        break;
-      case 2:
-        goalTypeString = "weekly goal";
-        break;
-      case 3:
-        goalTypeString = "total/cumulative goal";
-        break;
-      default:
-        goalTypeString = "goal";
-        break;
-    }
-    return goalTypeString;
-  },
-
-  habitDocumentDescription: function (habitDocument) {
-    console.log({ habitDocument });
-    const { archived, description, areaOfLife } = habitDocument;
-    const areaOfLifeString = fn.getAreaOfLifeString(areaOfLife);
-    const outputString = `${
-      archived ? "****ARCHIVED****\n" : ""
-    }${areaOfLifeString}${
-      description ? `\n👣 - **Description:**\n${description}` : ""
-    }`;
-    return outputString;
-  },
-
   habitDocumentToString: async function (
     bot,
     habitDocument,
@@ -367,7 +295,7 @@ module.exports = {
         averageCheckedPercent || `0.00`
       }%\n- **Average Missed:** ${averageMissedPercent || `0.00`}%`;
     }
-    let currentStateString = `**Current Log:** ${this.getStateEmoji(
+    let currentStateString = `**Current Log:** ${fn.getStateEmoji(
       currentState
     )}`;
     const areaOfLifeString = fn.getAreaOfLifeString(areaOfLife);
@@ -457,26 +385,20 @@ module.exports = {
 
   setHabitReminder: async function (
     bot,
+    timezoneOffset,
     commandUsed,
     userID,
     endTime,
     interval,
-    habitDescription,
     habitID,
-    countGoal = false,
-    goalType = false,
-    countMetric = false
   ) {
     try {
-      const reminderMessage = `**__Reminder to track your habit__** 😁.\n\n**Habit:** ${habitDescription}${
-        countGoal || countGoal === 0
-          ? `\n**Current${
-              goalType
-                ? ` ${fn.toTitleCase(this.getGoalTypeString(goalType))}`
-                : ""
-            }:**` + ` ${countGoal}${countMetric ? ` (${countMetric})` : ""}`
-          : ""
-      }\n\nType** \`?${commandUsed} log\` **- to **track your habit**`;
+      const reminderMessage = await fn.getHabitReminderMessage(
+        userID,
+        timezoneOffset,
+        commandUsed,
+        habitID
+      );
       const now = fn.getCurrentUTCTimestampFlooredToSecond();
       // Delete currently running reminders!
       if (habitID) {
@@ -524,7 +446,7 @@ module.exports = {
         daylightSaving,
         `__**Please enter the time you'd like in-between recurring reminders (interval):**__${
           showHabitInConfirmation
-            ? `\n\n${this.habitDocumentDescription(habitDocument)}`
+            ? `\n\n${fn.habitDocumentDescription(habitDocument)}`
             : ""
         }`,
         "Habit: Reminder Interval",
@@ -541,7 +463,7 @@ module.exports = {
         daylightSaving,
         `**When** would you like to **get your first habit reminder?**${
           showHabitInConfirmation
-            ? `\n\n${this.habitDocumentDescription(habitDocument)}`
+            ? `\n\n${fn.habitDocumentDescription(habitDocument)}`
             : ""
         }`,
         "Habit: First Reminder Time",
@@ -553,22 +475,19 @@ module.exports = {
 
       const successfullySetReminder = await this.setHabitReminder(
         bot,
+        timezoneOffset,
         commandUsed,
         userID,
         endTime,
         intervalArgs,
-        habitDocument.description,
         habitDocument._id,
-        habitDocument.settings.countGoal,
-        habitDocument.settings.countGoalType,
-        habitDocument.settings.countMetric
       );
       if (successfullySetReminder) {
         console.log("Habit log recurring reminder set.");
         message.reply(
           `Habit log recurring reminder set!${
             showHabitInConfirmation
-              ? `\n${this.habitDocumentDescription(habitDocument)}`
+              ? `\n${fn.habitDocumentDescription(habitDocument)}`
               : ""
           }\n**__First Reminder:__** **${fn.millisecondsToTimeString(
             endTime - fn.getCurrentUTCTimestampFlooredToSecond()
@@ -721,7 +640,7 @@ module.exports = {
       if (!confirmConversion) return confirmConversion;
       else if (confirmConversion) {
         const { habitCron } = userSettings;
-        const nextCron = this.getNextCronTimeUTC(
+        const nextCron = fn.getNextCronTimeUTC(
           timezoneOffset,
           habitCron,
           false,
@@ -849,72 +768,13 @@ module.exports = {
     return nextDayCron - timezoneOffset * HOUR_IN_MS;
   },
 
-  // You may need the current nextCron object to make this work
-  // Issue: If the client goes down for a long while, how will the system pinpoint the exact
-  // next cron time given the information from the habit and user objects?
-
-  // (i.e. if I have a cron ev 3 days and the system goes down for 2 days,
-  // the next cron is NOT in the next 3 days from then, but in the next day)
-
-  // How do you figure out where to scale from?
-  // Based on the last nextCron object, if you add the respective amount of days
-  // to it, keep doing so until the time you get it past the time of now
-  // Also be aware that the cron can either be same day or next day depending on the time from midnight
-
-  // Is next cron in utc?
-  // ${fn.timestampToDateString(nextCron - timezoneOffset * HOUR_IN_MS, true, true, true)}` : ""}`
-  // Apparently not. look into it!
-  // I would make the nextCron object UTC, then offset it manually by the user timezone!
-  // So fix this in the habits toString document
-
-  getNextCronTimeUTC: function (
-    timezoneOffset,
-    habitCron,
-    isWeeklyType,
-    cronPeriods,
-    nextCron = null
-  ) {
-    if (!nextCron) nextCron = Date.now();
-    const lastCronDate = new Date(nextCron);
-    const { daily: dailyCron, weekly: weeklyCron } = habitCron;
-    let cronPeriodsMultiplier = 0;
-    var newNextCron;
-    do {
-      if (isWeeklyType) {
-        const daysToNextWeeklyCronDay =
-          ((7 - (lastCronDate.getUTCDay() - weeklyCron)) % 7) + 1; // +1 for the next day (past midnight)
-        newNextCron =
-          new Date(
-            lastCronDate.getUTCFullYear(),
-            lastCronDate.getUTCMonth(),
-            lastCronDate.getUTCDate() +
-              7 * (cronPeriods * cronPeriodsMultiplier - 1 || 0) +
-              daysToNextWeeklyCronDay
-          ).getTime() + dailyCron;
-      } else {
-        newNextCron =
-          new Date(
-            lastCronDate.getUTCFullYear(),
-            lastCronDate.getUTCMonth(),
-            lastCronDate.getUTCDate() + cronPeriods * cronPeriodsMultiplier,
-            0
-          ).getTime() + dailyCron;
-      }
-      cronPeriodsMultiplier++;
-      newNextCron -= timezoneOffset * HOUR_IN_MS;
-      // console.log(`New Next Cron: ${fn.timestampToDateString(newNextCron)}`)
-      // console.log(`Next Cron: ${fn.timestampToDateString(nextCron)}`)
-    } while (newNextCron <= nextCron);
-    return newNextCron;
-  },
-
   habitCron: async function (habit, offset, habitCron) {
     // const { daily: dailyCron } = habitCron;
     var nextCron;
     let { _id, userID } = habit;
     let { settings } = habit;
     let { isWeeklyType, cronPeriods } = settings;
-    nextCron = await this.getNextCronTimeUTC(
+    nextCron = await fn.getNextCronTimeUTC(
       offset,
       habitCron,
       isWeeklyType,
@@ -931,7 +791,7 @@ module.exports = {
       }\nHabit Cron Delay: ${fn.millisecondsToTimeString(cronDelay)}\n`
     );
 
-    // const nextCronTime = this.getNextCronTimeUTC(offset, habitCron,
+    // const nextCronTime = fn.getNextCronTimeUTC(offset, habitCron,
     //     isWeeklyType, cronPeriods, nextCron);
     // console.log({ nextCronTime });
     // console.log(fn.timestampToDateString(nextCronTime + offset * HOUR_IN_MS));
@@ -1031,7 +891,7 @@ module.exports = {
     const currentLogs = await Log.find({
       connectedDocument: habitDocument._id,
     }).sort({ timestamp: -1 });
-    const todaysLog = await this.getTodaysLog(
+    const todaysLog = await fn.getTodaysLog(
       currentLogs,
       timezoneOffset,
       habitCron.daily
@@ -1039,7 +899,7 @@ module.exports = {
     if (todaysLog) {
       currentState = todaysLog.state;
     } else currentState = 0;
-    currentStreak = this.calculateCurrentStreak(
+    currentStreak = fn.calculateCurrentStreak(
       currentLogs,
       timezoneOffset,
       habitCron,
@@ -1113,7 +973,7 @@ module.exports = {
       const logs = await Log.find({ connectedDocument: habitID }).sort({
         timestamp: -1,
       });
-      let todaysLog = this.getTodaysLog(logs, timezoneOffset, habitCron.daily);
+      let todaysLog = fn.getTodaysLog(logs, timezoneOffset, habitCron.daily);
       console.log({ todaysLog });
       if (!todaysLog) {
         currentState = 1; //* Reset current state to ✅ (1)
@@ -1130,7 +990,7 @@ module.exports = {
     }
     //* NOTE: Count Goals logging will be handled in the habit/log commands
     await this.updateHabitStats(habit, timezoneOffset, habitCron);
-    nextCron = this.getNextCronTimeUTC(
+    nextCron = fn.getNextCronTimeUTC(
       timezoneOffset,
       habitCron,
       isWeeklyType,
@@ -1156,7 +1016,7 @@ module.exports = {
       cronPeriods,
     });
     console.log(`Old Habit Cron (UTC): ${fn.timestampToDateString(nextCron)}`);
-    nextCron = this.getNextCronTimeUTC(
+    nextCron = fn.getNextCronTimeUTC(
       timezoneOffset,
       habitCron,
       isWeeklyType,
@@ -1297,197 +1157,6 @@ module.exports = {
     return getAllHabits;
   },
 
-  getActualDateLogged: function (timestamp, dailyCron) {
-    // If the timestamp is on the intended day of the cron
-    // i.e. If it's a cron at 12:00AM Midnight, then the reset is intended for the
-    // habit log of the PREVIOUS DAY:
-    // - hence removal of the cron time past midnight and 1 second
-    //   to get 11:59 of the PREVIOUS DAY
-    const timePastMidnight = fn.getTimePastMidnightInMs(timestamp);
-    const isBeforeCronTime = timePastMidnight < dailyCron;
-    const date = new Date(timestamp);
-    const year = date.getUTCFullYear();
-    const month = date.getUTCMonth();
-    var day = date.getUTCDate();
-    if (isBeforeCronTime) day--;
-    const finalDate = new Date(year, month, day);
-    return finalDate.getTime();
-  },
-
-  getLogsFromTodayAndThePast: function (
-    pastToPresentSortedLogs,
-    timezoneOffset,
-    habitCron
-  ) {
-    let upcomingCron = this.getNextCronTimeUTC(
-      timezoneOffset,
-      habitCron,
-      false,
-      1
-    );
-    if (!upcomingCron && upcomingCron !== 0) return false;
-    else upcomingCron += timezoneOffset * HOUR_IN_MS;
-    const sortedLogs = pastToPresentSortedLogs.filter(
-      (log) => log.timestamp < upcomingCron
-    );
-    return sortedLogs;
-  },
-
-  calculateCurrentStreak: function (
-    sortedLogs,
-    timezoneOffset,
-    habitCron,
-    isWeeklyType,
-    cronPeriods
-  ) {
-    const dailyCron = habitCron.daily;
-    let streakReset = cronPeriods;
-    var currentStreak = 0;
-
-    //* Filter all of the future logs (i.e. the logs beyond today's cron)
-    // Get the cron time of today (end of day)
-    sortedLogs = this.getLogsFromTodayAndThePast(
-      sortedLogs,
-      timezoneOffset,
-      habitCron
-    );
-
-    var lastCheckedDay, lastCheckedLog, lastCheckedCronDay;
-    for (let i = 0; i < sortedLogs.length; i++) {
-      if (sortedLogs[i]) {
-        const latestLog = sortedLogs[i];
-        if (
-          sortedLogs.length === 1 &&
-          (latestLog.state === 1 || latestLog.state === 3)
-        ) {
-          currentStreak = 1;
-          break;
-        } else {
-          const latestTimestamp = latestLog.timestamp;
-          const adjustedLatestDay = this.getActualDateLogged(
-            latestTimestamp,
-            dailyCron
-          );
-          const latestCron =
-            this.getNextCronTimeUTC(
-              timezoneOffset,
-              habitCron,
-              isWeeklyType,
-              cronPeriods,
-              latestTimestamp - timezoneOffset * HOUR_IN_MS
-            ) +
-            timezoneOffset * HOUR_IN_MS;
-          const adjustedLatestCronDay = this.getActualDateLogged(
-            latestCron,
-            dailyCron
-          );
-          if (!lastCheckedDay && lastCheckedDay !== 0) {
-            lastCheckedDay = adjustedLatestDay;
-            lastCheckedLog = latestLog;
-            lastCheckedCronDay = adjustedLatestCronDay;
-          }
-          // console.log(
-          //   `\nLatest Timestamp: ${fn.timestampToDateString(latestTimestamp)}`
-          // );
-          // console.log(
-          //   `Last Checked Timestamp: ${fn.timestampToDateString(
-          //     lastCheckedDay
-          //   )}`
-          // );
-          // console.log(
-          //   `Latest Cron Day: ${fn.timestampToDateString(
-          //     adjustedLatestCronDay
-          //   )}`
-          // );
-          // console.log(
-          //   `Last Checked Cron Day: ${fn.timestampToDateString(
-          //     lastCheckedCronDay
-          //   )}`
-          // );
-
-          /** //* Weekly Streak Calculation Steps
-           * 1. Check if there is an entry for this week.
-           * 2. If there is, that entry becomes the lastCheckedDay, lastCheckedLog and, lastCheckedCronDay = adjustedLatestCronDay. + Increase the streak!
-           * 3. Otherwise is there is no entry for THE WEEK BEFORE, then break. (stop calculating the streak)
-           * -- lastCheckedCronDay is 2*cronPeriod weeks after the lastCheckedCronDay (i.e. outside the range of the weekly streak) (e.g. 1 week, 2 weeks) => break;
-           * -- => break if: cronDifference >= 7 * 2 * streakReset;
-           */
-          if (isWeeklyType) {
-            const cronDifference = fn.getDaysInBetweenTimestamps(
-              lastCheckedCronDay,
-              adjustedLatestCronDay
-            );
-            // console.log({ cronDifference });
-            if (latestLog.state === 1 || latestLog.state === 3) {
-              if (
-                lastCheckedLog._id.toString() !== latestLog._id.toString() &&
-                (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) &&
-                cronDifference < 7 * 2 * streakReset
-              ) {
-                // console.log(`Streak Before: ${currentStreak}`);
-                if (!currentStreak) currentStreak = 1;
-                currentStreak++;
-                // console.log(`Streak After: ${currentStreak}`);
-                // console.log(
-                //   `Prev Last Checked: ${fn.timestampToDateString(
-                //     lastCheckedDay
-                //   )}`
-                // );
-                lastCheckedCronDay = adjustedLatestCronDay;
-                lastCheckedDay = adjustedLatestDay;
-                lastCheckedLog = latestLog;
-                // console.log(
-                //   `Updated Last Checked: ${fn.timestampToDateString(
-                //     lastCheckedDay
-                //   )}`
-                // );
-              } else if (cronDifference >= 7 * 2 * streakReset) break;
-            }
-          } else {
-            // console.log(fn.timestampToDateString(lastCheckedDay));
-            // console.log(fn.timestampToDateString(adjustedLatestDay));
-            const daysDifference = fn.getDaysInBetweenTimestamps(
-              lastCheckedDay,
-              adjustedLatestDay
-            );
-            // console.log(`First Check for Days Difference: ${daysDifference}`);
-            if (latestLog.state === 1 || latestLog.state === 3) {
-              // console.log({
-              //   latestLog,
-              //   lastCheckedLog,
-              //   daysDifference,
-              //   streakReset,
-              // });
-              if (
-                lastCheckedLog._id.toString() !== latestLog._id.toString() &&
-                (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) &&
-                daysDifference <= streakReset
-              ) {
-                // console.log(`Streak Before: ${currentStreak}`);
-                if (!currentStreak) currentStreak = 1;
-                currentStreak++;
-                // console.log(`Streak After: ${currentStreak}`);
-                // console.log(
-                //   `Prev Last Checked: ${fn.timestampToDateString(
-                //     lastCheckedDay
-                //   )}`
-                // );
-                lastCheckedDay = adjustedLatestDay;
-                lastCheckedLog = latestLog;
-                // console.log(
-                //   `Updated Last Checked: ${fn.timestampToDateString(
-                //     lastCheckedDay
-                //   )}`
-                // );
-              } else if (daysDifference > streakReset) break;
-            }
-          }
-        }
-      } else break;
-    }
-    return currentStreak;
-  },
-
   getPastStreak: function (
     sortedLogs,
     timezoneOffset,
@@ -1496,7 +1165,7 @@ module.exports = {
     endTimestamp,
     createdAt = undefined
   ) {
-    sortedLogs = this.getLogsFromTodayAndThePast(
+    sortedLogs = fn.getLogsFromTodayAndThePast(
       sortedLogs,
       timezoneOffset,
       habitCron
@@ -1542,17 +1211,6 @@ module.exports = {
     return pastStreak;
   },
 
-  getCurrentDateByCronTime: function (timezoneOffset, dailyCronMsPastMidnight) {
-    const currentDate = new Date(
-      this.getActualDateLogged(
-        Date.now() + timezoneOffset * HOUR_IN_MS,
-        dailyCronMsPastMidnight,
-        timezoneOffset
-      )
-    );
-    return currentDate;
-  },
-
   getPastDaysStreak: function (
     sortedLogs,
     timezoneOffset,
@@ -1561,7 +1219,7 @@ module.exports = {
     createdAt = undefined
   ) {
     const { daily: dailyCron } = habitCron;
-    const currentDate = this.getCurrentDateByCronTime(
+    const currentDate = fn.getCurrentDateByCronTime(
       timezoneOffset,
       dailyCron
     );
@@ -1594,7 +1252,7 @@ module.exports = {
     createdAt = undefined
   ) {
     const { daily: dailyCron } = habitCron;
-    const currentDate = this.getCurrentDateByCronTime(
+    const currentDate = fn.getCurrentDateByCronTime(
       timezoneOffset,
       dailyCron
     );
@@ -1621,7 +1279,7 @@ module.exports = {
     createdAt = undefined
   ) {
     const { daily: dailyCron } = habitCron;
-    const currentDate = this.getCurrentDateByCronTime(
+    const currentDate = fn.getCurrentDateByCronTime(
       timezoneOffset,
       dailyCron
     );
@@ -1652,7 +1310,7 @@ module.exports = {
     createdAt = undefined
   ) {
     const { daily: dailyCron, weekly: weeklyCron } = habitCron;
-    const currentDate = this.getCurrentDateByCronTime(
+    const currentDate = fn.getCurrentDateByCronTime(
       timezoneOffset,
       dailyCron
     );
@@ -1688,71 +1346,6 @@ module.exports = {
       createdAt
     );
     return pastWeekStreak;
-  },
-
-  getTodaysLog: function (presentToPastSortedLogs, timezoneOffset, dailyCron) {
-    const currentHabitDate = this.getCurrentDateByCronTime(
-      timezoneOffset,
-      dailyCron
-    );
-    const nextHabitDate = new Date(
-      currentHabitDate.getUTCFullYear(),
-      currentHabitDate.getUTCMonth(),
-      currentHabitDate.getUTCDate() + 1
-    );
-    // console.log({ presentToPastSortedLogs, dailyCron });
-    // console.log(`Current Habit Date: ${fn.timestampToDateString(currentHabitDate.getTime())}`);
-    // console.log(`Next Habit Date: ${fn.timestampToDateString(nextHabitDate.getTime())}`);
-    const nearestLog = presentToPastSortedLogs.find(
-      (log) =>
-        log.timestamp < nextHabitDate.getTime() + dailyCron &&
-        log.timestamp >= currentHabitDate.getTime() + dailyCron
-    );
-    // console.log({ nearestLog });
-    if (nearestLog) return nearestLog;
-    else return null;
-  },
-
-  getHabitLogOnTimestampDay: function (
-    presentToPastSortedLogs,
-    targetTimestamp,
-    dailyCron
-  ) {
-    const targetDate = new Date(
-      this.getActualDateLogged(targetTimestamp, dailyCron)
-    );
-    console.log(fn.timestampToDateString(targetDate.getTime()));
-    const nextCronDate = new Date(
-      targetDate.getUTCFullYear(),
-      targetDate.getUTCMonth(),
-      targetDate.getUTCDate() + 1
-    );
-    const targetLog = presentToPastSortedLogs.find(
-      (log) =>
-        log.timestamp < nextCronDate.getTime() + dailyCron &&
-        log.timestamp >= targetDate.getTime() + dailyCron
-    );
-    if (targetLog) return targetLog;
-    else return null;
-  },
-
-  getStateEmoji: function (state) {
-    var stateEmoji;
-    switch (state) {
-      case 1:
-        stateEmoji = "✅";
-        break;
-      case 2:
-        stateEmoji = "❌";
-        break;
-      case 3:
-        stateEmoji = "⏭";
-        break;
-      default:
-        stateEmoji = "🔲";
-        break;
-    }
-    return stateEmoji;
   },
 
   getOneHabitByObjectID: async function (habitID) {

@@ -6,6 +6,8 @@ const User = require("../djs-bot/database/schemas/user");
 const mongoose = require("mongoose");
 const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
+const Habit = require("../djs-bot/database/schemas/habit");
+const Log = require("../djs-bot/database/schemas/habittracker");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
@@ -432,7 +434,8 @@ module.exports = {
                     } else message += remainingOccurrencesMessage;
                   }
                   if (
-                    updatedReminderObject.title === "Voice Channel Tracking"
+                    updatedReminderObject.title === "Voice Channel Tracking" ||
+                    updatedReminderObject.title === "Habit"
                   ) {
                     if (updatedReminderObject.sendAsEmbed) {
                       if (Array.isArray(message)) {
@@ -548,6 +551,8 @@ module.exports = {
     }
     return success;
   },
+
+  getUpdatedHabitReminderMessage: async function () {},
 
   // Create another function called schedule all dst
   // Then make this a scheduler for a single DST given the dstSettings object
@@ -958,6 +963,7 @@ module.exports = {
             { discordID: reminder.userID },
             { _id: 0, timezone: 1 }
           );
+          const { habitCron } = userSettings;
           const { offset, daylightSaving } = userSettings.timezone;
           const { endTime, interval, remainingOccurrences } = reminder;
           const hasOccurrences =
@@ -974,6 +980,8 @@ module.exports = {
 
             var remindersLeft = remainingOccurrences || 1;
             let onFirst = true,
+              iterations = 0,
+              MAX_ITERATIONS = 500,
               newEndTime = endTime;
             var intervalDuration;
             do {
@@ -995,10 +1003,15 @@ module.exports = {
                 }
                 if (remainingOccurrences) remindersLeft--;
               }
+              iterations++;
             } while (
+              iterations < MAX_ITERATIONS &&
               newEndTime <= fn.getCurrentUTCTimestampFlooredToSecond() &&
               remindersLeft > 0
             );
+            if (iterations >= MAX_ITERATIONS) {
+              newEndTime = Date.now();
+            }
 
             const newStartTime = intervalDuration
               ? newEndTime - intervalDuration
@@ -1072,14 +1085,27 @@ module.exports = {
                 //     updatedUserSettings);
               }
             }
+            if (reminder.title === "Habit" && reminder.connectedDocument) {
+              updateObject.message = await fn.getHabitReminderMessage(
+                reminder.userID,
+                offset,
+                "habit",
+                reminder.connectedDocument
+              );
+            }
             const updateReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
               { $set: updateObject },
               { new: true }
             );
             if (updateReminder) {
-              if (reminder.title === "Voice Channel Tracking") {
-                updateReminder.message = updateObject.message;
+              if (
+                reminder.title === "Voice Channel Tracking" ||
+                (reminder.title === "Habit" && reminder.connectedDocument)
+              ) {
+                console.log(updateObject.message);
+                updateReminder.message =
+                  updateObject.message || updateReminder.message;
               }
               return updateReminder;
             }

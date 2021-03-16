@@ -701,7 +701,6 @@ module.exports = {
                 //     }
                 //   });
                 // }
-                console.log("HERE!");
                 await hb.adjustHabitLogEntries(
                   authorID,
                   oldDailyCron,

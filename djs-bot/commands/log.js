@@ -38,7 +38,7 @@ function multipleLogsToStringArray(
       );
       break;
     }
-    const logString = hb.logDocumentToString(logArray[i], true, true);
+    const logString = fn.logDocumentToString(logArray[i], true, true);
     logsToString.push(logString);
   }
   if (toString) logsToString = logsToString.join("\n\n");
@@ -238,7 +238,7 @@ module.exports = {
           daylightSaving,
           `**__When do you want to log this habit for?__**\n\n**__Habit ${
             targetHabitIndex + 1
-          } (${sortType}):__**\n${hb.habitDocumentDescription(targetHabit)}`,
+          } (${sortType}):__**\n${fn.habitDocumentDescription(targetHabit)}`,
           `Log${isArchived ? " Archive" : ""}:${
             onFirst ? ` Habit ${targetHabitIndex + 1}` : ""
           } Timestamp`,
@@ -260,13 +260,13 @@ module.exports = {
         } = settings;
         var countValue;
         const countGoalTypeString = fn.toTitleCase(
-          hb.getGoalTypeString(countGoalType)
+          fn.getGoalTypeString(countGoalType)
         );
 
         let currentLogs = await Log.find({
           connectedDocument: targetHabit._id,
         }).sort({ timestamp: -1 });
-        let existingLog = hb.getHabitLogOnTimestampDay(
+        let existingLog = fn.getHabitLogOnTimestampDay(
           currentLogs,
           logTimestamp,
           habitCron.daily
@@ -282,7 +282,7 @@ module.exports = {
                   ? ` ${targetHabitIndex + 1} recent`
                   : ` ${targetHabitIndex + 1}`
                 : ""
-            }\`**)\n\n**Old Log:** ${hb.logDocumentToString(
+            }\`**)\n\n**Old Log:** ${fn.logDocumentToString(
               existingLog
             )}\n\n**Desired Timestamp:** ${fn.timestampToDateString(
               logTimestamp
@@ -306,7 +306,7 @@ module.exports = {
               logTimestamp
             )}`;
         const previousCountTypeString = existingLog
-          ? `**Previous ${countMetric}:** ${hb.countArrayToString(
+          ? `**Previous ${countMetric}:** ${fn.countArrayToString(
               existingLog.count
             )}`
           : "";
@@ -329,7 +329,7 @@ module.exports = {
         }
         // Then based on the user's countValue (if any), show the suggested log based on their goal
         const suggestedLogFromCountGoal = isCountType
-          ? `\n\n**${countMetric}:** ${hb.getStateEmoji(
+          ? `\n\n**${countMetric}:** ${fn.getStateEmoji(
               countValue >= countGoal ? 1 : 2
             )}\nCurrent Value (**${countValue}**) vs. ${countGoalTypeString} (**${countGoal}**)`
           : "";
@@ -340,7 +340,7 @@ module.exports = {
           PREFIX,
           checkMissedSkipList,
           3,
-          `__**What will you set the status of your habit to?**__\n${logTimestampString}\n**Currently:** ${hb.getStateEmoji(
+          `__**What will you set the status of your habit to?**__\n${logTimestampString}\n**Currently:** ${fn.getStateEmoji(
             existingLog ? existingLog.state : 0
           )}${suggestedLogFromCountGoal}`,
           `Log${isArchived ? " Archive" : ""}: Status`,
@@ -365,7 +365,7 @@ module.exports = {
           PREFIX,
           `Would you like to **__add a${
             currentReflection ? " new" : ""
-          } reflection message__** to go with your habit log?\n*If yes, you will type in your reflection in the next window!\nOtherwise, the reflection will not be changed.*\n${logTimestampString}\n**Current Log: ${hb.getStateEmoji(
+          } reflection message__** to go with your habit log?\n*If yes, you will type in your reflection in the next window!\nOtherwise, the reflection will not be changed.*\n${logTimestampString}\n**Current Log: ${fn.getStateEmoji(
             habitLog
           )}**\n${currentReflectionString}`,
           forceSkip,
@@ -394,9 +394,9 @@ module.exports = {
           bot,
           message,
           PREFIX,
-          `**__Are you sure you want to log this habit as:__** ${hb.getStateEmoji(
+          `**__Are you sure you want to log this habit as:__** ${fn.getStateEmoji(
             habitLog
-          )}\n**Previous State:** ${hb.getStateEmoji(
+          )}\n**Previous State:** ${fn.getStateEmoji(
             existingLog ? existingLog.state : 0
           )}${
             existingLog
@@ -408,7 +408,7 @@ module.exports = {
             isCountType ? `\n${previousCountTypeString}` : ""
           }\n**Previous Reflection:** ${
             currentReflection ? `\n${currentReflection}` : " N/A"
-          }\n\n__**New Log:**__\n**State:** ${hb.getStateEmoji(
+          }\n\n__**New Log:**__\n**State:** ${fn.getStateEmoji(
             habitLog
           )}\n**Timestamp:** ${fn.timestampToDateString(logTimestamp)}${
             isCountType && (countValue || countValue === 0)
@@ -430,13 +430,13 @@ module.exports = {
           currentLogs = await Log.find({
             connectedDocument: targetHabit._id,
           }).sort({ timestamp: -1 });
-          existingLog = hb.getHabitLogOnTimestampDay(
+          existingLog = fn.getHabitLogOnTimestampDay(
             currentLogs,
             logTimestamp,
             habitCron.daily
           );
           // const overwriteLog = !!existingLog;
-          // const isTodaysLog = !!hb.getTodaysLog(
+          // const isTodaysLog = !!fn.getTodaysLog(
           //   currentLogs,
           //   timezoneOffset,
           //   habitCron.daily
@@ -621,9 +621,9 @@ module.exports = {
 
         let logList = `**__Habit ${
           targetHabitIndex + 1
-        } (${sortType}):__**\n${hb.habitDocumentDescription(targetHabit)}\n\n`;
+        } (${sortType}):__**\n${fn.habitDocumentDescription(targetHabit)}\n\n`;
         habitLogs.forEach((log, i) => {
-          logList += `\`${i + 1}\`\: ${hb.logDocumentToString(log)}\n`;
+          logList += `\`${i + 1}\`\: ${fn.logDocumentToString(log)}\n`;
         });
         if (someLogsSelected) {
           logList += `\`${habitLogs.length + 1}\`: **DONE**`;
@@ -672,14 +672,14 @@ module.exports = {
       console.log({ targetLogs });
       const finalLogsString = targetLogs
         .map((log) => {
-          return hb.logDocumentToString(log);
+          return fn.logDocumentToString(log);
         })
         .join("\n");
       const confirmDeletion = await fn.getUserConfirmation(
         bot,
         message,
         PREFIX,
-        `**__Are you sure you want to delete the following habit logs?__**\n${hb.habitDocumentDescription(
+        `**__Are you sure you want to delete the following habit logs?__**\n${fn.habitDocumentDescription(
           targetHabit
         )}\n\n**__Logs to be Deleted:__**\n${finalLogsString}`,
         false,
@@ -817,7 +817,7 @@ module.exports = {
       logArray.unshift([
         `**__Habit ${
           targetHabitIndex + 1
-        } (${sortType}):__**\n${hb.habitDocumentDescription(targetHabit)}`,
+        } (${sortType}):__**\n${fn.habitDocumentDescription(targetHabit)}`,
       ]);
       await fn.sendPaginationEmbed(
         bot,
@@ -955,9 +955,9 @@ module.exports = {
 
       let logList = `**__Habit ${
         targetHabitIndex + 1
-      } (${sortType}):__**\n${hb.habitDocumentDescription(targetHabit)}\n\n`;
+      } (${sortType}):__**\n${fn.habitDocumentDescription(targetHabit)}\n\n`;
       logs.forEach((log, i) => {
-        logList += `\`${i + 1}\`\: ${hb.logDocumentToString(log)}\n`;
+        logList += `\`${i + 1}\`\: ${fn.logDocumentToString(log)}\n`;
       });
 
       const type = `Log${isArchived ? " Archive" : ""}`;
@@ -1023,14 +1023,14 @@ module.exports = {
             `Habit ${targetHabitIndex + 1} does not exist anymore!`
           );
         continueEdit = false;
-        showHabit = hb.habitDocumentDescription(targetHabit);
-        showLog = hb.logDocumentToString(targetLog);
+        showHabit = fn.habitDocumentDescription(targetHabit);
+        showLog = fn.logDocumentToString(targetLog);
 
         // Field the user wants to edit
         const fieldToEditInstructions = "**Which field do you want to edit?**";
         const fieldToEditAdditionalMessage = `__**Log ${
           targetLogIndex + 1
-        }:**__\n${hb.logDocumentToString(logs[targetLogIndex])}`;
+        }:**__\n${fn.logDocumentToString(logs[targetLogIndex])}`;
         const fieldToEditTitle = `${type}: Edit Field`;
         var fieldToEdit, fieldToEditIndex;
 
@@ -1072,7 +1072,7 @@ module.exports = {
             break;
           // State
           case 1:
-            let currentStateEmoji = hb.getStateEmoji(currentState);
+            let currentStateEmoji = fn.getStateEmoji(currentState);
             habitEditMessagePrompt = checkMissedSkipList;
             userEdit = await fn.userSelectFromList(
               bot,
@@ -1117,7 +1117,7 @@ module.exports = {
                 habitEmbedColour,
                 600000,
                 0,
-                `\n${hb.logDocumentToString(logs[targetLogIndex])}`
+                `\n${fn.logDocumentToString(logs[targetLogIndex])}`
               );
               if (!selectedCount) return;
               else targetCountIndex = selectedCount.index;
@@ -1166,7 +1166,7 @@ module.exports = {
                 continueEdit = true;
               } else {
                 // Log date collisions
-                const collisionLog = hb.getHabitLogOnTimestampDay(
+                const collisionLog = fn.getHabitLogOnTimestampDay(
                   logs,
                   userEdit,
                   userSettings.habitCron.daily
@@ -1195,9 +1195,9 @@ module.exports = {
                     true,
                     true,
                     false
-                  )}, and **the other log will be deleted***\n\n__**Current Log:**__ (Timestamp Unchanged)\n${hb.logDocumentToString(
+                  )}, and **the other log will be deleted***\n\n__**Current Log:**__ (Timestamp Unchanged)\n${fn.logDocumentToString(
                     targetLog
-                  )}\n\n__**Log to Overwrite:**__\n${hb.logDocumentToString(
+                  )}\n\n__**Log to Overwrite:**__\n${fn.logDocumentToString(
                     collisionLog
                   )}`,
                   false,
@@ -1312,8 +1312,8 @@ module.exports = {
               //       isArchived,
               //       hb.getOneHabitByCreatedAt
               //     );
-              showLog = hb.logDocumentToString(logs[targetLogIndex]);
-              showHabit = hb.habitDocumentDescription(targetHabit);
+              showLog = fn.logDocumentToString(logs[targetLogIndex]);
+              showHabit = fn.habitDocumentDescription(targetHabit);
               const continueEditMessage = `Do you want to continue **editing ${
                 isArchived ? "Archived " : ""
               }Habit ${targetHabitIndex + 1}'s Log ${
@@ -1364,8 +1364,8 @@ module.exports = {
             //       hb.getOneHabitByRecency
             //     );
             // console.log({ targetHabit, habitTargetID, fieldToEditIndex });
-            showLog = hb.logDocumentToString(logs[targetLogIndex]);
-            showHabit = hb.habitDocumentDescription(targetHabit);
+            showLog = fn.logDocumentToString(logs[targetLogIndex]);
+            showHabit = fn.habitDocumentDescription(targetHabit);
           } else {
             message.reply(
               `**${isArchived ? "Archived " : ""}Habit not found...**`

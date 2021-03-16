@@ -432,7 +432,7 @@ module.exports = {
             );
             if (!countGoalType && countGoalType !== 0) return;
             else countGoalType++;
-            goalTypeString = hb.getGoalTypeString(countGoalType);
+            goalTypeString = fn.getGoalTypeString(countGoalType);
             countGoal = await fn.getNumberEntry(
               bot,
               message,
@@ -503,7 +503,7 @@ module.exports = {
         habitCron = userSettings.habitCron;
         timezoneOffset = userSettings.timezone.offset;
         const currentTimestamp = Date.now() + timezoneOffset * HOUR_IN_MS;
-        const nextCron = hb.getNextCronTimeUTC(
+        const nextCron = fn.getNextCronTimeUTC(
           timezoneOffset,
           habitCron,
           isWeeklyType,
@@ -653,9 +653,7 @@ module.exports = {
       habitCommand === "delete" ||
       habitCommand === "del" ||
       habitCommand === "d" ||
-      habitCommand === "remove" ||
-      habitCommand === "rem" ||
-      habitCommand === "r"
+      habitCommand === "remove"
     ) {
       /**
        * Allow them to delete any habits - archived or not
@@ -1697,7 +1695,7 @@ module.exports = {
 
           var userEdit,
             habitEditMessagePrompt = "";
-          const goalTypeString = hb.getGoalTypeString(countGoalType);
+          const goalTypeString = fn.getGoalTypeString(countGoalType);
           switch (fieldToEditIndex) {
             case 0:
               //// ADD support for Add/Delete options too! List out all of the logs, if any, then 1 add, 2 delete, 3 edit (if logs.length)
@@ -1705,7 +1703,7 @@ module.exports = {
                 if (logs.length) {
                   let logList = `👣 - **__Habit Description:__**\n${habitDocument.description}\n\n`;
                   logs.forEach((log, i) => {
-                    logList += `\`${i + 1}\`\: ${hb.logDocumentToString(
+                    logList += `\`${i + 1}\`\: ${fn.logDocumentToString(
                       log
                     )}\n`;
                   });
@@ -1739,7 +1737,7 @@ module.exports = {
                     habitEmbedColour,
                     600000,
                     0,
-                    hb.logDocumentToString(logs[targetLogIndex])
+                    fn.logDocumentToString(logs[targetLogIndex])
                   );
                   if (!selectedLogField) return;
                   else targetLogField = selectedLogField.index;
@@ -1761,7 +1759,7 @@ module.exports = {
                       break;
                     // State
                     case 1:
-                      let currentStateEmoji = hb.getStateEmoji(currentState);
+                      let currentStateEmoji = fn.getStateEmoji(currentState);
                       habitEditMessagePrompt = checkMissedSkipList;
                       userEdit = await fn.userSelectFromList(
                         bot,
@@ -1806,7 +1804,7 @@ module.exports = {
                           habitEmbedColour,
                           600000,
                           0,
-                          `\n${hb.logDocumentToString(logs[targetLogIndex])}`
+                          `\n${fn.logDocumentToString(logs[targetLogIndex])}`
                         );
                         if (!selectedCount) return;
                         else targetCountIndex = selectedCount.index;
@@ -2128,7 +2126,7 @@ module.exports = {
                         continueEdit = true;
                       } else {
                         // Log date collisions
-                        const collisionLog = hb.getHabitLogOnTimestampDay(
+                        const collisionLog = fn.getHabitLogOnTimestampDay(
                           logs,
                           userEdit,
                           userSettings.habitCron.daily
@@ -2158,9 +2156,9 @@ module.exports = {
                             true,
                             true,
                             false
-                          )}, and **the other log will be deleted***\n\n__**Current Log:**__ (Timestamp Unchanged)\n${hb.logDocumentToString(
+                          )}, and **the other log will be deleted***\n\n__**Current Log:**__ (Timestamp Unchanged)\n${fn.logDocumentToString(
                             targetLog
-                          )}\n\n__**Log to Overwrite:**__\n${hb.logDocumentToString(
+                          )}\n\n__**Log to Overwrite:**__\n${fn.logDocumentToString(
                             collisionLog
                           )}`,
                           false,
@@ -2367,15 +2365,12 @@ module.exports = {
                       currentHabitReminders.forEach(async (reminder) => {
                         await hb.setHabitReminder(
                           bot,
+                          timezoneOffset,
                           commandUsed,
                           userID,
                           reminder.endTime,
                           reminder.interval,
-                          description,
                           habitTargetID,
-                          countGoal,
-                          countGoalType,
-                          countMetric
                         );
                       });
                     }
@@ -2387,7 +2382,7 @@ module.exports = {
               const currentLogs = await Log.find({
                 connectedDocument: habitDocument._id,
               }).sort({ timestamp: -1 });
-              currentStreak = hb.calculateCurrentStreak(
+              currentStreak = fn.calculateCurrentStreak(
                 currentLogs,
                 timezoneOffset,
                 habitCron,
@@ -2397,7 +2392,7 @@ module.exports = {
               if (currentStreak > (longestStreak ? longestStreak : 0)) {
                 longestStreak = currentStreak;
               }
-              const todaysLog = hb.getTodaysLog(
+              const todaysLog = fn.getTodaysLog(
                 currentLogs,
                 timezoneOffset,
                 habitCron.daily
@@ -2482,7 +2477,7 @@ module.exports = {
                 console.log({ habitDocument, habitTargetID, fieldToEditIndex });
                 const showEditedLog =
                   fieldToEditIndex === 0
-                    ? `\n\n__**Edited Log:**__\n${hb.logDocumentToString(
+                    ? `\n\n__**Edited Log:**__\n${fn.logDocumentToString(
                         logs[targetLogIndex]
                       )}`
                     : "";
@@ -2776,7 +2771,7 @@ module.exports = {
           daylightSaving,
           `**__When do you want to log this habit for?__**\n\n**__Habit ${
             targetHabitIndex + 1
-          } (${sortType}):__**\n${hb.habitDocumentDescription(targetHabit)}`,
+          } (${sortType}):__**\n${fn.habitDocumentDescription(targetHabit)}`,
           `Habit ${targetHabitIndex + 1}${
             isArchived ? " Archive" : ""
           }: Log Timestamp`,
@@ -2798,13 +2793,13 @@ module.exports = {
         } = settings;
         var countValue;
         const countGoalTypeString = fn.toTitleCase(
-          hb.getGoalTypeString(countGoalType)
+          fn.getGoalTypeString(countGoalType)
         );
 
         let currentLogs = await Log.find({
           connectedDocument: targetHabit._id,
         }).sort({ timestamp: -1 });
-        let existingLog = hb.getHabitLogOnTimestampDay(
+        let existingLog = fn.getHabitLogOnTimestampDay(
           currentLogs,
           logTimestamp,
           habitCron.daily
@@ -2818,7 +2813,7 @@ module.exports = {
               targetHabitIndex || targetHabitIndex === 0
                 ? ` ${targetHabitIndex + 1}`
                 : ""
-            }\`**)\n\n**Old Log:** ${hb.logDocumentToString(
+            }\`**)\n\n**Old Log:** ${fn.logDocumentToString(
               existingLog
             )}\n\n**Desired Timestamp:** ${fn.timestampToDateString(
               logTimestamp
@@ -2842,7 +2837,7 @@ module.exports = {
               logTimestamp
             )}`;
         const previousCountTypeString = existingLog
-          ? `**Previous ${countMetric}:** ${hb.countArrayToString(
+          ? `**Previous ${countMetric}:** ${fn.countArrayToString(
               existingLog.count
             )}`
           : "";
@@ -2865,7 +2860,7 @@ module.exports = {
         }
         // Then based on the user's countValue (if any), show the suggested log based on their goal
         const suggestedLogFromCountGoal = isCountType
-          ? `\n\n**${countMetric}:** ${hb.getStateEmoji(
+          ? `\n\n**${countMetric}:** ${fn.getStateEmoji(
               countValue >= countGoal ? 1 : 2
             )}\nCurrent Value (**${countValue}**) vs. ${countGoalTypeString} (**${countGoal}**)`
           : "";
@@ -2876,7 +2871,7 @@ module.exports = {
           PREFIX,
           checkMissedSkipList,
           3,
-          `__**What will you set the status of your habit to?**__\n${logTimestampString}\n**Currently:** ${hb.getStateEmoji(
+          `__**What will you set the status of your habit to?**__\n${logTimestampString}\n**Currently:** ${fn.getStateEmoji(
             existingLog ? existingLog.state : 0
           )}${suggestedLogFromCountGoal}`,
           `Habit${isArchived ? " Archive" : ""}: Log Status`,
@@ -2901,7 +2896,7 @@ module.exports = {
           PREFIX,
           `Would you like to **__add a${
             currentReflection ? " new" : ""
-          } reflection message__** to go with your habit log?\n*If yes, you will type in your reflection in the next window!\nOtherwise, the reflection will not be changed.*\n${logTimestampString}\n**Current Log: ${hb.getStateEmoji(
+          } reflection message__** to go with your habit log?\n*If yes, you will type in your reflection in the next window!\nOtherwise, the reflection will not be changed.*\n${logTimestampString}\n**Current Log: ${fn.getStateEmoji(
             habitLog
           )}**\n${currentReflectionString}`,
           forceSkip,
@@ -2930,9 +2925,9 @@ module.exports = {
           bot,
           message,
           PREFIX,
-          `**__Are you sure you want to log this habit as:__** ${hb.getStateEmoji(
+          `**__Are you sure you want to log this habit as:__** ${fn.getStateEmoji(
             habitLog
-          )}\n**Previous State:** ${hb.getStateEmoji(
+          )}\n**Previous State:** ${fn.getStateEmoji(
             existingLog ? existingLog.state : 0
           )}${
             existingLog
@@ -2944,7 +2939,7 @@ module.exports = {
             isCountType ? `\n${previousCountTypeString}` : ""
           }\n**Previous Reflection:** ${
             currentReflection ? `\n${currentReflection}` : " N/A"
-          }\n\n__**New Log:**__\n**State:** ${hb.getStateEmoji(
+          }\n\n__**New Log:**__\n**State:** ${fn.getStateEmoji(
             habitLog
           )}\n**Timestamp:** ${fn.timestampToDateString(logTimestamp)}${
             isCountType && (countValue || countValue === 0)
@@ -2966,13 +2961,13 @@ module.exports = {
           currentLogs = await Log.find({
             connectedDocument: targetHabit._id,
           }).sort({ timestamp: -1 });
-          existingLog = hb.getHabitLogOnTimestampDay(
+          existingLog = fn.getHabitLogOnTimestampDay(
             currentLogs,
             logTimestamp,
             habitCron.daily
           );
           const overwriteLog = !!existingLog;
-          const isTodaysLog = !!hb.getTodaysLog(
+          const isTodaysLog = !!fn.getTodaysLog(
             currentLogs,
             timezoneOffset,
             habitCron.daily
@@ -3038,7 +3033,7 @@ module.exports = {
             pastMonth,
             pastYear,
           } = targetHabit;
-          currentStreak = hb.calculateCurrentStreak(
+          currentStreak = fn.calculateCurrentStreak(
             currentLogs,
             timezoneOffset,
             habitCron,
@@ -3112,22 +3107,22 @@ module.exports = {
       }
       const sortType = indexByRecency ? "By Recency" : "By Date Created";
 
-      var userHabits;
+      var targetHabit;
       if (indexByRecency)
-        userHabits = await Habit.find({
+        targetHabit = await Habit.find({
           archived: isArchived,
           userID: authorID,
         }).sort({ _id: -1 });
       else
-        userHabits = await Habit.find({
+        targetHabit = await Habit.find({
           archived: isArchived,
           userID: authorID,
         }).sort({ createdAt: +1 });
-      if (!userHabits)
+      if (!targetHabit)
         return message.reply(
           `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
         );
-      if (!userHabits.length)
+      if (!targetHabit.length)
         return message.reply(
           `**No ${
             isArchived ? "archived " : ""
@@ -3146,16 +3141,16 @@ module.exports = {
           });
           if (recentHabit) {
             const recentHabitId = recentHabit._id.toString();
-            const recentHabitIndex = userHabits.findIndex(
+            const recentHabitIndex = targetHabit.findIndex(
               (habit) => habit._id.toString() === recentHabitId
             );
             if (recentHabitIndex === -1) return;
-            userHabits = [userHabits[recentHabitIndex]];
+            targetHabit = [targetHabit[recentHabitIndex]];
             habitIndex = recentHabitIndex;
           }
         } else if (isNumberArg) {
           habitIndex = parseInt(args[1 + archiveShift]);
-          if (habitIndex <= 0 || habitIndex > userHabits.length) {
+          if (habitIndex <= 0 || habitIndex > targetHabit.length) {
             return fn.sendErrorMessageAndUsage(
               message,
               habitActionHelpMessage,
@@ -3165,14 +3160,14 @@ module.exports = {
             );
           } else {
             habitIndex--;
-            userHabits = [userHabits[habitIndex]];
+            targetHabit = [targetHabit[habitIndex]];
           }
         }
       }
 
       var habitOutputArray = new Array();
       var i = habitIndex || 0;
-      for (const habit of userHabits) {
+      for (const habit of targetHabit) {
         i++;
         habitOutputArray.push(
           `__**Habit ${i} (${sortType}):**__\n${await hb.habitDocumentToString(
@@ -3240,22 +3235,22 @@ module.exports = {
       }
       const sortType = indexByRecency ? "By Recency" : "By Date Created";
 
-      var userHabits;
+      var targetHabit;
       if (indexByRecency)
-        userHabits = await Habit.find({
+        targetHabit = await Habit.find({
           archived: isArchived,
           userID: authorID,
         }).sort({ _id: -1 });
       else
-        userHabits = await Habit.find({
+        targetHabit = await Habit.find({
           archived: isArchived,
           userID: authorID,
         }).sort({ createdAt: +1 });
-      if (!userHabits)
+      if (!targetHabit)
         return message.reply(
           `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
         );
-      if (!userHabits.length)
+      if (!targetHabit.length)
         return message.reply(
           `**No ${
             isArchived ? "archived " : ""
@@ -3274,16 +3269,16 @@ module.exports = {
           });
           if (recentHabit) {
             const recentHabitId = recentHabit._id.toString();
-            const recentHabitIndex = userHabits.findIndex(
+            const recentHabitIndex = targetHabit.findIndex(
               (habit) => habit._id.toString() === recentHabitId
             );
             if (recentHabitIndex === -1) return;
-            userHabits = [userHabits[recentHabitIndex]];
+            targetHabit = [targetHabit[recentHabitIndex]];
             habitIndex = recentHabitIndex;
           }
         } else if (isNumberArg) {
           habitIndex = parseInt(args[1 + archiveShift]);
-          if (habitIndex <= 0 || habitIndex > userHabits.length) {
+          if (habitIndex <= 0 || habitIndex > targetHabit.length) {
             return fn.sendErrorMessageAndUsage(
               message,
               habitActionHelpMessage,
@@ -3293,14 +3288,14 @@ module.exports = {
             );
           } else {
             habitIndex--;
-            userHabits = [userHabits[habitIndex]];
+            targetHabit = [targetHabit[habitIndex]];
           }
         }
       }
 
       var habitOutputArray = new Array();
       var i = habitIndex || 0;
-      for (const habit of userHabits) {
+      for (const habit of targetHabit) {
         i++;
         habitOutputArray.push(
           `__**Habit ${i} (${sortType}):**__\n${await hb.habitDocumentToString(
@@ -3362,22 +3357,22 @@ module.exports = {
       }
       const sortType = indexByRecency ? "By Recency" : "By Date Created";
 
-      var userHabits;
+      var targetHabit;
       if (indexByRecency)
-        userHabits = await Habit.find({
+        targetHabit = await Habit.find({
           archived: isArchived,
           userID: authorID,
         }).sort({ _id: -1 });
       else
-        userHabits = await Habit.find({
+        targetHabit = await Habit.find({
           archived: isArchived,
           userID: authorID,
         }).sort({ createdAt: +1 });
-      if (!userHabits)
+      if (!targetHabit)
         return message.reply(
           `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
         );
-      if (!userHabits.length)
+      if (!targetHabit.length)
         return message.reply(
           `**No ${
             isArchived ? "archived " : ""
@@ -3396,16 +3391,16 @@ module.exports = {
           });
           if (recentHabit) {
             const recentHabitId = recentHabit._id.toString();
-            const recentHabitIndex = userHabits.findIndex(
+            const recentHabitIndex = targetHabit.findIndex(
               (habit) => habit._id.toString() === recentHabitId
             );
             if (recentHabitIndex === -1) return;
-            userHabits = [userHabits[recentHabitIndex]];
+            targetHabit = [targetHabit[recentHabitIndex]];
             habitIndex = recentHabitIndex;
           }
         } else if (isNumberArg) {
           habitIndex = parseInt(args[2 + archiveShift]);
-          if (habitIndex <= 0 || habitIndex > userHabits.length) {
+          if (habitIndex <= 0 || habitIndex > targetHabit.length) {
             return fn.sendErrorMessageAndUsage(
               message,
               habitActionHelpMessage,
@@ -3415,7 +3410,7 @@ module.exports = {
             );
           } else {
             habitIndex--;
-            userHabits = [userHabits[habitIndex]];
+            targetHabit = [targetHabit[habitIndex]];
           }
         }
       }
@@ -3424,7 +3419,7 @@ module.exports = {
       if (pastXDays) {
         var habitOutputArray = new Array();
         var i = habitIndex || 0;
-        for (const habit of userHabits) {
+        for (const habit of targetHabit) {
           i++;
           habitOutputArray.push(
             `__**Habit ${i} (${sortType}):**__\n${await hb.habitDocumentToString(
@@ -3474,7 +3469,11 @@ module.exports = {
       habitCommand === "reminder" ||
       habitCommand === "remindme" ||
       habitCommand === "remind" ||
-      habitCommand === "remindme"
+      habitCommand === "remindme" ||
+      habitCommand === "remin" ||
+      habitCommand === "rem" ||
+      habitCommand === "re" ||
+      habitCommand === "r"
     ) {
       let habitReminderUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <archive?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived habits!**\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       habitReminderUsageMessage = fn.getMessageEmbed(
@@ -3485,13 +3484,15 @@ module.exports = {
       if (habitType === "help")
         return message.channel.send(habitReminderUsageMessage);
 
-      var indexByRecency = false;
+      let indexByRecency = false;
       if (args[2 + archiveShift] !== undefined) {
         if (args[2 + archiveShift].toLowerCase() === "recent") {
           indexByRecency = true;
         }
       }
-      var habitArray;
+      const sortType = indexByRecency ? "By Recency" : "By Date Created";
+
+      var targetHabit;
       if (indexByRecency)
         habitArray = await Habit.find({
           archived: isArchived,
@@ -3502,6 +3503,10 @@ module.exports = {
           archived: isArchived,
           userID: authorID,
         }).sort({ createdAt: +1 });
+      if (!habitArray)
+        return message.reply(
+          `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
+        );
       if (!habitArray.length)
         return message.reply(
           `**No ${
@@ -3509,20 +3514,57 @@ module.exports = {
           }habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`
         );
 
-      let targetHabit = await fn.getUserSelectedObject(
-        bot,
-        message,
-        PREFIX,
-        "__**Which habit would you like to set a recurring reminder for?**__",
-        `Habit${isArchived ? " Archive" : ""}: Select Habit For Reminder`,
-        habitArray,
-        "description",
-        false,
-        habitEmbedColour,
-        600000
-      );
-      if (!targetHabit) return;
-      else targetHabit = targetHabit.object;
+      // If the user enters "recent" or a number, only show information for that one specific habit, otherwise show stats for all habits!
+      const targetHabitParam = args[1 + archiveShift]
+        ? args[1 + archiveShift].toLowerCase()
+        : false;
+      if (targetHabitParam) {
+        const isNumberArg = !isNaN(args[1 + archiveShift]);
+        if (targetHabitParam === "recent") {
+          const recentHabit = await Habit.findOne({ userID: authorID }).sort({
+            _id: -1,
+          });
+          if (recentHabit) {
+            const recentHabitId = recentHabit._id.toString();
+            const recentHabitIndex = habitArray.findIndex(
+              (habit) => habit._id.toString() === recentHabitId
+            );
+            if (recentHabitIndex === -1) return;
+            targetHabit = habitArray[recentHabitIndex];
+          }
+        } else if (isNumberArg) {
+          const habitIndex = parseInt(args[1 + archiveShift]);
+          if (habitIndex <= 0 || habitIndex > habitArray.length) {
+            return fn.sendErrorMessageAndUsage(
+              message,
+              habitActionHelpMessage,
+              `**${
+                isArchived ? "Archived " : ""
+              }Habit ${habitIndex} does not exist **...`
+            );
+          } else {
+            targetHabit = habitArray[habitIndex - 1];
+          }
+        }
+      }
+
+      if (!targetHabit) {
+        targetHabit = await fn.getUserSelectedObject(
+          bot,
+          message,
+          PREFIX,
+          "__**Which habit would you like to set a recurring reminder for?**__",
+          `Habit${isArchived ? " Archive" : ""}: Select Habit For Reminder`,
+          habitArray,
+          "description",
+          false,
+          habitEmbedColour,
+          600000
+        );
+        if (!targetHabit) return;
+        else targetHabit = targetHabit.object;
+      }
+
       await hb.setUserHabitReminder(
         bot,
         message,
@@ -3531,7 +3573,8 @@ module.exports = {
         daylightSaving,
         commandUsed,
         authorID,
-        targetHabit
+        targetHabit,
+        true
       );
       return;
     } else if (
