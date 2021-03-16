@@ -278,7 +278,7 @@ module.exports = {
               habitEmbedColour,
               `${userSettingsPrompt}\n\n${daysOfWeekList}`
             );
-            if (userEdit !== false && !isNaN(userEdit)) userEdit--;
+            if ((userEdit || userEdit === 0) && !isNaN(userEdit)) userEdit--;
             console.log({ userEdit });
             break;
           case 4:
@@ -535,7 +535,8 @@ module.exports = {
             }
             break;
         }
-        if (userEdit === false) return;
+        console.log({ userEdit });
+        if (!userEdit) return;
         else if (userEdit === undefined) userEdit = "back";
         else if (userEdit !== "back") {
           switch (fieldToEditIndex) {
@@ -612,7 +613,9 @@ module.exports = {
                   continueEdit = true;
                   break;
                 }
-                const startTimestamp = new Date(Date.now());
+                const startTimestamp = new Date(
+                  Date.now() + HOUR_IN_MS * timezoneOffset
+                );
                 let endTime = fn.timeCommandHandlerToUTC(
                   timeArgs[0] !== "today"
                     ? ["today"].concat(timeArgs)
@@ -639,8 +642,8 @@ module.exports = {
                     ? userSettings.habitCron.daily
                     : (endTime - todayMidnight) % DAY_IN_MS;
                 console.log({ endTime, startTimestamp, todayMidnight });
-                console.log({ newDailyCron });
                 const oldDailyCron = userSettings.habitCron.daily;
+                console.log({ oldDailyCron, newDailyCron });
                 //* Adjust their habit logs accordingly so that they fall under the same habit reset day!
                 //! Prompt user if they want to adapt their logs to this new timestamp (i.e. bring the later logs back into the next day)
                 //! Case I: If yes, bring the logs which are between midnight and the old cron time, and move them backwards
@@ -657,58 +660,53 @@ module.exports = {
                 if (!habits) break;
                 if (!habits.length) break;
                 const newCronIsAfterOldCron = oldDailyCron < newDailyCron;
-                // The case where the oldDailyCron is 0 (i.e. 12AM) and the new cron is before the old cron should have already been dealt with, with: if (oldDailyCron === newDailyCron) break;. But if not, it will here.
-                if (
-                  (!newCronIsAfterOldCron && oldDailyCron >= 1000) ||
-                  newCronIsAfterOldCron
-                ) {
-                  let confirmationMessage =
-                    "**Would you like to adjust your habit logs to fall on the __same day as they previously were?__**";
-                  if (newCronIsAfterOldCron) {
-                    confirmationMessage += `\n\ne.g. If you had a habit log that corresponds to **Monday** (Monday at 5AM, Old Cron Time: 4AM), and the new cron time makes the log correspond to **Sunday** (Monday at 5AM, NEW Cron Time: 6AM), the habit log will be moved (forward) to the new cron time (Monday at 6AM, NEW Cron Time: 6AM), so that it is **still a log for Monday**`;
-                  } else if (!newCronIsAfterOldCron && oldDailyCron >= 1000) {
-                    confirmationMessage += `\n\ne.g. If you had a habit log that corresponds to **Sunday** (Monday at 3AM, Old Cron Time: 4AM), and the new cron time makes the log correspond to **Monday** (Monday at 3AM, NEW Cron Time: 2AM), the habit log will be moved (backward) to 1 second before the new cron time (Monday at 1:59AM, NEW Cron Time: 2AM), so that it is **still a log for Sunday**`;
-                  } else break;
-                  confirmationMessage += `\n\nRecommendation: \`Yes\``;
-                  //* I set forceSkip to true, to force this shift to happen. Otherwise there will be more conflicts that the user will have trouble fixing in the future.
-                  const confirmAdjust = await fn.getUserConfirmation(
-                    bot,
-                    message,
-                    PREFIX,
-                    confirmationMessage,
-                    true,
-                    `${type}: Adjust Previous Habit Times`,
-                    600000
-                  );
-                  // If it's null, the user did not type anything automatically adjust
-                  if (!confirmAdjust && confirmAdjust !== null) break;
-                  // else if (confirmAdjust === false) {
-                  //   let {
-                  //     habitCron: updatedHabitCron,
-                  //   } = userSettings;
-                  //   habits.forEach(async (habit) => {
-                  //     if (habit) {
-                  //       const updatedHabit = await hb.updateHabit(
-                  //         habit,
-                  //         timezoneOffset,
-                  //         updatedHabitCron
-                  //       );
-                  //       hb.cancelHabitById(habit._id);
-                  //       await hb.habitCron(
-                  //         updatedHabit,
-                  //         timezoneOffset,
-                  //         updatedHabitCron
-                  //       );
-                  //     }
-                  //   });
-                  // }
-                  await hb.adjustHabitLogEntries(
-                    authorID,
-                    oldDailyCron,
-                    newDailyCron
-                  );
 
-                }
+                let confirmationMessage =
+                  "**Would you like to adjust your habit logs to fall on the __same day as they previously were?__**";
+                if (newCronIsAfterOldCron) {
+                  confirmationMessage += `\n\ne.g. If you had a habit log that corresponds to **Monday** (Monday at 5AM, Old Cron Time: 4AM), and the new cron time makes the log correspond to **Sunday** (Monday at 5AM, NEW Cron Time: 6AM), the habit log will be moved (forward) to the new cron time (Monday at 6AM, NEW Cron Time: 6AM), so that it is **still a log for Monday**`;
+                } else if (!newCronIsAfterOldCron && oldDailyCron >= 1000) {
+                  confirmationMessage += `\n\ne.g. If you had a habit log that corresponds to **Sunday** (Monday at 3AM, Old Cron Time: 4AM), and the new cron time makes the log correspond to **Monday** (Monday at 3AM, NEW Cron Time: 2AM), the habit log will be moved (backward) to 1 second before the new cron time (Monday at 1:59AM, NEW Cron Time: 2AM), so that it is **still a log for Sunday**`;
+                } else break;
+                confirmationMessage += `\n\nRecommendation: \`Yes\``;
+                //* I set forceSkip to true, to force this shift to happen. Otherwise there will be more conflicts that the user will have trouble fixing in the future.
+                const confirmAdjust = await fn.getUserConfirmation(
+                  bot,
+                  message,
+                  PREFIX,
+                  confirmationMessage,
+                  true,
+                  `${type}: Adjust Previous Habit Times`,
+                  600000
+                );
+                // If it's null, the user did not type anything automatically adjust
+                if (!confirmAdjust && confirmAdjust !== null) break;
+                // else if (confirmAdjust === false) {
+                //   let {
+                //     habitCron: updatedHabitCron,
+                //   } = userSettings;
+                //   habits.forEach(async (habit) => {
+                //     if (habit) {
+                //       const updatedHabit = await hb.updateHabit(
+                //         habit,
+                //         timezoneOffset,
+                //         updatedHabitCron
+                //       );
+                //       hb.cancelHabitById(habit._id);
+                //       await hb.habitCron(
+                //         updatedHabit,
+                //         timezoneOffset,
+                //         updatedHabitCron
+                //       );
+                //     }
+                //   });
+                // }
+                console.log("HERE!");
+                await hb.adjustHabitLogEntries(
+                  authorID,
+                  oldDailyCron,
+                  newDailyCron
+                );
                 // WITH Time collection
                 // Allow bot to make a new locked channel which will show the time based on the user settings - (ticking every 5 secs) then
                 // upon start up deletes all remaining timer channels if any - 3 per server/guild! (Allows for pomodoro!)

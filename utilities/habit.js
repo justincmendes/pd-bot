@@ -1196,7 +1196,7 @@ module.exports = {
   adjustHabitLogEntries: async function (userID, oldDailyCron, newDailyCron) {
     try {
       const newCronIsAfterOldCron = oldDailyCron < newDailyCron;
-      const userHabits = await Habit.find({userID});
+      const userHabits = await Habit.find({ userID });
       const habitIDs = userHabits
         .map((habit) => habit._id)
         .filter((habitID) => habitID !== undefined);
@@ -1204,6 +1204,7 @@ module.exports = {
         { connectedDocument: { $in: habitIDs } },
         { timestamp: 1 }
       );
+      // console.log({ logs });
       if (!logs) return false;
       if (!logs.length) return false;
 

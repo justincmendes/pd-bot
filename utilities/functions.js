@@ -4342,7 +4342,7 @@ module.exports = {
         600000
       );
       if (collectedEdit === "stop") return false;
-      else if (!collectedEdit) return "back";
+      else if (!collectedEdit) return false;
       else currentTimestamp = Date.now();
 
       if (collectedEdit.length > characterLimit) {
@@ -4698,7 +4698,7 @@ module.exports = {
         600000
       );
       if (collectedEdit === "stop") return false;
-      else if (!collectedEdit) return "back";
+      else if (!collectedEdit) return false;
       else currentTimestamp = Date.now();
 
       // Check if the given message is a number
