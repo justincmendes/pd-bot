@@ -1193,8 +1193,72 @@ module.exports = {
     }
   },
 
-  adjustHabitLogEntries: async function (userID) {
-    
+  adjustHabitLogEntries: async function (userID, oldDailyCron, newDailyCron) {
+    try {
+      const newCronIsAfterOldCron = oldDailyCron < newDailyCron;
+      const userHabits = await Habit.find({userID});
+      const habitIDs = userHabits
+        .map((habit) => habit._id)
+        .filter((habitID) => habitID !== undefined);
+      const logs = await Log.find(
+        { connectedDocument: { $in: habitIDs } },
+        { timestamp: 1 }
+      );
+      if (!logs) return false;
+      if (!logs.length) return false;
+
+      for (const log of logs) {
+        if (log.timestamp) {
+          var needsUpdate = false;
+          let { timestamp } = log;
+          const timestampsTimePastMidnight = fn.getTimePastMidnightInMs(
+            timestamp
+          );
+          console.log(`Timestamp: ${fn.timestampToDateString(timestamp)}`);
+          const date = new Date(timestamp);
+          const year = date.getUTCFullYear();
+          const month = date.getUTCMonth();
+          const day = date.getUTCDate();
+          if (newCronIsAfterOldCron) {
+            if (
+              timestampsTimePastMidnight >= oldDailyCron &&
+              timestampsTimePastMidnight < newDailyCron
+            ) {
+              timestamp = new Date(year, month, day).getTime() + newDailyCron;
+              console.log(
+                `New Timestamp: ${fn.timestampToDateString(timestamp)}`
+              );
+              needsUpdate = true;
+            }
+          } else {
+            if (
+              timestampsTimePastMidnight >= newDailyCron &&
+              timestampsTimePastMidnight < oldDailyCron
+            ) {
+              // One second before, because on or over the cron time corresponds to the next day
+              timestamp =
+                new Date(year, month, day).getTime() + newDailyCron - 1000;
+              console.log(
+                `New Timestamp: ${fn.timestampToDateString(timestamp)}`
+              );
+              needsUpdate = true;
+            }
+          }
+          if (needsUpdate) {
+            console.log(
+              `Updating Timestamp at ${fn.msToTimeFromMidnight(
+                timestampsTimePastMidnight
+              )}!\n`
+            );
+            await Log.updateOne({ _id: log._id }, { $set: { timestamp } });
+          }
+        }
+      }
+      return true;
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
   },
 
   /**

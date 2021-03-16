@@ -702,75 +702,12 @@ module.exports = {
                   //     }
                   //   });
                   // }
-                  const habitIDs = habits
-                    .map((habit) => habit._id)
-                    .filter((habitID) => habitID !== undefined);
-                  const logs = await Log.find(
-                    { connectedDocument: { $in: habitIDs } },
-                    { timestamp: 1 }
+                  await hb.adjustHabitLogEntries(
+                    authorID,
+                    oldDailyCron,
+                    newDailyCron
                   );
-                  if (!logs) break;
-                  if (!logs.length) break;
 
-                  logs.forEach(async (log) => {
-                    if (log.timestamp) {
-                      var needsUpdate = false;
-                      let { timestamp } = log;
-                      const timestampsTimePastMidnight = fn.getTimePastMidnightInMs(
-                        timestamp
-                      );
-                      console.log(
-                        `Timestamp: ${fn.timestampToDateString(timestamp)}`
-                      );
-                      const date = new Date(timestamp);
-                      const year = date.getUTCFullYear();
-                      const month = date.getUTCMonth();
-                      const day = date.getUTCDate();
-                      if (newCronIsAfterOldCron) {
-                        if (
-                          timestampsTimePastMidnight >= oldDailyCron &&
-                          timestampsTimePastMidnight < newDailyCron
-                        ) {
-                          timestamp =
-                            new Date(year, month, day).getTime() + newDailyCron;
-                          console.log(
-                            `New Timestamp: ${fn.timestampToDateString(
-                              timestamp
-                            )}`
-                          );
-                          needsUpdate = true;
-                        }
-                      } else {
-                        if (
-                          timestampsTimePastMidnight >= newDailyCron &&
-                          timestampsTimePastMidnight < oldDailyCron
-                        ) {
-                          // One second before, because on or over the cron time corresponds to the next day
-                          timestamp =
-                            new Date(year, month, day).getTime() +
-                            newDailyCron -
-                            1000;
-                          console.log(
-                            `New Timestamp: ${fn.timestampToDateString(
-                              timestamp
-                            )}`
-                          );
-                          needsUpdate = true;
-                        }
-                      }
-                      if (needsUpdate) {
-                        console.log(
-                          `Updating Timestamp at ${fn.msToTimeFromMidnight(
-                            timestampsTimePastMidnight
-                          )}!\n`
-                        );
-                        await Log.updateOne(
-                          { _id: log._id },
-                          { $set: { timestamp } }
-                        );
-                      }
-                    }
-                  });
                 }
                 // WITH Time collection
                 // Allow bot to make a new locked channel which will show the time based on the user settings - (ticking every 5 secs) then
@@ -1695,7 +1632,7 @@ module.exports = {
             await rm.updateUserReminders(
               bot,
               authorID,
-              //* * -1 because if the timezone is earlier, the reminder should be earlier => a soon start/end time => subtrack from the start/end times 
+              //* * -1 because if the timezone is earlier, the reminder should be earlier => a soon start/end time => subtrack from the start/end times
               timezoneDifference * -1,
               updateDmReminders,
               updateGuildReminders

@@ -2133,7 +2133,12 @@ module.exports = {
                           userEdit,
                           userSettings.habitCron.daily
                         );
-                        if (!collisionLog) {
+                        if (
+                          !collisionLog ||
+                          (collisionLog &&
+                            collisionLog._id.toString() ===
+                              targetLog._id.toString())
+                        ) {
                           targetLog.timestamp = userEdit;
                           break;
                         }
