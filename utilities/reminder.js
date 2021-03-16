@@ -8,6 +8,7 @@ const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
 const Habit = require("../djs-bot/database/schemas/habit");
 const Log = require("../djs-bot/database/schemas/habittracker");
+const Dst = require("../djs-bot/database/schemas/dst");
 require("dotenv").config();
 
 const HOUR_IN_MS = fn.HOUR_IN_MS;
