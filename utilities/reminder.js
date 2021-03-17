@@ -218,6 +218,9 @@ module.exports = {
             case "Goal":
               embedColour = goalEmbedColour;
               break;
+            case "Goals":
+              embedColour = goalEmbedColour;
+              break;
             case "Journal":
               embedColour = journalEmbedColour;
               break;
@@ -1068,8 +1071,7 @@ module.exports = {
                   { new: true }
                 );
               }
-            }
-            if (reminder.title === "Voice Channel Tracking") {
+            } else if (reminder.title === "Voice Channel Tracking") {
               updateObject.message = await fn.getTrackingReportString(
                 bot,
                 reminder.userID,
@@ -1101,13 +1103,19 @@ module.exports = {
                 // updateObject.message = await fn.getTrackingReportString(bot, reminder.userID, true,
                 //     updatedUserSettings);
               }
-            }
-            if (reminder.title === "Habit" && reminder.connectedDocument) {
+            } else if (
+              reminder.title === "Habit" &&
+              reminder.connectedDocument
+            ) {
               updateObject.message = await fn.getHabitReminderMessage(
                 reminder.userID,
                 offset,
                 "habit",
                 reminder.connectedDocument
+              );
+            } else if (reminder.title === "Goals") {
+              updateObject.message = await fn.getGoalsReminderMessage(
+                reminder.userID
               );
             }
             const updateReminder = await Reminder.findOneAndUpdate(
