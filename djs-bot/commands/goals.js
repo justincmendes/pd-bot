@@ -570,6 +570,7 @@ module.exports = {
       goalCommand === "start" ||
       goalCommand === "create" ||
       goalCommand === "s" ||
+      goalCommand === "st" ||
       goalCommand === "set" ||
       goalCommand === "c" ||
       goalCommand === "make" ||
