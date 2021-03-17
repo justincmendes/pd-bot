@@ -2354,7 +2354,7 @@ module.exports = {
       const userGoals = await Goal.find({
         userID: authorID,
         archived: false,
-      }).sort({ _id: +1 });
+      }).sort({ start: +1 });
       if (userGoals)
         if (userGoals.length) {
           var reset;

@@ -443,8 +443,10 @@ module.exports = {
                     } else message += remainingOccurrencesMessage;
                   }
                   if (
+                    updatedReminderObject.title === "Quote" ||
                     updatedReminderObject.title === "Voice Channel Tracking" ||
-                    updatedReminderObject.title === "Habit"
+                    updatedReminderObject.title === "Habit" ||
+                    updatedReminderObject.title === "Goals"
                   ) {
                     if (updatedReminderObject.sendAsEmbed) {
                       if (Array.isArray(message)) {
@@ -1125,8 +1127,10 @@ module.exports = {
             );
             if (updateReminder) {
               if (
+                reminder.title === "Quote" ||
                 reminder.title === "Voice Channel Tracking" ||
-                (reminder.title === "Habit" && reminder.connectedDocument)
+                (reminder.title === "Habit" && reminder.connectedDocument) ||
+                reminder.title === "Goals"
               ) {
                 console.log(updateObject.message);
                 updateReminder.message =
