@@ -155,7 +155,11 @@ module.exports = {
     await this.sendReminderByObject(bot, reminder);
   },
 
-  sendReminderByObject: async function (bot, reminderObject) {
+  sendReminderByObject: async function (
+    bot,
+    reminderObject,
+    onRestart = false
+  ) {
     try {
       console.log({ reminderObject });
       if (!reminderObject) return false;
@@ -378,7 +382,8 @@ module.exports = {
             timeout: fn.setLongTimeout(async () => {
               const updatedReminderObject = await this.updateRecurringReminderByObjectID(
                 bot,
-                reminderID
+                reminderID,
+                onRestart
               );
               if (updatedReminderObject) {
                 console.log({ updatedReminderObject });
@@ -773,11 +778,13 @@ module.exports = {
   },
 
   resetReminders: async function (bot) {
-    const allReminders = await this.getAllReminders();
+    // REMEMBER TO COMMENT THIS BACK IN BEFORE DEPLOYMENT! TEST
+    // const allReminders = await this.getAllReminders();
+    const allReminders = await Reminder.find({ userID: "746119608271896598" });
     console.log("Reinitializing all reminders.");
     if (allReminders) {
       allReminders.forEach(async (reminder) => {
-        await this.sendReminderByObject(bot, reminder);
+        await this.sendReminderByObject(bot, reminder, true);
       });
     }
   },
@@ -955,7 +962,11 @@ module.exports = {
     console.log(`Deleting all of ${userID}'s reminders`);
   },
 
-  updateRecurringReminderByObjectID: async function (bot, reminderID) {
+  updateRecurringReminderByObjectID: async function (
+    bot,
+    reminderID,
+    onRestart = false
+  ) {
     if (reminderID) {
       const reminder = await this.getOneReminderByObjectID(reminderID);
       if (reminder)
@@ -980,12 +991,12 @@ module.exports = {
                 : intervalArgs;
 
             var remindersLeft = remainingOccurrences || 1;
-            let onFirst = true,
-              iterations = 0,
+            let iterations = 0,
               MAX_ITERATIONS = 500,
-              newEndTime = endTime;
-            var intervalDuration;
+              newEndTime = endTime,
+              previousEndTime = newEndTime;
             do {
+              previousEndTime = newEndTime;
               newEndTime = fn.timeCommandHandlerToUTC(
                 intervalArgs,
                 newEndTime,
@@ -997,11 +1008,15 @@ module.exports = {
               );
               if (!newEndTime) return false;
               else {
+                // console.log(
+                //   `New End Time: ${fn.timestampToDateString(newEndTime)}`
+                // );
+                // console.log(
+                //   `Starting End Time: ${fn.timestampToDateString(
+                //     endTime + HOUR_IN_MS * offset
+                //   )}`
+                // );
                 newEndTime -= HOUR_IN_MS * offset;
-                if (onFirst) {
-                  intervalDuration = newEndTime - endTime;
-                  onFirst = false;
-                }
                 if (remainingOccurrences) remindersLeft--;
               }
               iterations++;
@@ -1013,10 +1028,10 @@ module.exports = {
             if (iterations >= MAX_ITERATIONS) {
               newEndTime = Date.now();
             }
-
-            const newStartTime = intervalDuration
-              ? newEndTime - intervalDuration
-              : endTime;
+            // console.log(
+            //   `FINAL End Time: ${fn.timestampToDateString(newEndTime)}`
+            // );
+            const newStartTime = previousEndTime || endTime;
             let updateObject = {
               startTime: newStartTime,
               endTime: newEndTime,
