@@ -779,7 +779,6 @@ module.exports = {
 
   resetReminders: async function (bot) {
     const allReminders = await this.getAllReminders();
-    const allReminders = await Reminder.find({ userID: "746119608271896598" });
     console.log("Reinitializing all reminders.");
     if (allReminders) {
       allReminders.forEach(async (reminder) => {
