@@ -432,7 +432,12 @@ module.exports = {
             currentReflection ? `\n${currentReflection}` : " N/A"
           }\n\n__**New Log:**__\n**State:** ${fn.getStateEmoji(
             habitLog
-          )}\n**Timestamp:** ${fn.timestampToDateString(logTimestamp)}${
+          )}\n**Timestamp:** ${fn.timestampToDateString(
+            logTimestamp
+          )}\n(Actual Habit Day: ${fn.timestampToDateString(
+            fn.getActualDateLogged(logTimestamp, habitCron.daily),
+            false
+          )})${
             isCountType && (countValue || countValue === 0)
               ? `\n**${countMetric}:** Current Value (**${countValue}**) vs. ${countGoalTypeString} (**${countGoal}**)`
               : ""
