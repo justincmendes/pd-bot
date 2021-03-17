@@ -699,7 +699,9 @@ module.exports = {
           bot,
           message,
           PREFIX,
-          `${instructions}${list ? `\n${list}` : ""}${messageAfterList ? `\n${messageAfterList}` : ""}`,
+          `${instructions}${list ? `\n${list}` : ""}${
+            messageAfterList ? `\n${messageAfterList}` : ""
+          }`,
           selectTitle,
           messageColour,
           delayTime,
@@ -7241,7 +7243,8 @@ module.exports = {
     log,
     habitCron,
     boldTimestamp = false,
-    underlineTimestamp = false
+    underlineTimestamp = false,
+    showTimestampOnly = false
   ) {
     const state = this.getStateEmoji(log.state);
     var messageString = log.message ? `\n**Message:** ${log.message}` : "";
@@ -7274,17 +7277,25 @@ module.exports = {
       timestampString = `${timestampString.substring(
         0,
         colonSeparator + 2
-      )}__${timestampString.substring(colonSeparator + 2, timestampString.length)}__`;
+      )}__${timestampString.substring(
+        colonSeparator + 2,
+        timestampString.length
+      )}__`;
       colonSeparator = timestampString.lastIndexOf(":");
     }
     if (boldTimestamp) {
       timestampString = `${timestampString.substring(
         0,
         colonSeparator + 2
-      )}**${timestampString.substring(colonSeparator + 2, timestampString.length)}**`;
+      )}**${timestampString.substring(
+        colonSeparator + 2,
+        timestampString.length
+      )}**`;
     }
 
-    return `${state} - ${timestampString}` + messageString + countString;
+    return `${state} - ${timestampString}${
+      showTimestampOnly ? "" : `${messageString}${countString}`
+    }`;
   },
 
   countArrayToString: function (countArray) {

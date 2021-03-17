@@ -292,8 +292,7 @@ module.exports = {
               existingLog,
               habitCron
             )}\n\n**Desired Timestamp:** ${fn.timestampToDateString(
-              logTimestamp,
-              habitCron
+              logTimestamp
             )}`,
             false,
             `Log${
@@ -307,12 +306,18 @@ module.exports = {
         const logTimestampString = existingLog
           ? `\n**Previous Timestamp:** ${fn.timestampToDateString(
               existingLog.timestamp
-            )}\n**Current Timestamp:** ${fn.timestampToDateString(
+            )}\n(Actual Habit Day: ${fn.timestampToDateString(
+              fn.getActualDateLogged(existingLog.timestamp, habitCron.daily)
+            )})\n**Current Timestamp:** ${fn.timestampToDateString(
               logTimestamp
-            )}`
+            )}\n(Actual Habit Day: ${fn.timestampToDateString(
+              fn.getActualDateLogged(logTimestamp, habitCron.daily)
+            )})`
           : `\n**Current Timestamp:** ${fn.timestampToDateString(
               logTimestamp
-            )}`;
+            )}\n(Actual Habit Day: ${fn.timestampToDateString(
+              fn.getActualDateLogged(logTimestamp, habitCron.daily)
+            )})`;
         const previousCountTypeString = existingLog
           ? `**Previous ${countMetric}:** ${fn.countArrayToString(
               existingLog.count
@@ -410,7 +415,9 @@ module.exports = {
             existingLog
               ? `\n**Previous Timestamp:** ${fn.timestampToDateString(
                   existingLog.timestamp
-                )}`
+                )}\n(Actual Habit Day: ${fn.timestampToDateString(
+                  fn.getActualDateLogged(existingLog.timestamp, habitCron.daily)
+                )})`
               : ""
           }${
             isCountType ? `\n${previousCountTypeString}` : ""
