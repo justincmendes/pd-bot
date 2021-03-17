@@ -774,7 +774,7 @@ module.exports = {
                         guildID,
                       };
                       const reminders = await Reminder.find(reminderQuery);
-                      reminders.forEach(async (reminder) => {
+                      reminders.forEach((reminder) => {
                         rm.cancelReminderById(reminder._id);
                       });
                       await Reminder.deleteMany(reminderQuery);
@@ -967,7 +967,7 @@ module.exports = {
 
               const reminderQuery = { title: "Quote", isDM: false, guildID };
               const reminders = await Reminder.find(reminderQuery);
-              reminders.forEach(async (reminder) => {
+              reminders.forEach((reminder) => {
                 rm.cancelReminderById(reminder._id);
               });
               await Reminder.deleteMany(reminderQuery);

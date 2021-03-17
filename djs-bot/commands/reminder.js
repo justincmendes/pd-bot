@@ -457,7 +457,7 @@ module.exports = {
           );
           const reminderQuery = { userID: authorID, isRecurring: false };
           const reminders = await Reminder.find(reminderQuery);
-          reminders.forEach(async (reminder) => {
+          reminders.forEach((reminder) => {
             rm.cancelReminderById(reminder._id);
           });
           await Reminder.deleteMany(reminderQuery);

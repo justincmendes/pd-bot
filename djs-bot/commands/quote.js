@@ -333,7 +333,7 @@ module.exports = {
                         title: "Quote",
                       };
                       const reminders = await Reminder.find(reminderQuery);
-                      reminders.forEach(async (reminder) => {
+                      reminders.forEach((reminder) => {
                         rm.cancelReminderById(reminder._id);
                       });
                       await Reminder.deleteMany(reminderQuery);
@@ -542,7 +542,7 @@ module.exports = {
               isRecurring: true,
             };
             const reminders = await Reminder.find(reminderQuery);
-            reminders.forEach(async (reminder) => {
+            reminders.forEach((reminder) => {
               rm.cancelReminderById(reminder._id);
             });
             await Reminder.deleteMany(reminderQuery);
