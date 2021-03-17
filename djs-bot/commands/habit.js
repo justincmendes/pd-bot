@@ -145,6 +145,7 @@ module.exports = {
     const authorUsername = message.author.username;
     let userSettings = await User.findOne({ discordID: authorID });
     const { tier } = userSettings;
+    let { habitCron } = userSettings;
     let habitUsageMessage =
       `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\`` +
       `\n\n\`<ACTION>\`: **add; see; log/end; delete; edit; archive; post; today; stats/statistics; past (stats on past x days);**\n\n*__ALIASES:__* **${
@@ -312,7 +313,7 @@ module.exports = {
           }
 
         userSettings = await User.findOne({ discordID: authorID });
-        let { habitCron } = userSettings;
+        habitCron = userSettings.habitCron;
         let cronSettings = `**Daily Streak Reset Time:** ${fn.msToTimeFromMidnight(
           habitCron.daily
         )}\n**Weekly Reset Day:** ${fn.getDayOfWeekToString(habitCron.weekly)}`;
@@ -1704,8 +1705,10 @@ module.exports = {
                   let logList = `👣 - **__Habit Description:__**\n${habitDocument.description}\n\n`;
                   logs.forEach((log, i) => {
                     logList += `\`${i + 1}\`\: ${fn.logDocumentToString(
-                      log
+                      log,
+                      habitCron
                     )}\n`;
+                    if (i !== logs.length - 1) logList += "\n";
                   });
                   targetLogIndex = await fn.userSelectFromList(
                     bot,
@@ -1737,7 +1740,7 @@ module.exports = {
                     habitEmbedColour,
                     600000,
                     0,
-                    fn.logDocumentToString(logs[targetLogIndex])
+                    fn.logDocumentToString(logs[targetLogIndex], habitCron)
                   );
                   if (!selectedLogField) return;
                   else targetLogField = selectedLogField.index;
@@ -1804,7 +1807,10 @@ module.exports = {
                           habitEmbedColour,
                           600000,
                           0,
-                          `\n${fn.logDocumentToString(logs[targetLogIndex])}`
+                          `\n${fn.logDocumentToString(
+                            logs[targetLogIndex],
+                            habitCron
+                          )}`
                         );
                         if (!selectedCount) return;
                         else targetCountIndex = selectedCount.index;
@@ -2157,9 +2163,11 @@ module.exports = {
                             true,
                             false
                           )}, and **the other log will be deleted***\n\n__**Current Log:**__ (Timestamp Unchanged)\n${fn.logDocumentToString(
-                            targetLog
+                            targetLog,
+                            habitCron
                           )}\n\n__**Log to Overwrite:**__\n${fn.logDocumentToString(
-                            collisionLog
+                            collisionLog,
+                            habitCron
                           )}`,
                           false,
                           `${type}: Overwrite Log? (Date Conflict)`,
@@ -2370,7 +2378,7 @@ module.exports = {
                           userID,
                           reminder.endTime,
                           reminder.interval,
-                          habitTargetID,
+                          habitTargetID
                         );
                       });
                     }
@@ -2378,7 +2386,7 @@ module.exports = {
               }
 
               // Update Stats!
-              const { habitCron } = userSettings;
+              habitCron = userSettings.habitCron;
               const currentLogs = await Log.find({
                 connectedDocument: habitDocument._id,
               }).sort({ timestamp: -1 });
@@ -2455,7 +2463,7 @@ module.exports = {
               console.log({ continueEdit });
               if (habitDocument) {
                 userSettings = await User.findOne({ discordID: authorID });
-                let { habitCron } = userSettings;
+                habitCron = userSettings.habitCron;
                 hb.cancelHabitById(habitDocument._id);
                 await hb.habitCron(habitDocument, timezoneOffset, habitCron);
 
@@ -2478,7 +2486,8 @@ module.exports = {
                 const showEditedLog =
                   fieldToEditIndex === 0
                     ? `\n\n__**Edited Log:**__\n${fn.logDocumentToString(
-                        logs[targetLogIndex]
+                        logs[targetLogIndex],
+                        habitCron
                       )}`
                     : "";
                 showHabit = await hb.habitDocumentToString(
@@ -2782,7 +2791,6 @@ module.exports = {
         if (!logTimestamp && logTimestamp !== 0) return;
 
         // If it is a count habit, get the count input first.
-        const { habitCron } = userSettings;
         const { settings } = targetHabit;
         const {
           isCountType,
@@ -2814,9 +2822,11 @@ module.exports = {
                 ? ` ${targetHabitIndex + 1}`
                 : ""
             }\`**)\n\n**Old Log:** ${fn.logDocumentToString(
-              existingLog
+              existingLog,
+              habitCron
             )}\n\n**Desired Timestamp:** ${fn.timestampToDateString(
-              logTimestamp
+              logTimestamp,
+              habitCron
             )}`,
             false,
             `Habit${

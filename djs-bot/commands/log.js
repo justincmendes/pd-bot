@@ -22,6 +22,7 @@ const checkMissedSkipList =
 // Private Function Declarations
 function multipleLogsToStringArray(
   message,
+  habitCron,
   logArray,
   numberOfLogs,
   entriesToSkip = 0,
@@ -38,7 +39,12 @@ function multipleLogsToStringArray(
       );
       break;
     }
-    const logString = fn.logDocumentToString(logArray[i], true, true);
+    const logString = fn.logDocumentToString(
+      logArray[i],
+      habitCron,
+      true,
+      true
+    );
     logsToString.push(logString);
   }
   if (toString) logsToString = logsToString.join("\n\n");
@@ -95,6 +101,7 @@ module.exports = {
     const authorUsername = message.author.username;
     let userSettings = await User.findOne({ discordID: authorID });
     const { tier } = userSettings;
+    let { habitCron } = userSettings;
     let logUsageMessage =
       `**USAGE**\n\`${PREFIX}${commandUsed} <ACTION>\`` +
       `\n\n\`<ACTION>\`: **add/start; see; delete; edit**\n\n*__ALIASES:__* **${
@@ -249,7 +256,6 @@ module.exports = {
         if (!logTimestamp && logTimestamp !== 0) return;
 
         // If it is a count habit, get the count input first.
-        const { habitCron } = userSettings;
         const { settings } = targetHabit;
         const {
           isCountType,
@@ -283,9 +289,11 @@ module.exports = {
                   : ` ${targetHabitIndex + 1}`
                 : ""
             }\`**)\n\n**Old Log:** ${fn.logDocumentToString(
-              existingLog
+              existingLog,
+              habitCron
             )}\n\n**Desired Timestamp:** ${fn.timestampToDateString(
-              logTimestamp
+              logTimestamp,
+              habitCron
             )}`,
             false,
             `Log${
@@ -623,7 +631,11 @@ module.exports = {
           targetHabitIndex + 1
         } (${sortType}):__**\n${fn.habitDocumentDescription(targetHabit)}\n\n`;
         habitLogs.forEach((log, i) => {
-          logList += `\`${i + 1}\`\: ${fn.logDocumentToString(log)}\n`;
+          logList += `\`${i + 1}\`\: ${fn.logDocumentToString(
+            log,
+            habitCron
+          )}\n`;
+          if (i !== habitLogs.length - 1) logList += "\n";
         });
         if (someLogsSelected) {
           logList += `\`${habitLogs.length + 1}\`: **DONE**`;
@@ -672,7 +684,7 @@ module.exports = {
       console.log({ targetLogs });
       const finalLogsString = targetLogs
         .map((log) => {
-          return fn.logDocumentToString(log);
+          return fn.logDocumentToString(log, habitCron);
         })
         .join("\n");
       const confirmDeletion = await fn.getUserConfirmation(
@@ -692,7 +704,7 @@ module.exports = {
         await Log.deleteMany({ _id: { $in: targetLogIds } });
         const userSettings = await User.findOne({ discordID: authorID });
         if (userSettings) {
-          const { habitCron } = userSettings;
+          habitCron = userSettings.habitCron;
           await hb.updateHabitStats(targetHabit, timezoneOffset, habitCron);
         }
       }
@@ -808,6 +820,7 @@ module.exports = {
       console.log({ logView, totalLogs });
       const logArray = multipleLogsToStringArray(
         message,
+        habitCron,
         logView,
         totalLogs,
         0,
@@ -957,7 +970,8 @@ module.exports = {
         targetHabitIndex + 1
       } (${sortType}):__**\n${fn.habitDocumentDescription(targetHabit)}\n\n`;
       logs.forEach((log, i) => {
-        logList += `\`${i + 1}\`\: ${fn.logDocumentToString(log)}\n`;
+        logList += `\`${i + 1}\`\: ${fn.logDocumentToString(log, habitCron)}\n`;
+        if (i !== logs.length - 1) logList += "\n";
       });
 
       const type = `Log${isArchived ? " Archive" : ""}`;
@@ -1024,13 +1038,13 @@ module.exports = {
           );
         continueEdit = false;
         showHabit = fn.habitDocumentDescription(targetHabit);
-        showLog = fn.logDocumentToString(targetLog);
+        showLog = fn.logDocumentToString(targetLog, habitCron);
 
         // Field the user wants to edit
         const fieldToEditInstructions = "**Which field do you want to edit?**";
         const fieldToEditAdditionalMessage = `__**Log ${
           targetLogIndex + 1
-        }:**__\n${fn.logDocumentToString(logs[targetLogIndex])}`;
+        }:**__\n${fn.logDocumentToString(logs[targetLogIndex], habitCron)}`;
         const fieldToEditTitle = `${type}: Edit Field`;
         var fieldToEdit, fieldToEditIndex;
 
@@ -1117,7 +1131,7 @@ module.exports = {
                 habitEmbedColour,
                 600000,
                 0,
-                `\n${fn.logDocumentToString(logs[targetLogIndex])}`
+                `\n${fn.logDocumentToString(logs[targetLogIndex], habitCron)}`
               );
               if (!selectedCount) return;
               else targetCountIndex = selectedCount.index;
@@ -1196,9 +1210,11 @@ module.exports = {
                     true,
                     false
                   )}, and **the other log will be deleted***\n\n__**Current Log:**__ (Timestamp Unchanged)\n${fn.logDocumentToString(
-                    targetLog
+                    targetLog,
+                    habitCron
                   )}\n\n__**Log to Overwrite:**__\n${fn.logDocumentToString(
-                    collisionLog
+                    collisionLog,
+                    habitCron
                   )}`,
                   false,
                   `${type}: Overwrite Log? (Date Conflict)`,
@@ -1288,7 +1304,7 @@ module.exports = {
 
             if (targetHabit) {
               userSettings = await User.findOne({ discordID: authorID });
-              const { habitCron } = userSettings;
+              habitCron = userSettings;
               targetHabit = await hb.updateHabitStats(
                 targetHabit,
                 timezoneOffset,
@@ -1312,7 +1328,7 @@ module.exports = {
               //       isArchived,
               //       hb.getOneHabitByCreatedAt
               //     );
-              showLog = fn.logDocumentToString(logs[targetLogIndex]);
+              showLog = fn.logDocumentToString(logs[targetLogIndex], habitCron);
               showHabit = fn.habitDocumentDescription(targetHabit);
               const continueEditMessage = `Do you want to continue **editing ${
                 isArchived ? "Archived " : ""
@@ -1364,7 +1380,7 @@ module.exports = {
             //       hb.getOneHabitByRecency
             //     );
             // console.log({ targetHabit, habitTargetID, fieldToEditIndex });
-            showLog = fn.logDocumentToString(logs[targetLogIndex]);
+            showLog = fn.logDocumentToString(logs[targetLogIndex], habitCron);
             showHabit = fn.habitDocumentDescription(targetHabit);
           } else {
             message.reply(

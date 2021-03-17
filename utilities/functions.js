@@ -699,7 +699,7 @@ module.exports = {
           bot,
           message,
           PREFIX,
-          `${instructions}\n${list}\n${messageAfterList || ""}`,
+          `${instructions}${list ? `\n${list}` : ""}${messageAfterList ? `\n${messageAfterList}` : ""}`,
           selectTitle,
           messageColour,
           delayTime,
@@ -7239,6 +7239,7 @@ module.exports = {
 
   logDocumentToString: function (
     log,
+    habitCron,
     boldTimestamp = false,
     underlineTimestamp = false
   ) {
@@ -7247,6 +7248,7 @@ module.exports = {
     const countString = this.countArrayToString(log.count);
     var timestampString = this.timestampToDateString(log.timestamp);
     let timeComma = timestampString.lastIndexOf(",");
+
     if (underlineTimestamp) {
       timestampString = `__${timestampString.substring(
         0,
@@ -7260,6 +7262,28 @@ module.exports = {
         timeComma
       )}**${timestampString.substring(timeComma, timestampString.length)}`;
     }
+
+    timestampString += `\nActual Habit Day: ${this.timestampToDateString(
+      this.getActualDateLogged(log.timestamp, habitCron.daily),
+      false,
+      true,
+      true
+    )}`;
+    let colonSeparator = timestampString.lastIndexOf(":");
+    if (underlineTimestamp) {
+      timestampString = `${timestampString.substring(
+        0,
+        colonSeparator + 2
+      )}__${timestampString.substring(colonSeparator + 2, timestampString.length)}__`;
+      colonSeparator = timestampString.lastIndexOf(":");
+    }
+    if (boldTimestamp) {
+      timestampString = `${timestampString.substring(
+        0,
+        colonSeparator + 2
+      )}**${timestampString.substring(colonSeparator + 2, timestampString.length)}**`;
+    }
+
     return `${state} - ${timestampString}` + messageString + countString;
   },
 
@@ -7347,6 +7371,7 @@ module.exports = {
               const todaysLogMessage = todaysLog
                 ? `\n\n**__Today's Current Log:__**\n${this.logDocumentToString(
                     todaysLog,
+                    habitCron,
                     true,
                     false
                   )}`
@@ -7354,6 +7379,7 @@ module.exports = {
               const previousLogMessage = previousLog
                 ? `\n\n**__Previous Log:__**\n${this.logDocumentToString(
                     previousLog,
+                    habitCron,
                     true,
                     false
                   )}`
@@ -7493,11 +7519,13 @@ module.exports = {
 
     //* Filter all of the future logs (i.e. the logs beyond today's cron)
     // Get the cron time of today (end of day)
+    console.log({ sortedLogs });
     sortedLogs = this.getLogsFromTodayAndThePast(
       sortedLogs,
       timezoneOffset,
       habitCron
     );
+    console.log({ sortedLogs });
 
     var lastCheckedDay, lastCheckedLog, lastCheckedCronDay;
     for (let i = 0; i < sortedLogs.length; i++) {
