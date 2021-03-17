@@ -540,7 +540,7 @@ module.exports = {
   /**
    * @param {mongoose.Schema.Types.ObjectId | String} connectedDocumentId
    */
-  cancelReminderByConnectedDocument: function (connectedDocumentId) {
+  cancelRemindersByConnectedDocument: function (connectedDocumentId) {
     const success = fn.cancelCronByConnectedDocument(
       reminders,
       connectedDocumentId
@@ -1419,6 +1419,8 @@ module.exports = {
     userTimezoneOffset,
     userDaylightSavingSetting,
     isRecurring,
+    type = "Recurring Reminder",
+    embedColour = fn.repeatReminderEmbedColour,
     timeExamples = fn.timeExamples
   ) {
     var firstEndTime, error, startTimestamp;
@@ -1432,8 +1434,14 @@ module.exports = {
         message,
         PREFIX,
         reminderPrompt,
-        `${isRecurring ? "Repeat " : ""}Reminder: First Reminder`,
-        isRecurring ? repeatEmbedColour : reminderEmbedColour
+        type
+          ? `${type}: First Reminder`
+          : `${isRecurring ? "Repeat " : ""}Reminder: First Reminder`,
+        embedColour
+          ? embedColour
+          : isRecurring
+          ? repeatEmbedColour
+          : reminderEmbedColour
       );
       if (!userTimeInput || userTimeInput === "stop") return false;
       startTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
@@ -1611,7 +1619,9 @@ module.exports = {
       reminderHelpMessage,
       timezoneOffset,
       daylightSavingsSetting,
-      isRecurring
+      isRecurring,
+      isRecurring ? "Recurring Reminder" : "Reminder",
+      isRecurring ? repeatEmbedColour : reminderEmbedColour
     );
     console.log({ duration });
     if (!duration && duration !== 0) return false;
@@ -1663,6 +1673,55 @@ module.exports = {
         )}** from now!`
       );
       return currentTimestamp + duration;
+    }
+  },
+
+  getRemainingOccurrences: async function (
+    bot,
+    message,
+    PREFIX,
+    type,
+    embedColour
+  ) {
+    try {
+      let remainingOccurrences = await fn.userSelectFromList(
+        bot,
+        message,
+        PREFIX,
+        "`1` - **Keep repeating** 🔁\n`2` - **Repeat a certain number of times** 🔢",
+        2,
+        "Would you like this reminder to repeat indefinitely or repeat a fixed number of times?",
+        `${type}: Number of Occurrences`,
+        embedColour,
+        300000
+      );
+      if (!remainingOccurrences && remainingOccurrences !== 0)
+        return remainingOccurrences;
+
+      if (remainingOccurrences === 0) {
+        remainingOccurrences = undefined;
+      } else if (remainingOccurrences === 1) {
+        let numberOfRepeats = await fn.getNumberEntry(
+          bot,
+          message,
+          PREFIX,
+          "**How many times do you want this reminder to repeat?**\n(Enter a positive whole number or `0` to repeat indefinitely)",
+          `${type}: Number of Occurrences`,
+          true,
+          false,
+          false,
+          0,
+          undefined,
+          embedColour
+        );
+        if (!numberOfRepeats && numberOfRepeats !== 0) return numberOfRepeats;
+        else if (numberOfRepeats === 0) remainingOccurrences = undefined;
+        else remainingOccurrences = numberOfRepeats;
+      }
+      return remainingOccurrences;
+    } catch (err) {
+      console.log(err);
+      return false;
     }
   },
 

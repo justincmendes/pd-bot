@@ -738,7 +738,7 @@ module.exports = {
         );
         message.reply("**Your journal entry was successfully completed!**");
         if (journalInProgress._id) {
-          await rm.cancelRemindersByConnectedDocument(journalInProgress._id);
+          rm.cancelRemindersByConnectedDocument(journalInProgress._id);
           await Reminder.deleteMany({
             connectedDocument: journalInProgress._id,
           });

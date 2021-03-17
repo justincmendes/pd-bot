@@ -1134,7 +1134,7 @@ module.exports = {
             if (doc) {
               if (doc._id) {
                 // Removing any lingering reminders
-                rm.cancelReminderByConnectedDocument(doc._id);
+                rm.cancelRemindersByConnectedDocument(doc._id);
                 const removeReminders = await Reminder.deleteMany({
                   userID: authorID,
                   connectedDocument: doc._id,
@@ -2366,7 +2366,7 @@ module.exports = {
                     }
                     if (end)
                       if (fastTargetID) {
-                        rm.cancelReminderByConnectedDocument(fastTargetID);
+                        rm.cancelRemindersByConnectedDocument(fastTargetID);
                         await Reminder.deleteMany(connectedReminderQuery);
                       }
                   } else if (fieldToEditIndex === 0) {
@@ -2420,7 +2420,7 @@ module.exports = {
                     }
                     if (changeReminders) {
                       if (fastTargetID) {
-                        rm.cancelReminderByConnectedDocument(fastTargetID);
+                        rm.cancelRemindersByConnectedDocument(fastTargetID);
                         await Reminder.deleteMany(connectedReminderQuery);
                       }
                       console.log({

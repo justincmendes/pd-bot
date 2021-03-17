@@ -402,7 +402,7 @@ module.exports = {
       const now = fn.getCurrentUTCTimestampFlooredToSecond();
       // Delete currently running reminders!
       if (habitID) {
-        rm.cancelReminderByConnectedDocument(habitID);
+        rm.cancelRemindersByConnectedDocument(habitID);
         await Reminder.deleteMany({ userID, connectedDocument: habitID });
       }
       await rm.setNewDMReminder(

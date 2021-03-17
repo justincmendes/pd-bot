@@ -433,8 +433,7 @@ module.exports = {
             }
           return;
         } else if (deleteType === "all") {
-          const confirmDeleteAllMessage =
-            `Are you sure you want to **delete all** of your recorded recurring reminders?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
+          const confirmDeleteAllMessage = `Are you sure you want to **delete all** of your recorded recurring reminders?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           const pastNumberOfEntriesIndex = totalReminderNumber;
           if (pastNumberOfEntriesIndex === 0) {
             return fn.sendErrorMessage(message, noRemindersMessage);
@@ -448,8 +447,7 @@ module.exports = {
             "Recurring Reminder: Delete All Recurring Reminders WARNING!"
           );
           if (!confirmDeleteAll) return;
-          const finalDeleteAllMessage =
-            `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR RECURRING REMINDERS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
+          const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR RECURRING REMINDERS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
             message,
@@ -905,8 +903,7 @@ module.exports = {
       reminderCommand === "update" ||
       reminderCommand === "upd"
     ) {
-      let reminderEditUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${reminderCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3** (3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the reminders by **time created instead of reminder start time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      let reminderEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${reminderCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3** (3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the reminders by **time created instead of reminder start time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       reminderEditUsageMessage = fn.getMessageEmbed(
         reminderEditUsageMessage,
         `Recurring Reminder: Edit Help`,
@@ -1635,39 +1632,15 @@ module.exports = {
       let { duration: intervalDuration, args: intervalArgs } = interval;
       console.log(fn.millisecondsToTimeString(intervalDuration));
 
-      let remainingOccurrences = await fn.userSelectFromList(
+      let remainingOccurrences = rm.getRemainingOccurrences(
         bot,
         message,
         PREFIX,
-        "`1` - **Keep repeating** 🔁\n`2` - **Repeat a certain number of times** 🔢",
-        2,
-        "Would you like this reminder to repeat indefinitely or repeat a fixed number of times?",
-        "Recurring Reminder: Number of Occurrences",
-        repeatEmbedColour,
-        300000
+        "Recurring Reminder",
+        repeatEmbedColour
       );
-      if (!remainingOccurrences && remainingOccurrences !== 0) return;
-
-      if (remainingOccurrences === 0) {
-        remainingOccurrences = false;
-      } else if (remainingOccurrences === 1) {
-        let numberOfRepeats = await fn.getNumberEntry(
-          bot,
-          message,
-          PREFIX,
-          "**How many times do you want this reminder to repeat?**\n(Enter a positive whole number or `0` to repeat indefinitely)",
-          "Recurring Reminder: Number of Occurrences",
-          true,
-          false,
-          false,
-          0,
-          undefined,
-          repeatEmbedColour
-        );
-        if (!numberOfRepeats && numberOfRepeats !== 0) return;
-        else if (numberOfRepeats === 0) remainingOccurrences = undefined;
-        else remainingOccurrences = numberOfRepeats;
-      }
+      if (!remainingOccurrences && remainingOccurrences !== undefined) return;
+      if (!remainingOccurrences) remainingOccurrences = undefined;
 
       let channel = await rm.getChannelOrDM(
         bot,
@@ -1701,19 +1674,19 @@ module.exports = {
         repeatHelpMessage,
         timezoneOffset,
         daylightSavingsSetting,
-        true
+        true,
+        "Recurring Reminder",
+        repeatEmbedColour
       );
       console.log({ duration });
       if (!duration && duration !== 0) return;
       const currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
       duration = duration > 0 ? duration : 0;
-      const confirmCreationMessage =
-        `Are you sure you want to set the following **recurring reminder** to send -\n**in ${channel} after ${fn.millisecondsToTimeString(
-          duration
-        )} from now**` +
-        ` (and repeat every **${fn.millisecondsToTimeString(
-          intervalDuration
-        )}**):\n\n${repeatMessage}`;
+      const confirmCreationMessage = `Are you sure you want to set the following **recurring reminder** to send -\n**in ${channel} ${fn.millisecondsToTimeString(
+        duration
+      )} from now**, repeating every **${fn.millisecondsToTimeString(
+        intervalDuration
+      )}**:\n\n${repeatMessage}`;
       const confirmCreation = await fn.getUserConfirmation(
         bot,
         message,

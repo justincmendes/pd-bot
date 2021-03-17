@@ -8,6 +8,7 @@ const Reminder = require("../djs-bot/database/schemas/reminder");
 const User = require("../djs-bot/database/schemas/user");
 const Guild = require("../djs-bot/database/schemas/guildsettings");
 const Dst = require("../djs-bot/database/schemas/dst");
+const Goal = require("../djs-bot/database/schemas/longtermgoals");
 const Habit = require("../djs-bot/database/schemas/habit");
 const Log = require("../djs-bot/database/schemas/habittracker");
 const Track = require("../djs-bot/database/schemas/track");
@@ -190,7 +191,7 @@ module.exports = {
       console.log(
         "Ending (confirmationMessage) promise...\nConfirmation Value (in function): false"
       );
-      if(message.channel.type !== "dm") {
+      if (message.channel.type !== "dm") {
         this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
       }
       return null;
@@ -266,7 +267,7 @@ module.exports = {
       console.log(
         "Ending (confirmationMessage) promise...\nConfirmation Value (in function): false"
       );
-      if(message.channel.type !== "dm") {
+      if (message.channel.type !== "dm") {
         this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
       }
       return false;
@@ -333,7 +334,7 @@ module.exports = {
               `ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`
             );
             console.log("Ending (reactionDataCollect) promise...");
-            if(message.channel.type !== "dm") {
+            if (message.channel.type !== "dm") {
               this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
             }
             console.log(`Reaction Value (in function): undefined`);
@@ -474,7 +475,7 @@ module.exports = {
               `ERROR: User didn't respond within ${delayTime / MS_TO_SECONDS}s!`
             );
             console.log("Ending (messageDataCollect) promise...");
-            if(message.channel.type !== "dm") {
+            if (message.channel.type !== "dm") {
               this.sendMessageThenDelete(message, "Ending...", deleteDelay);
             }
             console.log(`Message Sent (in function): false`);
@@ -708,7 +709,7 @@ module.exports = {
           false,
           userMessageDeleteDelay
         );
-        if (!targetObject) return false;
+        if (!targetObject) return targetObject;
         else currentTimestamp = Date.now();
         targetIndex = targetObject.content;
         const errorMessage = "**Please enter a number on the given list!**";
@@ -4352,7 +4353,7 @@ module.exports = {
         600000
       );
       if (collectedEdit === "stop") return false;
-      else if (!collectedEdit) return false;
+      else if (!collectedEdit) return collectedEdit;
       else currentTimestamp = Date.now();
 
       if (collectedEdit.length > characterLimit) {
@@ -4517,6 +4518,7 @@ module.exports = {
           message.channel.send(
             `This was your **${field} edit!**:\n${userEdit.join("\n")}`
           );
+          return collectedEdit;
         }
         return false;
       } else currentTimestamp = Date.now();
@@ -4708,7 +4710,7 @@ module.exports = {
         600000
       );
       if (collectedEdit === "stop") return false;
-      else if (!collectedEdit) return false;
+      else if (!collectedEdit) return collectedEdit;
       else currentTimestamp = Date.now();
 
       // Check if the given message is a number
@@ -4787,7 +4789,8 @@ module.exports = {
           false
         );
         if (userTimeInput === "back") return "back";
-        if (userTimeInput === "stop" || !userTimeInput) return false;
+        if (userTimeInput === "stop") return false;
+        if (!userTimeInput) return userTimeInput;
         const timeArgs = userTimeInput.toLowerCase().split(/[\s\n]+/);
         let now = Date.now();
         endTime = this.timeCommandHandlerToUTC(
@@ -5264,7 +5267,8 @@ module.exports = {
       300000,
       false
     );
-    if (!userTimezone || userTimezone === "stop") return false;
+    if (!userTimezone) return userTimezone;
+    if (userTimezone === "stop") return false;
     const userTimezoneOffset = this.getTimezoneOffset(userTimezone);
     if (!userTimezoneOffset && userTimezoneOffset !== 0) {
       message.reply("**This __timezone does not exist__... Try again!**");
@@ -5546,7 +5550,8 @@ module.exports = {
           additionalInstructions,
           instructionKeywords
         );
-        if (!entry && entry !== "") return false;
+        if (!entry && entry !== "") return entry;
+        // Could also break; But returning entry in the case of null
         else if (!isNaN(entry)) {
           entry = allowDecimals ? parseFloat(entry) : parseInt(entry);
           if (!allowNegatives && entry < 0) {
@@ -5612,11 +5617,8 @@ module.exports = {
         embedColour,
         600000
       );
-      if (
-        !collectedEntry ||
-        collectedEntry === "stop" ||
-        (await this.userIsSpamming(message))
-      ) {
+      if (!collectedEntry) return collectedEntry;
+      if (collectedEntry === "stop" || (await this.userIsSpamming(message))) {
         return false;
       }
       if (hasInstructions) {
@@ -5634,7 +5636,7 @@ module.exports = {
           title
         );
         if (confirmEntry === false) reset = true;
-        else if (confirmEntry === null) return false;
+        else if (confirmEntry === null) return confirmEntry;
       }
     } while (reset);
     return collectedEntry;
@@ -5749,6 +5751,7 @@ module.exports = {
           message.channel.send(
             `This was your **entry**:\n${finalEntry.join("\n")}`
           );
+          return collectedEntry;
         }
         return false;
       } else currentTimestamp = Date.now();
@@ -5966,7 +5969,8 @@ module.exports = {
         dataCollectDelay,
         false
       );
-      if (!time || time === "stop") return false;
+      if (!time) return time;
+      if (time === "stop") return false;
       timeArgs = time.toLowerCase().split(/[\s\n]+/);
       let now = this.getCurrentUTCTimestampFlooredToSecond();
       time = this.timeCommandHandlerToUTC(
@@ -7408,6 +7412,13 @@ module.exports = {
         break;
     }
     return goalTypeString;
+  },
+
+  getGoalsReminderMessage: async function (userID) {
+    const goals = await Goal.find({ userID }).sort({ _id: -1 });
+    return `\"**__What you aim at determines what you see.__**\" – Jordan B. Peterson.\n\n__Here are your long-term goals:__\n${goals
+      .map((goal, i) => `🎯 **Goal ${i + 1}:**\n${goal.description}`)
+      .join("\n")}`;
   },
 
   // You may need the current nextCron object to make this work

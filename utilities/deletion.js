@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const Reminder = require("../djs-bot/database/schemas/reminder");
-const { cancelReminderByConnectedDocument } = require("./reminder");
+const { cancelRemindersByConnectedDocument } = require("./reminder");
 require("dotenv").config();
 
 module.exports = {
@@ -31,7 +31,7 @@ module.exports = {
         await Model.deleteMany(query);
         documents.forEach(async (document) => {
           if (document._id) {
-            cancelReminderByConnectedDocument(document._id);
+            cancelRemindersByConnectedDocument(document._id);
             const reminders = await Reminder.deleteMany({
               connectedDocument: document._id,
             });
@@ -79,7 +79,7 @@ module.exports = {
         if (query) await Model.deleteMany(query);
         documents.forEach(async (document) => {
           if (document._id) {
-            cancelReminderByConnectedDocument(document._id);
+            cancelRemindersByConnectedDocument(document._id);
             const reminders = await Reminder.deleteMany({
               connectedDocument: document._id,
             });
@@ -129,7 +129,7 @@ module.exports = {
           } document (${objectID.toString()}) and it's associated reminders...`
         );
         if (document._id) {
-          cancelReminderByConnectedDocument(document._id);
+          cancelRemindersByConnectedDocument(document._id);
           const reminders = await Reminder.deleteMany({
             connectedDocument: document._id,
           });
@@ -173,7 +173,7 @@ module.exports = {
         console.log(
           `Deleting a ${Model.modelName} document and it's associated reminders\nQuery: ${query}`
         );
-        cancelReminderByConnectedDocument(document._id);
+        cancelRemindersByConnectedDocument(document._id);
         const reminders = await Reminder.deleteMany({
           connectedDocument: document._id,
         });

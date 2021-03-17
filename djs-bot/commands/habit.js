@@ -2358,7 +2358,7 @@ module.exports = {
                   });
                   if (currentHabitReminders)
                     if (currentHabitReminders.length) {
-                      rm.cancelReminderByConnectedDocument(habitTargetID);
+                      rm.cancelRemindersByConnectedDocument(habitTargetID);
                       await Reminder.deleteMany({
                         connectedDocument: habitTargetID,
                       });
@@ -3671,7 +3671,7 @@ module.exports = {
               if (err) return console.error(err);
               console.log({ result });
               if (targetHabit._id) {
-                rm.cancelReminderByConnectedDocument(targetHabit._id);
+                rm.cancelRemindersByConnectedDocument(targetHabit._id);
                 await Reminder.deleteMany({
                   connectedDocument: targetHabit._id,
                 });

@@ -199,7 +199,7 @@ async function getRecentGoal(bot, userID, isArchived, embedColour) {
   return goalEmbed;
 }
 
-function getGoalReminderString(
+function getGoalEndReminderString(
   commandUsed,
   timezoneOffset,
   startTimeUTC,
@@ -216,7 +216,7 @@ function getGoalReminderString(
   }!**:\n🎯 - ${goalDescription}\n\nType \`?${commandUsed} see\` to **see** the full details of this goal\nType \`?${commandUsed} edit\` to **edit** this goal and/or change the goal's set completion date\nType \`?${commandUsed} end\` to mark this goal as **completed**`;
 }
 
-async function setGoalReminders(
+async function setGoalEndingReminders(
   bot,
   userID,
   timezoneOffset,
@@ -275,7 +275,7 @@ async function setGoalReminders(
       userID,
       startTime,
       dayBefore,
-      getGoalReminderString(
+      getGoalEndReminderString(
         commandUsed,
         timezoneOffset,
         startTime,
@@ -296,7 +296,7 @@ async function setGoalReminders(
         userID,
         startTime,
         weekBefore,
-        getGoalReminderString(
+        getGoalEndReminderString(
           commandUsed,
           timezoneOffset,
           startTime,
@@ -317,7 +317,7 @@ async function setGoalReminders(
           userID,
           startTime,
           monthBefore,
-          getGoalReminderString(
+          getGoalEndReminderString(
             commandUsed,
             timezoneOffset,
             startTime,
@@ -338,7 +338,7 @@ async function setGoalReminders(
             userID,
             startTime,
             semiAnnumBefore,
-            getGoalReminderString(
+            getGoalEndReminderString(
               commandUsed,
               timezoneOffset,
               startTime,
@@ -359,7 +359,7 @@ async function setGoalReminders(
               userID,
               startTime,
               yearBefore,
-              getGoalReminderString(
+              getGoalEndReminderString(
                 commandUsed,
                 timezoneOffset,
                 startTime,
@@ -384,7 +384,7 @@ async function setGoalReminders(
     userID,
     startTime,
     yearBefore,
-    getGoalReminderString(
+    getGoalEndReminderString(
       commandUsed,
       timezoneOffset,
       startTime,
@@ -399,6 +399,120 @@ async function setGoalReminders(
     false,
     goalEmbedColour
   );
+}
+
+async function setGoalsReminder(
+  bot,
+  userID,
+  startTime,
+  endTime,
+  isRecurring,
+  interval,
+  remainingOccurrences
+) {
+  try {
+    const type = "Goals";
+    const goalReminderString = await fn.getGoalsReminderMessage(userID);
+    await rm.setNewDMReminder(
+      bot,
+      userID,
+      startTime,
+      endTime,
+      goalReminderString,
+      type,
+      true,
+      undefined,
+      isRecurring,
+      interval,
+      remainingOccurrences,
+      goalEmbedColour
+    );
+    return true;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+}
+
+async function setUserGoalsReminder(
+  bot,
+  message,
+  PREFIX,
+  timezoneOffset,
+  daylightSaving,
+  forceSkip,
+  userID,
+  helpMessage,
+  type = "Long-Term Goal"
+) {
+  try {
+    let interval = await rm.getInterval(
+      bot,
+      message,
+      PREFIX,
+      timezoneOffset,
+      daylightSaving,
+      `__**Please enter the time you'd like in-between recurring reminders (interval):**__`,
+      `${type}: Recurring Reminder Interval`,
+      goalEmbedColour
+    );
+    if (!interval) return false;
+    let { duration: intervalDuration, args: intervalArgs } = interval;
+    console.log(fn.millisecondsToTimeString(intervalDuration));
+
+    let remainingOccurrences = await rm.getRemainingOccurrences(
+      bot,
+      message,
+      PREFIX,
+      `${type} Recurring Reminder`,
+      goalEmbedColour
+    );
+    if (!remainingOccurrences && remainingOccurrences !== undefined) return;
+    if (!remainingOccurrences) remainingOccurrences = undefined;
+
+    let duration = await rm.getUserFirstRecurringEndDuration(
+      bot,
+      message,
+      PREFIX,
+      helpMessage,
+      timezoneOffset,
+      daylightSaving,
+      true,
+      "Long-Term Goal",
+      goalEmbedColour
+    );
+    console.log({ duration });
+    if (!duration && duration !== 0) return false;
+    const currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
+    duration = duration > 0 ? duration : 0;
+    const confirmCreationMessage = `Are you sure you want to get **__long-term goal (DM) reminders__ ${fn.millisecondsToTimeString(
+      duration
+    )} from now**, repeating every **${fn.millisecondsToTimeString(
+      intervalDuration
+    )}**?`;
+    const confirmCreation = await fn.getUserConfirmation(
+      bot,
+      message,
+      PREFIX,
+      confirmCreationMessage,
+      forceSkip,
+      `${type}: Confirm Reminder`,
+      180000
+    );
+    if (!confirmCreation) return confirmCreation;
+    await setGoalsReminder(
+      bot,
+      userID,
+      currentTimestamp,
+      currentTimestamp + duration,
+      true,
+      intervalArgs,
+      remainingOccurrences
+    );
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
 }
 
 module.exports = {
@@ -669,18 +783,18 @@ module.exports = {
             })
             .catch((err) => console.error(err));
 
-          // Setup reminder!
-          const confirmReminders = await fn.getUserConfirmation(
+          // Setup end reminders!
+          const confirmEndReminders = await fn.getUserConfirmation(
             bot,
             message,
             PREFIX,
-            "__Would you like to get **reminders before this goal ends?:**__\n\n**1 year, 6 months, 1 month, 1 week, and 1 day before**",
+            "__Would you like to be **notified before this goal ends?:**__\n\n**1 year, 6 months, 1 month, 1 week, and 1 day before**",
             false,
-            "Long-Term Goal: Reminders",
+            "Long-Term Goal: Goal End Notification",
             180000
           );
-          if (confirmReminders) {
-            await setGoalReminders(
+          if (confirmEndReminders) {
+            await setGoalEndingReminders(
               bot,
               authorID,
               timezoneOffset,
@@ -692,10 +806,31 @@ module.exports = {
               time[1]
             );
           }
-        } else {
-          reset = true;
-          continue;
-        }
+        } else if (confirmEndReminders === null) return;
+
+        // Setup reminder!
+        const confirmGoalsReminder = await fn.getUserConfirmation(
+          bot,
+          message,
+          PREFIX,
+          "__Would you like **recurring reminders of your goal so you don't forget about your important goals?**__\n(The more you see your goals, the more you act in such a way that faciliates progress towards your goals)\n\nRecommended: `Weekly`, `Bi-Weekly`, or `Monthly` Goal Reminders",
+          false,
+          "Long-Term Goal: Reminders",
+          180000
+        );
+        if (confirmGoalsReminder) {
+          const setGoalsReminder = await setUserGoalsReminder(
+            bot,
+            message,
+            PREFIX,
+            timezoneOffset,
+            daylightSaving,
+            forceSkip,
+            authorID,
+            goalHelpMessage
+          );
+          if (setGoalsReminder === null) return;
+        } else if (confirmGoalsReminder === null) return;
 
         let habits = await Habit.find(
           { userID: authorID, archived: false, connectedGoal: undefined },
@@ -751,7 +886,7 @@ module.exports = {
                 );
                 if (!confirmEnd) break;
               } while (true);
-            }
+            } else if (connectHabits === null) return;
           }
         const createAnother = await fn.getUserConfirmation(
           bot,
@@ -1130,8 +1265,7 @@ module.exports = {
             return;
           }
         } else if (deleteType === "all") {
-          const confirmDeleteAllMessage =
-            `Are you sure you want to **delete all** of your recorded goals?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
+          const confirmDeleteAllMessage = `Are you sure you want to **delete all** of your recorded goals?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           const pastNumberOfEntriesIndex = totalGoalNumber;
           if (pastNumberOfEntriesIndex === 0) {
             return fn.sendErrorMessage(message, noGoalsMessage);
@@ -1976,7 +2110,7 @@ module.exports = {
                   fieldToEditIndex === 8
                 ) {
                   if (goalTargetID) {
-                    rm.cancelReminderByConnectedDocument(goalTargetID);
+                    rm.cancelRemindersByConnectedDocument(goalTargetID);
                     const removeOldReminders = await Reminder.deleteMany({
                       connectedDocument: goalTargetID,
                     });
@@ -1989,7 +2123,7 @@ module.exports = {
                           (fieldToEditIndex === 7 && completed === false) ||
                           (fieldToEditIndex === 8 && archived === false)
                         ) {
-                          await setGoalReminders(
+                          await setGoalEndingReminders(
                             bot,
                             authorID,
                             timezoneOffset,
@@ -2126,8 +2260,7 @@ module.exports = {
     ) {
       // (similar indexing to edit, recent or #) + archive
       // Make a list - similar to archive
-      let goalEditUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${goalCommand} <archive?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived goals!**\n\n\`<recent?>\`(OPT.): type **recent** to order the goals by **actual time created instead of goal start time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      let goalEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${goalCommand} <archive?> <recent?> <force?>\`\n\n\`<archive?>\`: (OPT.) type **archive** after the command action to apply your command to your **archived goals!**\n\n\`<recent?>\`(OPT.): type **recent** to order the goals by **actual time created instead of goal start time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       goalEditUsageMessage = fn.getMessageEmbed(
         goalEditUsageMessage,
         `Long-Term Goal: End Help`,
@@ -2200,7 +2333,7 @@ module.exports = {
               if (err) return console.error(err);
               console.log({ result });
               if (targetGoal._id) {
-                rm.cancelReminderByConnectedDocument(targetGoal._id);
+                rm.cancelRemindersByConnectedDocument(targetGoal._id);
                 await Reminder.deleteMany({
                   connectedDocument: targetGoal._id,
                 });
@@ -2227,12 +2360,38 @@ module.exports = {
           var reset;
           do {
             reset = false;
+
+            const selectReminderType = await fn.userSelectFromList(
+              bot,
+              message,
+              PREFIX,
+              `\`1\` - Recurring Long-Term Goal Reminders\n\`2\` - Goal Ending Reminders`,
+              2,
+              `**Please enter the number corresponding to the type of reminder you'd like to set:**`,
+              `Long-Term Goal: Reminder Type`,
+              goalEmbedColour,
+              600000
+            );
+            if (!selectReminderType && selectReminderType !== 0) return;
+
+            const reminderTypeString =
+              selectReminderType === 0
+                ? `recurring`
+                : selectReminderType === 1
+                ? "ending"
+                : "";
             const selectedGoal = await fn.getUserSelectedObject(
               bot,
               message,
               PREFIX,
-              "**Enter the number corresponding to the long-term goal you want reminders for:**\n(1 year, 6 months, 1 month, 1 week, and 1 day before expected goal end time)",
-              "Long-Term Goal: Goal Reminder",
+              `**Enter the number corresponding to the long-term goal you want ${
+                reminderTypeString ? `${reminderTypeString} ` : ""
+              }reminders for:**${
+                selectReminderType === 1
+                  ? `\n(1 year, 6 months, 1 month, 1 week, and 1 day before expected goal end time)`
+                  : ""
+              }`,
+              "Long-Term Goal: Select Goal For Reminder",
               userGoals,
               "description",
               false,
@@ -2240,7 +2399,20 @@ module.exports = {
               600000
             );
             if (!selectedGoal) return;
-            else {
+
+            if (selectReminderType === 0) {
+              const setGoalsReminder = await setUserGoalsReminder(
+                bot,
+                message,
+                PREFIX,
+                timezoneOffset,
+                daylightSaving,
+                forceSkip,
+                authorID,
+                goalHelpMessage
+              );
+              if (!setGoalsReminder) return;
+            } else if (selectReminderType === 1) {
               const confirmSelection = await fn.getUserConfirmation(
                 bot,
                 message,
@@ -2253,22 +2425,21 @@ module.exports = {
               );
               if (confirmSelection === false) break;
               else if (confirmSelection === null) return;
-              else {
-                if (selectedGoal.object._id) {
-                  const currentReminders = await Reminder.find({
-                    connectedDocument: selectedGoal.object._id,
-                  });
-                  if (currentReminders)
-                    if (currentReminders.length) {
-                      rm.cancelReminderByConnectedDocument(
-                        selectedGoal.object._id
-                      );
-                      await Reminder.deleteMany({
-                        connectedDocument: selectedGoal.object._id,
-                      });
-                    }
-                }
-                await setGoalReminders(
+
+              if (selectedGoal.object._id) {
+                const currentReminders = await Reminder.find({
+                  connectedDocument: selectedGoal.object._id,
+                });
+                if (currentReminders)
+                  if (currentReminders.length) {
+                    rm.cancelRemindersByConnectedDocument(
+                      selectedGoal.object._id
+                    );
+                    await Reminder.deleteMany({
+                      connectedDocument: selectedGoal.object._id,
+                    });
+                  }
+                await setGoalEndingReminders(
                   bot,
                   authorID,
                   timezoneOffset,
@@ -2281,13 +2452,14 @@ module.exports = {
                 );
               }
             }
+
             const setMoreReminders = await fn.getUserConfirmation(
               bot,
               message,
               PREFIX,
               "Would you like to set another long-term goal reminder?",
               false,
-              "Long-Term Goal: Goal Reminder Continue",
+              "Long-Term Goal: Another Reminder",
               180000
             );
             if (!setMoreReminders) return;
@@ -2325,8 +2497,7 @@ module.exports = {
       }
 
       // Allows for archive - indexing by unarchived entries only!
-      let goalEditUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${goalCommand} <recent?> <force?>\`\n\n\`<recent?>\`(OPT.): type **recent** to order the goals by **actual time created instead of goal start time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      let goalEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${goalCommand} <recent?> <force?>\`\n\n\`<recent?>\`(OPT.): type **recent** to order the goals by **actual time created instead of goal start time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       goalEditUsageMessage = fn.getMessageEmbed(
         goalEditUsageMessage,
         `Long-Term Goal: Archive Help`,
@@ -2392,7 +2563,7 @@ module.exports = {
               if (err) return console.error(err);
               console.log({ result });
               if (targetGoal._id) {
-                rm.cancelReminderByConnectedDocument(targetGoal._id);
+                rm.cancelRemindersByConnectedDocument(targetGoal._id);
                 await Reminder.deleteMany({
                   connectedDocument: targetGoal._id,
                 });
