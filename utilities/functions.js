@@ -7417,7 +7417,7 @@ module.exports = {
   getGoalsReminderMessage: async function (userID) {
     const goals = await Goal.find({ userID }).sort({ _id: -1 });
     return `\"**__What you aim at determines what you see.__**\" – Jordan B. Peterson.\n\n__Here are your long-term goals:__\n${goals
-      .map((goal, i) => `🎯 **Goal ${i + 1}:**\n${goal.description}`)
+      .map((goal, i) => `🎯 **__Goal ${i + 1}:__**\n${goal.description}`)
       .join("\n")}`;
   },
 
