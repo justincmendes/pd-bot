@@ -1719,7 +1719,7 @@ module.exports = {
           console.log(
             `Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Fasts (${sortType})`
           );
-          targetIDs.forEach(async (id) => {
+          targetIDs.forEach((id) => {
             rm.cancelReminderById(id);
           });
           await del.deleteManyByIDAndConnectedReminders(Fast, targetIDs);
@@ -1819,7 +1819,7 @@ module.exports = {
               console.log(
                 `Deleting ${authorID}'s Fasts ${toDelete} (${sortType})`
               );
-              fastTargetIDs.forEach(async (id) => {
+              fastTargetIDs.forEach((id) => {
                 rm.cancelReminderById(id);
               });
               await del.deleteManyByIDAndConnectedReminders(
@@ -1908,7 +1908,7 @@ module.exports = {
               console.log(
                 `Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} fast(s) past ${skipEntries} (${sortType})`
               );
-              targetIDs.forEach(async (id) => {
+              targetIDs.forEach((id) => {
                 rm.cancelReminderById(id);
               });
               await del.deleteManyByIDAndConnectedReminders(Fast, targetIDs);

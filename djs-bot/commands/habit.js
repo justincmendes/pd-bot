@@ -760,7 +760,7 @@ module.exports = {
           console.log(
             `Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Habits (${sortType})`
           );
-          targetIDs.forEach(async (id) => {
+          targetIDs.forEach((id) => {
             hb.cancelHabitById(id);
           });
           await del.deleteManyByIDAndConnectedReminders(Habit, targetIDs);
@@ -867,7 +867,7 @@ module.exports = {
             console.log(
               `Deleting ${authorID}'s Habits ${toDelete} (${sortType})`
             );
-            habitTargetIDs.forEach(async (id) => {
+            habitTargetIDs.forEach((id) => {
               hb.cancelHabitById(id);
             });
             await del.deleteManyByIDAndConnectedReminders(
@@ -963,7 +963,7 @@ module.exports = {
               console.log(
                 `Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} habits past ${skipEntries} (${sortType})`
               );
-              targetIDs.forEach(async (id) => {
+              targetIDs.forEach((id) => {
                 hb.cancelHabitById(id);
               });
               await del.deleteManyByIDAndConnectedReminders(Habit, targetIDs);

@@ -873,7 +873,7 @@ module.exports = {
           console.log(
             `Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Goals (${sortType})`
           );
-          targetIDs.forEach(async (id) => {
+          targetIDs.forEach((id) => {
             rm.cancelReminderById(id);
           });
           await del.deleteManyByIDAndConnectedReminders(Goal, targetIDs);
@@ -974,7 +974,7 @@ module.exports = {
             console.log(
               `Deleting ${authorID}'s Goals ${toDelete} (${sortType})`
             );
-            goalTargetIDs.forEach(async (id) => {
+            goalTargetIDs.forEach((id) => {
               rm.cancelReminderById(id);
             });
             await del.deleteManyByIDAndConnectedReminders(Goal, goalTargetIDs);
@@ -1064,7 +1064,7 @@ module.exports = {
               console.log(
                 `Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} goals past ${skipEntries} (${sortType})`
               );
-              targetIDs.forEach(async (id) => {
+              targetIDs.forEach((id) => {
                 rm.cancelReminderById(id);
               });
               await del.deleteManyByIDAndConnectedReminders(Goal, targetIDs);

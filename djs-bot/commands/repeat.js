@@ -182,7 +182,7 @@ module.exports = {
               console.log(
                 `Deleting ${authorUsername}'s (${authorID}) Past ${numberArg} Reminders (${sortType})`
               );
-              targetIDs.forEach(async (id) => {
+              targetIDs.forEach((id) => {
                 rm.cancelReminderById(id);
               });
               await Reminder.deleteMany({ _id: { $in: targetIDs } });
@@ -283,7 +283,7 @@ module.exports = {
                 console.log(
                   `Deleting ${authorID}'s Reminders ${toDelete} (${sortType})`
                 );
-                reminderTargetIDs.forEach(async (id) => {
+                reminderTargetIDs.forEach((id) => {
                   rm.cancelReminderById(id);
                 });
                 await Reminder.deleteMany({ _id: { $in: reminderTargetIDs } });
@@ -366,7 +366,7 @@ module.exports = {
                   console.log(
                     `Deleting ${authorUsername}'s (${authorID}) ${pastNumberOfEntries} reminder(s) past ${skipEntries} (${sortType})`
                   );
-                  targetIDs.forEach(async (id) => {
+                  targetIDs.forEach((id) => {
                     rm.cancelReminderById(id);
                   });
                   await Reminder.deleteMany({ _id: { $in: targetIDs } });
