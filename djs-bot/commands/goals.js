@@ -2374,31 +2374,29 @@ module.exports = {
             );
             if (!selectReminderType && selectReminderType !== 0) return;
 
-            const reminderTypeString =
-              selectReminderType === 0
-                ? `recurring`
-                : selectReminderType === 1
-                ? "ending"
-                : "";
-            const selectedGoal = await fn.getUserSelectedObject(
-              bot,
-              message,
-              PREFIX,
-              `**Enter the number corresponding to the long-term goal you want ${
-                reminderTypeString ? `${reminderTypeString} ` : ""
-              }reminders for:**${
-                selectReminderType === 1
-                  ? `\n(1 year, 6 months, 1 month, 1 week, and 1 day before expected goal end time)`
-                  : ""
-              }`,
-              "Long-Term Goal: Select Goal For Reminder",
-              userGoals,
-              "description",
-              false,
-              goalEmbedColour,
-              600000
-            );
-            if (!selectedGoal) return;
+            const reminderTypeString = selectReminderType === 1 ? "ending" : "";
+            var selectedGoal;
+            if (selectReminderType === 1) {
+              const selectedGoal = await fn.getUserSelectedObject(
+                bot,
+                message,
+                PREFIX,
+                `**Enter the number corresponding to the long-term goal you want ${
+                  reminderTypeString ? `${reminderTypeString} ` : ""
+                }reminders for:**${
+                  selectReminderType === 1
+                    ? `\n(1 year, 6 months, 1 month, 1 week, and 1 day before expected goal end time)`
+                    : ""
+                }`,
+                "Long-Term Goal: Select Goal For Reminder",
+                userGoals,
+                "description",
+                false,
+                goalEmbedColour,
+                600000
+              );
+              if (!selectedGoal) return;
+            }
 
             if (selectReminderType === 0) {
               const setGoalsReminder = await setUserGoalsReminder(
