@@ -6079,17 +6079,17 @@ module.exports = {
         if (cronCollection) {
           cronCollection.forEach((cronSubArray, i) => {
             if (cronSubArray) {
-              for (var i = 0; i < cronSubArray.length; i++) {
+              for (var j = 0; j < cronSubArray.length; j++) {
                 // console.log({ i });
                 // console.log(cronSubArray[i].id);
                 // console.log({ targetID });
                 // console.log(cronSubArray[i].id === targetID);
-                const targetObject = cronSubArray[i].id === targetID;
+                const targetObject = cronSubArray[j].id === targetID;
                 if (targetObject) {
                   console.log(`Cancelling Cron: _id = ${targetID}`);
                   foundTarget = true;
-                  clearTimeout(cronSubArray[i].timeout);
-                  cronSubArray.splice(i, 1);
+                  clearTimeout(cronSubArray[j].timeout);
+                  cronSubArray.splice(j, 1);
                 }
               }
             }

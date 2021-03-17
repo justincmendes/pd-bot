@@ -477,6 +477,7 @@ module.exports = {
                   } else channelObject.send(message);
 
                   if (!isLastReminder) {
+                    this.cancelReminderById(reminderID);
                     await this.sendReminderByObject(bot, updatedReminderObject);
                     return;
                   }
@@ -521,6 +522,7 @@ module.exports = {
    * @param {mongoose.Schema.Types.ObjectId | String} reminderID
    */
   cancelReminderById: function (reminderID) {
+    // console.log({ reminders });
     const success = fn.cancelCronById(reminders, reminderID);
     if (success) {
       console.log(`Successfully cancelled reminder ${reminderID}.`);
@@ -531,6 +533,7 @@ module.exports = {
     } else {
       console.log(`Failed to cancel reminder ${reminderID}.`);
     }
+    // console.log({ reminders });
     return success;
   },
 
@@ -557,8 +560,6 @@ module.exports = {
     }
     return success;
   },
-
-  getUpdatedHabitReminderMessage: async function () {},
 
   // Create another function called schedule all dst
   // Then make this a scheduler for a single DST given the dstSettings object
@@ -778,6 +779,8 @@ module.exports = {
   },
 
   resetReminders: async function (bot) {
+    // REMEMBER TO COMMENT THE SECOND allReminders BACK IN BEFORE DEPLOYMENT! TEST
+    // const allReminders = await Reminder.find({ userID: "746119608271896598" });
     const allReminders = await this.getAllReminders();
     console.log("Reinitializing all reminders.");
     if (allReminders) {
