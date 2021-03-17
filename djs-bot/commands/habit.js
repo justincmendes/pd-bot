@@ -2840,16 +2840,19 @@ module.exports = {
           ? `\n**Previous Timestamp:** ${fn.timestampToDateString(
               existingLog.timestamp
             )}\n(Actual Habit Day: ${fn.timestampToDateString(
-              fn.getActualDateLogged(existingLog.timestamp, habitCron.daily)
+              fn.getActualDateLogged(existingLog.timestamp, habitCron.daily),
+              false
             )})\n**Current Timestamp:** ${fn.timestampToDateString(
               logTimestamp
             )}\n(Actual Habit Day: ${fn.timestampToDateString(
-              fn.getActualDateLogged(logTimestamp, habitCron.daily)
+              fn.getActualDateLogged(logTimestamp, habitCron.daily),
+              false
             )})`
           : `\n**Current Timestamp:** ${fn.timestampToDateString(
               logTimestamp
             )}\n(Actual Habit Day: ${fn.timestampToDateString(
-              fn.getActualDateLogged(logTimestamp, habitCron.daily)
+              fn.getActualDateLogged(logTimestamp, habitCron.daily),
+              false
             )})`;
         const previousCountTypeString = existingLog
           ? `**Previous ${countMetric}:** ${fn.countArrayToString(
@@ -2949,7 +2952,11 @@ module.exports = {
               ? `\n**Previous Timestamp:** ${fn.timestampToDateString(
                   existingLog.timestamp
                 )}\n(Actual Habit Day: ${fn.timestampToDateString(
-                  fn.getActualDateLogged(existingLog.timestamp, habitCron.daily)
+                  fn.getActualDateLogged(
+                    existingLog.timestamp,
+                    habitCron.daily
+                  ),
+                  false
                 )})`
               : ""
           }${
