@@ -779,7 +779,7 @@ module.exports = {
   },
 
   resetReminders: async function (bot) {
-    // REMEMBER TO COMMENT THE SECOND allReminders BACK IN BEFORE DEPLOYMENT! TEST
+    //! REMEMBER TO COMMENT THE SECOND allReminders BACK IN BEFORE DEPLOYMENT! TEST
     // const allReminders = await Reminder.find({ userID: "746119608271896598" });
     const allReminders = await this.getAllReminders();
     console.log("Reinitializing all reminders.");

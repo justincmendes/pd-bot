@@ -190,7 +190,9 @@ module.exports = {
       console.log(
         "Ending (confirmationMessage) promise...\nConfirmation Value (in function): false"
       );
-      this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+      if(message.channel.type !== "dm") {
+        this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+      }
       return null;
     }
   },
@@ -264,7 +266,9 @@ module.exports = {
       console.log(
         "Ending (confirmationMessage) promise...\nConfirmation Value (in function): false"
       );
-      this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+      if(message.channel.type !== "dm") {
+        this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+      }
       return false;
     }
   },
@@ -329,7 +333,9 @@ module.exports = {
               `ERROR: User didn't react within ${delayTime / MS_TO_SECONDS}s!`
             );
             console.log("Ending (reactionDataCollect) promise...");
-            this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+            if(message.channel.type !== "dm") {
+              this.sendMessageThenDelete(message, "Exiting...", deleteDelay);
+            }
             console.log(`Reaction Value (in function): undefined`);
             return false;
           });
@@ -468,7 +474,9 @@ module.exports = {
               `ERROR: User didn't respond within ${delayTime / MS_TO_SECONDS}s!`
             );
             console.log("Ending (messageDataCollect) promise...");
-            this.sendMessageThenDelete(message, "Ending...", deleteDelay);
+            if(message.channel.type !== "dm") {
+              this.sendMessageThenDelete(message, "Ending...", deleteDelay);
+            }
             console.log(`Message Sent (in function): false`);
             return false;
           });
