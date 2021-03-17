@@ -813,7 +813,7 @@ module.exports = {
           bot,
           message,
           PREFIX,
-          "__Would you like **recurring reminders of your goal so you don't forget about your important goals?**__\n(The more you see your goals, the more you act in such a way that faciliates progress towards your goals)\n\nRecommended: `Weekly`, `Bi-Weekly`, or `Monthly` Goal Reminders",
+          "__**Would you like recurring reminders of your goal so you don't forget about your important goals?**__\n\n(The more you see your goals, the more you act in such a way that faciliates progress towards your goals)\n\nRecommended: `Weekly`, `Bi-Weekly`, or `Monthly` Goal Reminders",
           false,
           "Long-Term Goal: Reminders",
           180000
@@ -833,7 +833,7 @@ module.exports = {
         } else if (confirmGoalsReminder === null) return;
 
         let habits = await Habit.find(
-          { userID: authorID, archived: false, connectedGoal: undefined },
+          { userID: authorID, archived: false },
           { _id: 1, description: 1, areaOfLife: 1 }
         );
         if (habits)
