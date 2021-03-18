@@ -2088,7 +2088,7 @@ module.exports = {
                     message,
                     PREFIX,
                     forceSkip,
-                    weeklyGoalEntryTitle,
+                    `${type}: Goal Specifics`,
                     mastermindEmbedColour,
                     editInstructions,
                     ["back"]
