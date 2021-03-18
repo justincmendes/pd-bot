@@ -4182,7 +4182,9 @@ module.exports = {
                 : ` ${i + 1}`
               : "";
             goalStringArray.push(
-              `**${underlineWeeklyGoal ? "__" : ""}${type}Goal${goalNumber}${addColonToTitle ? ":": ""}${underlineWeeklyGoal ? "__" : ""}** ${
+              `**${underlineWeeklyGoal ? "__" : ""}${type}Goal${goalNumber}${
+                addColonToTitle ? ":" : ""
+              }${underlineWeeklyGoal ? "__" : ""}** ${
                 goal.description ? `\n🎯 - ${goal.description}` : ""
               }${goal.specifics ? `\n❓ - ${goal.specifics}` : ""}${
                 goal.reason ? `\n💭 - ${goal.reason}` : ""
