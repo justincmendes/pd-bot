@@ -461,7 +461,7 @@ module.exports = {
           console.log(
             `Deleting ALL OF ${authorUsername}'s (${authorID}) Recorded Reminders`
           );
-          const reminderQuery = { userID: authorID, isRecurring: false };
+          const reminderQuery = { userID: authorID, isRecurring: true };
           const reminders = await Reminder.find(reminderQuery);
           reminders.forEach((reminder) => {
             rm.cancelReminderById(reminder._id);
