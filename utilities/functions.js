@@ -4181,14 +4181,14 @@ module.exports = {
                 ? ` \`${i + 1}\``
                 : ` ${i + 1}`
               : "";
+              // ${goal.reason ? `\n💭 - ${goal.reason}` : ""}
             goalStringArray.push(
               `**${underlineWeeklyGoal ? "__" : ""}${type}Goal${goalNumber}${
                 addColonToTitle ? ":" : ""
               }${underlineWeeklyGoal ? "__" : ""}** ${
                 goal.description ? `\n🎯 - ${goal.description}` : ""
-              }${goal.specifics ? `\n❓ - ${goal.specifics}` : ""}${
-                goal.reason ? `\n💭 - ${goal.reason}` : ""
-              }${
+              }${goal.specifics ? `\n❓ - ${goal.specifics}` : ""}
+              ${
                 !isNaN(goal.type)
                   ? `${
                       this.areasOfLifeEmojis[parseInt(goal.type)]
