@@ -7453,15 +7453,15 @@ module.exports = {
                 targetHabitIndex + 1
               } (By Date Created):__**\n${this.habitDocumentDescription(
                 targetHabit
-              )}\n${
+              )}${
                 targetHabit.specifics
-                  ? `\n${this.habitDocumentSpecifics(targetHabit, true)}`
+                  ? `\n\n${this.habitDocumentSpecifics(targetHabit, true)}`
                   : ""
-              }\n**Current Streak:** ${
+              }\n\n**Current Streak:** ${
                 targetHabit.currentStreak || 0
               }\n**Longest Streak:** ${targetHabit.longestStreak || 0}${
                 countGoal || countGoal === 0
-                  ? `\n**Current${
+                  ? `\n\n**Current${
                       goalType
                         ? ` ${this.toTitleCase(
                             this.getGoalTypeString(goalType)
@@ -7481,11 +7481,13 @@ module.exports = {
       targetHabit
     )}${
       targetHabit.specifics
-        ? `\n${this.habitDocumentSpecifics(targetHabit, true)}`
+        ? `\n\n${this.habitDocumentSpecifics(targetHabit, true)}`
         : ""
-    }${
+    }\n\n**Current Streak:** ${
+      targetHabit.currentStreak || 0
+    }\n**Longest Streak:** ${targetHabit.longestStreak || 0}${
       countGoal || countGoal === 0
-        ? `\n**Current${
+        ? `\n\n**Current${
             goalType
               ? ` ${this.toTitleCase(this.getGoalTypeString(goalType))}`
               : ""
