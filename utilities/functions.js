@@ -4164,7 +4164,9 @@ module.exports = {
     type = null,
     doubleSpace = true,
     showNumber = true,
-    emphasizeNumber = false
+    emphasizeNumber = false,
+    underlineWeeklyGoal = false,
+    addColonToTitle = false
   ) {
     if (Array.isArray(goalArray)) {
       if (goalArray.length) {
@@ -4180,7 +4182,7 @@ module.exports = {
                 : ` ${i + 1}`
               : "";
             goalStringArray.push(
-              `**${type}Goal${goalNumber}** ${
+              `**${underlineWeeklyGoal ? "__" : ""}${type}Goal${goalNumber}${addColonToTitle ? ":": ""}${underlineWeeklyGoal ? "__" : ""}** ${
                 goal.description ? `\n🎯 - ${goal.description}` : ""
               }${goal.specifics ? `\n❓ - ${goal.specifics}` : ""}${
                 goal.reason ? `\n💭 - ${goal.reason}` : ""

@@ -8,6 +8,7 @@ const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
 const Habit = require("../djs-bot/database/schemas/habit");
 const Log = require("../djs-bot/database/schemas/habittracker");
+const Mastermind = require("../djs-bot/database/schemas/mastermind");
 const Dst = require("../djs-bot/database/schemas/dst");
 require("dotenv").config();
 
@@ -234,8 +235,11 @@ module.exports = {
               embedColour = trackEmbedColour;
               break;
             default:
+              if (title.startsWith("Mastermind: Weekly Goals")) {
+                embedColour = mastermindEmbedColour;
+              }
               // Assuming the embedColour passed in is valid hex code****
-              if (!embedColour && embedColour !== 0) {
+              else if (!embedColour && embedColour !== 0) {
                 if (isRecurring) embedColour = repeatEmbedColour;
                 else embedColour = reminderEmbedColour;
               }
@@ -446,7 +450,10 @@ module.exports = {
                     updatedReminderObject.title === "Quote" ||
                     updatedReminderObject.title === "Voice Channel Tracking" ||
                     updatedReminderObject.title === "Habit" ||
-                    updatedReminderObject.title === "Goals"
+                    updatedReminderObject.title === "Goals" ||
+                    updatedReminderObject.title.startsWith(
+                      "Mastermind: Weekly Goals"
+                    )
                   ) {
                     if (updatedReminderObject.sendAsEmbed) {
                       if (Array.isArray(message)) {
@@ -1119,6 +1126,28 @@ module.exports = {
               updateObject.message = await fn.getGoalsReminderMessage(
                 reminder.userID
               );
+            } else if (
+              reminder.title.startsWith("Mastermind: Weekly Goals") &&
+              reminder.connectedDocument
+            ) {
+              const userMastermind = await Mastermind.findOne({
+                connectedDocument: reminder.connectedDocument,
+              });
+              if (userMastermind) {
+                const userGoals = userMastermind.journal
+                  ? userMastermind.journal.goals
+                  : false;
+                if (userGoals) {
+                  updateObject.message = await fn.goalArrayToString(
+                    userGoals,
+                    "Weekly",
+                    true,
+                    true,
+                    false,
+                    true
+                  );
+                }
+              }
             }
             const updateReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
@@ -1130,7 +1159,9 @@ module.exports = {
                 reminder.title === "Quote" ||
                 reminder.title === "Voice Channel Tracking" ||
                 (reminder.title === "Habit" && reminder.connectedDocument) ||
-                reminder.title === "Goals"
+                reminder.title === "Goals" ||
+                (reminder.title.startsWith("Mastermind: Weekly Goals") &&
+                  reminder.connectedDocument)
               ) {
                 console.log(updateObject.message);
                 updateReminder.message =
