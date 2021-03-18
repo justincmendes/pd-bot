@@ -43,13 +43,17 @@ const habitSchema = mongoose.Schema({
     type: String,
     required: true,
   },
+  specifics: {
+    type: String,
+    required: false,
+  },
   areaOfLife: {
     type: Number,
     required: false,
   },
   reason: {
     type: String,
-    required: true,
+    required: false,
   },
   connectedGoal: {
     type: mongoose.Schema.Types.ObjectId,

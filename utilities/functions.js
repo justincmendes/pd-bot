@@ -387,14 +387,20 @@ module.exports = {
     var result;
     const deleteDelay = 3000;
     const MS_TO_SECONDS = 1000;
-    const footerText = `${
+    let footerText = `${
       additionalFooterText ? `${additionalFooterText}\n` : ""
     }*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
     textEntryInstructions = `${
       showNewLineInstructions
         ? `\n\n↩ - Press \`SHIFT+ENTER\` to enter a **newline** before sending!`
         : ""
-    }${showStopInstructions ? `\n\n🛑 - Type \`stop\` to **cancel**` : ""}`;
+    }${
+      showStopInstructions
+        ? `${
+            showNewLineInstructions ? "" : "\n"
+          }\n🛑 - Type \`stop\` to **cancel**`
+        : ""
+    }`;
     prompt = prompt + textEntryInstructions;
     let embeds = this.getEmbedArray(prompt, title, true, false, colour);
     embeds.forEach((embed, i) => {
@@ -4176,7 +4182,9 @@ module.exports = {
             goalStringArray.push(
               `**${type}Goal${goalNumber}** ${
                 goal.description ? `\n🎯 - ${goal.description}` : ""
-              }${goal.reason ? `\n💭 - ${goal.reason}` : ""}${
+              }${goal.specifics ? `\n❓ - ${goal.specifics}` : ""}${
+                goal.reason ? `\n💭 - ${goal.reason}` : ""
+              }${
                 !isNaN(goal.type)
                   ? `${
                       this.areasOfLifeEmojis[parseInt(goal.type)]
@@ -4211,9 +4219,9 @@ module.exports = {
     startEntry = "",
     continueEntry = "",
     weeklyGoals = [
-      { type: null, description: "", reason: "" },
-      { type: null, description: "", reason: "" },
-      { type: null, description: "", reason: "" },
+      { type: null, description: "", specifics: "", reason: "" },
+      { type: null, description: "", specifics: "", reason: "" },
+      { type: null, description: "", specifics: "", reason: "" },
     ]
   ) {
     const doubleSpace = weeklyGoals.some((goal) => goal.type);
@@ -4915,7 +4923,7 @@ module.exports = {
     embedColour = this.defaultEmbedColour
   ) {
     try {
-      let embedString = new Array();
+      let embedStrings = new Array();
       let maxString = "";
       if (elements) {
         let isString = false;
@@ -4927,14 +4935,44 @@ module.exports = {
           } else elements = [elements];
         }
         if (Array.isArray(elements)) {
+          // Time down the sizes of each elements
+          if (!isString) {
+            for (var i = 0; i < elements.length; i++) {
+              const element = elements[i];
+              if (element.length >= 2046) {
+                const splitElements = this.getSplitStringByDiscordMaxString(
+                  element
+                );
+                var stringToKeep = "",
+                  stringToForward = "";
+                for (var k = 0; k < splitElements.length; k++) {
+                  if (stringToKeep.length + splitElements[k].length < 2046) {
+                    stringToKeep += splitElements[k];
+                  } else {
+                    stringToForward += splitElements[k];
+                  }
+                }
+                const atEnd = i === elements.length - 1;
+                elements[i] = stringToKeep;
+                if (stringToForward) {
+                  if (atEnd) {
+                    elements.push("");
+                  }
+                  elements[i + 1] = `${stringToForward}${
+                    doubleSpace ? "\n\n" : "\n"
+                  }${elements[i + 1]}`;
+                }
+              }
+            }
+          }
           elements.forEach((element, i) => {
             const combinedString = maxString + element;
             if (element.length >= 2046) {
               if (maxString === "") {
-                embedString.push(element);
+                embedStrings.push(element);
               } else {
-                embedString.push(maxString);
-                embedString.push(element);
+                embedStrings.push(maxString);
+                embedStrings.push(element);
                 maxString = "";
               }
             } else if (
@@ -4943,7 +4981,7 @@ module.exports = {
             ) {
               if (combinedString.length >= 2046) {
                 maxString += element;
-                embedString.push(maxString);
+                embedStrings.push(maxString);
               } else
                 maxString += isString
                   ? element
@@ -4955,12 +4993,12 @@ module.exports = {
                 if (combinedString.length <= 2048) {
                   maxString += element;
                 } else {
-                  embedString.push(maxString);
+                  embedStrings.push(maxString);
                   maxString = element;
                 }
-                embedString.push(maxString);
+                embedStrings.push(maxString);
               } else {
-                embedString.push(maxString);
+                embedStrings.push(maxString);
                 maxString = isString
                   ? element
                   : doubleSpace
@@ -4970,14 +5008,22 @@ module.exports = {
             }
           });
           // console.log({ embedString });
+          // embedStrings.forEach((str, i) => {
+          //   console.log(`Length at ${i + 1}: ${str.length}`);
+          //   if (str.length > 2048) {
+          //     console.log({ str });
+          //   }
+          // });
           let embedArray = new Array();
-          embedString.forEach((string) => {
-            const embed = this.getMessageEmbed(string, title, embedColour);
-            embedArray.push(
-              fileName
-                ? embed.setFooter(`${this.fileFooterText} (${fileName})`)
-                : embed
-            );
+          embedStrings.forEach((string) => {
+            if (string.length) {
+              const embed = this.getMessageEmbed(string, title, embedColour);
+              embedArray.push(
+                fileName
+                  ? embed.setFooter(`${this.fileFooterText} (${fileName})`)
+                  : embed
+              );
+            }
           });
           return embedArray;
         }
@@ -7239,6 +7285,14 @@ module.exports = {
     return outputString;
   },
 
+  habitDocumentSpecifics: function (habitDocument, addNewLine = true) {
+    const { specifics } = habitDocument;
+    const outputString = specifics
+      ? `❓ - **Specifics:**${addNewLine ? "\n" : ""}${specifics}`
+      : "";
+    return outputString;
+  },
+
   logDocumentToString: function (
     log,
     habitCron,
@@ -7344,7 +7398,7 @@ module.exports = {
       : { daily: 0, weekly: 0 };
     const targetHabit = await Habit.findById(habitID);
     if (!targetHabit) return null;
-    const { settings, description: habitDescription } = targetHabit;
+    const { settings, description: habitDescription, specifics } = targetHabit;
     const { countGoal, countMetric, goalType } = settings;
 
     const allUserHabits = await Habit.find({ userID }).sort({ createdAt: +1 });
@@ -7399,7 +7453,11 @@ module.exports = {
                 targetHabitIndex + 1
               } (By Date Created):__**\n${this.habitDocumentDescription(
                 targetHabit
-              )}\n**Current Streak:** ${
+              )}\n${
+                targetHabit.specifics
+                  ? `\n${this.habitDocumentSpecifics(targetHabit, true)}`
+                  : ""
+              }\n**Current Streak:** ${
                 targetHabit.currentStreak || 0
               }\n**Longest Streak:** ${targetHabit.longestStreak || 0}${
                 countGoal || countGoal === 0
@@ -7422,6 +7480,10 @@ module.exports = {
     return `**__Reminder to track your habit__** 😁.\n\n**__Habit:__**\n${this.habitDocumentDescription(
       targetHabit
     )}${
+      targetHabit.specifics
+        ? `\n${this.habitDocumentSpecifics(targetHabit, true)}`
+        : ""
+    }${
       countGoal || countGoal === 0
         ? `\n**Current${
             goalType

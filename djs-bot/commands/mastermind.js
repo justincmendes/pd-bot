@@ -243,7 +243,7 @@ async function setMastermindWeeklyGoalReminder(
   weeklyGoals,
   mastermindCreatedTime,
   mastermindID,
-  recurrances
+  recurrences
 ) {
   const reminderString = fn.goalArrayToString(
     weeklyGoals,
@@ -277,7 +277,7 @@ async function setMastermindWeeklyGoalReminder(
     mastermindID,
     true,
     "1 day",
-    recurrances || undefined,
+    recurrences || undefined,
     mastermindEmbedColour
   );
 }
@@ -296,7 +296,7 @@ async function setUserMastermindReminder(
     PREFIX,
     timezoneOffset,
     daylightSaving,
-    "**When** do you want your **first weekly goal reminder?**\n(Recommended: \`tomorrow at 12pm\` or \`tom at 8a\`)",
+    "**When** do you want your **first weekly goal reminder?**\n(Recommended: `tomorrow at 12pm` or `tom at 8a`)",
     "Mastermind: Weekly Goals Daily Reminder Time of Day",
     true,
     mastermindEmbedColour
@@ -318,6 +318,7 @@ async function setUserMastermindReminder(
   );
   if (!repetitions && repetitions !== 0) return false;
   if (repetitions === 0) repetitions = undefined;
+  console.log({ repetitions });
   const mastermindReminders = await getCurrentMastermindReminders(
     message.author.id
   );
@@ -731,6 +732,7 @@ module.exports = {
         let goalCount = 1;
         var weeklyGoals = new Array();
         do {
+          const weeklyGoalEntryTitle = `Mastermind Entry: Weekly Goal ${goalCount}`;
           const completionInstructions = `${
             goalCount !== 1
               ? goalCount === 2
@@ -747,8 +749,8 @@ module.exports = {
             bot,
             message,
             PREFIX,
-            `**🎯 What is __Goal #${goalCount}__ of this week's goals?**\n(Within 100 characters)`,
-            `Mastermind Entry: Weekly Goal ${goalCount}`,
+            `**🎯 What is __Goal #${goalCount}__ of this week's goals?**\n(Within 100 characters)\n\n*Write a brief description of your weekly goal (in very simple terms), you will get into the specifics in the next few pages.*`,
+            weeklyGoalEntryTitle,
             100,
             "a goal",
             forceSkip,
@@ -774,18 +776,30 @@ module.exports = {
             `${areasOfLifeList}\n\n${goalDescriptionString}`,
             areasOfLife.length,
             `**__Which area of life does Goal #${goalCount} fall under?__**`,
-            `Mastermind Entry: Weekly Goal ${goalCount}`,
+            weeklyGoalEntryTitle,
             mastermindEmbedColour
           );
           if (!weeklyGoalType && weeklyGoalType !== 0) return;
 
           const goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[weeklyGoalType]} ${areasOfLife[weeklyGoalType]}`;
+
+          const weeklyGoalSpecifics = await hb.getHabitSpecifics(
+            bot,
+            message,
+            PREFIX,
+            forceSkip,
+            weeklyGoalEntryTitle,
+            mastermindEmbedColour,
+            `\n${goalDescriptionString}\n${goalTypeString}`
+          );
+          if (!weeklyGoalSpecifics && weeklyGoalSpecifics !== "") return;
+
           const weeklyGoalReason = await fn.getSingleEntryWithCharacterLimit(
             bot,
             message,
             PREFIX,
             `${goalDescriptionString}\n${goalTypeString}\n\n**__💭 Why do you want to accomplish this goal?__**\n(Within 1000 characters)`,
-            `Mastermind Entry: Weekly Goal ${goalCount}`,
+            weeklyGoalEntryTitle,
             1000,
             "a goal reason",
             forceSkip,
@@ -837,6 +851,7 @@ module.exports = {
           weeklyGoals.push({
             type: weeklyGoalType,
             description: weeklyGoalDescription,
+            specifics: weeklyGoalSpecifics,
             reason: weeklyGoalReason,
             connectedGoal,
           });
@@ -1348,8 +1363,7 @@ module.exports = {
             return;
           }
         } else if (deleteType === "all") {
-          const confirmDeleteAllMessage =
-            `Are you sure you want to **delete all** of your recorded masterminds?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
+          const confirmDeleteAllMessage = `Are you sure you want to **delete all** of your recorded masterminds?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           const pastNumberOfEntriesIndex = totalMastermindNumber;
           if (pastNumberOfEntriesIndex === 0) {
             return fn.sendErrorMessage(message, noMastermindsMessage);
@@ -1744,8 +1758,7 @@ module.exports = {
       mastermindCommand === "e" ||
       mastermindCommand === "ch"
     ) {
-      let mastermindEditUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${mastermindCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3** (3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the masterminds by **actual time created instead of mastermind created time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      let mastermindEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${mastermindCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3** (3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the masterminds by **actual time created instead of mastermind created time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       mastermindEditUsageMessage = fn.getMessageEmbed(
         mastermindEditUsageMessage,
         `Mastermind: Edit Help`,
@@ -1854,9 +1867,11 @@ module.exports = {
             var userEdit,
               mastermindEditMessagePrompt = "";
             const type = "Mastermind Entry";
+            const editInstructions =
+              "\nType `back` to go **back to the main edit menu**";
             let { journal, createdAt } = mastermindDocument;
             if (fieldToEditIndex === 0) {
-              mastermindEditMessagePrompt = `**__Please enter the date and time when this mastermind entry was created:__** ⌚\n${timeExamples}`;
+              mastermindEditMessagePrompt = `\n**__Please enter the date and time when this mastermind entry was created:__** ⌚\n${timeExamples}`;
               userEdit = await fn.getUserEditString(
                 bot,
                 message,
@@ -1869,7 +1884,7 @@ module.exports = {
               );
             } else if (!usedTemplate) {
               if (fieldToEditIndex === 1) {
-                mastermindEditMessagePrompt = `**__Please enter your new mastermind entry:__**`;
+                mastermindEditMessagePrompt = `\n**__Please enter your new mastermind entry:__**`;
                 userEdit = await fn.getUserMultilineEditString(
                   bot,
                   message,
@@ -2067,6 +2082,21 @@ module.exports = {
                   weeklyGoalType--;
 
                   let goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[weeklyGoalType]} ${areasOfLife[weeklyGoalType]}`;
+
+                  let weeklyGoalSpecifics = await hb.getHabitSpecifics(
+                    bot,
+                    message,
+                    PREFIX,
+                    forceSkip,
+                    weeklyGoalEntryTitle,
+                    mastermindEmbedColour,
+                    editInstructions,
+                    ["back"]
+                  );
+                  if (!weeklyGoalSpecifics && weeklyGoalSpecifics !== "")
+                    return;
+                  else if (weeklyGoalSpecifics === "back") break;
+
                   let weeklyGoalReason = await fn.getUserEditString(
                     bot,
                     message,
@@ -2092,6 +2122,7 @@ module.exports = {
                   userEdit = {
                     type: weeklyGoalType,
                     description: weeklyGoalDescription,
+                    specifics: weeklyGoalSpecifics,
                     reason: weeklyGoalReason,
                   };
                   journal.goals = userEdit;
@@ -2378,7 +2409,7 @@ module.exports = {
                   true,
                   true,
                   true
-                )}__**?\n${fn.goalArrayToString(
+                )}__**?\n\n${fn.goalArrayToString(
                   targetMastermind.journal.goals,
                   "Weekly",
                   false,
@@ -2502,8 +2533,7 @@ module.exports = {
       mastermindCommand === "temp" ||
       mastermindCommand === "t"
     ) {
-      let templateUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${mastermindCommand} <NUMBER_OF_USERS> <NAMES>\`\n\n\`<NUMBER_OF_USERS>\`: **10** (**any number**)\n\n\`<NAMES>\`: Enter names of people in mastermind meeting\n***(COMMA SEPARATED, spaces in between are optional)***\n(i.e. \`Paul, Radeesh, David, Kenneth, Kurt, Angel, Luke, Josh, Ragel, Sharran, Justin\`)`;
+      let templateUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${mastermindCommand} <NUMBER_OF_USERS> <NAMES>\`\n\n\`<NUMBER_OF_USERS>\`: **10** (**any number**)\n\n\`<NAMES>\`: Enter names of people in mastermind meeting\n***(COMMA SEPARATED, spaces in between are optional)***\n(i.e. \`Paul, Radeesh, David, Kenneth, Kurt, Angel, Luke, Josh, Ragel, Sharran, Justin\`)`;
       templateUsageMessage = fn.getMessageEmbed(
         templateUsageMessage,
         "Mastermind: Help",

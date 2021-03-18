@@ -257,6 +257,18 @@ module.exports = {
         if (!habitAreaOfLife && habitAreaOfLife !== 0) return;
 
         const habitTypeString = `__**Type:**__ ${areasOfLifeEmojis[habitAreaOfLife]} **${areasOfLife[habitAreaOfLife]}**\n${habitDescriptionString}`;
+
+        const specifics = await hb.getHabitSpecifics(
+          bot,
+          message,
+          PREFIX,
+          forceSkip,
+          "Habit: Creation - Specifics",
+          habitEmbedColour,
+          `${habitTypeString}`
+        );
+        if (!specifics && specifics !== "") return;
+
         let habitReason = await fn.getMultilineEntry(
           bot,
           message,
@@ -589,6 +601,7 @@ module.exports = {
             HOUR_IN_MS * timezoneOffset,
           archived: false,
           description: habitDescription,
+          specifics,
           areaOfLife: habitAreaOfLife,
           reason: habitReason,
           connectedGoal,
@@ -1600,6 +1613,7 @@ module.exports = {
             archived,
             description,
             areaOfLife,
+            specifics,
             reason,
             currentStreak,
             currentState,
@@ -1626,6 +1640,7 @@ module.exports = {
             "Logs/Entries",
             "Date Created",
             "Description",
+            "Specifics",
             "Reason",
             "Area Of Life",
             "Archived",
@@ -1868,7 +1883,23 @@ module.exports = {
               );
               description = userEdit;
               break;
-            case 3:
+            case 3: {
+              let editInstructions =
+                "\nType \`back\` to go **back to the main edit menu**";
+              userEdit = await hb.getHabitSpecifics(
+                bot,
+                message,
+                PREFIX,
+                forceSkip,
+                `${type}: Edit`,
+                habitEmbedColour,
+                editInstructions,
+                ["back"]
+              );
+              specifics = userEdit;
+              break;
+            }
+            case 4:
               habitEditMessagePrompt =
                 "\n💭 **__Why__ do you want to incorporate this habit into your lifestyle?**\n(Within 1000 characters)";
               userEdit = await fn.getUserMultilineEditString(
@@ -1884,7 +1915,7 @@ module.exports = {
               );
               reason = userEdit;
               break;
-            case 4:
+            case 5:
               habitEditMessagePrompt = `\n**__Which area of life does this habit fall under? 🌱__**\n${areasOfLifeList}`;
               userEdit = await fn.getUserEditNumber(
                 bot,
@@ -1905,7 +1936,7 @@ module.exports = {
                 areaOfLife = userEdit;
               }
               break;
-            case 5:
+            case 6:
               habitEditMessagePrompt = `\n**__Currently:__ ${
                 archived ? "Archived" : "NOT Archived"
               }\n\n📁 - Archive\n\n📜 - No Archive**`;
@@ -1921,7 +1952,7 @@ module.exports = {
                 habitEmbedColour
               );
               break;
-            case 6:
+            case 7:
               let connectedGoalString = "**Currently:** ";
               if (connectedGoal) {
                 const connectedGoalDocument = goals.find(
@@ -1963,7 +1994,7 @@ module.exports = {
               else if (userEdit === "back") break;
               else userEdit--; // Minus 1 for array offset
               break;
-            case 7:
+            case 8:
               habitEditMessagePrompt = `\n**__When do you want this habit's streaks to reset?__** ⌚\n**Currently:** ${
                 isWeeklyType ? "Weekly" : "Daily"
               }\n\n🌇 - **Daily Reset**\n📅 - **Weekly Reset**`;
@@ -1979,7 +2010,7 @@ module.exports = {
                 habitEmbedColour
               );
               break;
-            case 8:
+            case 9:
               habitEditMessagePrompt = `**__After how many ${
                 isWeeklyType ? "weeks" : "days"
               } do you want your habit streak to reset__**\n(Enter a number)`;
@@ -1994,7 +2025,7 @@ module.exports = {
                 habitEmbedColour
               );
               break;
-            case 9:
+            case 10:
               habitEditMessagePrompt = `**__Do you want the habit to automatically log/complete?__**`;
               const hasCountGoal = countGoal && countGoal !== 0;
               var noMoreStreakHabitsAtTier;
@@ -2034,7 +2065,7 @@ module.exports = {
               );
               autoLogType = userEdit;
               break;
-            case 10:
+            case 11:
               habitEditMessagePrompt = `\n**__Currently:__ ${
                 isCountType ? "Yes" : "No"
               }\n\n🔢 - Has a value to count\n\n⛔ - No value to count**`;
@@ -2050,7 +2081,7 @@ module.exports = {
                 habitEmbedColour
               );
               break;
-            case 11:
+            case 12:
               habitEditMessagePrompt = `\n**__What metric are you tracking for this habit?__** 📏\n(Within 30 characters)\ne.g. Pushups, Hours Spend Studying`;
               userEdit = await fn.getUserEditString(
                 bot,
@@ -2065,7 +2096,7 @@ module.exports = {
               );
               countMetric = userEdit;
               break;
-            case 12:
+            case 13:
               habitEditMessagePrompt = `**What kind of goal do you have for __${
                 countMetric || "this count-based habit"
               }__?**`;
@@ -2086,7 +2117,7 @@ module.exports = {
                 countGoalType = userEdit;
               }
               break;
-            case 13:
+            case 14:
               habitEditMessagePrompt = `**What is your ${
                 goalTypeString || "goal"
               } for __${countMetric || "this count-based habit"}?__**`;
@@ -2251,7 +2282,7 @@ module.exports = {
                   continueEdit = true;
                 } else createdAt = userEdit;
                 break;
-              case 5:
+              case 6:
                 switch (userEdit) {
                   case "📁":
                     userEdit = true;
@@ -2272,12 +2303,12 @@ module.exports = {
                   isArchived = userEdit;
                 }
                 break;
-              case 6:
+              case 7:
                 if (userEdit === goals.length) {
                   connectedGoal = undefined;
                 } else connectedGoal = goals[userEdit]._id;
                 break;
-              case 7:
+              case 8:
                 switch (userEdit) {
                   case "📅":
                     userEdit = true;
@@ -2293,7 +2324,7 @@ module.exports = {
                   isWeeklyType = userEdit;
                 }
                 break;
-              case 8:
+              case 9:
                 if (!isNaN(userEdit)) cronPeriods = parseFloat(userEdit);
                 else {
                   message.reply(
@@ -2303,7 +2334,7 @@ module.exports = {
                   );
                 }
                 break;
-              case 10:
+              case 11:
                 switch (userEdit) {
                   case "🔢":
                     userEdit = true;
@@ -2337,7 +2368,7 @@ module.exports = {
                   isCountType = userEdit;
                 }
                 break;
-              case 13:
+              case 14:
                 if (!isNaN(userEdit)) countGoal = parseFloat(userEdit);
                 else {
                   message.reply(
@@ -2356,9 +2387,9 @@ module.exports = {
             try {
               if (
                 fieldToEditIndex === 2 ||
-                fieldToEditIndex === 11 ||
                 fieldToEditIndex === 12 ||
-                fieldToEditIndex === 13
+                fieldToEditIndex === 13 ||
+                fieldToEditIndex === 14
               ) {
                 if (habitTargetID) {
                   const currentHabitReminders = await Reminder.find({
@@ -2437,6 +2468,7 @@ module.exports = {
                     archived,
                     description,
                     areaOfLife,
+                    specifics,
                     reason,
                     connectedGoal,
                     nextCron,

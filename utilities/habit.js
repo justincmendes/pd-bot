@@ -41,6 +41,7 @@ module.exports = {
       createdAt,
       archived,
       description,
+      specifics,
       areaOfLife,
       reason,
       currentStreak,
@@ -303,7 +304,7 @@ module.exports = {
     let outputString =
       `${archived ? "****ARCHIVED****\n" : ""}${areaOfLifeString}${
         description ? `\n👣 - **Description:**\n${description}` : ""
-      }${
+      }${specifics ? `\n${fn.habitDocumentSpecifics(habitDocument)}` : ""}${
         reason ? `\n💭 - **Reason:**\n${reason}` : ""
       }${connectedGoalString}\n${currentStateString}\n**Current Streak:** ${
         currentStreak || 0
@@ -390,7 +391,7 @@ module.exports = {
     userID,
     endTime,
     interval,
-    habitID,
+    habitID
   ) {
     try {
       const reminderMessage = await fn.getHabitReminderMessage(
@@ -480,7 +481,7 @@ module.exports = {
         userID,
         endTime,
         intervalArgs,
-        habitDocument._id,
+        habitDocument._id
       );
       if (successfullySetReminder) {
         console.log("Habit log recurring reminder set.");
@@ -668,6 +669,7 @@ module.exports = {
             archived: false,
             description: goal.description,
             areaOfLife: goal.type,
+            specifics: goal.specifics,
             reason: goal.reason,
             connectedGoal: goal.connectedGoal,
             nextCron,
@@ -712,6 +714,37 @@ module.exports = {
       return false;
     }
   },
+
+  getHabitSpecifics: async function (
+    bot,
+    message,
+    PREFIX,
+    forceSkip,
+    title = "Habit: Specifics",
+    embedColour = fn.habitEmbedColour,
+    additionalInstructions = false,
+    instructionKeywords = []
+  ) {
+    const specifics = await fn.getMultilineEntry(
+      bot,
+      message,
+      PREFIX,
+      `**__Answer some or all the following questions regarding your habit:__**\n(Within 1000 characters)\n🔴 - **How** will do your habit?\n🔵 - **Who** do you need help from or who is involved?\n🟢 - **Where** will you do your habit?\n🟡 - **When** will you do your habit?\n\n**__Examples (from *Atomic Habits* by James Clear):__**\n${this.implementationIntentionsExamples}\n\n${this.habitStackingExamples}`,
+      `${title} (Who, Where, When, How)`,
+      forceSkip,
+      embedColour,
+      1000,
+      additionalInstructions,
+      instructionKeywords
+    );
+    if (!specifics) return specifics;
+    else return specifics.message;
+  },
+
+  implementationIntentionsExamples:
+    "🔵 **__Implementation Intentions__** 🔵\n`I will [BEHAVIOR] at [TIME] in [LOCATION].`\n- I will meditate for one minute at 7 a.m. in my kitchen.\n- I will study Spanish for twenty minutes at 6 p.m. in my bedroom.\n- I will exercise for one hour at 5 p.m. in my local gym.\n- I will make my partner a cup of tea at 8 a.m. in the kitchen.",
+  habitStackingExamples:
+    "🔴 **__Habit Stacking__** 🔴\n`After/Before [CURRENT HABIT], I will [NEW HABIT].`\n- After I pour my cup of coffee each morning, I will meditate for one minute.\n- After I take off my work shoes, I will immediately change into my workout clothes.\n- After I sit down to dinner, I will say one thing I’m grateful for that happened today.\n- After I get into bed at night, I will give my partner a kiss.\n- After I put on my running shoes, I will text a friend or family member where I am running and how long it will take.",
 
   getOneHabitByRecency: async function (
     userID,
@@ -1219,10 +1252,7 @@ module.exports = {
     createdAt = undefined
   ) {
     const { daily: dailyCron } = habitCron;
-    const currentDate = fn.getCurrentDateByCronTime(
-      timezoneOffset,
-      dailyCron
-    );
+    const currentDate = fn.getCurrentDateByCronTime(timezoneOffset, dailyCron);
     const currentYear = currentDate.getUTCFullYear();
     const currentMonth = currentDate.getUTCMonth();
     const currentDay = currentDate.getUTCDate();
@@ -1252,10 +1282,7 @@ module.exports = {
     createdAt = undefined
   ) {
     const { daily: dailyCron } = habitCron;
-    const currentDate = fn.getCurrentDateByCronTime(
-      timezoneOffset,
-      dailyCron
-    );
+    const currentDate = fn.getCurrentDateByCronTime(timezoneOffset, dailyCron);
     const currentYear = currentDate.getUTCFullYear();
     const firstDayOfYear = new Date(currentYear, 0).getTime() + dailyCron;
     const lastDayOfYear = new Date(currentYear + 1, 0, 1).getTime() + dailyCron;
@@ -1279,10 +1306,7 @@ module.exports = {
     createdAt = undefined
   ) {
     const { daily: dailyCron } = habitCron;
-    const currentDate = fn.getCurrentDateByCronTime(
-      timezoneOffset,
-      dailyCron
-    );
+    const currentDate = fn.getCurrentDateByCronTime(timezoneOffset, dailyCron);
     const currentYear = currentDate.getUTCFullYear();
     const currentMonth = currentDate.getUTCMonth();
     const firstDayOfMonth =
@@ -1310,10 +1334,7 @@ module.exports = {
     createdAt = undefined
   ) {
     const { daily: dailyCron, weekly: weeklyCron } = habitCron;
-    const currentDate = fn.getCurrentDateByCronTime(
-      timezoneOffset,
-      dailyCron
-    );
+    const currentDate = fn.getCurrentDateByCronTime(timezoneOffset, dailyCron);
     const currentYear = currentDate.getUTCFullYear();
     const currentMonth = currentDate.getUTCMonth();
     const currentDay = currentDate.getUTCDate();

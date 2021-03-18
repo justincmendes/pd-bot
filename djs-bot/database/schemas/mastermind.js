@@ -65,6 +65,10 @@ const mastermindSchema = mongoose.Schema({
           type: String,
           required: false,
         },
+        specifics: {
+          type: String,
+          required: false,
+        },
         reason: {
           type: String,
           required: false,
