@@ -518,7 +518,7 @@ module.exports = {
           bot,
           message,
           PREFIX,
-          `**Select the habit you'd like to post:**${
+          `**__Select the habit you'd like to post:__**${
             someHabitsSelected
               ? `\n(Type \`${habits.length + 1}\` if you're done)`
               : ""
@@ -543,9 +543,9 @@ module.exports = {
                 bot,
                 message,
                 PREFIX,
-                "**Would you like to add another habit to be posted?**",
+                "**__Would you like to add another habit to be posted?__**",
                 false,
-                "Habit: Weekly Goals into Habits"
+                "Habit: Post - Add More?"
               );
               if (typeof anotherHabit === "boolean") {
                 if (anotherHabit === true) reset = true;

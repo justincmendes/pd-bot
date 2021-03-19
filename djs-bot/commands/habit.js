@@ -1885,7 +1885,7 @@ module.exports = {
               break;
             case 3: {
               let editInstructions =
-                "\nType \`back\` to go **back to the main edit menu**";
+                "\nType `back` to go **back to the main edit menu**";
               userEdit = await hb.getHabitSpecifics(
                 bot,
                 message,
@@ -3641,7 +3641,14 @@ module.exports = {
     } else if (
       archiveRegex.test(habitCommand) ||
       habitCommand === "stash" ||
-      habitCommand === "store"
+      habitCommand === "store" ||
+      habitCommand === "stall" ||
+      habitCommand === "rest" ||
+      habitCommand === "pause" ||
+      habitCommand === "freeze" ||
+      habitCommand === "free" ||
+      habitCommand === "fr" ||
+      habitCommand === "f"
     ) {
       if (tier === 1) {
         if (totalArchiveNumber >= habitArchiveMax) {
@@ -3663,6 +3670,7 @@ module.exports = {
           );
         }
       }
+
       // Allows for archive - indexing by unarchived entries only!
       let habitArchiveUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${habitCommand} <recent?> <force?>\`\n\n\`<recent?>\`(OPT.): type **recent** to order the habits by **actual time created instead of the date created property!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       habitArchiveUsageMessage = fn.getMessageEmbed(
@@ -3673,25 +3681,31 @@ module.exports = {
       if (habitType === "help")
         return message.channel.send(habitArchiveUsageMessage);
 
-      var indexByRecency = false;
-      if (args[1] !== undefined) {
-        if (args[1].toLowerCase() === "recent") {
+      var habitIndex;
+      let indexByRecency = false;
+      if (args[2 + archiveShift] !== undefined) {
+        if (args[2 + archiveShift].toLowerCase() === "recent") {
           indexByRecency = true;
         }
       }
+      const sortType = indexByRecency ? "By Recency" : "By Date Created";
 
       do {
-        var habitArray;
+        var targetHabit, habitArray;
         if (indexByRecency)
-          habitArray = await Habit.find(
-            { userID: authorID, archived: false },
-            { _id: 1, "habit.description": 1 }
-          ).sort({ _id: -1 });
+          habitArray = await Habit.find({
+            archived: isArchived,
+            userID: authorID,
+          }).sort({ _id: -1 });
         else
-          habitArray = await Habit.find(
-            { userID: authorID, archived: false },
-            { _id: 1, "habit.description": 1 }
-          ).sort({ "habit.createdAt": +1 });
+          habitArray = await Habit.find({
+            archived: isArchived,
+            userID: authorID,
+          }).sort({ createdAt: +1 });
+        if (!habitArray)
+          return message.reply(
+            `**NO HABITS**... try \`${PREFIX}${commandUsed} help\` to set one up!`
+          );
         if (!habitArray.length)
           return message.reply(
             `**No ${
@@ -3699,47 +3713,85 @@ module.exports = {
             }habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`
           );
 
-        var targetHabit;
-        const selectedHabit = await fn.getUserSelectedObject(
-          bot,
-          message,
-          PREFIX,
-          "__**Which habit would you like to archive?**__",
-          `Habit${isArchived ? " Archive" : ""}: Archive Selection`,
-          habitArray,
-          "description",
-          false,
-          habitEmbedColour,
-          600000,
-          0
-        );
-        if (!selectedHabit) return;
-        else targetHabit = selectedHabit.object;
+        // If the user enters "recent" or a number, only show information for that one specific habit, otherwise show stats for all habits!
+        const targetHabitParam = args[1 + archiveShift]
+          ? args[1 + archiveShift].toLowerCase()
+          : false;
+        if (targetHabitParam) {
+          const isNumberArg = !isNaN(args[1 + archiveShift]);
+          if (targetHabitParam === "recent") {
+            const recentHabit = await Habit.findOne({ userID: authorID }).sort({
+              _id: -1,
+            });
+            if (recentHabit) {
+              const recentHabitId = recentHabit._id.toString();
+              const recentHabitIndex = habitArray.findIndex(
+                (habit) => habit._id.toString() === recentHabitId
+              );
+              if (recentHabitIndex === -1) return;
+              targetHabit = habitArray[recentHabitIndex];
+            }
+          } else if (isNumberArg) {
+            let habitIndex = parseInt(args[1 + archiveShift]);
+            if (habitIndex <= 0 || habitIndex > habitArray.length) {
+              return fn.sendErrorMessageAndUsage(
+                message,
+                habitActionHelpMessage,
+                `**${
+                  isArchived ? "Archived " : ""
+                }Habit ${habitIndex} does not exist **...`
+              );
+            } else {
+              targetHabit = habitArray[habitIndex - 1];
+            }
+          }
+        }
+
+        if (!targetHabit) {
+          const selectedHabit = await fn.getUserSelectedObject(
+            bot,
+            message,
+            PREFIX,
+            "__**Which habit would you like to archive?**__",
+            `Habit${isArchived ? " Archive" : ""}: Archive Selection`,
+            habitArray,
+            "description",
+            false,
+            habitEmbedColour,
+            600000,
+            0
+          );
+          if (!selectedHabit) return;
+          else targetHabit = selectedHabit.object;
+        }
 
         const confirmEnd = await fn.getUserConfirmation(
           bot,
           message,
           PREFIX,
-          `**Are you sure you want to archive this habit?**\n(it will not be deleted, but won't show up in your regular \`${PREFIX}${commandUsed} see\` \`${PREFIX}${commandUsed} post\` \`${PREFIX}${commandUsed} delete\` commands\nand you won't get reminders for it anymore)\n\n🎯 - __**Description:**__\n${targetHabit.description}`,
+          `**__Are you sure you want to archive this habit?__**\n\n❄ - **Your current streak will be frozen and stopped.**\n🕵️‍♀️ - **This habit won't show up in your regular commands:**\n\`${PREFIX}${commandUsed} see\` \`${PREFIX}${commandUsed} edit\` \`${PREFIX}${commandUsed} post\` \`${PREFIX}${commandUsed} delete\`\n⏲ - **You won't get reminders for it anymore.** (if any)\n\n${fn.habitDocumentDescription(
+            targetHabit
+          )}`,
           forceSkip,
-          `Habit${isArchived ? " Archive" : ""}: Archive Confirmation`
+          `Habit${isArchived ? " Archive" : ""}: Archive Confirmation`,
+          600000
         );
-        if (confirmEnd) {
-          await Habit.updateOne(
-            { _id: targetHabit._id },
-            { $set: { archived: true } },
-            async (err, result) => {
-              if (err) return console.error(err);
-              console.log({ result });
-              if (targetHabit._id) {
-                rm.cancelRemindersByConnectedDocument(targetHabit._id);
-                await Reminder.deleteMany({
-                  connectedDocument: targetHabit._id,
-                });
-              }
+        if (!confirmEnd) return;
+        await Habit.updateOne(
+          { _id: targetHabit._id },
+          { $set: { archived: true } },
+          async (err, result) => {
+            if (err) return console.error(err);
+            console.log({ result });
+            if (targetHabit._id) {
+              rm.cancelRemindersByConnectedDocument(targetHabit._id);
+              await Reminder.deleteMany({
+                connectedDocument: targetHabit._id,
+              });
+              hb.cancelHabitById(targetHabit._id);
             }
-          );
-        } else continue;
+          }
+        );
       } while (true);
     } else return message.reply(habitHelpMessage);
   },
