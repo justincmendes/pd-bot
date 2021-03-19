@@ -1133,7 +1133,10 @@ module.exports = {
               const userMastermind = await Mastermind.findOne({
                 connectedDocument: reminder.connectedDocument,
               });
-              const userGoals = userMastermind?.journal?.goals;
+              const userGoals =
+                userMastermind &&
+                userMastermind.journal &&
+                userMastermind.journal.goals;
               if (userGoals) {
                 updateObject.message = fn.goalArrayToString(
                   userGoals,
