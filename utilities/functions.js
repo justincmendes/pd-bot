@@ -4167,7 +4167,8 @@ module.exports = {
     showNumber = true,
     emphasizeNumber = false,
     underlineWeeklyGoal = false,
-    addColonToTitle = false
+    addColonToTitle = false,
+    showGoalReason = true
   ) {
     if (Array.isArray(goalArray)) {
       if (goalArray.length) {
@@ -4182,13 +4183,14 @@ module.exports = {
                 ? ` \`${i + 1}\``
                 : ` ${i + 1}`
               : "";
-            // ${goal.reason ? `\n💭 - ${goal.reason}` : ""}
             goalStringArray.push(
               `**${underlineWeeklyGoal ? "__" : ""}${type}Goal${goalNumber}${
                 addColonToTitle ? ":" : ""
               }${underlineWeeklyGoal ? "__" : ""}** ${
                 goal.description ? `\n🎯 - ${goal.description}` : ""
-              }${goal.specifics ? `\n❓ - ${goal.specifics}` : ""}
+              }${goal.specifics ? `\n❓ - ${goal.specifics}` : ""}${
+                showGoalReason && goal.reason ? `\n💭 - ${goal.reason}` : ""
+              }
               ${
                 !isNaN(goal.type)
                   ? `${
@@ -5172,11 +5174,13 @@ module.exports = {
               break;
             default:
               if (
-                additionalReactions && additionalReactions.includes(reaction.emoji.name) &&
+                additionalReactions &&
+                additionalReactions.includes(reaction.emoji.name) &&
                 additionalReactionsInformation &&
                 additionalReactionsInformation.length
               ) {
-                switch (reaction.emoji.name) {
+                switch (
+                  reaction.emoji.name
                   //! Issue: Cannot call habit.js because habit.js relies on fn (also this function relies on fn)
                   // Send the user to their habits
                   // case "🔁":
@@ -5228,6 +5232,7 @@ module.exports = {
                   //     }
                   //   }
                   //   break;
+                ) {
                 }
               }
           }
@@ -7519,9 +7524,7 @@ module.exports = {
                     false
                   )}`
                 : "";
-              return `**__Reminder to track your habit__** 😁.\n\n**__Habit ${
-                targetHabitIndex
-              } (By Date Created):__**\n${this.habitDocumentDescription(
+              return `**__Reminder to track your habit__** 😁.\n\n**__Habit ${targetHabitIndex} (By Date Created):__**\n${this.habitDocumentDescription(
                 targetHabit
               )}${
                 targetHabit.specifics
@@ -7540,9 +7543,7 @@ module.exports = {
                     }:**` +
                     ` ${countGoal}${countMetric ? ` (${countMetric})` : ""}`
                   : ""
-              }${todaysLogMessage}${previousLogMessage}\n\nType** \`?${commandUsed} log ${
-                targetHabitIndex
-              }\` **- to **track your habit**`;
+              }${todaysLogMessage}${previousLogMessage}\n\nType** \`?${commandUsed} log ${targetHabitIndex}\` **- to **track your habit**`;
             }
         }
     }

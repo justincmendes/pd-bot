@@ -187,6 +187,8 @@ module.exports = {
       const duration = endTime - startTime;
       const user = bot.users.cache.get(userID);
       const channelObject = isDM ? user : bot.channels.cache.get(channel);
+      let additionalReactionEmojis = [],
+        additionalReactionInformation = [];
       if (channelObject) {
         const channelID = channelObject.id;
         const usernameAndDiscriminator = user
@@ -302,6 +304,24 @@ module.exports = {
               .setFooter(reminderFooter, user.displayAvatarURL())
               .setColor(embedColour);
           } else {
+            var habitFooter = "";
+            if (title === "Habit" && connectedDocument) {
+              habitFooter = `\n🔁 to track your habit`;
+              additionalReactionEmojis.push("🔁");
+              additionalReactionInformation.push(connectedDocument);
+              // const habits = await Habit.find({ userID }).sort({
+              //   createdAt: +1,
+              // });
+              // if (habits && habits.length) {
+              //   const targetHabitIndex = habits.findIndex(
+              //     (habit) =>
+              //       habit._id.toString() === connectedDocument.toString()
+              //   );
+              //   if (targetHabitIndex !== -1) {
+              //     const targetHabit = habits[targetHabitIndex];
+              //   }
+              // }
+            }
             for (embed of message) {
               embed.setFooter(
                 `${reminderFooter}${
@@ -310,7 +330,7 @@ module.exports = {
                       ? `\n${embed.footer.text}`
                       : ""
                     : ""
-                }`,
+                }${habitFooter}`,
                 user.displayAvatarURL()
               );
             }
@@ -474,7 +494,9 @@ module.exports = {
                           channelObject.id,
                           userID,
                           [embed],
-                          true
+                          true,
+                          additionalReactionEmojis,
+                          additionalReactionInformation
                         );
                       }
                     } else {
@@ -483,7 +505,9 @@ module.exports = {
                         channelObject.id,
                         userID,
                         [message],
-                        true
+                        true,
+                        additionalReactionEmojis,
+                        additionalReactionInformation
                       );
                     }
                   } else channelObject.send(message);
@@ -1144,7 +1168,9 @@ module.exports = {
                     true,
                     true,
                     false,
-                    true
+                    true,
+                    true,
+                    false
                   );
                 }
               }

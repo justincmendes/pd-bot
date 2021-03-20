@@ -252,7 +252,8 @@ async function setMastermindWeeklyGoalReminder(
     true,
     false,
     true,
-    true
+    true,
+    false
   );
   const weekOfString = fn.timestampToDateString(
     mastermindCreatedTime,
@@ -1870,7 +1871,7 @@ module.exports = {
               mastermindEditMessagePrompt = "";
             const type = "Mastermind Entry";
             const editInstructions =
-              "\nType \`back\` to go **back to the main edit menu**";
+              "\nType `back` to go **back to the main edit menu**";
             let { journal, createdAt } = mastermindDocument;
             if (fieldToEditIndex === 0) {
               mastermindEditMessagePrompt = `\n**__Please enter the date and time when this mastermind entry was created:__** ⌚\n${timeExamples}`;
