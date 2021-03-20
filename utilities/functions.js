@@ -5172,7 +5172,7 @@ module.exports = {
               break;
             default:
               if (
-                additionalReactions.includes(reaction.emoji.name) &&
+                additionalReactions && additionalReactions.includes(reaction.emoji.name) &&
                 additionalReactionsInformation &&
                 additionalReactionsInformation.length
               ) {
