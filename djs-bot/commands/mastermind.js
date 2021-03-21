@@ -941,7 +941,7 @@ module.exports = {
             if (
               mastermindDocument &&
               mastermindDocument.journal &&
-              mastermindDocument.goals
+              mastermindDocument.journal.goals
             ) {
               const goalsToReminderConfirmation = await fn.getUserConfirmation(
                 bot,
