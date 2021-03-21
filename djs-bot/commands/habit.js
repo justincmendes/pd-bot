@@ -1886,7 +1886,7 @@ module.exports = {
               break;
             case 3: {
               let editInstructions =
-                "\nType \`back\` to go **back to the main edit menu**";
+                "\nType `back` to go **back to the main edit menu**";
               userEdit = await hb.getHabitSpecifics(
                 bot,
                 message,
@@ -3693,6 +3693,8 @@ module.exports = {
       }
       const sortType = indexByRecency ? "By Recency" : "By Date Created";
 
+      var targetHabitParam =
+        args[1 + archiveShift] && args[1 + archiveShift].toLowerCase();
       do {
         var targetHabit, habitArray;
         if (indexByRecency)
@@ -3717,9 +3719,6 @@ module.exports = {
           );
 
         // If the user enters "recent" or a number, only show information for that one specific habit, otherwise show stats for all habits!
-        const targetHabitParam = args[1 + archiveShift]
-          ? args[1 + archiveShift].toLowerCase()
-          : false;
         if (targetHabitParam) {
           const isNumberArg = !isNaN(args[1 + archiveShift]);
           if (targetHabitParam === "recent") {
@@ -3795,6 +3794,7 @@ module.exports = {
             }
           }
         );
+        targetHabitParam = undefined;
       } while (true);
     } else return message.reply(habitHelpMessage);
   },
