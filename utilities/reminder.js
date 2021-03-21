@@ -306,9 +306,10 @@ module.exports = {
           } else {
             var habitFooter = "";
             if (title === "Habit" && connectedDocument) {
-              habitFooter = `\n🔁 to track your habit`;
-              additionalReactionEmojis.push("🔁");
-              additionalReactionInformation.push(connectedDocument);
+              // habitFooter = `\n🔁 to track your habit`;
+              // additionalReactionEmojis.push("🔁");
+              // additionalReactionInformation.push(connectedDocument);
+
               // const habits = await Habit.find({ userID }).sort({
               //   createdAt: +1,
               // });

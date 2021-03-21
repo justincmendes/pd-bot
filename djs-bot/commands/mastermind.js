@@ -2432,7 +2432,7 @@ module.exports = {
                   false,
                   true,
                   false
-                )}\n\n**(If yes, you can adjust when you want the reminder to start and how many times you want it)**`,
+                )}\n\n*If yes, you can adjust when you want the reminder to start and how many times you want it*`,
                 forceSkip,
                 "Mastermind: Weekly Goal Reminder Confirmation",
                 180000

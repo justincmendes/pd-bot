@@ -5070,7 +5070,7 @@ module.exports = {
         emojis = withDelete ? emojis.concat([cancel]) : emojis;
         emojis = withFile ? emojis.concat([file]) : emojis;
         if (additionalReactions && additionalReactions.length) {
-          emojis = [emojis, ...additionalReactions];
+          emojis = emojis.concat(additionalReactions);
         }
         emojis.forEach(async (emoji, i) => {
           await this.quickReact(embed, emoji, i);
@@ -5171,15 +5171,15 @@ module.exports = {
                 }
               }
               break;
-            default:
-              if (
-                additionalReactions &&
+              default:
+                if (
+                  additionalReactions &&
                 additionalReactions.includes(reaction.emoji.name) &&
                 additionalReactionsInformation &&
                 additionalReactionsInformation.length
-              ) {
-                switch (
-                  reaction.emoji.name
+                ) {
+                  switch (reaction.emoji.name) {
+                  }
                   //! Issue: Cannot call habit.js because habit.js relies on fn (also this function relies on fn)
                   // Send the user to their habits
                   // case "🔁":
@@ -5230,10 +5230,9 @@ module.exports = {
                   //       );
                   //     }
                   //   }
-                  //   break;
-                ) {
-                }
+                    // break;
               }
+              break;
           }
           embed.edit(embedArray[currentPage]);
           if (channel.type !== "dm") reaction.users.remove(user);
@@ -7483,6 +7482,9 @@ module.exports = {
       let recentLogs = await Log.find({ connectedDocument: habitID }).sort({
         timestamp: -1,
       });
+      var logsExist = false,
+        todaysLogMessage = "",
+        previousLogMessage = "";
       if (recentLogs)
         if (recentLogs.length) {
           recentLogs = this.getLogsFromTodayAndThePast(
@@ -7492,6 +7494,7 @@ module.exports = {
           );
           if (recentLogs)
             if (recentLogs.length) {
+              logsExist = true;
               const todaysLog = this.getTodaysLog(
                 recentLogs,
                 timezoneOffset,
@@ -7507,7 +7510,7 @@ module.exports = {
               } else {
                 previousLog = recentLogs[0];
               }
-              const todaysLogMessage = todaysLog
+              todaysLogMessage = todaysLog
                 ? `\n\n**__Today's Current Log:__**\n${this.logDocumentToString(
                     todaysLog,
                     habitCron,
@@ -7515,7 +7518,7 @@ module.exports = {
                     false
                   )}`
                 : "";
-              const previousLogMessage = previousLog
+              previousLogMessage = previousLog
                 ? `\n\n**__Previous Log:__**\n${this.logDocumentToString(
                     previousLog,
                     habitCron,
@@ -7523,28 +7526,27 @@ module.exports = {
                     false
                   )}`
                 : "";
-              return `**__Reminder to track your habit__** 😁.\n\n**__Habit ${targetHabitIndex} (By Date Created):__**\n${this.habitDocumentDescription(
-                targetHabit
-              )}${
-                targetHabit.specifics
-                  ? `\n\n${this.habitDocumentSpecifics(targetHabit, true)}`
-                  : ""
-              }\n\n**Current Streak:** ${
-                targetHabit.currentStreak || 0
-              }\n**Longest Streak:** ${targetHabit.longestStreak || 0}${
-                countGoal || countGoal === 0
-                  ? `\n\n**Current${
-                      goalType
-                        ? ` ${this.toTitleCase(
-                            this.getGoalTypeString(goalType)
-                          )}`
-                        : ""
-                    }:**` +
-                    ` ${countGoal}${countMetric ? ` (${countMetric})` : ""}`
-                  : ""
-              }${todaysLogMessage}${previousLogMessage}\n\nType** \`?${commandUsed} log ${targetHabitIndex}\` **- to **track your habit**`;
             }
         }
+      return `**__Reminder to track your habit__** 😁.\n\n**__Habit ${targetHabitIndex + 1} (By Date Created):__**\n${this.habitDocumentDescription(
+        targetHabit
+      )}${
+        targetHabit.specifics
+          ? `\n\n${this.habitDocumentSpecifics(targetHabit, true)}`
+          : ""
+      }\n\n**Current Streak:** ${
+        targetHabit.currentStreak || 0
+      }\n**Longest Streak:** ${targetHabit.longestStreak || 0}${
+        countGoal || countGoal === 0
+          ? `\n\n**Current${
+              goalType
+                ? ` ${this.toTitleCase(this.getGoalTypeString(goalType))}`
+                : ""
+            }:**` + ` ${countGoal}${countMetric ? ` (${countMetric})` : ""}`
+          : ""
+      }${logsExist ? todaysLogMessage : ""}${
+        logsExist ? previousLogMessage : ""
+      }\n\nType** \`?${commandUsed} log ${targetHabitIndex + 1}\` **- to **track your habit**`;
     }
     // Otherwise... (Default Message)
     return `**__Reminder to track your habit__** 😁.\n\n**__Habit:__**\n${this.habitDocumentDescription(
