@@ -786,7 +786,7 @@ module.exports = {
 
           const goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[weeklyGoalType]} ${areasOfLife[weeklyGoalType]}`;
 
-          const weeklyGoalSpecifics = await hb.getHabitSpecifics(
+          let weeklyGoalSpecifics = await hb.getHabitSpecifics(
             bot,
             message,
             PREFIX,
@@ -796,13 +796,13 @@ module.exports = {
             `${completionInstructions}\n\n${goalDescriptionString}\n${goalTypeString}`,
             completionKeywords
           );
-          if (!weeklyGoalSpecifics && weeklyGoalSpecifics !== "") return;
-          else if (weeklyGoalSpecifics === "done") break;
-          else if (weeklyGoalSpecifics === "reset") {
+          if (!weeklyGoalSpecifics) return;
+          else if (weeklyGoalSpecifics.returnVal === "done") break;
+          else if (weeklyGoalSpecifics.returnVal === "reset") {
             goalCount = 1;
             weeklyGoals = new Array();
             continue;
-          }
+          } else weeklyGoalSpecifics = weeklyGoalSpecifics.message;
 
           let weeklyGoalReason = await fn.getMultilineEntry(
             bot,
@@ -2109,8 +2109,9 @@ module.exports = {
                     editInstructions,
                     ["back"]
                   );
-                  if (!weeklyGoalSpecifics && weeklyGoalSpecifics !== "") return;
-                  else if (weeklyGoalSpecifics === "back") break;
+                  if (!weeklyGoalSpecifics) return;
+                  else if (weeklyGoalSpecifics.returnVal === "back") break;
+                  else weeklyGoalSpecifics = weeklyGoalSpecifics.message;
 
                   let weeklyGoalReason = await fn.getUserMultilineEditString(
                     bot,

@@ -258,7 +258,7 @@ module.exports = {
 
         const habitTypeString = `__**Type:**__ ${areasOfLifeEmojis[habitAreaOfLife]} **${areasOfLife[habitAreaOfLife]}**\n${habitDescriptionString}`;
 
-        const specifics = await hb.getHabitSpecifics(
+        let specifics = await hb.getHabitSpecifics(
           bot,
           message,
           PREFIX,
@@ -267,7 +267,8 @@ module.exports = {
           habitEmbedColour,
           `${habitTypeString}`
         );
-        if (!specifics && specifics !== "") return;
+        if (!specifics) return;
+        else specifics = specifics.message;
 
         let habitReason = await fn.getMultilineEntry(
           bot,
@@ -1885,7 +1886,7 @@ module.exports = {
               break;
             case 3: {
               let editInstructions =
-                "\nType `back` to go **back to the main edit menu**";
+                "\nType \`back\` to go **back to the main edit menu**";
               userEdit = await hb.getHabitSpecifics(
                 bot,
                 message,
@@ -1896,7 +1897,9 @@ module.exports = {
                 editInstructions,
                 ["back"]
               );
-              specifics = userEdit;
+              if (!userEdit) return;
+              else if (userEdit.returnVal === "back") userEdit = "back";
+              else specifics = userEdit.message;
               break;
             }
             case 4:

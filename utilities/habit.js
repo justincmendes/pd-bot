@@ -737,8 +737,7 @@ module.exports = {
       additionalInstructions,
       instructionKeywords
     );
-    if (!specifics) return specifics;
-    else return specifics.message;
+    return specifics;
   },
 
   implementationIntentionsExamples:
