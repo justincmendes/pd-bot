@@ -1599,7 +1599,7 @@ module.exports = {
       fastCommand === "clear" ||
       fastCommand === "erase"
     ) {
-      const additionalInstruction = `\n\nIF you'd like to see more of your fasts first before trying to delete: try \`${PREFIX}${commandUsed} see\`\nIF you'd like to archive the deleted fasts as well (i.e. get the data in a .txt file) - **proceed**.\nIF you'd like to archive without deletion, try: \`${PREFIX}${commandUsed} archive\` (FUTURE FEATURE)\\*`;
+      const additionalInstruction = `\n\nIF you'd like to get your fasts in a text file (.txt) first before trying to delete: try \`${PREFIX}${commandUsed} see\``;
       var fastDeleteUsage = fn.getReadOrDeleteUsageMessage(
         PREFIX,
         commandUsed,
@@ -1970,8 +1970,7 @@ module.exports = {
             return;
           }
         } else if (deleteType === "all") {
-          const confirmDeleteAllMessage =
-            `Are you sure you want to **delete all** of your recorded fasts?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
+          const confirmDeleteAllMessage = `Are you sure you want to **delete all** of your recorded fasts?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           const pastNumberOfEntriesIndex = totalFastNumber;
           if (pastNumberOfEntriesIndex === 0) {
             return fn.sendErrorMessage(message, noFastsMessage);
@@ -1985,8 +1984,7 @@ module.exports = {
             "Fast: Delete All Fasts WARNING!"
           );
           if (!confirmDeleteAll) return;
-          const finalDeleteAllMessage =
-            `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR FASTS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
+          const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR FASTS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
             message,
@@ -2075,8 +2073,7 @@ module.exports = {
       fastCommand === "up" ||
       fastCommand === "upd"
     ) {
-      var fastEditUsage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent/current; 3** (3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the fasts by **time created instead of fast start time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      var fastEditUsage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent/current; 3** (3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the fasts by **time created instead of fast start time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       fastEditUsage = fn.getMessageEmbed(
         fastEditUsage,
         `Fast: Edit Help`,
@@ -2625,8 +2622,7 @@ module.exports = {
       fastCommand === "share" ||
       fastCommand === "upload"
     ) {
-      var fastPostUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3 **(3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the fasts by **time created instead of fast start time!**\n\n\`<force>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      var fastPostUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${fastCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3 **(3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the fasts by **time created instead of fast start time!**\n\n\`<force>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       fastPostUsageMessage = fn.getMessageEmbed(
         fastPostUsageMessage,
         `Fast: Post Help`,

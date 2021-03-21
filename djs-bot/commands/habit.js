@@ -1203,7 +1203,9 @@ module.exports = {
       // Do not show the most recent habit embed, when a valid command is called
       // it will be handled properly later based on the values passed in!
       else {
-        const seeType = habitType;
+        const seeType = args[1 + archiveShift]
+          ? args[1 + archiveShift].toLowerCase()
+          : false;
         var pastFunctionality, habitIndex;
         let indexByRecency = false;
         // To check if the given argument is a number!
@@ -1394,9 +1396,9 @@ module.exports = {
                   return fn.sendErrorMessageAndUsage(
                     message,
                     habitActionHelpMessage,
-                    `** ${
+                    `**${
                       isArchived ? "ARCHIVED " : ""
-                    } HABITS(S) DO NOT EXIST **...`
+                    }HABITS(S) DO NOT EXIST **...`
                   );
                 }
                 const confirmSeePastMessage = `Are you sure you want to ** see ${
@@ -1490,7 +1492,7 @@ module.exports = {
             message,
             `**${
               isArchived ? "ARCHIVED " : ""
-            } HABIT ${habitIndex} DOES NOT EXIST **...`
+            }HABIT ${habitIndex} DOES NOT EXIST **...`
           );
         }
         // NOT using the past functionality:

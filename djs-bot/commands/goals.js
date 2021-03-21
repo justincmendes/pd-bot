@@ -1429,7 +1429,9 @@ module.exports = {
       // Do not show the most recent goal embed, when a valid command is called
       // it will be handled properly later based on the values passed in!
       else {
-        const seeType = goalType;
+        const seeType = args[1 + archiveShift]
+        ? args[1 + archiveShift].toLowerCase()
+        : false;
         var pastFunctionality, goalIndex;
         let indexByRecency = false;
         // To check if the given argument is a number!
