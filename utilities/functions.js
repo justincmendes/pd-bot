@@ -4195,7 +4195,7 @@ module.exports = {
                 !isNaN(goal.type)
                   ? `${
                       this.areasOfLifeEmojis[parseInt(goal.type)]
-                        ? `\n${this.areasOfLifeEmojis[parseInt(goal.type)]}`
+                        ? `${this.areasOfLifeEmojis[parseInt(goal.type)]}`
                         : ""
                     }${
                       this.areasOfLife[parseInt(goal.type)]
