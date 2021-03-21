@@ -739,15 +739,15 @@ module.exports = {
           const completionInstructions = `${
             goalCount !== 1
               ? goalCount === 2
-                ? `Type \`set\` to **submit** all goals entered so far (**Goal ${
+                ? `Type \`done\` to **submit** all goals entered so far (**Goal ${
                     goalCount - 1
                   }**)`
-                : `Type \`set\` to **submit** all goals entered so far (**Goals 1-${
+                : `Type \`done\` to **submit** all goals entered so far (**Goals 1-${
                     goalCount - 1
                   }**)`
-              : `Type \`set\` to **skip** entering any goals`
+              : `Type \`done\` to **skip** entering any goals`
           }\nType \`reset\` to **reset** all of your current **weekly goals**`;
-          const completionKeywords = ["set", "reset"];
+          const completionKeywords = ["done", "reset"];
           const weeklyGoalDescription = await fn.getSingleEntryWithCharacterLimit(
             bot,
             message,
@@ -762,7 +762,7 @@ module.exports = {
             completionKeywords
           );
           if (!weeklyGoalDescription && weeklyGoalDescription !== "") return;
-          else if (weeklyGoalDescription === "set") break;
+          else if (weeklyGoalDescription === "done") break;
           else if (weeklyGoalDescription === "reset") {
             goalCount = 1;
             weeklyGoals = new Array();
@@ -793,30 +793,37 @@ module.exports = {
             forceSkip,
             weeklyGoalEntryTitle,
             mastermindEmbedColour,
-            `\n${goalDescriptionString}\n${goalTypeString}`
+            `${completionInstructions}\n\n${goalDescriptionString}\n${goalTypeString}`,
+            completionKeywords
           );
           if (!weeklyGoalSpecifics && weeklyGoalSpecifics !== "") return;
+          else if (weeklyGoalSpecifics === "done") break;
+          else if (weeklyGoalSpecifics === "reset") {
+            goalCount = 1;
+            weeklyGoals = new Array();
+            continue;
+          }
 
-          const weeklyGoalReason = await fn.getSingleEntryWithCharacterLimit(
+          let weeklyGoalReason = await fn.getMultilineEntry(
             bot,
             message,
             PREFIX,
             `${goalDescriptionString}\n${goalTypeString}\n\n**__💭 Why do you want to accomplish this goal?__**\n(Within 1000 characters)`,
             weeklyGoalEntryTitle,
-            1000,
-            "a goal reason",
             forceSkip,
             mastermindEmbedColour,
+            1000,
             completionInstructions,
             completionKeywords
           );
-          if (!weeklyGoalReason && weeklyGoalReason !== "") return;
-          else if (weeklyGoalReason === "set") break;
-          else if (weeklyGoalReason === "reset") {
+          if (!weeklyGoalReason) return;
+          else if (weeklyGoalReason.returnVal === "done") break;
+          else if (weeklyGoalReason.returnVal === "reset") {
             goalCount = 1;
             weeklyGoals = new Array();
             continue;
           }
+          weeklyGoalReason = weeklyGoalReason.message;
 
           // Ask which goal this is connected to if the user has any long-term goals setup
           // And have a connection to the given goals _id, then send that in to the habit
@@ -931,54 +938,60 @@ module.exports = {
             )
           );
           if (userWantsTemplate) {
-            const goalsToReminderConfirmation = await fn.getUserConfirmation(
-              bot,
-              message,
-              PREFIX,
-              `Would you like to be **reminded** of your **Mastermind Weekly Goals** each day this upcoming week?\n(If yes, you can choose if you want to be reminded of them for 7 days or more)\n\n**If you want to setup Weekly Goal reminders later**, type \`${PREFIX}${commandUsed} reminder\``,
-              forceSkip,
-              "Mastermind: Weekly Goals Daily Reminder",
-              300000
-            );
-            if (goalsToReminderConfirmation) {
-              await setUserMastermindReminder(
+            if (
+              mastermindDocument &&
+              mastermindDocument.journal &&
+              mastermindDocument.goals
+            ) {
+              const goalsToReminderConfirmation = await fn.getUserConfirmation(
                 bot,
                 message,
                 PREFIX,
-                timezoneOffset,
-                daylightSaving,
-                mastermindDocument
+                `Would you like to be **reminded** of your **Mastermind Weekly Goals** each day this upcoming week?\n(If yes, you can choose if you want to be reminded of them for 7 days or more)\n\n**If you want to setup Weekly Goal reminders later**, type \`${PREFIX}${commandUsed} reminder\``,
+                forceSkip,
+                "Mastermind: Weekly Goals Daily Reminder",
+                300000
               );
-            }
+              if (goalsToReminderConfirmation) {
+                await setUserMastermindReminder(
+                  bot,
+                  message,
+                  PREFIX,
+                  timezoneOffset,
+                  daylightSaving,
+                  mastermindDocument
+                );
+              }
 
-            const goalsToHabitConfirmation = await fn.getUserConfirmation(
-              bot,
-              message,
-              PREFIX,
-              `**Would you like to set any of this week's goal(s) as a habit?:**\n\n${
-                fn.goalArrayToString(
-                  mastermindDocument.journal.goals,
-                  "Weekly",
-                  true,
-                  true
-                ) || ""
-              }\n\n**If you want to setup Weekly Goal habits later**, type \`${PREFIX}${commandUsed} habit\``,
-              forceSkip,
-              "Mastermind: Weekly Goals into Habits",
-              600000
-            );
-            if (goalsToHabitConfirmation) {
-              const successfullySetHabits = await hb.setMastermindHabits(
+              const goalsToHabitConfirmation = await fn.getUserConfirmation(
                 bot,
                 message,
                 PREFIX,
-                commandUsed,
-                timezoneOffset,
-                daylightSaving,
-                mastermindDocument,
-                userSettings
+                `**Would you like to set any of this week's goal(s) as a habit?:**\n\n${
+                  fn.goalArrayToString(
+                    mastermindDocument.journal.goals,
+                    "Weekly",
+                    true,
+                    true
+                  ) || ""
+                }\n\n**If you want to setup Weekly Goal habits later**, type \`${PREFIX}${commandUsed} habit\``,
+                forceSkip,
+                "Mastermind: Weekly Goals into Habits",
+                600000
               );
-              if (!successfullySetHabits) return;
+              if (goalsToHabitConfirmation) {
+                const successfullySetHabits = await hb.setMastermindHabits(
+                  bot,
+                  message,
+                  PREFIX,
+                  commandUsed,
+                  timezoneOffset,
+                  daylightSaving,
+                  mastermindDocument,
+                  userSettings
+                );
+                if (!successfullySetHabits) return;
+              }
             }
 
             // 6. Post
@@ -2096,11 +2109,10 @@ module.exports = {
                     editInstructions,
                     ["back"]
                   );
-                  if (!weeklyGoalSpecifics && weeklyGoalSpecifics !== "")
-                    return;
+                  if (!weeklyGoalSpecifics && weeklyGoalSpecifics !== "") return;
                   else if (weeklyGoalSpecifics === "back") break;
 
-                  let weeklyGoalReason = await fn.getUserEditString(
+                  let weeklyGoalReason = await fn.getUserMultilineEditString(
                     bot,
                     message,
                     PREFIX,
@@ -2108,7 +2120,8 @@ module.exports = {
                     `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
                     type,
                     forceSkip,
-                    mastermindEmbedColour
+                    mastermindEmbedColour,
+                    1000
                   );
                   if (!weeklyGoalReason && weeklyGoalReason !== "") return;
                   else if (weeklyGoalReason === "back") break;
