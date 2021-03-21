@@ -1632,7 +1632,7 @@ module.exports = {
       let { duration: intervalDuration, args: intervalArgs } = interval;
       console.log(fn.millisecondsToTimeString(intervalDuration));
 
-      let remainingOccurrences = rm.getRemainingOccurrences(
+      let remainingOccurrences = await rm.getRemainingOccurrences(
         bot,
         message,
         PREFIX,
