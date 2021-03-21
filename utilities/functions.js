@@ -4190,12 +4190,11 @@ module.exports = {
                 goal.description ? `\n🎯 - ${goal.description}` : ""
               }${goal.specifics ? `\n❓ - ${goal.specifics}` : ""}${
                 showGoalReason && goal.reason ? `\n💭 - ${goal.reason}` : ""
-              }
-              ${
+              }${
                 !isNaN(goal.type)
                   ? `${
                       this.areasOfLifeEmojis[parseInt(goal.type)]
-                        ? `${this.areasOfLifeEmojis[parseInt(goal.type)]}`
+                        ? `\n${this.areasOfLifeEmojis[parseInt(goal.type)]}`
                         : ""
                     }${
                       this.areasOfLife[parseInt(goal.type)]
