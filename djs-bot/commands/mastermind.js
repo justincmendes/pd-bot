@@ -809,7 +809,7 @@ module.exports = {
             message,
             PREFIX,
             `${goalDescriptionString}\n${goalTypeString}\n\n**__💭 Why do you want to accomplish this goal?__**\n(Within 1000 characters)`,
-            weeklyGoalEntryTitle,
+            `${weeklyGoalEntryTitle} (Why)`,
             forceSkip,
             mastermindEmbedColour,
             1000,
