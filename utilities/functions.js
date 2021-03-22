@@ -5171,66 +5171,66 @@ module.exports = {
                 }
               }
               break;
-              default:
-                if (
-                  additionalReactions &&
+            default:
+              if (
+                additionalReactions &&
                 additionalReactions.includes(reaction.emoji.name) &&
                 additionalReactionsInformation &&
                 additionalReactionsInformation.length
-                ) {
-                  switch (reaction.emoji.name) {
-                  }
-                  //! Issue: Cannot call habit.js because habit.js relies on fn (also this function relies on fn)
-                  // Send the user to their habits
-                  // case "🔁":
-                  //   {
-                  //     let reactionsIndex = additionalReactions.findIndex(
-                  //       (reaction) => reaction === reaction.emoji.name
-                  //     );
-                  //     if (
-                  //       reactionsIndex !== -1 &&
-                  //       additionalReactionsInformation[reactionsIndex]
-                  //     ) {
-                  //       const data =
-                  //         additionalReactionsInformation[reactionsIndex];
-                  //       const userHabits = await Habit.findOne({
-                  //         _id: data._id,
-                  //       });
-                  //       if (!userHabits) break;
-                  //       if (!userHabits.length) break;
-                  //       const targetHabitIndex = userHabits.findIndex(
-                  //         (habit) =>
-                  //           habit._id.toString() === data._id.toString()
-                  //       );
-                  //       if (targetHabitIndex === -1) break;
-                  //       const userSettings = await User.findOne({
-                  //         discordID: authorID,
-                  //       });
-                  //       const { timezone } = userSettings;
-                  //       await habitCommand.run(
-                  //         bot,
-                  //         {
-                  //           author: bot.users.cache.get(authorID),
-                  //           type: "dm",
-                  //           content: `?habit log ${targetHabitIndex}`,
-                  //           channel: bot.channels.cache.get(authorID),
-                  //           createdAt: new Date(Date.now()),
-                  //           createdTimestamp: Date.now(),
-                  //           deleteable: true,
-                  //           deleted: false,
-                  //           pinnable: true,
-                  //           pinned: false,
-                  //         },
-                  //         "habit",
-                  //         ["habit", "log", targetHabitIndex],
-                  //         DEFAULT_PREFIX,
-                  //         timezone && timezone.offset,
-                  //         timezone && timezone.daylightSaving,
-                  //         false
-                  //       );
-                  //     }
-                  //   }
-                    // break;
+              ) {
+                switch (reaction.emoji.name) {
+                }
+                //! Issue: Cannot call habit.js because habit.js relies on fn (also this function relies on fn)
+                // Send the user to their habits
+                // case "🔁":
+                //   {
+                //     let reactionsIndex = additionalReactions.findIndex(
+                //       (reaction) => reaction === reaction.emoji.name
+                //     );
+                //     if (
+                //       reactionsIndex !== -1 &&
+                //       additionalReactionsInformation[reactionsIndex]
+                //     ) {
+                //       const data =
+                //         additionalReactionsInformation[reactionsIndex];
+                //       const userHabits = await Habit.findOne({
+                //         _id: data._id,
+                //       });
+                //       if (!userHabits) break;
+                //       if (!userHabits.length) break;
+                //       const targetHabitIndex = userHabits.findIndex(
+                //         (habit) =>
+                //           habit._id.toString() === data._id.toString()
+                //       );
+                //       if (targetHabitIndex === -1) break;
+                //       const userSettings = await User.findOne({
+                //         discordID: authorID,
+                //       });
+                //       const { timezone } = userSettings;
+                //       await habitCommand.run(
+                //         bot,
+                //         {
+                //           author: bot.users.cache.get(authorID),
+                //           type: "dm",
+                //           content: `?habit log ${targetHabitIndex}`,
+                //           channel: bot.channels.cache.get(authorID),
+                //           createdAt: new Date(Date.now()),
+                //           createdTimestamp: Date.now(),
+                //           deleteable: true,
+                //           deleted: false,
+                //           pinnable: true,
+                //           pinned: false,
+                //         },
+                //         "habit",
+                //         ["habit", "log", targetHabitIndex],
+                //         DEFAULT_PREFIX,
+                //         timezone && timezone.offset,
+                //         timezone && timezone.daylightSaving,
+                //         false
+                //       );
+                //     }
+                //   }
+                // break;
               }
               break;
           }
@@ -7332,6 +7332,7 @@ module.exports = {
     timezoneOffset,
     habitCron
   ) {
+    // console.log({timezoneOffset, habitCron});
     let upcomingCron = this.getNextCronTimeUTC(
       timezoneOffset,
       habitCron,
@@ -7340,6 +7341,7 @@ module.exports = {
     );
     if (!upcomingCron && upcomingCron !== 0) return false;
     else upcomingCron += timezoneOffset * HOUR_IN_MS;
+    // console.log(`Upcoming Cron: ${this.timestampToDateString(upcomingCron)}`);
     const sortedLogs = pastToPresentSortedLogs.filter(
       (log) => log.timestamp < upcomingCron
     );
@@ -7528,9 +7530,9 @@ module.exports = {
                 : "";
             }
         }
-      return `**__Reminder to track your habit__** 😁.\n\n**__Habit ${targetHabitIndex + 1} (By Date Created):__**\n${this.habitDocumentDescription(
-        targetHabit
-      )}${
+      return `**__Reminder to track your habit__** 😁.\n\n**__Habit ${
+        targetHabitIndex + 1
+      } (By Date Created):__**\n${this.habitDocumentDescription(targetHabit)}${
         targetHabit.specifics
           ? `\n\n${this.habitDocumentSpecifics(targetHabit, true)}`
           : ""
@@ -7546,7 +7548,9 @@ module.exports = {
           : ""
       }${logsExist ? todaysLogMessage : ""}${
         logsExist ? previousLogMessage : ""
-      }\n\nType** \`?${commandUsed} log ${targetHabitIndex + 1}\` **- to **track your habit**`;
+      }\n\nType** \`?${commandUsed} log ${
+        targetHabitIndex + 1
+      }\` **- to **track your habit**`;
     }
     // Otherwise... (Default Message)
     return `**__Reminder to track your habit__** 😁.\n\n**__Habit:__**\n${this.habitDocumentDescription(
@@ -7774,12 +7778,12 @@ module.exports = {
             );
             // console.log(`First Check for Days Difference: ${daysDifference}`);
             if (latestLog.state === 1 || latestLog.state === 3) {
-              // console.log({
-              //   latestLog,
-              //   lastCheckedLog,
-              //   daysDifference,
-              //   streakReset,
-              // });
+              console.log({
+                latestLog,
+                lastCheckedLog,
+                daysDifference,
+                streakReset,
+              });
               if (
                 lastCheckedLog._id.toString() !== latestLog._id.toString() &&
                 (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) &&
@@ -7801,6 +7805,11 @@ module.exports = {
                 //     lastCheckedDay
                 //   )}`
                 // );
+              } else if (i === 0) {
+                if (!currentStreak) {
+                  currentStreak = 1;
+                  break;
+                }
               } else if (daysDifference > streakReset) break;
             }
           }

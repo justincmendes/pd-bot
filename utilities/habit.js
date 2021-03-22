@@ -928,7 +928,9 @@ module.exports = {
       timezoneOffset,
       habitCron.daily
     );
+    // console.log({todaysLog});
     if (todaysLog) {
+      // console.log("HERE!")
       currentState = todaysLog.state;
     } else currentState = 0;
     currentStreak = fn.calculateCurrentStreak(

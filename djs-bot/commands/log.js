@@ -1323,7 +1323,7 @@ module.exports = {
 
             if (targetHabit) {
               userSettings = await User.findOne({ discordID: authorID });
-              habitCron = userSettings;
+              habitCron = userSettings.habitCron;
               targetHabit = await hb.updateHabitStats(
                 targetHabit,
                 timezoneOffset,
