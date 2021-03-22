@@ -1780,7 +1780,9 @@ module.exports = {
                       break;
                     // State
                     case 1:
-                      let currentStateEmoji = fn.getStateEmoji(logs[targetLogIndex].state);
+                      let currentStateEmoji = fn.getStateEmoji(
+                        logs[targetLogIndex].state
+                      );
                       habitEditMessagePrompt = checkMissedSkipList;
                       userEdit = await fn.userSelectFromList(
                         bot,
@@ -2502,7 +2504,7 @@ module.exports = {
                 userSettings = await User.findOne({ discordID: authorID });
                 habitCron = userSettings.habitCron;
                 hb.cancelHabitById(habitDocument._id);
-                if(habitDocument.archived === false) {
+                if (habitDocument.archived === false) {
                   await hb.habitCron(habitDocument, timezoneOffset, habitCron);
                 }
 
@@ -2758,24 +2760,28 @@ module.exports = {
           }habits** were found... Try \`${PREFIX}${commandUsed} help\` for help!`
         );
 
+      const targetHabitParam = args[1 + archiveShift]
+        ? args[1 + archiveShift].toLowerCase()
+        : false;
       var onFirst = true;
       do {
         var targetHabit, targetHabitIndex;
         // If the user entered an index, use that, otherwise let them select from a list.
-        if (onFirst && habitType) {
-          if (!isNaN(habitType)) {
-            targetHabitIndex = parseInt(habitType);
+
+        if (onFirst && targetHabitParam) {
+          if (!isNaN(targetHabitParam)) {
+            targetHabitIndex = parseInt(targetHabitParam);
             if (targetHabitIndex <= 0 || targetHabitIndex > habitArray.length) {
               return message.reply(
                 `**${isArchived ? "Archived " : ""}Habit ${parseInt(
-                  habitType
+                  targetHabitParam
                 )}** does not exist... Try \`${PREFIX}${commandUsed} ${logCommand} help\` for help!`
               );
             } else {
               targetHabitIndex--;
               targetHabit = habitArray[targetHabitIndex];
             }
-          } else if (habitType === "recent") {
+          } else if (targetHabitParam === "recent") {
             const recentHabit = await Habit.findOne({ userID: authorID }).sort({
               _id: -1,
             });
