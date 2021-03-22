@@ -7476,7 +7476,7 @@ module.exports = {
     const { settings, description: habitDescription, specifics } = targetHabit;
     const { countGoal, countMetric, goalType } = settings;
 
-    const allUserHabits = await Habit.find({ userID }).sort({ createdAt: +1 });
+    const allUserHabits = await Habit.find({ userID, archived: false }).sort({ createdAt: +1 });
     const targetHabitIndex = allUserHabits.findIndex(
       (habit) => habit._id.toString() === habitID.toString()
     );

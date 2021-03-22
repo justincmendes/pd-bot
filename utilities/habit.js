@@ -1072,7 +1072,7 @@ module.exports = {
     userSettings
   ) {
     try {
-      const userHabits = await Habit.find({ userID });
+      const userHabits = await Habit.find({ userID, archived: false });
       if (userHabits)
         if (userHabits.length) {
           const { habitCron } = userSettings;
