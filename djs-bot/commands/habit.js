@@ -1780,7 +1780,7 @@ module.exports = {
                       break;
                     // State
                     case 1:
-                      let currentStateEmoji = fn.getStateEmoji(currentState);
+                      let currentStateEmoji = fn.getStateEmoji(logs[targetLogIndex].state);
                       habitEditMessagePrompt = checkMissedSkipList;
                       userEdit = await fn.userSelectFromList(
                         bot,
@@ -2579,6 +2579,7 @@ module.exports = {
                     isArchived,
                     hb.getOneHabitByRecency
                   );
+              habitIndex--;
               console.log({ habitDocument, habitTargetID, fieldToEditIndex });
               showHabit = await hb.habitDocumentToString(
                 bot,

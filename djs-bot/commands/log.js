@@ -1105,7 +1105,7 @@ module.exports = {
             break;
           // State
           case 1:
-            let currentStateEmoji = fn.getStateEmoji(currentState);
+            let currentStateEmoji = fn.getStateEmoji(targetLog.state);
             habitEditMessagePrompt = checkMissedSkipList;
             userEdit = await fn.userSelectFromList(
               bot,

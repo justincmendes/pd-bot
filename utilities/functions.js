@@ -7805,12 +7805,12 @@ module.exports = {
                 //     lastCheckedDay
                 //   )}`
                 // );
-              } else if (i === 0) {
-                if (!currentStreak) {
-                  currentStreak = 1;
-                  break;
-                }
-              } else if (daysDifference > streakReset) break;
+              } else if (
+                lastCheckedLog._id.toString() === latestLog._id.toString()
+              ) {
+                if (!currentStreak) currentStreak = 1;
+              }
+              if (daysDifference > streakReset) break;
             }
           }
         }

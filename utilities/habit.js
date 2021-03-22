@@ -1217,7 +1217,7 @@ module.exports = {
             )}`
           );
           const logTimestamp = sortedLogs[i].timestamp;
-          if (logTimestamp <= startTimestamp) break;
+          if (logTimestamp < startTimestamp) break;
           else if (logTimestamp <= endTimestamp) {
             checkLogs.push(sortedLogs[i]);
           }
@@ -1342,7 +1342,7 @@ module.exports = {
     // console.log(currentDate.getUTCDay());
     // console.log({ weeklyCron });
     const daysPastLastCron =
-      ((6 - (weeklyCron - currentDate.getUTCDay())) % 7) + 1;
+      ((6 - (weeklyCron - currentDate.getUTCDay())) % 7);
     //* UPDATE: NO +1 because it will be off by one day
     // OLD NOTE: +1 because a Sunday cron ends on Monday (usually around midnight)
     const firstDayOfPastWeek =
