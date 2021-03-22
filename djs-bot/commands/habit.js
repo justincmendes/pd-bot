@@ -2502,7 +2502,9 @@ module.exports = {
                 userSettings = await User.findOne({ discordID: authorID });
                 habitCron = userSettings.habitCron;
                 hb.cancelHabitById(habitDocument._id);
-                await hb.habitCron(habitDocument, timezoneOffset, habitCron);
+                if(habitDocument.archived === false) {
+                  await hb.habitCron(habitDocument, timezoneOffset, habitCron);
+                }
 
                 habitIndex = indexByRecency
                   ? await hb.getHabitIndexByFunction(
@@ -2712,6 +2714,7 @@ module.exports = {
       // return;
     } else if (
       habitCommand === "log" ||
+      habitCommand === "l" ||
       habitCommand === "track" ||
       habitCommand === "check" ||
       habitCommand === "complete" ||
