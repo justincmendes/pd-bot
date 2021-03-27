@@ -7810,8 +7810,8 @@ module.exports = {
               ) {
                 if (!currentStreak) currentStreak = 1;
               }
-              if (daysDifference > streakReset) break;
             }
+            if (daysDifference > streakReset) break;
           }
         }
       } else break;
