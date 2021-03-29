@@ -7685,171 +7685,172 @@ module.exports = {
     for (let i = 0; i < sortedLogs.length; i++) {
       if (sortedLogs[i]) {
         const latestLog = sortedLogs[i];
+        const latestTimestamp = latestLog.timestamp;
+        const adjustedLatestDay = this.getActualDateLogged(
+          latestTimestamp,
+          dailyCron
+        );
+        const latestCron =
+          this.getNextCronTimeUTC(
+            timezoneOffset,
+            habitCron,
+            isWeeklyType,
+            cronPeriods,
+            latestTimestamp - timezoneOffset * HOUR_IN_MS
+          ) +
+          timezoneOffset * HOUR_IN_MS;
+        const adjustedLatestCronDay = this.getActualDateLogged(
+          latestCron,
+          dailyCron
+        );
+        if (!lastCheckedDay && lastCheckedDay !== 0) {
+          const now =
+            this.getCurrentUTCTimestampFlooredToSecond() +
+            timezoneOffset * HOUR_IN_MS;
+          lastCheckedDay = relativeToNow
+            ? this.getActualDateLogged(now, dailyCron)
+            : adjustedLatestDay;
+          lastCheckedLog = latestLog;
+          lastCheckedCronDay = relativeToNow
+            ? this.getActualDateLogged(
+                this.getNextCronTimeUTC(
+                  timezoneOffset,
+                  habitCron,
+                  isWeeklyType,
+                  cronPeriods
+                ) +
+                  timezoneOffset * HOUR_IN_MS,
+                dailyCron
+              )
+            : adjustedLatestCronDay;
+          console.log(
+            `lastCheckedDay: ${this.timestampToDateString(lastCheckedDay)}`
+          );
+          console.log(`lastCheckedLog: ${lastCheckedLog}`);
+          console.log(
+            `lastCheckedCronDay: ${this.timestampToDateString(
+              lastCheckedCronDay
+            )}`
+          );
+        }
+        // console.log(
+        //   lastCheckedLog._id.toString() !== latestLog._id.toString(),
+        //   i
+        // );
+        // console.log(
+        //   `\nLatest Timestamp: ${this.timestampToDateString(latestTimestamp)}`
+        // );
+        // console.log(
+        //   `Last Checked Timestamp: ${this.timestampToDateString(
+        //     lastCheckedDay
+        //   )}`
+        // );
+        // console.log(
+        //   `Latest Cron Day: ${this.timestampToDateString(
+        //     adjustedLatestCronDay
+        //   )}`
+        // );
+        // console.log(
+        //   `Last Checked Cron Day: ${this.timestampToDateString(
+        //     lastCheckedCronDay
+        //   )}`
+        // );
+
+        /** //* Weekly Streak Calculation Steps
+         * 1. Check if there is an entry for this week.
+         * 2. If there is, that entry becomes the lastCheckedDay, lastCheckedLog and, lastCheckedCronDay = adjustedLatestCronDay. + Increase the streak!
+         * 3. Otherwise is there is no entry for THE WEEK BEFORE, then break. (stop calculating the streak)
+         * -- lastCheckedCronDay is 2*cronPeriod weeks after the lastCheckedCronDay (i.e. outside the range of the weekly streak) (e.g. 1 week, 2 weeks) => break;
+         * -- => break if: cronDifference >= 7 * 2 * streakReset;
+         */
+        if (isWeeklyType) {
+          const cronDifference = this.getDaysInBetweenTimestamps(
+            lastCheckedCronDay,
+            adjustedLatestCronDay
+          );
+          // console.log({ cronDifference });
+          if (latestLog.state === 1 || latestLog.state === 3) {
+            if (
+              lastCheckedLog._id.toString() !== latestLog._id.toString() &&
+              (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) &&
+              cronDifference < 7 * 2 * streakReset
+            ) {
+              // console.log(`Streak Before: ${currentStreak}`);
+              if (!currentStreak) currentStreak = 1;
+              currentStreak++;
+              // console.log(`Streak After: ${currentStreak}`);
+              // console.log(
+              //   `Prev Last Checked: ${this.timestampToDateString(
+              //     lastCheckedDay
+              //   )}`
+              // );
+              lastCheckedCronDay = adjustedLatestCronDay;
+              lastCheckedDay = adjustedLatestDay;
+              lastCheckedLog = latestLog;
+              // console.log(
+              //   `Updated Last Checked: ${this.timestampToDateString(
+              //     lastCheckedDay
+              //   )}`
+              // );
+            }
+          }
+          if (cronDifference >= 7 * 2 * streakReset) break;
+        } else {
+          // console.log(this.timestampToDateString(lastCheckedDay));
+          // console.log(this.timestampToDateString(adjustedLatestDay));
+          const daysDifference = this.getDaysInBetweenTimestamps(
+            // relativeToNow && !currentStreak ? lastCheckedCronDay : lastCheckedDay,
+            lastCheckedDay,
+            adjustedLatestDay
+          );
+          // console.log(`First Check for Days Difference: ${daysDifference}`);
+          if (daysDifference > streakReset) break;
+
+          if (latestLog.state === 1 || latestLog.state === 3) {
+            console.log({
+              latestLog,
+              lastCheckedLog,
+              daysDifference,
+              streakReset,
+            });
+            // If on the first iteration and the current log is
+            if (
+              lastCheckedLog._id.toString() === latestLog._id.toString() &&
+              daysDifference === streakReset
+            )
+              break;
+            if (daysDifference <= streakReset) {
+              // console.log(`Streak Before: ${currentStreak}`);
+              if (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) {
+                if (!currentStreak) currentStreak = 1;
+                if (
+                  lastCheckedLog._id.toString() !== latestLog._id.toString()
+                ) {
+                  currentStreak++;
+                }
+              } else if (daysDifference === streakReset) break;
+              // console.log(`Streak After: ${currentStreak}`);
+              // console.log(
+              //   `Prev Last Checked: ${this.timestampToDateString(
+              //     lastCheckedDay
+              //   )}`
+              // );
+              lastCheckedDay = adjustedLatestDay;
+              lastCheckedLog = latestLog;
+              // console.log(
+              //   `Updated Last Checked: ${this.timestampToDateString(
+              //     lastCheckedDay
+              //   )}`
+              // );
+            }
+          }
+        }
         if (
           sortedLogs.length === 1 &&
           (latestLog.state === 1 || latestLog.state === 3)
         ) {
           currentStreak = 1;
           break;
-        } else {
-          const latestTimestamp = latestLog.timestamp;
-          const adjustedLatestDay = this.getActualDateLogged(
-            latestTimestamp,
-            dailyCron
-          );
-          const latestCron =
-            this.getNextCronTimeUTC(
-              timezoneOffset,
-              habitCron,
-              isWeeklyType,
-              cronPeriods,
-              latestTimestamp - timezoneOffset * HOUR_IN_MS
-            ) +
-            timezoneOffset * HOUR_IN_MS;
-          const adjustedLatestCronDay = this.getActualDateLogged(
-            latestCron,
-            dailyCron
-          );
-          if (!lastCheckedDay && lastCheckedDay !== 0) {
-            const now =
-              this.getCurrentUTCTimestampFlooredToSecond() +
-              timezoneOffset * HOUR_IN_MS;
-            lastCheckedDay = relativeToNow
-              ? this.getActualDateLogged(now, dailyCron)
-              : adjustedLatestDay;
-            lastCheckedLog = latestLog;
-            lastCheckedCronDay = relativeToNow
-              ? this.getActualDateLogged(
-                  this.getNextCronTimeUTC(
-                    timezoneOffset,
-                    habitCron,
-                    isWeeklyType,
-                    cronPeriods
-                  ) +
-                    timezoneOffset * HOUR_IN_MS,
-                  dailyCron
-                )
-              : adjustedLatestCronDay;
-            console.log(
-              `lastCheckedDay: ${this.timestampToDateString(lastCheckedDay)}`
-            );
-            console.log(`lastCheckedLog: ${lastCheckedLog}`);
-            console.log(
-              `lastCheckedCronDay: ${this.timestampToDateString(
-                lastCheckedCronDay
-              )}`
-            );
-          }
-          // console.log(
-          //   lastCheckedLog._id.toString() !== latestLog._id.toString(),
-          //   i
-          // );
-          // console.log(
-          //   `\nLatest Timestamp: ${this.timestampToDateString(latestTimestamp)}`
-          // );
-          // console.log(
-          //   `Last Checked Timestamp: ${this.timestampToDateString(
-          //     lastCheckedDay
-          //   )}`
-          // );
-          // console.log(
-          //   `Latest Cron Day: ${this.timestampToDateString(
-          //     adjustedLatestCronDay
-          //   )}`
-          // );
-          // console.log(
-          //   `Last Checked Cron Day: ${this.timestampToDateString(
-          //     lastCheckedCronDay
-          //   )}`
-          // );
-
-          /** //* Weekly Streak Calculation Steps
-           * 1. Check if there is an entry for this week.
-           * 2. If there is, that entry becomes the lastCheckedDay, lastCheckedLog and, lastCheckedCronDay = adjustedLatestCronDay. + Increase the streak!
-           * 3. Otherwise is there is no entry for THE WEEK BEFORE, then break. (stop calculating the streak)
-           * -- lastCheckedCronDay is 2*cronPeriod weeks after the lastCheckedCronDay (i.e. outside the range of the weekly streak) (e.g. 1 week, 2 weeks) => break;
-           * -- => break if: cronDifference >= 7 * 2 * streakReset;
-           */
-          if (isWeeklyType) {
-            const cronDifference = this.getDaysInBetweenTimestamps(
-              lastCheckedCronDay,
-              adjustedLatestCronDay
-            );
-            // console.log({ cronDifference });
-            if (latestLog.state === 1 || latestLog.state === 3) {
-              if (
-                lastCheckedLog._id.toString() !== latestLog._id.toString() &&
-                (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) &&
-                cronDifference < 7 * 2 * streakReset
-              ) {
-                // console.log(`Streak Before: ${currentStreak}`);
-                if (!currentStreak) currentStreak = 1;
-                currentStreak++;
-                // console.log(`Streak After: ${currentStreak}`);
-                // console.log(
-                //   `Prev Last Checked: ${this.timestampToDateString(
-                //     lastCheckedDay
-                //   )}`
-                // );
-                lastCheckedCronDay = adjustedLatestCronDay;
-                lastCheckedDay = adjustedLatestDay;
-                lastCheckedLog = latestLog;
-                // console.log(
-                //   `Updated Last Checked: ${this.timestampToDateString(
-                //     lastCheckedDay
-                //   )}`
-                // );
-              } else if (cronDifference >= 7 * 2 * streakReset) break;
-            }
-          } else {
-            // console.log(this.timestampToDateString(lastCheckedDay));
-            // console.log(this.timestampToDateString(adjustedLatestDay));
-            const daysDifference = this.getDaysInBetweenTimestamps(
-              // relativeToNow && !currentStreak ? lastCheckedCronDay : lastCheckedDay,
-              lastCheckedDay,
-              adjustedLatestDay
-            );
-            // console.log(`First Check for Days Difference: ${daysDifference}`);
-            if (daysDifference > streakReset) break;
-            if (latestLog.state === 1 || latestLog.state === 3) {
-              console.log({
-                latestLog,
-                lastCheckedLog,
-                daysDifference,
-                streakReset,
-              });
-              // If on the first iteration and the current log is 
-              if (
-                lastCheckedLog._id.toString() === latestLog._id.toString() &&
-                daysDifference === streakReset
-              )
-                break;
-              if (daysDifference <= streakReset) {
-                // console.log(`Streak Before: ${currentStreak}`);
-                if (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) {
-                  if (!currentStreak) currentStreak = 1;
-                  if (
-                    lastCheckedLog._id.toString() !== latestLog._id.toString()
-                  ) {
-                    currentStreak++;
-                  }
-                } else if (daysDifference === streakReset) break;
-                // console.log(`Streak After: ${currentStreak}`);
-                // console.log(
-                //   `Prev Last Checked: ${this.timestampToDateString(
-                //     lastCheckedDay
-                //   )}`
-                // );
-                lastCheckedDay = adjustedLatestDay;
-                lastCheckedLog = latestLog;
-                // console.log(
-                //   `Updated Last Checked: ${this.timestampToDateString(
-                //     lastCheckedDay
-                //   )}`
-                // );
-              }
-            }
-          }
         }
       } else break;
     }
