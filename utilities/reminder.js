@@ -537,7 +537,7 @@ module.exports = {
               );
               console.log({ reminderExists });
               if (reminderExists) {
-                channelObject.send(message);
+                await fn.sendPaginationEmbed(bot, channelObject.id, userID, message, true);
                 await this.deleteOneReminderByObjectID(
                   reminderID
                 ).catch((err) => console.error(err));

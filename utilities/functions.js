@@ -7813,7 +7813,7 @@ module.exports = {
               daysDifference,
               streakReset,
             });
-            // If on the first iteration and the current log is
+            // If on the first iteration and the current log is at the end of the streak reset, it does not count towards the streak.
             if (
               lastCheckedLog._id.toString() === latestLog._id.toString() &&
               daysDifference === streakReset
