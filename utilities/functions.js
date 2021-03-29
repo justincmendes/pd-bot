@@ -7476,7 +7476,9 @@ module.exports = {
     const { settings, description: habitDescription, specifics } = targetHabit;
     const { countGoal, countMetric, goalType } = settings;
 
-    const allUserHabits = await Habit.find({ userID, archived: false }).sort({ createdAt: +1 });
+    const allUserHabits = await Habit.find({ userID, archived: false }).sort({
+      createdAt: +1,
+    });
     const targetHabitIndex = allUserHabits.findIndex(
       (habit) => habit._id.toString() === habitID.toString()
     );
@@ -7662,7 +7664,8 @@ module.exports = {
     timezoneOffset,
     habitCron,
     isWeeklyType,
-    cronPeriods
+    cronPeriods,
+    relativeToNow = true
   ) {
     const dailyCron = habitCron.daily;
     let streakReset = cronPeriods;
@@ -7708,10 +7711,39 @@ module.exports = {
             dailyCron
           );
           if (!lastCheckedDay && lastCheckedDay !== 0) {
-            lastCheckedDay = adjustedLatestDay;
+            const now =
+              this.getCurrentUTCTimestampFlooredToSecond() +
+              timezoneOffset * HOUR_IN_MS;
+            lastCheckedDay = relativeToNow
+              ? this.getActualDateLogged(now, dailyCron)
+              : adjustedLatestDay;
             lastCheckedLog = latestLog;
-            lastCheckedCronDay = adjustedLatestCronDay;
+            lastCheckedCronDay = relativeToNow
+              ? this.getActualDateLogged(
+                  this.getNextCronTimeUTC(
+                    timezoneOffset,
+                    habitCron,
+                    isWeeklyType,
+                    cronPeriods
+                  ) +
+                    timezoneOffset * HOUR_IN_MS,
+                  dailyCron
+                )
+              : adjustedLatestCronDay;
+            console.log(
+              `lastCheckedDay: ${this.timestampToDateString(lastCheckedDay)}`
+            );
+            console.log(`lastCheckedLog: ${lastCheckedLog}`);
+            console.log(
+              `lastCheckedCronDay: ${this.timestampToDateString(
+                lastCheckedCronDay
+              )}`
+            );
           }
+          // console.log(
+          //   lastCheckedLog._id.toString() !== latestLog._id.toString(),
+          //   i
+          // );
           // console.log(
           //   `\nLatest Timestamp: ${this.timestampToDateString(latestTimestamp)}`
           // );
@@ -7773,10 +7805,12 @@ module.exports = {
             // console.log(this.timestampToDateString(lastCheckedDay));
             // console.log(this.timestampToDateString(adjustedLatestDay));
             const daysDifference = this.getDaysInBetweenTimestamps(
+              // relativeToNow && !currentStreak ? lastCheckedCronDay : lastCheckedDay,
               lastCheckedDay,
               adjustedLatestDay
             );
             // console.log(`First Check for Days Difference: ${daysDifference}`);
+            if (daysDifference > streakReset) break;
             if (latestLog.state === 1 || latestLog.state === 3) {
               console.log({
                 latestLog,
@@ -7784,14 +7818,22 @@ module.exports = {
                 daysDifference,
                 streakReset,
               });
+              // If on the first iteration and the current log is 
               if (
-                lastCheckedLog._id.toString() !== latestLog._id.toString() &&
-                (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) &&
-                daysDifference <= streakReset
-              ) {
+                lastCheckedLog._id.toString() === latestLog._id.toString() &&
+                daysDifference === streakReset
+              )
+                break;
+              if (daysDifference <= streakReset) {
                 // console.log(`Streak Before: ${currentStreak}`);
-                if (!currentStreak) currentStreak = 1;
-                currentStreak++;
+                if (lastCheckedLog.state === 1 || lastCheckedLog.state === 3) {
+                  if (!currentStreak) currentStreak = 1;
+                  if (
+                    lastCheckedLog._id.toString() !== latestLog._id.toString()
+                  ) {
+                    currentStreak++;
+                  }
+                } else if (daysDifference === streakReset) break;
                 // console.log(`Streak After: ${currentStreak}`);
                 // console.log(
                 //   `Prev Last Checked: ${this.timestampToDateString(
@@ -7805,17 +7847,13 @@ module.exports = {
                 //     lastCheckedDay
                 //   )}`
                 // );
-              } else if (
-                lastCheckedLog._id.toString() === latestLog._id.toString()
-              ) {
-                if (!currentStreak) currentStreak = 1;
               }
             }
-            if (daysDifference > streakReset) break;
           }
         }
       } else break;
     }
+    console.log({ currentStreak });
     return currentStreak;
   },
 
