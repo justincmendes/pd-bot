@@ -3354,7 +3354,10 @@ module.exports = {
             relativeTimeExpressionArray[4]
           );
         console.log({ futureTruePastFalse });
-        numberOfTimeScales = parseInt(relativeDay) - 1;
+        numberOfTimeScales = parseInt(relativeDay);
+        if (numberOfTimeScales === 0) return false;
+        else if (numberOfTimeScales > 0) numberOfTimeScales--;
+        else isThis = true;
       } else if (/last|past|previous|prior/.test(relativeDay)) {
         numberOfTimeScales = -1;
       } else if (/next|following/.test(relativeDay)) {
@@ -3402,6 +3405,13 @@ module.exports = {
         isThis = true;
         if (isPastDay) numberOfTimeScales = -1;
         else numberOfTimeScales = 0;
+      } else if (
+        futureTruePastFalse &&
+        isDigit &&
+        !isThis &&
+        (currentDayOfWeek === targetDayOfWeek)
+      ) {
+        numberOfTimeScales++;
       }
       console.log({
         isThis,
@@ -3421,13 +3431,14 @@ module.exports = {
           currentDayOfWeek = (currentDayOfWeek + 1) % 7;
         } else {
           if (numberOfDaysForward === 0 && numberOfTimeScales === 0) {
-            numberOfDaysForward = isThis ? 0 : 7;
+            numberOfDaysForward = isThis || !futureTruePastFalse ? 0 : 7;
             break;
           } else break;
         }
       }
-      if (numberOfTimeScales === 1 && isPastDay && !isDigit)
+      if (numberOfTimeScales === 1 && isPastDay && !isDigit) {
         numberOfTimeScales = 0;
+      }
       console.log({ numberOfDaysForward, numberOfTimeScales });
       if (isDigit) {
         if (!futureTruePastFalse) {
