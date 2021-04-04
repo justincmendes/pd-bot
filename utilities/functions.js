@@ -3409,9 +3409,11 @@ module.exports = {
         futureTruePastFalse &&
         isDigit &&
         !isThis &&
-        (currentDayOfWeek === targetDayOfWeek)
+        currentDayOfWeek === targetDayOfWeek
       ) {
         numberOfTimeScales++;
+      } else if (numberOfTimeScales === 0 && isForInterval) {
+        if (!isThis) numberOfTimeScales = 1;
       }
       console.log({
         isThis,
