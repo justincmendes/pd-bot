@@ -537,7 +537,28 @@ module.exports = {
               );
               console.log({ reminderExists });
               if (reminderExists) {
-                await fn.sendPaginationEmbed(bot, channelObject.id, userID, message, true);
+                if (reminderExists.sendAsEmbed) {
+                  if (Array.isArray(message)) {
+                    for (const embed of message) {
+                      await fn.sendPaginationEmbed(
+                        bot,
+                        channelObject.id,
+                        userID,
+                        [embed],
+                        true,
+                      );
+                    }
+                  } else {
+                    await fn.sendPaginationEmbed(
+                      bot,
+                      channelObject.id,
+                      userID,
+                      [message],
+                      true,
+                    );
+                  }
+                } else channelObject.send(message);
+                
                 await this.deleteOneReminderByObjectID(
                   reminderID
                 ).catch((err) => console.error(err));
