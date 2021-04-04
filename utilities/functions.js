@@ -3405,15 +3405,12 @@ module.exports = {
         isThis = true;
         if (isPastDay) numberOfTimeScales = -1;
         else numberOfTimeScales = 0;
-      } else if (
-        futureTruePastFalse &&
-        isDigit &&
-        !isThis &&
-        currentDayOfWeek === targetDayOfWeek
-      ) {
-        numberOfTimeScales++;
-      } else if (numberOfTimeScales === 0 && isForInterval) {
-        if (!isThis) numberOfTimeScales = 1;
+      } else if (currentDayOfWeek === targetDayOfWeek) {
+        if (futureTruePastFalse && isDigit && !isThis) {
+          numberOfTimeScales++;
+        } else if (numberOfTimeScales === 0 && isForInterval) {
+          if (!isThis) numberOfTimeScales = 1;
+        }
       }
       console.log({
         isThis,
