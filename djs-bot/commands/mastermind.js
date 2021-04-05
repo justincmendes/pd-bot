@@ -858,6 +858,7 @@ module.exports = {
                   : undefined;
               }
             }
+
           weeklyGoals.push({
             type: weeklyGoalType,
             description: weeklyGoalDescription,
@@ -867,6 +868,24 @@ module.exports = {
           });
           goalCount++;
           if (goalCount >= 10) break;
+
+          const goalsOut = weeklyGoals
+            .map(
+              (goal, i) =>
+                `**🎯 __Weekly Goal ${i + 1}:__**\n${goal.description}`
+            )
+            .join("\n\n");
+          const userIsFinished = await fn.getUserConfirmation(
+            bot,
+            message,
+            PREFIX,
+            `**Would you like to __set another weekly goal?__**\n*- Type \`no\` if you're finished setting goals*\n\n${goalsOut}`,
+            false,
+            `Mastermind Entry: Set Another Goal (${goalCount - 1} Goals)`,
+            600000
+          );
+          if (userIsFinished === null) return;
+          else if (!userIsFinished) break;
         } while (true);
         console.log({ weeklyGoals });
 
