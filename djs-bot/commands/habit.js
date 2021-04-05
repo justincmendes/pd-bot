@@ -3810,7 +3810,7 @@ module.exports = {
             hb.cancelHabitById(updatedHabit._id);
           }
         }
-        
+
         message.reply(`**Successfully archived __Habit ${habitIndex + 1}__!**`);
         targetHabitParam = undefined;
         targetHabit = undefined;
