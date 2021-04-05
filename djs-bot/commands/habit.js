@@ -3743,10 +3743,11 @@ module.exports = {
                 (habit) => habit._id.toString() === recentHabitId
               );
               if (recentHabitIndex === -1) return;
-              targetHabit = habitArray[recentHabitIndex];
+              habitIndex = recentHabitIndex;
+              targetHabit = habitArray[habitIndex];
             }
           } else if (isNumberArg) {
-            let habitIndex = parseInt(args[1 + archiveShift]);
+            habitIndex = parseInt(args[1 + archiveShift]);
             if (habitIndex <= 0 || habitIndex > habitArray.length) {
               return fn.sendErrorMessageAndUsage(
                 message,
@@ -3756,7 +3757,8 @@ module.exports = {
                 }Habit ${habitIndex} does not exist **...`
               );
             } else {
-              targetHabit = habitArray[habitIndex - 1];
+              habitIndex = habitIndex - 1;
+              targetHabit = habitArray[habitIndex];
             }
           }
         }
@@ -3779,7 +3781,7 @@ module.exports = {
           else targetHabit = selectedHabit.object;
         }
 
-        const confirmEnd = await fn.getUserConfirmation(
+        const confirmArchive = await fn.getUserConfirmation(
           bot,
           message,
           PREFIX,
@@ -3790,23 +3792,29 @@ module.exports = {
           `Habit${isArchived ? " Archive" : ""}: Archive Confirmation`,
           600000
         );
-        if (!confirmEnd) return;
-        await Habit.updateOne(
+        if (!confirmArchive) return;
+
+        const updatedHabit = await Habit.findOneAndUpdate(
           { _id: targetHabit._id },
           { $set: { archived: true } },
-          async (err, result) => {
-            if (err) return console.error(err);
-            console.log({ result });
-            if (targetHabit._id) {
-              rm.cancelRemindersByConnectedDocument(targetHabit._id);
-              await Reminder.deleteMany({
-                connectedDocument: targetHabit._id,
-              });
-              hb.cancelHabitById(targetHabit._id);
-            }
+          { new: true }
+        ).catch((err) => console.error(err));
+
+        console.log({ updatedHabit });
+        if (updatedHabit) {
+          if (updatedHabit._id) {
+            rm.cancelRemindersByConnectedDocument(updatedHabit._id);
+            await Reminder.deleteMany({
+              connectedDocument: updatedHabit._id,
+            });
+            hb.cancelHabitById(updatedHabit._id);
           }
-        );
+        }
+        
+        message.reply(`**Successfully archived __Habit ${habitIndex + 1}__!**`);
         targetHabitParam = undefined;
+        targetHabit = undefined;
+        habitIndex = undefined;
       } while (true);
     } else return message.reply(habitHelpMessage);
   },

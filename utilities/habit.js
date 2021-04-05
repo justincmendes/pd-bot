@@ -731,7 +731,7 @@ module.exports = {
       PREFIX,
       `**__Answer some or all the following questions regarding your habit:__**\n(Within 1000 characters)\n🔴 - **How** will do your habit?\n🔵 - **Who** do you need help from or who is involved?\n🟢 - **Where** will you do your habit?\n🟡 - **When** will you do your habit?\n\n**__Examples (from *Atomic Habits* by James Clear):__**\n${this.implementationIntentionsExamples}\n\n${this.habitStackingExamples}`,
       `${title} (Who, Where, When, How)`,
-      forceSkip,
+      true,
       embedColour,
       1000,
       additionalInstructions,
