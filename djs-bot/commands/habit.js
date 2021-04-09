@@ -3142,7 +3142,7 @@ module.exports = {
             {
               $set: {
                 currentState:
-                  isTodaysLog && !overwriteLog ? currentState : habitLog,
+                  isTodaysLog && overwriteLog ? habitLog : currentState,
                 currentStreak,
                 longestStreak,
                 pastWeek,
