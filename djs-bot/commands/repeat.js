@@ -1241,14 +1241,14 @@ module.exports = {
                         } else {
                           let channelID = /\<\#(\d+)\>/.exec(channelType);
                           channelID = channelID[1];
-                          const channel = bot.channels.cache.get(channelID);
-                          if (!channel) {
+                          const targetChannel = bot.channels.cache.get(channelID);
+                          if (!targetChannel) {
                             continueEdit = true;
                             message.reply(
                               `**This channel (\#${channelID}) does not exist...**`
                             );
                           } else {
-                            const userPermissions = channel.permissionsFor(
+                            const userPermissions = targetChannel.permissionsFor(
                               authorID
                             );
                             console.log({ userPermissions });
@@ -1258,7 +1258,7 @@ module.exports = {
                             ) {
                               isDM = false;
                               channel = channelID;
-                              guildID = channel.guild.id;
+                              guildID = targetChannel.guild.id;
                             } else {
                               continueEdit = true;
                               message.reply(
