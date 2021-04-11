@@ -5617,7 +5617,7 @@ module.exports = {
       );
       if (targetChannelIndex === false) return false;
       console.log({ targetChannelIndex });
-      let targetChannelName = await bot.channels.cache.get(
+      let targetChannelName = bot.channels.cache.get(
         channelList[targetChannelIndex]
       ).name;
       confirmSendToChannel = await this.getUserConfirmation(
