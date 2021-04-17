@@ -41,7 +41,7 @@ module.exports = {
     // If ephemeral message (i.e. disappearing message)
     const userSettings = await User.findOne(
       {
-        discordID: interaction.member.user.id,
+        discordID: interaction.guild_id ? interaction.member.user.id : interaction.user.id,
       },
       { _id: 0, hideSlashCommandReplies: 1 }
     );

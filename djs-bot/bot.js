@@ -488,7 +488,9 @@ bot.on("ready", async () => {
     const command = bot.commands.get(commandName);
     if (!command) return;
 
-    const userID = interaction.member.user.id;
+    const userID = interaction.guild_id
+      ? interaction.member.user.id
+      : interaction.user.id;
 
     // Spam Prevention:
     const updatedSpamCheck = await checkSpam(userID, Date.now());
