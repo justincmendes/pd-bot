@@ -5,6 +5,7 @@ const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
+const ic = require("../../utilities/interactions");
 require("dotenv").config();
 
 const validTypes = fn.reminderTypes;
@@ -12,6 +13,7 @@ const repeatMax = fn.repeatMaxTier1;
 const repeatEmbedColour = fn.repeatReminderEmbedColour;
 const reminderType = "Repeating Reminder";
 const HOUR_IN_MS = fn.HOUR_IN_MS;
+const MINIMUM_INTERVAL = 60000;
 
 // ADD Feature to prevent spam:
 // <BLACKLISTING>: Preventing certain roles or certain users from setting repeat reminders
@@ -23,13 +25,16 @@ const HOUR_IN_MS = fn.HOUR_IN_MS;
 // Function Declarations and Definitions
 
 module.exports = {
-  name: "repeat",
+  name: "recurringreminder",
   description: "Set a personal or group RECURRING reminder",
   aliases: [
+    "repeat",
     "rr",
     "ar",
     "recur",
     "recurring",
+    "reminderrepeat",
+    "reminderrecur",
     "schedule",
     "sch",
     "sched",
@@ -1241,7 +1246,9 @@ module.exports = {
                         } else {
                           let channelID = /\<\#(\d+)\>/.exec(channelType);
                           channelID = channelID[1];
-                          const targetChannel = bot.channels.cache.get(channelID);
+                          const targetChannel = bot.channels.cache.get(
+                            channelID
+                          );
                           if (!targetChannel) {
                             continueEdit = true;
                             message.reply(
@@ -1754,5 +1761,238 @@ module.exports = {
         );
       }
     } else return message.reply(repeatHelpMessage);
+  },
+
+  runSlashCommand: async ({
+    bot,
+    interaction,
+    args,
+    timezoneOffset,
+    daylightSaving,
+  }) => {
+    // Variable Declarations and Initializations
+    // if(!interaction) return;
+    const { member } = interaction;
+    const { subCommand, subCommandGroup } = args;
+    // if(!subCommand || !subCommandGroup) return;
+
+    const authorID = member.user.id;
+    const totalReminderNumber = await rm.getTotalReminders(authorID, false);
+    if (totalReminderNumber === false) return;
+
+    const userSettings = await User.findOne({ discordID: authorID });
+    const { tier } = userSettings;
+
+    if (subCommandGroup === "set") {
+      if (tier === 1) {
+        if (totalReminderNumber >= repeatMax) {
+          await ic.reply(
+            bot,
+            interaction,
+            fn
+              .getMessageEmbed(
+                fn.getTierMaxMessage(
+                  "/",
+                  interaction.data.name || "recur",
+                  repeatMax,
+                  ["Recurring Reminder", "Recurring Reminders"],
+                  1,
+                  false
+                ),
+                `Recurring Reminder: Tier 1 Maximum`,
+                repeatEmbedColour
+              )
+              .setFooter(fn.premiumFooterText)
+          );
+          return;
+        }
+      }
+
+      let { when, interval, repetitions, message, channel, sendAsEmbed } = args;
+
+      if (subCommand === "dm") {
+        channel = authorID;
+      } else if (subCommand === "channel") {
+        // Verify if the channel is a text channel
+        const channelObject = bot.channels.cache.get(channel);
+        console.log({ channelObject });
+        if (
+          !channelObject ||
+          !channelObject.type ||
+          channelObject.type !== "text"
+        ) {
+          await ic.reply(
+            bot,
+            interaction,
+            `Please select a valid **text channel!**`
+          );
+          return;
+        }
+      }
+
+      if (!interval) return;
+      interval = interval.toLowerCase().split(/[\s\n]+/);
+      const intervalArgs =
+        interval[0] === "in" ? interval : ["in"].concat(interval);
+
+      let presentTimestamp = Date.now();
+      let intervalDuration = fn.timeCommandHandlerToUTC(
+        intervalArgs,
+        presentTimestamp,
+        timezoneOffset,
+        daylightSaving,
+        true,
+        true,
+        true
+      );
+      if (!intervalDuration) {
+        ic.reply(
+          bot,
+          interaction,
+          `**INVALID Interval**...** \`\/date\` **for **valid time inputs!**`,
+          true,
+          15000
+        );
+        return;
+      } else presentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
+      intervalDuration -= presentTimestamp + HOUR_IN_MS * timezoneOffset;
+      if (intervalDuration <= 0) {
+        ic.reply(
+          bot,
+          interaction,
+          `**INVALID Interval**... \`\/date\` for **valid time inputs!**`,
+          true,
+          15000
+        );
+        return;
+      } else if (intervalDuration < MINIMUM_INTERVAL) {
+        ic.reply(
+          bot,
+          interaction,
+          `Intervals must be **__> ${fn.millisecondsToTimeString(
+            MINIMUM_INTERVAL
+          )}__**`,
+          true,
+          15000
+        );
+        return;
+      } else interval = intervalArgs.join(" ");
+
+      //* Parse the repetitions input
+      // if (repetitions < 0 || repetitions === 0) {
+      //   await ic.reply(
+      //     bot,
+      //     interaction,
+      //     `Please enter an **__integer > 0__ or leave the field blank** for your **number of repetitions** for the recurring reminder.`
+      //   );
+      //   return;
+      // }
+      if (!repetitions || repetitions < 0) {
+        repetitions = undefined;
+      }
+
+      if (!when) return;
+      when = when.toLowerCase().split(/[\s\n]+/);
+      const timeArgs =
+        when[0] === "in" && when[0] !== "now" ? when : ["in"].concat(when);
+
+      let reminderEndTime = fn.timeCommandHandlerToUTC(
+        timeArgs,
+        Date.now(),
+        timezoneOffset,
+        daylightSaving
+      );
+
+      var currentTimestamp, duration;
+      if (!reminderEndTime) {
+        await ic.reply(
+          bot,
+          interaction,
+          `Please enter a date/time (\`when\`) in the **future**! Try** \`\/date\` **for help`
+        );
+        return;
+      } else {
+        const now = fn.getCurrentUTCTimestampFlooredToSecond();
+        if (now + timezoneOffset * HOUR_IN_MS > reminderEndTime) {
+          await ic.reply(
+            bot,
+            interaction,
+            `Please enter a date/time (\`when\`) in the **future**! Try** \`\/date\` **for help`
+          );
+          return;
+        }
+        currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
+        reminderEndTime -= HOUR_IN_MS * timezoneOffset;
+        duration = reminderEndTime - currentTimestamp;
+        duration = fn.millisecondsToTimeString(duration > 0 ? duration : 0);
+      }
+
+      //* Figure out how to send user confirmations!
+      // const confirmCreationMessage = `Are you sure you want to set the following **one-time reminder** to send -\n**in ${channel} after ${duration} from now**:\n\n${message}`;
+      // const confirmCreation = await fn.getUserConfirmation(
+      //   bot,
+      //   message,
+      //   DEFAULT_PREFIX,
+      //   confirmCreationMessage,
+      //   forceSkip,
+      //   "Reminder: Confirm Creation",
+      //   180000
+      // );
+      // if (!confirmCreation) return;
+      if (subCommand === "dm") {
+        await rm.setNewDMReminder(
+          bot,
+          authorID,
+          currentTimestamp,
+          reminderEndTime,
+          message,
+          reminderType,
+          sendAsEmbed === undefined ? true : sendAsEmbed,
+          false,
+          true,
+          interval,
+          repetitions,
+          repeatEmbedColour
+        );
+      } else if (subCommand === "channel") {
+        const userPermissions = bot.channels.cache
+          .get(channel)
+          .permissionsFor(authorID);
+        console.log({ userPermissions });
+        if (
+          userPermissions.has("SEND_MESSAGES") &&
+          userPermissions.has("VIEW_CHANNEL")
+        ) {
+          await rm.setNewChannelReminder(
+            bot,
+            authorID,
+            channel,
+            currentTimestamp,
+            reminderEndTime,
+            message,
+            reminderType,
+            sendAsEmbed,
+            false,
+            true,
+            interval,
+            repetitions,
+            repeatEmbedColour
+          );
+        } else
+          await ic.reply(
+            bot,
+            interaction,
+            `You are **not authorized to send messages** to that channel...`
+          );
+      }
+      duration = reminderEndTime - fn.getCurrentUTCTimestampFlooredToSecond();
+      duration = fn.millisecondsToTimeString(duration > 0 ? duration : 0);
+      await ic.reply(
+        bot,
+        interaction,
+        `Your **recurring reminder** has been set to trigger in **${duration}** from now!`
+      );
+      return;
+    }
   },
 };

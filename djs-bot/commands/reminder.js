@@ -3,6 +3,7 @@ const Discord = require("discord.js");
 const User = require("../database/schemas/user");
 const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
+const ic = require("../../utilities/interactions");
 const fn = require("../../utilities/functions");
 const rm = require("../../utilities/reminder");
 require("dotenv").config();
@@ -425,8 +426,7 @@ module.exports = {
             }
           return;
         } else if (deleteType === "all") {
-          const confirmDeleteAllMessage =
-            `Are you sure you want to **delete all** of your recorded reminders?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
+          const confirmDeleteAllMessage = `Are you sure you want to **delete all** of your recorded reminders?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           const pastNumberOfEntriesIndex = totalReminderNumber;
           if (pastNumberOfEntriesIndex === 0) {
             return fn.sendErrorMessage(message, noRemindersMessage);
@@ -440,8 +440,7 @@ module.exports = {
             "Reminder: Delete All Reminders WARNING!"
           );
           if (!confirmDeleteAll) return;
-          const finalDeleteAllMessage =
-            `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR REMINDERS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
+          const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR REMINDERS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
             message,
@@ -896,8 +895,7 @@ module.exports = {
       reminderCommand === "update" ||
       reminderCommand === "upd"
     ) {
-      let reminderEditUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${reminderCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3** (3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the reminders by **time created instead of reminder start time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      let reminderEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${reminderCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3** (3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the reminders by **time created instead of reminder start time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       reminderEditUsageMessage = fn.getMessageEmbed(
         reminderEditUsageMessage,
         `Reminder: Edit Help`,
@@ -1236,7 +1234,9 @@ module.exports = {
                         } else {
                           let channelID = /\<\#(\d+)\>/.exec(channelType);
                           channelID = channelID[1];
-                          const targetChannel = bot.channels.cache.get(channelID);
+                          const targetChannel = bot.channels.cache.get(
+                            channelID
+                          );
                           if (!targetChannel) {
                             continueEdit = true;
                             message.reply(
@@ -1734,5 +1734,177 @@ module.exports = {
         );
       }
     } else return message.reply(reminderHelpMessage);
+  },
+
+  runSlashCommand: async ({
+    bot,
+    interaction,
+    args,
+    timezoneOffset,
+    daylightSaving,
+  }) => {
+    // Variable Declarations and Initializations
+    // if(!interaction) return;
+    const { member } = interaction;
+    const { subCommand, subCommandGroup } = args;
+    // if(!subCommand || !subCommandGroup) return;
+
+    const authorID = member.user.id;
+    const totalReminderNumber = await rm.getTotalReminders(authorID, false);
+    if (totalReminderNumber === false) return;
+
+    const userSettings = await User.findOne({ discordID: authorID });
+    const { tier } = userSettings;
+
+    if (subCommandGroup === "set") {
+      if (tier === 1) {
+        if (totalReminderNumber >= reminderMax) {
+          await ic.reply(
+            bot,
+            interaction,
+            fn
+              .getMessageEmbed(
+                fn.getTierMaxMessage(
+                  "/",
+                  interaction.data.name || "reminder",
+                  reminderMax,
+                  ["Reminder", "Reminders"],
+                  1,
+                  false
+                ),
+                `Reminder: Tier 1 Maximum`,
+                reminderEmbedColour
+              )
+              .setFooter(fn.premiumFooterText)
+          );
+          return;
+        }
+      }
+
+      let { when, message, channel, sendAsEmbed } = args;
+
+      if (subCommand === "dm") {
+        channel = authorID;
+      } else if (subCommand === "channel") {
+        // Verify if the channel is a text channel
+        const channelObject = bot.channels.cache.get(channel);
+        console.log({ channelObject });
+        if (
+          !channelObject ||
+          !channelObject.type ||
+          channelObject.type !== "text"
+        ) {
+          await ic.reply(
+            bot,
+            interaction,
+            `Please select a valid **text channel!**`
+          );
+          return;
+        }
+      }
+
+      if (!when) return;
+      when = when.toLowerCase().split(/[\s\n]+/);
+      const timeArgs =
+        when[0] === "in" && when[0] !== "now" ? when : ["in"].concat(when);
+
+      let reminderEndTime = fn.timeCommandHandlerToUTC(
+        timeArgs,
+        Date.now(),
+        timezoneOffset,
+        daylightSaving
+      );
+
+      var currentTimestamp, duration;
+      if (!reminderEndTime) {
+        await ic.reply(
+          bot,
+          interaction,
+          `Please enter a date/time in the **future**! Try** \`\/date\` **for help`
+        );
+        return;
+      } else {
+        const now = fn.getCurrentUTCTimestampFlooredToSecond();
+        if (now + timezoneOffset * HOUR_IN_MS > reminderEndTime) {
+          await ic.reply(
+            bot,
+            interaction,
+            `Please enter a date/time in the **future**! Try** \`\/date\` **for help`
+          );
+          return;
+        }
+        currentTimestamp = fn.getCurrentUTCTimestampFlooredToSecond();
+        reminderEndTime -= HOUR_IN_MS * timezoneOffset;
+        duration = reminderEndTime - currentTimestamp;
+        duration = fn.millisecondsToTimeString(duration > 0 ? duration : 0);
+      }
+
+      //* Figure out how to send user confirmations!
+      // const confirmCreationMessage = `Are you sure you want to set the following **one-time reminder** to send -\n**in ${channel} after ${duration} from now**:\n\n${message}`;
+      // const confirmCreation = await fn.getUserConfirmation(
+      //   bot,
+      //   message,
+      //   DEFAULT_PREFIX,
+      //   confirmCreationMessage,
+      //   forceSkip,
+      //   "Reminder: Confirm Creation",
+      //   180000
+      // );
+      // if (!confirmCreation) return;
+      if (subCommand === "dm") {
+        await rm.setNewDMReminder(
+          bot,
+          authorID,
+          currentTimestamp,
+          reminderEndTime,
+          message,
+          reminderType,
+          sendAsEmbed === undefined ? true : sendAsEmbed,
+          false,
+          false,
+          false,
+          false,
+          reminderEmbedColour
+        );
+      } else if (subCommand === "channel") {
+        const userPermissions = bot.channels.cache
+          .get(channel)
+          .permissionsFor(authorID);
+        console.log({ userPermissions });
+        if (
+          userPermissions.has("SEND_MESSAGES") &&
+          userPermissions.has("VIEW_CHANNEL")
+        ) {
+          await rm.setNewChannelReminder(
+            bot,
+            authorID,
+            channel,
+            currentTimestamp,
+            reminderEndTime,
+            message,
+            reminderType,
+            sendAsEmbed,
+            false,
+            false,
+            false,
+            false,
+            reminderEmbedColour
+          );
+        } else
+          await ic.reply(
+            bot,
+            interaction,
+            `You are **not authorized to send messages** to that channel...`
+          );
+      }
+      duration = reminderEndTime - fn.getCurrentUTCTimestampFlooredToSecond();
+      duration = fn.millisecondsToTimeString(duration > 0 ? duration : 0);
+      await ic.reply(
+        bot,
+        interaction,
+        `Your **one-time reminder** has been set to trigger in **${duration}** from now!`
+      );
+      return;
+    }
   },
 };

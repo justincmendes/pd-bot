@@ -84,6 +84,11 @@ const userSettingsSchema = mongoose.Schema({
     required: true,
     default: false,
   },
+  hideSlashCommandReplies: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
   voiceChannels: [
     {
       id: {

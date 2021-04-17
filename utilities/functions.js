@@ -3,6 +3,7 @@
  */
 const Discord = require("discord.js");
 const fs = require("fs");
+const tm = require("./timeout");
 const mongoose = require("mongoose");
 const Reminder = require("../djs-bot/database/schemas/reminder");
 const User = require("../djs-bot/database/schemas/user");
@@ -28,7 +29,6 @@ const WEEK_IN_MS = 6.048e8;
 const MONTH_IN_MS = 2.628e9;
 // const YEAR_IN_MS = DAY_IN_MS * 365;
 const YEAR_IN_MS = 3.154e10;
-const MAX_32_BIT_SIGNED_INT = 2147483647;
 const spamRecords = new Discord.Collection();
 const tracking = new Discord.Collection();
 const autoSendReports = new Discord.Collection();
@@ -6043,29 +6043,6 @@ module.exports = {
     return i + 1;
   },
 
-  setLongTimeout(callback, delay) {
-    var timeout;
-    if (delay > MAX_32_BIT_SIGNED_INT) {
-      timeout = setTimeout(
-        () => this.setLongTimeout(callback, delay - MAX_32_BIT_SIGNED_INT),
-        MAX_32_BIT_SIGNED_INT
-      );
-    } else timeout = setTimeout(callback, delay);
-    return timeout;
-  },
-
-  setLongInterval(callback, delay) {
-    var interval;
-    if (delay > MAX_32_BIT_SIGNED_INT) {
-      interval = this.setLongTimeout(callback, delay);
-      const next = this.setLongTimeout(
-        () => this.setLongInterval(callback, delay),
-        delay
-      );
-    } else interval = setInterval(callback, delay);
-    return interval;
-  },
-
   getDateAndTimeEntry: async function (
     bot,
     message,
@@ -6586,7 +6563,7 @@ module.exports = {
         this.autoSendTrackReportUserAddChannel(
           userID,
           trackObject.voiceChannelID,
-          this.setLongTimeout(async () => {
+          tm.setLongTimeout(async () => {
             // let updatedTrackObject = await Track.findOne({
             //     userID, voiceChannelID: trackObject.voiceChannelID,
             //     finishedSession: true,
@@ -7881,6 +7858,19 @@ module.exports = {
         : ""
     }`;
     return areaOfLifeString;
+  },
+
+  snakeCaseToCamelCase: function (string) {
+    if (!string) return;
+    string = string.toLowerCase();
+    const snakeCaseRegex = /[\_\-](\w)/g;
+    const camelCaseString = string.replace(
+      snakeCaseRegex,
+      (match, startingLetter) => {
+        return startingLetter.toUpperCase();
+      }
+    );
+    return camelCaseString;
   },
 
   getTierMaxMessage: function (

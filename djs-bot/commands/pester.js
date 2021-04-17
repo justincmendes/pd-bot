@@ -21,12 +21,7 @@ module.exports = {
   description: "Users that like pestering accountability!",
   aliases: [
     "pest",
-    "accountable",
-    "accountability",
     "pestering",
-    "a",
-    "acc",
-    "account",
   ],
   cooldown: 2.5,
   args: false,

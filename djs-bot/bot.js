@@ -16,6 +16,7 @@ const bot = new Discord.Client({
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
   ws: { intents: Discord.Intents.PRIVILEDGED },
 });
+const ic = require("../utilities/interactions");
 const fn = require("../utilities/functions");
 const rm = require("../utilities/reminder");
 const hb = require("../utilities/habit");
@@ -42,6 +43,173 @@ const CLOSE_COMMAND_SPAM_NUMBER = fn.CLOSE_COMMAND_SPAM_NUMBER;
 const REFRESH_SPAM_DELAY = fn.REFRESH_COMMAND_SPAM_DELAY;
 const CLOSE_COMMAND_DELAY = fn.CLOSE_COMMAND_DELAY;
 
+// Function Definitions
+/**
+ * Parsing options into key-value args:
+ */
+const createArgs = (options) => {
+  if (!options) return;
+  var args = {};
+  console.log({ options });
+  for (const option of options) {
+    console.log({ option });
+    addArg(args, option);
+    const subCommandOptions = option.options;
+    console.log({ subCommandOptions });
+    if (subCommandOptions && subCommandOptions.length) {
+      for (const subCommandOption of subCommandOptions) {
+        console.log({ subCommandOption });
+        addArg(args, subCommandOption);
+        const subCommandGroupOptions = subCommandOption.options;
+        console.log({ subCommandGroupOptions });
+        if (subCommandGroupOptions && subCommandGroupOptions.length) {
+          for (const subGroupOption of subCommandGroupOptions) {
+            console.log({ subGroupOption });
+            addArg(args, subGroupOption);
+          }
+        }
+      }
+    }
+  }
+  return args;
+};
+
+/**
+ * Add new key-value pair to an object.
+ * - originalArgs, passed by reference.
+ */
+const addArg = (originalArgs, option) => {
+  if (!option || !option.type) return false;
+  const { type, name, value } = option;
+  if (type !== 1 && type !== 2) {
+    originalArgs[fn.snakeCaseToCamelCase(name)] = value;
+  } else if (name) {
+    if (type === 1) {
+      originalArgs["subCommand"] = name;
+    } else if (type === 2) {
+      originalArgs["subCommandGroup"] = name;
+    }
+  }
+  return true;
+};
+
+const getApp = (guildID) => {
+  const app = bot.api.applications(bot.user.id);
+  if (guildID) {
+    app.guilds(guildID);
+  }
+  return app;
+};
+
+const getSpamMessage = (timeoutInMinutes) => {
+  return `**Please don't spam me 🥺**, I will have to stop responding to your commands for at least **__${timeoutInMinutes} minute(s)__.**`;
+};
+
+const getCooldownMessage = (secondsLeft, commandName) => {
+  return `Please **wait ${
+    secondsLeft || secondsLeft === 0 ? secondsLeft.toFixed(1) : "a few"
+  } more second(s)** before reusing the **\`${commandName}\` command**`;
+};
+
+const checkSpam = async (userID, createdTimestamp) => {
+  const spamDetails = spamRecords.get(userID);
+  if (spamDetails) {
+    spamDetails.messageCount++;
+    const messageSendDelay =
+      createdTimestamp - (spamDetails.lastTimestamp || 0);
+    spamDetails.lastTimestamp = createdTimestamp;
+    if (messageSendDelay < CLOSE_COMMAND_DELAY) {
+      spamDetails.closeMessageCount++;
+    }
+    if (
+      spamDetails.closeMessageCount >= CLOSE_COMMAND_SPAM_NUMBER ||
+      spamDetails.messageCount >= COMMAND_SPAM_NUMBER
+    ) {
+      const timeout =
+        timeoutDurations[spamDetails.timeoutLevel - 1] ||
+        fn.getTimeScaleToMultiplyInMs("minute");
+      spamDetails.isRateLimited = true;
+      setTimeout(() => {
+        if (spamDetails) {
+          spamDetails.closeMessageCount = 0;
+          spamDetails.messageCount = 1;
+          spamDetails.isRateLimited = false;
+          if (spamDetails.timeoutLevel < 4) spamDetails.timeoutLevel++;
+        }
+      }, timeout);
+      return {
+        isSpamming: true,
+        timeoutMinutes: timeout / fn.getTimeScaleToMultiplyInMs("minute"),
+      };
+    }
+    if (spamDetails.messageCount === 2) {
+      setTimeout(() => {
+        if (spamDetails) {
+          spamDetails.messageCount = 1;
+          spamDetails.closeMessageCount = 0;
+        }
+      }, REFRESH_SPAM_DELAY);
+    }
+  } else {
+    setTimeout(() => {
+      if (spamDetails.isRateLimited) {
+        setTimeout(() => {
+          spamRecords.delete(userID);
+        }, (timeoutDurations[spamDetails.timeoutLevel - 1] || fn.getTimeScaleToMultiplyInMs("minute")) + fn.getTimeScaleToMultiplyInMs("hour") * 4);
+      } else spamRecords.delete(userID);
+    }, fn.getTimeScaleToMultiplyInMs("day") / 2);
+    spamRecords.set(userID, {
+      lastTimestamp: createdTimestamp,
+      messageCount: 1,
+      closeMessageCount: 0,
+      isRateLimited: false,
+      timeoutLevel: 1,
+    });
+  }
+  return {
+    isSpamming: false,
+  };
+};
+
+const cooldownCheck = async (userID, command) => {
+  if (!cooldowns.has(command.name)) {
+    cooldowns.set(command.name, new Discord.Collection());
+  }
+  const now = Date.now();
+  const cooldownUsers = cooldowns.get(command.name);
+  const cooldownAmount = command.cooldown * 1000;
+  if (cooldownUsers.has(userID)) {
+    const cooldownDetails = cooldownUsers.get(userID);
+    if (cooldownDetails.sentCooldownMessage === false) {
+      const expirationTime = cooldownDetails.endTime + cooldownAmount;
+      if (now < expirationTime) {
+        const secondsLeft = (expirationTime - now) / 1000;
+        if (cooldownUsers.has(userID)) {
+          cooldownDetails.sentCooldownMessage = true;
+        }
+        return {
+          onCooldown: true,
+          secondsLeft,
+        };
+      }
+    }
+    return {
+      onCooldown: true,
+      sentCooldownMessage: cooldownDetails.sentCooldownMessage,
+    };
+  } else {
+    cooldownUsers.set(userID, {
+      endTime: now,
+      sentCooldownMessage: false,
+    });
+    setTimeout(() => cooldownUsers.delete(userID), cooldownAmount);
+  }
+  return {
+    onCooldown: false,
+  };
+};
+
+// File Reader Output
 fs.readdir("./djs-bot/commands", (err, files) => {
   //! This (err) shouldn't happen, this would be on Node.js
   if (err) console.error(err);
@@ -73,12 +241,332 @@ bot.on("ready", async () => {
     type: "WATCHING",
   });
 
+  //* Show Current Slash Commands in Guild
+  // const commands = await getApp("709165601993523233").commands.get();
+  // console.log({ commands });
+
+  //* Sample Slash Command (from guild) Deletion!
+  // await getApp("709165601993523233").commands("832857900954681344").delete();
+  // await getApp(<GUILD_ID>).commands(<COMMAND_ID>).delete();
+
+  //* Reminder Command:
+  // await getApp("736750419170164800").commands.post({
+  //   data: {
+  //     name: "reminder",
+  //     description: "Set a channel or DM one-time reminder",
+  //     options: [
+  //       {
+  //         name: "set",
+  //         description: "Create/Set a reminder",
+  //         type: 2,
+  //         options: [
+  //           {
+  //             name: "dm",
+  //             description: "Set a DM Reminder",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "when",
+  //                 description:
+  //                   "Enter the date/time of when you want this reminder to be triggered.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "message",
+  //                 description: "Enter the message of this reminder.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "send_as_embed",
+  //                 description:
+  //                   "Send this reminder as an embed message. (Default: True)",
+  //                 required: false,
+  //                 type: 5,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "channel",
+  //             description: "Set a channel Reminder",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "channel",
+  //                 description:
+  //                   "Enter the text channel you'd like to send this reminder to",
+  //                 required: true,
+  //                 type: 7,
+  //               },
+  //               {
+  //                 name: "when",
+  //                 description:
+  //                   "Enter date/time of when you want this reminder to be triggered",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "message",
+  //                 description:
+  //                   "Enter the reminder message. (Remember to @mention the roles/users you want to ping/notify!)",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "send_as_embed",
+  //                 description:
+  //                   "Send this reminder as an embed message. NOTE: No pings will trigger if true! (Default: False)",
+  //                 required: false,
+  //                 type: 5,
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     ],
+  //   },
+  // });
+
+  //* Recurring Reminder (Repeat) Command:
+  // await getApp("736750419170164800").commands.post({
+  //   data: {
+  //     name: "recurringreminder",
+  //     description: "Set a channel or DM repeating/recurring reminder",
+  //     options: [
+  //       {
+  //         name: "set",
+  //         description: "Create/Set a recurring reminder",
+  //         type: 2,
+  //         options: [
+  //           {
+  //             name: "dm",
+  //             description: "Set a DM Recurring Reminder",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "when",
+  //                 description:
+  //                   "Enter the date/time of when you want this reminder to be triggered.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "interval",
+  //                 description:
+  //                   "Enter the duration of time you want between each recurring reminder.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "message",
+  //                 description: "Enter the message of this reminder.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "repetitions",
+  //                 description:
+  //                   "How many times do you want to get this reminder? Enter 0 for default. (Default: Indefinitely)",
+  //                 required: false,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "send_as_embed",
+  //                 description:
+  //                   "Send this reminder as an embed message. (Default: True)",
+  //                 required: false,
+  //                 type: 5,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "channel",
+  //             description: "Set a channel Recurring Reminder",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "channel",
+  //                 description:
+  //                   "Enter the text channel you'd like to send this reminder to",
+  //                 required: true,
+  //                 type: 7,
+  //               },
+  //               {
+  //                 name: "when",
+  //                 description:
+  //                   "Enter date/time of when you want this reminder to be triggered",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "interval",
+  //                 description:
+  //                   "Enter the duration of time you want between each recurring reminder.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "message",
+  //                 description:
+  //                   "Enter the reminder message. (Remember to @mention the roles/users you want to ping/notify!)",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "repetitions",
+  //                 description:
+  //                   "How many times do you want to get this reminder? Enter 0 for default. (Default: Indefinitely)",
+  //                 required: false,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "send_as_embed",
+  //                 description:
+  //                   "Send this reminder as an embed message. NOTE: No pings will trigger if true! (Default: False)",
+  //                 required: false,
+  //                 type: 5,
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     ],
+  //   },
+  // });
+
+  //* Sample Command: Ping
+  // await getApp("736750419170164800").commands.post({
+  //   data: {
+  //     name: 'ping',
+  //     description: 'A simple ping pong commands',
+  //   },
+  // });
+
+  //* Sample Command With Options/Args
+  // await getApp("736750419170164800").commands.post({
+  //   data: {
+  //     name: "new",
+  //     description: "A new command",
+  //     options: [
+  //       {
+  //         name: "Name",
+  //         description: "Your Name",
+  //         required: true,
+  //         type: 3,
+  //       },
+  //       {
+  //         name: "Age",
+  //         description: "Your Age",
+  //         required: false,
+  //         type: 4,
+  //       },
+  //       {
+  //         name: "Channel",
+  //         description: "Enter the channel you'd like to send this reminder to!",
+  //         required: false,
+  //         type: 7,
+  //       },
+  //     ],
+  //   },
+  // });
+
+  /**
+   * * Slash Command Event Listener (Websocket)
+   */
+  bot.ws.on("INTERACTION_CREATE", async (interaction) => {
+    const { name, options } = interaction.data;
+
+    console.log({ options });
+
+    // Parsing options into key-value args:
+    let args = createArgs(options);
+
+    // console.log(options[0].options[0].options);
+    const commandName = name.toLowerCase();
+    args = { commandName, ...args };
+    console.log({ args });
+
+    const command = bot.commands.get(commandName);
+    if (!command) return;
+
+    const userID = interaction.member.user.id;
+
+    // Spam Prevention:
+    const updatedSpamCheck = await checkSpam(userID, Date.now());
+    if (updatedSpamCheck && updatedSpamCheck.isSpamming) {
+      // const userDM = bot.users.cache.get(userID);
+      await ic.reply(
+        bot,
+        interaction,
+        getSpamMessage(updatedSpamCheck.timeoutMinutes),
+        true
+      );
+      return;
+    }
+
+    // Cooldowns:
+    const cooldown = await cooldownCheck(userID, commandName);
+    if (cooldown && cooldown.onCooldown) {
+      await ic.reply(
+        bot,
+        interaction,
+        getCooldownMessage(cooldown.secondsLeft, commandName),
+        true,
+        cooldown.secondsLeft * 1000
+      );
+    }
+
+    // Retrieve user settings:
+    var timezoneOffset, daylightSaving;
+    let userSettings = await User.findOne({ discordID: userID });
+    if (!userSettings) {
+      // Get user to enter the userSettings
+    } else {
+      timezoneOffset = userSettings.timezone.offset;
+      daylightSaving = userSettings.timezone.daylightSaving;
+    }
+
+    // Retrieve the PREFIX
+    // const guildSettings = await Guild.findOne({ guildID });
+    // PREFIX = guildSettings ? guildSettings.prefix : DEFAULT_PREFIX;
+
+    try {
+      // console.log({ command });
+      console.log(`Command: ${command.name}`);
+      await command.runSlashCommand({
+        bot,
+        interaction,
+        args,
+        // PREFIX: DEFAULT_PREFIX,
+        timezoneOffset,
+        daylightSaving,
+      });
+      return;
+    } catch (err) {
+      console.error(err);
+      await ic.reply(
+        bot,
+        interaction,
+        "There was an error trying to execute that command!",
+        true
+      );
+    }
+    // console.log({ interaction });
+    return;
+  });
+
   //! DO NOT have this activated when testing - it will delete all of the guildsettings data
-  await gu.updateGuilds(bot);
+  if (!bot.guilds.cache.get("736750419170164800")) {
+    await gu.updateGuilds(bot);
+  }
 
   //! Avoid having this one on when not testing voice - it will alter other user's tracking data!
-  await fn.resetAllVoiceChannelTracking(bot);
+  if (!bot.guilds.cache.get("736750419170164800")) {
+    await fn.resetAllVoiceChannelTracking(bot);
+  }
 
+  //* Enable these 4 below for proper data persistence upon reset
   await fn.updateAllUsers(bot);
   await rm.rescheduleAllDST(bot);
   await rm.resetReminders(bot);
@@ -86,14 +574,14 @@ bot.on("ready", async () => {
 
   // For adjusting EST user's from EST to EDT! (Should not need to be used, will happen automatically now)
   // const estUsers = await User.find({
-  //   discordID: {
-  //     $nin: [
-  //       "208829852583723008",
-  //       "208829852583723008",
-  //       "635266254109802508",
-  //       "633117006874542110",
-  //     ],
-  //   },
+  // // discordID: {
+  // //   $nin: [
+  // //     "208829852583723008",
+  // //     "208829852583723008",
+  // //     "635266254109802508",
+  // //     "633117006874542110",
+  // //   ],
+  // // },
   //   "timezone.name": "EST",
   // });
   // for (const estUser of estUsers) {
@@ -101,68 +589,71 @@ bot.on("ready", async () => {
   // }
 
   //* For Testing
+  // console.log(fn.timestampToDateString(fn.timeCommandHandlerToUTC("2 mon ago", Date.now(), -4, true, false, true, false)));
+  // console.log(fn.timestampToDateString(fn.timeCommandHandlerToUTC("in 2 tues", Date.now(), -4, true, false, true, true)));
   // let logs = [
   //   {
   //     _id: 10,
-  //     timestamp: new Date(2021, 2, 15, 4).getTime(),
+  //     timestamp: new Date(2021, 2, 29, 0).getTime(),
   //     state: 1,
   //   },
   //   {
   //     _id: 9,
-  //     timestamp: new Date(2021, 2, 14, 4).getTime(),
-  //     state: 3,
+  //     timestamp: new Date(2021, 2, 28, 0).getTime(),
+  //     state: 1,
   //   },
   //   {
   //     _id: 8,
-  //     timestamp: new Date(2021, 2, 13, 0).getTime(),
+  //     timestamp: new Date(2021, 2, 27, 0).getTime(),
   //     state: 1,
   //   },
   //   {
   //     _id: 7,
-  //     timestamp: new Date(2021, 2, 12, 4).getTime(),
+  //     timestamp: new Date(2021, 2, 26, 0).getTime(),
   //     state: 2,
   //   },
   //   {
   //     _id: 6,
-  //     timestamp: new Date(2021, 2, 11, 4).getTime(),
-  //     state: 2,
-  //   },
-  //   {
-  //     _id: 5,
-  //     timestamp: new Date(2021, 2, 10, 4).getTime(),
+  //     timestamp: new Date(2021, 2, 25, 0).getTime(),
   //     state: 1,
   //   },
-  //   {
-  //     _id: 4,
-  //     timestamp: new Date(2021, 2, 4, 4).getTime(),
-  //     state: 2,
-  //   },
-  //   {
-  //     _id: 3,
-  //     timestamp: new Date(2021, 2, 3, 4).getTime(),
-  //     state: 2,
-  //   },
-  //   {
-  //     _id: 2,
-  //     timestamp: new Date(2021, 2, 2, 4).getTime(),
-  //     state: 2,
-  //   },
-  //   {
-  //     _id: 1,
-  //     timestamp: new Date(2021, 2, -13, 4).getTime(),
-  //     state: 1,
-  //   },
+  // {
+  //   _id: 5,
+  //   timestamp: new Date(2021, 2, 10, 4).getTime(),
+  //   state: 1,
+  // },
+  // {
+  //   _id: 4,
+  //   timestamp: new Date(2021, 2, 4, 4).getTime(),
+  //   state: 2,
+  // },
+  // {
+  //   _id: 3,
+  //   timestamp: new Date(2021, 2, 3, 4).getTime(),
+  //   state: 2,
+  // },
+  // {
+  //   _id: 2,
+  //   timestamp: new Date(2021, 2, 2, 4).getTime(),
+  //   state: 2,
+  // },
+  // {
+  //   _id: 1,
+  //   timestamp: new Date(2021, 2, -13, 4).getTime(),
+  //   state: 1,
+  // },
   // ];
+
+  // console.log(
+  //   fn.calculateCurrentStreak(logs, -5, { daily: 0, weekly: 0 }, false, 1)
+  // );
   // logs = await Log.find({
   //   connectedDocument: "6039f503812977313c2f8ec6",
   // }).sort({ timestamp: -1 });
   // console.log(
-  //   hb.calculateCurrentStreak(logs, -5, { daily: 0, weekly: 0 }, true, 2)
+  //   fn.calculateCurrentStreak(logs, -5, { daily: 0, weekly: 0 }, true, 2)
   // );
-  // console.log(
-  //   hb.calculateCurrentStreak(logs, -5, { daily: 0, weekly: 0 }, false, 3)
-  // );
-  // console.log(hb.getHabitLogOnTimestampDay(logs, new Date(2021, 2, 14, 4), 0));
+  // console.log(fn.getHabitLogOnTimestampDay(logs, new Date(2021, 2, 14, 4), 0));
 
   // await hb.updateHabit(
   //   await Habit.findOne({ userID: message.author.id }).sort({ timestamp: -1 }),
@@ -224,7 +715,7 @@ bot.on("ready", async () => {
   //     },
   // ], -5, { daily: 10800000, weekly: 0 }, 3, new Date(2020, 10, 1, 4).getTime()));
   // await hb.habitCron(bot, '208829852583723008');
-  // hb.calculateCurrentStreak([
+  // fn.calculateCurrentStreak([
   // {
   //     timestamp: new Date(2020, 11, 8, 4).getTime(),
   //     state: 1
@@ -266,9 +757,9 @@ bot.on("ready", async () => {
   //     timestamp: new Date(2020, 10, 22, 4).getTime(),
   //     state: 1
   // },
-  // ], -5, { daily: 10800000, weekly: 0 }, false, 2, hb.getNextCronTimeUTC(-5, { daily: 10800000, weekly: 0 }, true, 2,
+  // ], -5, { daily: 10800000, weekly: 0 }, false, 2, fn.getNextCronTimeUTC(-5, { daily: 10800000, weekly: 0 }, true, 2,
   //     new Date(2020, 9, 29, 12).getTime() - 5 * 8.64e+7) - 5 * 8.64e+7);
-  // console.log(fn.timestampToDateString(hb.getNextCronTimeUTC(-5, { daily: 10800000, weekly: 0 }, true, 2,
+  // console.log(fn.timestampToDateString(fn.getNextCronTimeUTC(-5, { daily: 10800000, weekly: 0 }, true, 2,
   //     new Date(2020, 9, 30, 12).getTime() - 5 * 8.64e+7) - 5 * 8.64e+7));
 
   // //Generating Link
@@ -303,6 +794,8 @@ bot.on("ready", async () => {
 // });
 
 bot.on("message", async (message) => {
+  // console.log({ message });
+
   // If the user is blocked from typing commands - 1 minute timeout, make this a global statement
   // If their name is part of the timeouts Array List!
   // If the message is from a bot, ignore
@@ -366,100 +859,27 @@ bot.on("message", async (message) => {
   );
 
   // Spam Prevention:
-  const spamDetails = spamRecords.get(message.author.id);
-  if (spamDetails) {
-    spamDetails.messageCount++;
-    const messageSendDelay =
-      message.createdTimestamp - (spamDetails.lastTimestamp || 0);
-    spamDetails.lastTimestamp = message.createdTimestamp;
-    if (messageSendDelay < CLOSE_COMMAND_DELAY) {
-      spamDetails.closeMessageCount++;
-    }
-    if (
-      spamDetails.closeMessageCount >= CLOSE_COMMAND_SPAM_NUMBER ||
-      spamDetails.messageCount >= COMMAND_SPAM_NUMBER
-    ) {
-      const timeout =
-        timeoutDurations[spamDetails.timeoutLevel - 1] ||
-        fn.getTimeScaleToMultiplyInMs("minute");
-      const userDM = bot.users.cache.get(message.author.id);
-      spamDetails.isRateLimited = true;
-      setTimeout(() => {
-        if (spamDetails) {
-          spamDetails.closeMessageCount = 0;
-          spamDetails.messageCount = 1;
-          spamDetails.isRateLimited = false;
-          if (spamDetails.timeoutLevel < 4) spamDetails.timeoutLevel++;
-        }
-        // if (userDM) userDM.send("**You may now enter my commands again**, please don't spam again - you will be ratelimited for longer!");
-      }, timeout);
-      if (userDM)
-        userDM.send(
-          `**Please don't spam me 🥺**, I will have to stop responding to your commands for at least **__${
-            timeout / fn.getTimeScaleToMultiplyInMs("minute")
-          } minute(s)__.**`
-        );
-      return;
-    }
-    if (spamDetails.messageCount === 2) {
-      setTimeout(() => {
-        if (spamDetails) {
-          spamDetails.messageCount = 1;
-          spamDetails.closeMessageCount = 0;
-        }
-      }, REFRESH_SPAM_DELAY);
-    }
-  } else {
-    setTimeout(() => {
-      if (spamDetails.isRateLimited) {
-        setTimeout(() => {
-          spamRecords.delete(message.author.id);
-        }, (timeoutDurations[spamDetails.timeoutLevel - 1] || fn.getTimeScaleToMultiplyInMs("minute")) + fn.getTimeScaleToMultiplyInMs("hour") * 4);
-      } else spamRecords.delete(message.author.id);
-    }, fn.getTimeScaleToMultiplyInMs("day") / 2);
-    spamRecords.set(message.author.id, {
-      lastTimestamp: message.createdTimestamp,
-      messageCount: 1,
-      closeMessageCount: 0,
-      isRateLimited: false,
-      timeoutLevel: 1,
-    });
+  const updatedSpamCheck = await checkSpam(
+    message.author.id,
+    message.createdTimestamp
+  );
+  if (updatedSpamCheck && updatedSpamCheck.isSpamming) {
+    const userDM = bot.users.cache.get(message.author.id);
+    userDM.send(getSpamMessage(updatedSpamCheck.timeoutMinutes));
+    return;
   }
 
   // Cooldowns:
-  if (!cooldowns.has(command.name)) {
-    cooldowns.set(command.name, new Discord.Collection());
-  }
-  const now = Date.now();
-  const cooldownUsers = cooldowns.get(command.name);
-  const cooldownAmount = command.cooldown * 1000;
-  if (cooldownUsers.has(message.author.id)) {
-    const cooldownDetails = cooldownUsers.get(message.author.id);
-    if (cooldownDetails.sentCooldownMessage === false) {
-      const expirationTime = cooldownDetails.endTime + cooldownAmount;
-      if (now < expirationTime) {
-        const timeLeft = (expirationTime - now) / 1000;
-        fn.sendReplyThenDelete(
-          message,
-          `Please **wait ${timeLeft.toFixed(
-            1
-          )} more second(s)** before reusing the **\`${
-            command.name
-          }\` command**`,
-          timeLeft * 1000
-        );
-        if (cooldownUsers.has(message.author.id)) {
-          cooldownDetails.sentCooldownMessage = true;
-        }
-      }
+  const cooldown = await cooldownCheck(message.author.id, command);
+  if (cooldown && cooldown.onCooldown) {
+    if (!cooldown.sentCooldownMessage) {
+      fn.sendReplyThenDelete(
+        message,
+        getCooldownMessage(cooldown.secondsLeft, command.name),
+        cooldown.secondsLeft * 1000
+      );
     }
     return;
-  } else {
-    cooldownUsers.set(message.author.id, {
-      endTime: now,
-      sentCooldownMessage: false,
-    });
-    setTimeout(() => cooldownUsers.delete(message.author.id), cooldownAmount);
   }
 
   if (commandName !== "ping") {

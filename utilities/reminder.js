@@ -6,6 +6,7 @@ const User = require("../djs-bot/database/schemas/user");
 const mongoose = require("mongoose");
 const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
+const tm = require("./timeout");
 const Habit = require("../djs-bot/database/schemas/habit");
 const Log = require("../djs-bot/database/schemas/habittracker");
 const Mastermind = require("../djs-bot/database/schemas/mastermind");
@@ -407,7 +408,7 @@ module.exports = {
             connectedId: connectedDocument
               ? connectedDocument.toString()
               : undefined,
-            timeout: fn.setLongTimeout(async () => {
+            timeout: tm.setLongTimeout(async () => {
               const updatedReminderObject = await this.updateRecurringReminderByObjectID(
                 bot,
                 reminderID,
@@ -531,7 +532,7 @@ module.exports = {
             connectedId: connectedDocument
               ? connectedDocument.toString()
               : undefined,
-            timeout: fn.setLongTimeout(async () => {
+            timeout: tm.setLongTimeout(async () => {
               const reminderExists = await this.getOneReminderByObjectID(
                 reminderID
               );
@@ -728,7 +729,7 @@ module.exports = {
     await Dst.updateOne({ timezone }, { $set: { isDST } });
 
     await this.updateDstOffset(bot, isDST, timezone);
-    fn.setLongTimeout(async () => {
+    tm.setLongTimeout(async () => {
       dstSetting = await Dst.findOne({ timezone });
       await this.scheduleOneDST(bot, dstSetting);
       return;

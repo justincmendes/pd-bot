@@ -7,6 +7,7 @@ const Guild = require("../djs-bot/database/schemas/guildsettings");
 const Goal = require("../djs-bot/database/schemas/longtermgoals");
 const User = require("../djs-bot/database/schemas/user");
 const mongoose = require("mongoose");
+const tm = require("./timeout");
 const fn = require("./functions");
 const rm = require("./reminder");
 require("dotenv").config();
@@ -839,7 +840,7 @@ module.exports = {
       const userHabits = habits.get(userID);
       userHabits.push({
         id: _id.toString(),
-        timeout: fn.setLongTimeout(async () => {
+        timeout: tm.setLongTimeout(async () => {
           const updatedHabit = await this.updateHabit(habit, offset, habitCron);
           if (!updatedHabit) return false;
           let updatedOffset = offset;

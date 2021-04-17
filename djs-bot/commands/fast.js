@@ -803,10 +803,9 @@ module.exports = {
   ) {
     // Variable Declarations and Initializations
     var fastUsageMessage =
-      `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\`\n\n` <
-      ACTION >
+      `**USAGE:**\n\`${PREFIX}${commandUsed} <ACTION>\`:\n\n` +
       `: **help; start/s; end/e; see; edit; delete/d; post/p**` +
-        `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join("; ")}**`;
+      `\n\n*__ALIASES:__* **${this.name} - ${this.aliases.join("; ")}**`;
     fastUsageMessage = fn.getMessageEmbed(
       fastUsageMessage,
       "Fast: Help",
