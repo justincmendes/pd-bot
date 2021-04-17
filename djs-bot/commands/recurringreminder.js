@@ -1808,7 +1808,14 @@ module.exports = {
         }
       }
 
-      let { when, interval, repetitions, message, channel, sendAsEmbed } = args;
+      let {
+        when,
+        interval,
+        repetitions,
+        message,
+        channel,
+        embed: sendAsEmbed,
+      } = args;
 
       if (subCommand === "dm") {
         channel = authorID;
