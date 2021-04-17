@@ -50,21 +50,21 @@ const CLOSE_COMMAND_DELAY = fn.CLOSE_COMMAND_DELAY;
 const createArgs = (options) => {
   if (!options) return;
   var args = {};
-  console.log({ options });
+  // console.log({ options });
   for (const option of options) {
-    console.log({ option });
+    // console.log({ option });
     addArg(args, option);
     const subCommandOptions = option.options;
-    console.log({ subCommandOptions });
+    // console.log({ subCommandOptions });
     if (subCommandOptions && subCommandOptions.length) {
       for (const subCommandOption of subCommandOptions) {
-        console.log({ subCommandOption });
+        // console.log({ subCommandOption });
         addArg(args, subCommandOption);
         const subCommandGroupOptions = subCommandOption.options;
-        console.log({ subCommandGroupOptions });
+        // console.log({ subCommandGroupOptions });
         if (subCommandGroupOptions && subCommandGroupOptions.length) {
           for (const subGroupOption of subCommandGroupOptions) {
-            console.log({ subGroupOption });
+            // console.log({ subGroupOption });
             addArg(args, subGroupOption);
           }
         }
@@ -476,13 +476,10 @@ bot.on("ready", async () => {
    */
   bot.ws.on("INTERACTION_CREATE", async (interaction) => {
     const { name, options } = interaction.data;
-
-    console.log({ options });
+    // console.log({ options });
 
     // Parsing options into key-value args:
     let args = createArgs(options);
-
-    // console.log(options[0].options[0].options);
     const commandName = name.toLowerCase();
     args = { commandName, ...args };
     console.log({ args });
@@ -527,10 +524,6 @@ bot.on("ready", async () => {
       daylightSaving = userSettings.timezone.daylightSaving;
     }
 
-    // Retrieve the PREFIX
-    // const guildSettings = await Guild.findOne({ guildID });
-    // PREFIX = guildSettings ? guildSettings.prefix : DEFAULT_PREFIX;
-
     try {
       // console.log({ command });
       console.log(`Command: ${command.name}`);
@@ -538,7 +531,6 @@ bot.on("ready", async () => {
         bot,
         interaction,
         args,
-        // PREFIX: DEFAULT_PREFIX,
         timezoneOffset,
         daylightSaving,
       });
