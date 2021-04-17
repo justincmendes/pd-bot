@@ -1772,11 +1772,17 @@ module.exports = {
   }) => {
     // Variable Declarations and Initializations
     // if(!interaction) return;
-    const { member } = interaction;
     const { subCommand, subCommandGroup } = args;
     // if(!subCommand || !subCommandGroup) return;
 
-    const authorID = member.user.id;
+    const authorID = interaction.guild_id
+      ? interaction.member.user.id
+      : interaction.user.id;
+    const authorUsername = interaction.user.username;
+    const authorNickname = interaction.guild_id
+      ? interaction.member.nick
+      : authorUsername;
+
     const totalReminderNumber = await rm.getTotalReminders(authorID, false);
     if (totalReminderNumber === false) return;
 
