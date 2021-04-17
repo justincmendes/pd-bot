@@ -1751,7 +1751,9 @@ module.exports = {
     const authorID = interaction.guild_id
       ? interaction.member.user.id
       : interaction.user.id;
-    const authorUsername = interaction.user.username;
+    const authorUsername = interaction.guild_id
+      ? interaction.member.user.username
+      : interaction.user.username;
     const authorNickname = interaction.guild_id
       ? interaction.member.nick
       : authorUsername;
