@@ -242,11 +242,11 @@ bot.on("ready", async () => {
   });
 
   //* Show Current Slash Commands in Guild
-  // const commands = await getApp("709165601993523233").commands.get();
+  // const commands = await getApp("736750419170164800").commands.get();
   // console.log({ commands });
 
   //* Sample Slash Command (from guild) Deletion!
-  // await getApp("709165601993523233").commands("832857900954681344").delete();
+  // await getApp("736750419170164800").commands("832857900954681344").delete();
   // await getApp(<GUILD_ID>).commands(<COMMAND_ID>).delete();
 
   //* Reminder Command:
@@ -279,7 +279,7 @@ bot.on("ready", async () => {
   //                 type: 3,
   //               },
   //               {
-  //                 name: "send_as_embed",
+  //                 name: "embed",
   //                 description:
   //                   "Send this reminder as an embed message. (Default: True)",
   //                 required: false,
@@ -314,7 +314,7 @@ bot.on("ready", async () => {
   //                 type: 3,
   //               },
   //               {
-  //                 name: "send_as_embed",
+  //                 name: "embed",
   //                 description:
   //                   "Send this reminder as an embed message. NOTE: No pings will trigger if true! (Default: False)",
   //                 required: false,
@@ -372,7 +372,7 @@ bot.on("ready", async () => {
   //                 type: 4,
   //               },
   //               {
-  //                 name: "send_as_embed",
+  //                 name: "embed",
   //                 description:
   //                   "Send this reminder as an embed message. (Default: True)",
   //                 required: false,
@@ -421,7 +421,7 @@ bot.on("ready", async () => {
   //                 type: 4,
   //               },
   //               {
-  //                 name: "send_as_embed",
+  //                 name: "embed",
   //                 description:
   //                   "Send this reminder as an embed message. NOTE: No pings will trigger if true! (Default: False)",
   //                 required: false,
@@ -475,6 +475,7 @@ bot.on("ready", async () => {
    * * Slash Command Event Listener (Websocket)
    */
   bot.ws.on("INTERACTION_CREATE", async (interaction) => {
+    console.log({ interaction });
     const { name, options } = interaction.data;
     // console.log({ options });
 
