@@ -6,6 +6,7 @@ const Habit = require("../database/schemas/habit");
 const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
+const hb = require("../../utilities/habit");
 const rm = require("../../utilities/reminder");
 const del = require("../../utilities/deletion");
 require("dotenv").config();
