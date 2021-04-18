@@ -666,7 +666,7 @@ module.exports = {
           bot,
           message,
           PREFIX,
-          `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**\n(Within 1000 characters)\n\n**__Examples (from *Atomic Habits* by James Clear):__**`,
+          `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**\n(Within 1000 characters)\n\n**__Examples (from *Atomic Habits* by James Clear):__**\n${this.implementationIntentionsExamples}\n\n${this.habitStackingExamples}`,
           `Long-Term Goal: Creation - Actionable Steps`,
           true,
           goalEmbedColour,
