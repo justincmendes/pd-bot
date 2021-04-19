@@ -2,10 +2,10 @@
  * @author Justin Mendes
  * @license MIT
  * Date Created: July 18, 2020
- * Last Updated: March 03, 2020
+ * Last Updated: April 18, 2021
  */
 
-// To keep the sensitive information in a separate folder
+// To keep the sensitive information to be stored in a separate folder
 // and allow for environment variables when hosting
 require("dotenv").config();
 const TOKEN = process.env.TOKEN;
@@ -42,6 +42,8 @@ const COMMAND_SPAM_NUMBER = 15;
 const CLOSE_COMMAND_SPAM_NUMBER = fn.CLOSE_COMMAND_SPAM_NUMBER;
 const REFRESH_SPAM_DELAY = fn.REFRESH_COMMAND_SPAM_DELAY;
 const CLOSE_COMMAND_DELAY = fn.CLOSE_COMMAND_DELAY;
+
+const validTypes = fn.reminderTypes;
 
 // Function Definitions
 /**
@@ -109,6 +111,22 @@ const getCooldownMessage = (secondsLeft, commandName) => {
   return `Please **wait ${
     secondsLeft || secondsLeft === 0 ? secondsLeft.toFixed(1) : "a few"
   } more second(s)** before reusing the **\`${commandName}\` command**`;
+};
+
+const getPrefix = async (channelType, guildID = undefined) => {
+  var PREFIX = DEFAULT_PREFIX;
+  if (channelType !== "dm") {
+    if (!guildID) return PREFIX;
+    const guildSettings = await Guild.findOne({ guildID });
+    PREFIX = (guildSettings && guildSettings.prefix) || DEFAULT_PREFIX;
+  }
+  return PREFIX;
+};
+
+const isPrefixedCommandCall = (string, PREFIX) => {
+  const startsWithPrefix = string.startsWith(PREFIX);
+  const isMention = string.startsWith(pdBotTag);
+  return startsWithPrefix || isMention;
 };
 
 const checkSpam = async (userID, createdTimestamp) => {
@@ -241,6 +259,26 @@ bot.on("ready", async () => {
     type: "WATCHING",
   });
 
+  // const collectedMessage = await fn.messageDataCollect(
+  //   bot,
+  //   "746119608271896598",
+  //   "736750420625457216",
+  //   "?",
+  //   "Enter something, make sure to test if it listens to when you start up another command or interaction!",
+  //   "Testing Message Collection"
+  // );
+  // console.log({ collectedMessage });
+
+  // const collectedReaction = await fn.reactionDataCollect(
+  //   bot,
+  //   "746119608271896598",
+  //   "736750420625457216",
+  //   "Enter an emoji reactions!",
+  //   ["😀", "😎", "😂", "😃", "😄"],
+  //   "Testing Reaction Collection"
+  // );
+  // console.log({ collectedReaction });
+
   //* Show Current Slash Commands in Guild
   // const commands = await getApp("736750419170164800").commands.get();
   // console.log({ commands });
@@ -250,7 +288,7 @@ bot.on("ready", async () => {
   // await getApp(<GUILD_ID>).commands(<COMMAND_ID>).delete();
 
   //* Reminder Command:
-  // await getApp("736750419170164800").commands.post({
+  // await getApp().commands.post({
   //   data: {
   //     name: "reminder",
   //     description: "Set a channel or DM one-time reminder",
@@ -324,12 +362,204 @@ bot.on("ready", async () => {
   //           },
   //         ],
   //       },
+  //       {
+  //         name: "edit",
+  //         description: "Edit a reminder",
+  //         type: 2,
+  //         options: [
+  //           {
+  //             name: "type",
+  //             description:
+  //               "Change the type of your reminder (e.g. Habit to Regular Reminder)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the type for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "type",
+  //                 description:
+  //                   "Enter the type of reminder you'd like to change this reminder to.",
+  //                 required: true,
+  //                 type: 3,
+  //                 choices: validTypes.map((type) => {
+  //                   return { name: type, value: type };
+  //                 }),
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "channel",
+  //             description:
+  //               "Change your reminder's destination to a channel of your choice.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the channel for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "channel",
+  //                 description:
+  //                   "Enter the text channel you'd like to send this reminder to",
+  //                 required: true,
+  //                 type: 7,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "dm",
+  //             description:
+  //               "Change your reminder's destination to your direct messages.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the channel for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "time_created",
+  //             description:
+  //               "Change the date/time of when your reminder was created.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the channel for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "when",
+  //                 description:
+  //                   "Enter date/time of when you created this reminder.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "trigger_time",
+  //             description:
+  //               "Change the date/time of when you want your reminder to be sent.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the channel for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "when",
+  //                 description:
+  //                   "Enter date/time of when you want this reminder to send.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "message",
+  //             description: "Change the message of your reminder.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the channel for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "message",
+  //                 description:
+  //                   'Enter the message you want to be sent. If reminder type is not "reminder," this edit will be lost.',
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "repeat",
+  //             description:
+  //               "Convert your reminder into a recurring/repeating reminder.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the repetition for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "interval",
+  //                 description:
+  //                   "Enter the time duration you want between each reminder.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //               {
+  //                 name: "repetitions",
+  //                 description:
+  //                   "How many times do you want to get this reminder? Enter 0 for default. (Default: Indefinitely)",
+  //                 required: false,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "next",
+  //                 description:
+  //                   "Update your reminder trigger time. Enter the date/time of when you want to send your next reminder.",
+  //                 required: false,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "embed",
+  //             description:
+  //               "Change whether your reminder gets sent as an embed or plain text.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the embed setting for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "embed",
+  //                 description:
+  //                   "Send this reminder as an embed message. NOTE: No pings will trigger if true for a channel reminder!",
+  //                 required: false,
+  //                 type: 5,
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
   //     ],
   //   },
   // });
 
   //* Recurring Reminder (Repeat) Command:
-  // await getApp("736750419170164800").commands.post({
+  // await getApp().commands.post({
   //   data: {
   //     name: "recurringreminder",
   //     description: "Set a channel or DM repeating/recurring reminder",
@@ -424,6 +654,226 @@ bot.on("ready", async () => {
   //                 name: "embed",
   //                 description:
   //                   "Send this reminder as an embed message. NOTE: No pings will trigger if true! (Default: False)",
+  //                 required: false,
+  //                 type: 5,
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //       {
+  //         name: "edit",
+  //         description: "Edit a repeating/recurring reminder",
+  //         type: 2,
+  //         options: [
+  //           {
+  //             name: "type",
+  //             description:
+  //               "Change the type of your reminder (e.g. Habit to Regular Reminder)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the type for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "type",
+  //                 description:
+  //                   "Enter the type of reminder you'd like to change this reminder to.",
+  //                 required: true,
+  //                 type: 3,
+  //                 choices: validTypes.map((type) => {
+  //                   return { name: type, value: type };
+  //                 }),
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "channel",
+  //             description:
+  //               "Change your reminder's destination to a channel of your choice.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the channel for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "channel",
+  //                 description:
+  //                   "Enter the text channel you'd like to send this reminder to",
+  //                 required: true,
+  //                 type: 7,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "dm",
+  //             description:
+  //               "Change your reminder's destination to your direct messages.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the channel for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "time_created",
+  //             description:
+  //               "Change the date/time of when your reminder was created.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the channel for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "when",
+  //                 description:
+  //                   "Enter date/time of when you created this reminder.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "trigger_time",
+  //             description:
+  //               "Change the date/time of when you want your reminder to be sent.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the channel for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "when",
+  //                 description:
+  //                   "Enter date/time of when you want this reminder to send.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "message",
+  //             description: "Change the message of your reminder.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the channel for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "message",
+  //                 description:
+  //                   'Enter the message you want to be sent. If reminder type is not "reminder," this edit will be lost.',
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "one-time",
+  //             description: "Convert your reminder into a one-time reminder.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to make a one-time reminder.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "next",
+  //                 description:
+  //                   "Update your reminder trigger time. Enter the date/time of when you want to send your next reminder.",
+  //                 required: false,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "interval",
+  //             description:
+  //               "Change the time duration between your repeating/recurring reminder.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the interval for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "interval",
+  //                 description:
+  //                   "Enter the duration of time you want between each recurring reminder.",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "repetitions",
+  //             description: "Change the number of reminders you want.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the interval for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "repetitions",
+  //                 description:
+  //                   "How many times do you want to get this reminder? Enter 0 for default. (Default: Indefinitely)",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "embed",
+  //             description:
+  //               "Change whether your reminder gets sent as an embed or plain text.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the reminder you'd like to edit the embed setting for.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "embed",
+  //                 description:
+  //                   "Send this reminder as an embed message. NOTE: No pings will trigger if true for a channel reminder!",
   //                 required: false,
   //                 type: 5,
   //               },
@@ -527,15 +977,21 @@ bot.on("ready", async () => {
       daylightSaving = userSettings.timezone.daylightSaving;
     }
 
+    const PREFIX = await getPrefix(
+      interaction.guild_id ? "text" : "dm",
+      interaction.guild_id
+    );
+
     try {
       // console.log({ command });
-      console.log(`Command: ${command.name}`);
+      console.log(`Interaction Command: ${command.name}`);
       await command.runSlashCommand({
         bot,
         interaction,
         args,
         timezoneOffset,
         daylightSaving,
+        PREFIX,
       });
       return;
     } catch (err) {
@@ -582,6 +1038,15 @@ bot.on("ready", async () => {
   // for (const estUser of estUsers) {
   //    await rm.updateUserReminders(bot, estUser.discordID, -1, true, true);
   // }
+
+  //* Testing Discord message sending!
+  // const testChannel = bot.channels.cache.get('746119608271896598');
+  // testChannel.send("Sent to channel!");
+
+  // const testUser = bot.users.cache.get('746119608271896598');
+  // const msgOut = await testUser.send(new Discord.MessageEmbed().setTitle("Test").setDescription("Message"));
+  // console.log({msgOut});
+  // msgOut.delete({timeout: 3000});
 
   //* For Testing
   // console.log(fn.timestampToDateString(fn.timeCommandHandlerToUTC("2 mon ago", Date.now(), -4, true, false, true, false)));
@@ -800,19 +1265,15 @@ bot.on("message", async (message) => {
     if (userSpamCheck.isRateLimited) return;
   }
 
-  var PREFIX;
-  if (message.channel.type === "dm") {
-    PREFIX = DEFAULT_PREFIX;
-  } else {
-    const guildID = message.guild.id;
-    const guildSettings = await Guild.findOne({ guildID });
-    PREFIX = guildSettings ? guildSettings.prefix : DEFAULT_PREFIX;
-  }
+  const PREFIX = await getPrefix(
+    message.channel.type,
+    message.guild && message.guild.id
+  );
   const isMention = message.content.startsWith(pdBotTag);
   // PREFIX = '?'; //* For Testing
 
   // When the message does not start with prefix, do nothing
-  if (!message.content.startsWith(PREFIX) && !isMention) return;
+  if (!isPrefixedCommandCall(message.content, PREFIX)) return;
 
   // Args/Arguments:
   // .slice to remove the first part of message containing the prefix
@@ -886,7 +1347,8 @@ bot.on("message", async (message) => {
     if (!userSettings) {
       const timezone = await fn.getNewUserTimezoneSettings(
         bot,
-        message,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         user.id
       );

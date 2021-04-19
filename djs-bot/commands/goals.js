@@ -493,7 +493,8 @@ async function setUserGoalsReminder(
     )}**?`;
     const confirmCreation = await fn.getUserConfirmation(
       bot,
-      message,
+      message.author.id,
+      message.channel.id,
       PREFIX,
       confirmCreationMessage,
       forceSkip,
@@ -608,8 +609,9 @@ module.exports = {
       do {
         reset = false;
         const goalType = await fn.userSelectFromList(
-          bot,
-          message,
+            bot,
+            message.author.id,
+            message.channel.id,
           PREFIX,
           areasOfLifeList,
           areasOfLife.length,
@@ -621,8 +623,9 @@ module.exports = {
 
         const goalTypeString = `__**Type:**__ ${areasOfLifeEmojis[goalType]} **${areasOfLife[goalType]}**`;
         const goalDescription = await fn.getSingleEntryWithCharacterLimit(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           `${goalTypeString}\n\n🎯 **What is your __long-term goal__?**\n(Within 250 characters)\n\n*Write a brief and concise description of your goal (in very simple terms), you will get into the specifics in the next few pages.*`,
           `Long-Term Goal: Creation - Set Goal`,
@@ -643,8 +646,9 @@ module.exports = {
           goalDescription === "" ? "" : `\n${goalDescription}`
         }`;
         let goalCheckpoints = await fn.getMultilineEntry(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           `${goalTypeString}\n${goalDescriptionString}\n\n🏁 **What are some __checkpoints or milestones__ that would indicate progress on this goal?**\n(Within 1000 characters)`,
           `Long-Term Goal: Creation - Checkpoints/Milestones`,
@@ -664,8 +668,9 @@ module.exports = {
           goalCheckpoints === "" ? "" : `\n${goalCheckpoints}`
         }`;
         let goalSteps = await fn.getMultilineEntry(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n👣 **What are some __actionable steps__ for this goal?**\n(Within 1000 characters)\n\n**__Examples (from *Atomic Habits* by James Clear):__**\n${hb.implementationIntentionsExamples}\n\n${hb.habitStackingExamples}`,
           `Long-Term Goal: Creation - Actionable Steps`,
@@ -685,8 +690,9 @@ module.exports = {
           goalSteps === "" ? "" : `\n${goalSteps}`
         }`;
         let goalReason = await fn.getMultilineEntry(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           `${goalTypeString}\n${goalDescriptionString}\n\n${goalCheckpointsString}\n\n${goalStepsString}\n\n💭 **__Why__ do you want to accomplish this goal?**\n(Within 1000 characters)`,
           `Long-Term Goal: Creation - Reason`,
@@ -710,8 +716,9 @@ module.exports = {
               timeField[i]
             }__ this goal:**\n${i === 0 ? timeExamples : futureTimeExamples}`;
             let timeInput = await fn.getSingleEntry(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               goalsTimePrompt,
               "Long-Term Goal: Creation - Set Time",
@@ -753,7 +760,8 @@ module.exports = {
           )}\nEnd: ${fn.timestampToDateString(time[1])}`
         );
         if (
-          fn.endTimeAfterStartTime(message, time[0], time[1], "Long-Term Goal")
+          fn.endTimeAfterStartTime(bot,
+            message.channel.id, time[0], time[1], "Long-Term Goal")
         ) {
           goalDocument = new Goal({
             _id: mongoose.Types.ObjectId(),
@@ -788,7 +796,8 @@ module.exports = {
           // Setup end reminders!
           const confirmEndReminders = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+      message.channel.id,
             PREFIX,
             "__Would you like to be **notified before this goal ends?:**__\n\n**1 year, 6 months, 1 month, 1 week, and 1 day before**",
             false,
@@ -813,7 +822,8 @@ module.exports = {
         // Setup reminder!
         const confirmGoalsReminder = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+      message.channel.id,
           PREFIX,
           "__**Would you like recurring reminders of your goal so you don't forget about your important goals?**__\n\n(The more you see your goals, the more you act in such a way that faciliates progress towards your goals)\n\nRecommended: `Weekly`, `Bi-Weekly`, or `Monthly` Goal Reminders",
           false,
@@ -842,7 +852,8 @@ module.exports = {
           if (habits.length) {
             const connectHabits = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+      message.channel.id,
               PREFIX,
               "Would you like to **connect habits** to this goal? 🔗",
               false,
@@ -861,8 +872,9 @@ module.exports = {
                 });
 
                 let targetHabitIndex = await fn.userSelectFromList(
-                  bot,
-                  message,
+            bot,
+            message.author.id,
+            message.channel.id,
                   PREFIX,
                   habitList,
                   habits.length,
@@ -880,7 +892,8 @@ module.exports = {
                 );
                 const confirmEnd = await fn.getUserConfirmation(
                   bot,
-                  message,
+                  message.author.id,
+      message.channel.id,
                   PREFIX,
                   `**Is there __another habit__ you would like to connect to this goal?** 🔗`,
                   forceSkip,
@@ -892,7 +905,8 @@ module.exports = {
           }
         const createAnother = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+      message.channel.id,
           PREFIX,
           "Would you like to create another **long-term goal?**",
           false,
@@ -995,7 +1009,8 @@ module.exports = {
           const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} goals?**`;
           const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             goalArray,
             multipleDeleteMessage,
@@ -1097,7 +1112,8 @@ module.exports = {
           habits = fn.getEmbedArray(habits, "", true, false, goalEmbedColour);
           const confirmDeleteMany = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             habits,
             deleteConfirmMessage,
@@ -1186,7 +1202,8 @@ module.exports = {
               const multipleDeleteMessage = `Are you sure you want to **delete ${goalCollection.length} goals past goal ${skipEntries}?**`;
               const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 goalArray,
                 multipleDeleteMessage,
@@ -1248,7 +1265,8 @@ module.exports = {
           const deleteConfirmMessage = `Are you sure you want to **delete your most recent goal?:**`;
           const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             goalEmbed,
             deleteConfirmMessage,
@@ -1274,7 +1292,8 @@ module.exports = {
           }
           let confirmDeleteAll = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+      message.channel.id,
             PREFIX,
             confirmDeleteAllMessage,
             forceSkip,
@@ -1286,7 +1305,8 @@ module.exports = {
           const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR GOALS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+      message.channel.id,
             PREFIX,
             finalDeleteAllMessage,
             `Long-Term Goal${
@@ -1350,7 +1370,8 @@ module.exports = {
         const deleteConfirmMessage = `Are you sure you want to **delete Goal ${pastNumberOfEntriesIndex}?**`;
         const deleteConfirmation = await fn.getPaginatedUserConfirmation(
           bot,
-          message,
+          message.author.id,
+                message.channel.id,
           PREFIX,
           goalEmbed,
           deleteConfirmMessage,
@@ -1498,7 +1519,8 @@ module.exports = {
             } goals?**`;
             let confirmSeeGoals = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+      message.channel.id,
               PREFIX,
               confirmSeeMessage,
               forceSkip,
@@ -1515,7 +1537,8 @@ module.exports = {
               "Are you sure you want to **see all** of your goal history?";
             let confirmSeeAll = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+      message.channel.id,
               PREFIX,
               confirmSeeAllMessage,
               forceSkip,
@@ -1616,7 +1639,8 @@ module.exports = {
                 } entries past ${entriesToSkip}?**`;
                 const confirmSeePast = await fn.getUserConfirmation(
                   bot,
-                  message,
+                  message.author.id,
+      message.channel.id,
                   PREFIX,
                   confirmSeePastMessage,
                   forceSkip,
@@ -1841,8 +1865,9 @@ module.exports = {
           }: Edit Field`;
           var fieldToEdit, fieldToEditIndex;
           const selectedField = await fn.getUserSelectedObject(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             fieldToEditInstructions,
             fieldToEditTitle,
@@ -1878,7 +1903,8 @@ module.exports = {
               goalEditMessagePrompt = `\n__**Please enter the date/time of when you started this goal:**__ ⌚\n${timeExamples}`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 goalEditMessagePrompt,
@@ -1891,7 +1917,8 @@ module.exports = {
               goalEditMessagePrompt = `\n__**Please enter the date/time of when you ended or intend to end this goal:**__ ⌚\n${timeExamples}`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 goalEditMessagePrompt,
@@ -1904,7 +1931,8 @@ module.exports = {
               goalEditMessagePrompt = `\n**__Which area of life does your long-term goal fall under?__ 🌱**\n${areasOfLifeList}`;
               userEdit = await fn.getUserEditNumber(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 areasOfLife.length,
@@ -1926,7 +1954,8 @@ module.exports = {
                 "\n🎯 **What is your __long-term goal__?**\n(Within 250 characters)";
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 goalEditMessagePrompt,
@@ -1942,7 +1971,8 @@ module.exports = {
                 "\n💭 **__Why__ do you want to accomplish this goal?**\n(Within 1000 characters)";
               userEdit = await fn.getUserMultilineEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 goalEditMessagePrompt,
@@ -1958,7 +1988,8 @@ module.exports = {
                 "\n🏁 **What are some __checkpoints__ that would indicate progress on this goal?**\n(Within 1000 characters)";
               userEdit = await fn.getUserMultilineEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 goalEditMessagePrompt,
@@ -1974,7 +2005,8 @@ module.exports = {
                 "\n👣 **What are some __actionable steps__ for this goal?**\n(Within 1000 characters)";
               userEdit = await fn.getUserMultilineEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 goalEditMessagePrompt,
@@ -1991,7 +2023,8 @@ module.exports = {
               }\n\n✅ - Completed\n\n🏃‍♂️ - In Progress**`;
               userEdit = await fn.getUserEditBoolean(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 goalEditMessagePrompt,
@@ -2007,7 +2040,8 @@ module.exports = {
               }\n\n📁 - Archive\n\n📜 - No Archive**`;
               userEdit = await fn.getUserEditBoolean(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 goalEditMessagePrompt,
@@ -2162,7 +2196,8 @@ module.exports = {
                 const continueEditMessage = `Do you want to continue **editing Goal ${goalIndex}?:**\n\n__**Goal ${goalIndex}:**__ ${showGoal}`;
                 continueEdit = await fn.getUserConfirmation(
                   bot,
-                  message,
+                  message.author.id,
+      message.channel.id,
                   PREFIX,
                   continueEditMessage,
                   forceSkip,
@@ -2300,8 +2335,9 @@ module.exports = {
           );
 
         let targetGoal = await fn.getUserSelectedObject(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           "__**Which goal would you like to end?:**__",
           `Long-Term Goal${isArchived ? " Archive" : ""}: End Selection`,
@@ -2316,7 +2352,8 @@ module.exports = {
 
         const confirmEnd = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+      message.channel.id,
           PREFIX,
           `**Are you sure you want to mark this goal as complete?**\n🎯 - __**Description:**__\n${targetGoal.description}`,
           forceSkip,
@@ -2366,8 +2403,9 @@ module.exports = {
             reset = false;
 
             const selectReminderType = await fn.userSelectFromList(
-              bot,
-              message,
+            bot,
+            message.author.id,
+            message.channel.id,
               PREFIX,
               `\`1\` - Recurring Long-Term Goal Reminders\n\`2\` - Goal Ending Reminders`,
               2,
@@ -2383,7 +2421,8 @@ module.exports = {
             if (selectReminderType === 1) {
               const selectedGoal = await fn.getUserSelectedObject(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 `**Enter the number corresponding to the long-term goal you want ${
                   reminderTypeString ? `${reminderTypeString} ` : ""
@@ -2417,7 +2456,8 @@ module.exports = {
             } else if (selectReminderType === 1) {
               const confirmSelection = await fn.getUserConfirmation(
                 bot,
-                message,
+                message.author.id,
+      message.channel.id,
                 PREFIX,
                 `**Are you sure you want reminders for this long-term goal?**` +
                   `\n(1 year, 6 months, 1 month, 1 week, and 1 day before expected goal end time)\n\n${selectedGoal.object.description}`,
@@ -2457,7 +2497,8 @@ module.exports = {
 
             const setMoreReminders = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+      message.channel.id,
               PREFIX,
               "Would you like to set another long-term goal reminder?",
               false,
@@ -2535,8 +2576,9 @@ module.exports = {
           );
 
         let targetGoal = await fn.getUserSelectedObject(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           "__**Which goal would you like to archive?:**__",
           `Long-Term Goal${isArchived ? " Archive" : ""}: Archive Selection`,
@@ -2551,7 +2593,8 @@ module.exports = {
 
         const confirmEnd = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+      message.channel.id,
           PREFIX,
           `**Are you sure you want to archive this goal?**\n(it will not be deleted, but won't show up in your \`${PREFIX}${commandUsed} post\`\nand you won't get reminders for it anymore)\n\n🎯 - __**Description:**__\n${targetGoal.description}`,
           forceSkip,

@@ -38,8 +38,9 @@ module.exports = {
     daylightSaving
   ) {
     let endTime = await fn.getDateAndTimeEntry(
-      bot,
-      message,
+                bot,
+                message.author.id,
+                message.channel.id,
       PREFIX,
       timezoneOffset,
       daylightSaving,
@@ -122,7 +123,8 @@ module.exports = {
     });
     const selectVoiceChannel = await fn.userSelectFromList(
       bot,
-      message,
+      message.author.id,
+      message.channel.id,
       PREFIX,
       vcList,
       voiceChannelArray.length,

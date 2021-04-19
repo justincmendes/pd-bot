@@ -94,8 +94,9 @@ module.exports = {
         );
         const fieldToEditTitle = "Quote: Edit Field";
         const selectedField = await fn.getUserSelectedObject(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           fieldToEditInstructions,
           fieldToEditTitle,
@@ -120,8 +121,9 @@ module.exports = {
           case 0:
             quoteSettingsPrompt = `Do you want to regularly recieve an **inspirational quote?**\n🙌 - **Yes**\n⛔ - **No**`;
             userEdit = await fn.getUserEditBoolean(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               quoteSettingsPrompt,
@@ -137,7 +139,8 @@ module.exports = {
                 `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}\n\nType \`skip\` to **start it now**`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 quoteSettingsPrompt,
@@ -160,7 +163,8 @@ module.exports = {
               quoteSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 quoteSettingsPrompt,
@@ -204,8 +208,9 @@ module.exports = {
                   if (userEdit) {
                     quoteSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
                     intervalArgs = await fn.getUserEditString(
-                      bot,
-                      message,
+                bot,
+                message.author.id,
+                message.channel.id,
                       PREFIX,
                       "Quote Interval",
                       quoteSettingsPrompt,
@@ -262,8 +267,9 @@ module.exports = {
                         quoteSettingsPrompt =
                           `\n__**When do you intend to start the first quote?**__ ⌚\n${futureTimeExamples}\n\nType \`skip\` to **start it now**`;
                         let quoteTrigger = await fn.getUserEditString(
-                          bot,
-                          message,
+                bot,
+                message.author.id,
+                message.channel.id,
                           PREFIX,
                           "First Quote Time",
                           quoteSettingsPrompt,
@@ -456,8 +462,9 @@ module.exports = {
                         : ""
                     }\n${futureTimeExamples}\n\nType \`same\` to **keep it the same**\nType \`skip\` to **start it now**`;
                     let quoteTrigger = await fn.getUserEditString(
-                      bot,
-                      message,
+                bot,
+                message.author.id,
+                message.channel.id,
                       PREFIX,
                       "First Quote Time",
                       quoteSettingsPrompt,
@@ -573,7 +580,8 @@ module.exports = {
           )}`;
           continueEdit = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+      message.channel.id,
             PREFIX,
             continueEditMessage,
             forceSkip,

@@ -254,7 +254,8 @@ async function getFastPostEmbedArray(
     console.log({ attachment });
     collectedObject = await fn.messageDataCollect(
       bot,
-      message,
+      message.author.id,
+      message.channel.id,
       PREFIX,
       fastPostMessagePrompt,
       "Fast: Post Creation",
@@ -387,7 +388,8 @@ async function getFastPostEmbedArray(
         "Are you sure you want to remove your **attached image/gif?**";
       let confirmClearMessage = await fn.getUserConfirmation(
         bot,
-        message,
+        message.author.id,
+      message.channel.id,
         PREFIX,
         removeFastWarning,
         forceSkip,
@@ -401,7 +403,8 @@ async function getFastPostEmbedArray(
         "Are you sure you want to reset your **current message?** (your attached image remains the same if you had one)";
       let confirmClearMessage = await fn.getUserConfirmation(
         bot,
-        message,
+        message.author.id,
+      message.channel.id,
         PREFIX,
         clearMessageWarning,
         forceSkip,
@@ -417,7 +420,8 @@ async function getFastPostEmbedArray(
         "Are you sure you want to reset both your **current message and attached image?**";
       let confirmClearAll = await fn.getUserConfirmation(
         bot,
-        message,
+        message.author.id,
+      message.channel.id,
         PREFIX,
         clearAllWarning,
         forceSkip,
@@ -437,7 +441,8 @@ async function getFastPostEmbedArray(
         "Are you sure you want to add the default message including the **time and your fast breaker** (if you entered one)";
       let confirmOverwrite = await fn.getUserConfirmation(
         bot,
-        message,
+        message.author.id,
+      message.channel.id,
         PREFIX,
         addDefaultMessagePrompt,
         true,
@@ -460,7 +465,8 @@ async function getFastPostEmbedArray(
         "Are you sure you want to add your **full fast (including mood and reflection)**";
       let confirmOverwrite = await fn.getUserConfirmation(
         bot,
-        message,
+        message.author.id,
+      message.channel.id,
         PREFIX,
         addFullFastPrompt,
         true,
@@ -724,7 +730,8 @@ async function getUserReminderEndTime(
       `\n\n${fn.durationExamples}\n\nType \`skip\` to **start your fast without setting up an end of fast reminder**`;
     const userTimeInput = await fn.messageDataCollect(
       bot,
-      message,
+      message.author.id,
+      message.channel.id,
       PREFIX,
       reminderPrompt,
       "Fast: Duration",
@@ -768,7 +775,8 @@ async function getUserReminderEndTime(
       );
       const confirmReminder = await fn.getUserConfirmation(
         bot,
-        message,
+        message.author.id,
+      message.channel.id,
         PREFIX,
         `Are you sure you want to be reminded after **${fastDurationString}** of fasting?`,
         forceSkip,
@@ -886,8 +894,9 @@ module.exports = {
       if (fastIsInProgress >= 1) return message.reply(fastIsRunningMessage);
       else {
         let startTime = await fn.getDateAndTimeEntry(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           timezoneOffset,
           daylightSavingSetting,
@@ -997,8 +1006,9 @@ module.exports = {
         // value from the database - to ensure the user is correct!
 
         let endTimestamp = await fn.getDateAndTimeEntry(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           timezoneOffset,
           daylightSavingSetting,
@@ -1014,7 +1024,8 @@ module.exports = {
         const { startTime } = currentFast;
         console.log({ currentFast, startTime, endTimestamp });
         const validEndTime = fn.endTimeAfterStartTime(
-          message,
+          bot,
+          message.channel.id,
           startTime,
           endTimestamp,
           "Fast"
@@ -1034,7 +1045,8 @@ module.exports = {
         const quickEndEmojis = ["✍", "⌚", "❌"];
         let quickEnd = await fn.reactionDataCollect(
           bot,
-          message,
+          authorID,
+          message.channel.id,
           quickEndMessage,
           quickEndEmojis,
           "Fast: Quick End?",
@@ -1056,8 +1068,9 @@ module.exports = {
           const fastBreakerPrompt =
             "**What did you break your fast with?**\n(Within 150 characters)";
           fastBreaker = await fn.getSingleEntryWithCharacterLimit(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             fastBreakerPrompt,
             "Fast: Fast Breaker",
@@ -1076,7 +1089,8 @@ module.exports = {
             "**How did you feel during this past fast?\n\nEnter a number from 1-5 (1 = worst, 5 = best)**\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖";
           mood = await fn.userSelectFromList(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             "",
             5,
@@ -1091,8 +1105,9 @@ module.exports = {
           const reflectionTextPrompt =
             "**__Reflection Questions:__**\n🤔 - **Why did you feel that way?**\n💭 - **What did you do that made it great? / What could you have done to make it better?**\n(Within 1000 characters)";
           reflection = await fn.getMultilineEntry(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             reflectionTextPrompt,
             "Fast: Reflection",
@@ -1112,7 +1127,8 @@ module.exports = {
         )}** fast?\n\n**Fast Breaker:** ${fastBreaker}\n**Mood:** ${mood}\n**Reflection:**\n${reflection}`;
         //If the user declines or has made a mistake, stop.
         const confirmation = await fn
-          .getUserConfirmation(bot, message, PREFIX, endConfirmation, forceSkip)
+          .getUserConfirmation(bot, message.author.id,
+            message.channel.id, PREFIX, endConfirmation, forceSkip)
           .catch((err) => console.error(err));
         console.log(`Confirmation function call: ${confirmation}`);
         if (!confirmation) return;
@@ -1150,7 +1166,8 @@ module.exports = {
                 "Would you like to take a **picture** of your **fast breaker** *and/or* **send a message** to a server channel? (for accountability!)";
               let confirmPostFast = await fn.getUserConfirmation(
                 bot,
-                message,
+                message.author.id,
+      message.channel.id,
                 PREFIX,
                 confirmPostFastMessage,
                 forceSkip,
@@ -1349,7 +1366,8 @@ module.exports = {
             const confirmSeeMessage = `Are you sure you want to **see ${args[2]} fasts?**`;
             let confirmSeeAll = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+      message.channel.id,
               PREFIX,
               confirmSeeMessage,
               forceSkip,
@@ -1376,7 +1394,8 @@ module.exports = {
               "Are you sure you want to **see all** of your fast history?";
             let confirmSeeAll = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+      message.channel.id,
               PREFIX,
               confirmSeeAllMessage,
               forceSkip,
@@ -1469,7 +1488,8 @@ module.exports = {
                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} fasts past ${entriesToSkip}?**`;
                 const confirmSeePast = await fn.getUserConfirmation(
                   bot,
-                  message,
+                  message.author.id,
+      message.channel.id,
                   PREFIX,
                   confirmSeePastMessage,
                   forceSkip,
@@ -1705,7 +1725,8 @@ module.exports = {
           const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} fast(s)**?`;
           const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             fastArray,
             multipleDeleteMessage,
@@ -1806,7 +1827,8 @@ module.exports = {
             const sortType = indexByRecency ? "By Recency" : "By Start Time";
             const confirmDeleteMany = await fn.getPaginatedUserConfirmation(
               bot,
-              message,
+              message.author.id,
+            message.channel.id,
               PREFIX,
               fastDataToStringArray,
               deleteConfirmMessage,
@@ -1893,7 +1915,8 @@ module.exports = {
               const multipleDeleteMessage = `Are you sure you want to **delete ${fastCollection.length} fast(s) past fast ${skipEntries}**?`;
               const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
                 bot,
-                message,
+                message.author.id,
+            message.channel.id,
                 PREFIX,
                 fastArray,
                 multipleDeleteMessage,
@@ -1955,7 +1978,8 @@ module.exports = {
           const deleteConfirmMessage = `Are you sure you want to **delete your most recent fast?**`;
           const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             fastEmbed,
             deleteConfirmMessage,
@@ -1976,7 +2000,8 @@ module.exports = {
           }
           let confirmDeleteAll = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+      message.channel.id,
             PREFIX,
             confirmDeleteAllMessage,
             forceSkip,
@@ -1986,7 +2011,8 @@ module.exports = {
           const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR FASTS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+      message.channel.id,
             PREFIX,
             finalDeleteAllMessage,
             false,
@@ -2045,7 +2071,8 @@ module.exports = {
         const deleteConfirmMessage = `Are you sure you want to **delete Fast ${pastNumberOfEntriesIndex}?**`;
         const deleteConfirmation = await fn.getPaginatedUserConfirmation(
           bot,
-          message,
+          message.author.id,
+            message.channel.id,
           PREFIX,
           fastEmbed,
           deleteConfirmMessage,
@@ -2182,8 +2209,9 @@ module.exports = {
           const fieldToEditTitle = `Fast: Edit Field`;
           var fieldToEdit, fieldToEditIndex;
           const selectedField = await fn.getUserSelectedObject(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             fieldToEditInstructions,
             fieldToEditTitle,
@@ -2206,7 +2234,8 @@ module.exports = {
               fastEditMessagePrompt = `\n${timeExamples}`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 fastEditMessagePrompt,
@@ -2219,7 +2248,8 @@ module.exports = {
               fastEditMessagePrompt = `\n${timeExamples}`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 fastEditMessagePrompt,
@@ -2233,7 +2263,8 @@ module.exports = {
               fastEditMessagePrompt = "(Within 150 characters)";
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 fastEditMessagePrompt,
@@ -2249,7 +2280,8 @@ module.exports = {
                 "**__How did you feel during this past fast?__\n\nEnter a number from 1-5 (1 = worst, 5 = best)**\n`5`-😄; `4`-🙂; `3`-😐; `2`-😔; `1`-😖";
               userEdit = await fn.getUserEditNumber(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 5,
@@ -2266,7 +2298,8 @@ module.exports = {
                 "\n**__Reflection Questions:__**\n🤔 - **Why did you feel that way?**\n💭 - **What did you do that made it great? / What could you have done to make it better?**\n(Within 1000 characters)";
               userEdit = await fn.getUserMultilineEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 fastEditMessagePrompt,
@@ -2303,7 +2336,8 @@ module.exports = {
               // Otherwise, go back to the main menu
               const validFastDuration = fastData[fieldToEditIndex]
                 ? fn.endTimeAfterStartTime(
-                    message,
+                  bot,
+                  message.channel.id,
                     fastData[0],
                     fastData[1],
                     type
@@ -2335,7 +2369,8 @@ module.exports = {
                       "⬆ - **Update your fast ending reminders**\n**⏭ - End this current fast**\n❌ - **Exit**";
                     const endReaction = await fn.reactionDataCollect(
                       bot,
-                      message,
+                      authorID,
+          message.channel.id,
                       changeRemindersMessage,
                       ["⬆", "⏭", "❌"],
                       "Fast: Update Ending Reminders or End Fast",
@@ -2370,7 +2405,8 @@ module.exports = {
                       "Do you want to **update your intended fast duration?**";
                     const updateConfirmation = await fn.getUserConfirmation(
                       bot,
-                      message,
+                      message.author.id,
+      message.channel.id,
                       PREFIX,
                       updateRemindersMessage,
                       false,
@@ -2561,7 +2597,8 @@ module.exports = {
                   const continueEditMessage = `Do you want to continue **editing Fast ${pastNumberOfEntriesIndex}?:**\n\n__**Fast ${pastNumberOfEntriesIndex}:**__\n${showFast}`;
                   continueEdit = await fn.getUserConfirmation(
                     bot,
-                    message,
+                    message.author.id,
+      message.channel.id,
                     PREFIX,
                     continueEditMessage,
                     forceSkip,

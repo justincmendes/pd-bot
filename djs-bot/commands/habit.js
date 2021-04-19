@@ -225,8 +225,9 @@ module.exports = {
         // Type Integration?: Give a selection if yes show all of the options, automark ✅
         // else: proceed with the following
         const habitDescription = await fn.getSingleEntryWithCharacterLimit(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           "👣 **What is the __habit__ you'd like to track?** 📈\n(Within 100 characters)",
           "Habit: Creation - Description",
@@ -246,7 +247,8 @@ module.exports = {
         const habitDescriptionString = `__**Description:**__\n${habitDescription}`;
         const habitAreaOfLife = await fn.userSelectFromList(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           areasOfLifeList,
           areasOfLife.length,
@@ -271,8 +273,9 @@ module.exports = {
         else specifics = specifics.message;
 
         let habitReason = await fn.getMultilineEntry(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           habitTypeString +
             "\n\n💭 **__Why__ do you want to incorporate this habit into your lifestyle?**\n(Within 1000 characters)",
@@ -299,8 +302,9 @@ module.exports = {
             const selectionInstructions = `${habitDescriptionString}\n\n**__Which goal is this habit connected to, if any?__** 🔗`;
             const selectionTitle = "Habit: Creation - Connected Goal";
             const selectedGoal = await fn.getUserSelectedObject(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               selectionInstructions,
               selectionTitle,
@@ -333,7 +337,8 @@ module.exports = {
 
         let cronType = await fn.userSelectFromList(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "\n`1` - **Daily Reset** 🌇\n`2` - **Weekly Reset** 📅",
           2,
@@ -354,7 +359,8 @@ module.exports = {
             )}`;
         const advancedSettings = await fn.userSelectFromList(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "\n`1` - **Default Settings**\n`2` - **Advanced Settings**",
           2,
@@ -375,8 +381,9 @@ module.exports = {
         let goalTypeString = "";
         if (advancedSettings === 1) {
           cronPeriods = await fn.getNumberEntry(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             `**__After how many ${
               isWeeklyType ? "weeks" : "days"
@@ -402,7 +409,8 @@ module.exports = {
 
           isCountType = await fn.userSelectFromList(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             "\n`1` - **Yes** ✅\n`2` - **No** ❌",
             2,
@@ -416,8 +424,9 @@ module.exports = {
 
           if (isCountType) {
             countMetric = await fn.getSingleEntryWithCharacterLimit(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               "**__What metric are you tracking for this habit?__** 📏\n(Within 30 characters)\ne.g. Pushups, Hours Spend Studying",
               "Habit: Creation - Advanced Settings: Count Metric",
@@ -436,7 +445,8 @@ module.exports = {
 
             countGoalType = await fn.userSelectFromList(
               bot,
-              message,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               "\n`1` - **Daily Goal** 🌇\n`2` - **Weekly Goal** 📅\n`3` - **Total/Cumulative Goal** 🔢",
               3,
@@ -448,8 +458,9 @@ module.exports = {
             else countGoalType++;
             goalTypeString = fn.getGoalTypeString(countGoalType);
             countGoal = await fn.getNumberEntry(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               `**What is your ${goalTypeString} for __${countMetric}?__**\n\n(Enter a number)`,
               `Habit: Creation - Advanced Settings: Count Goal`,
@@ -486,7 +497,8 @@ module.exports = {
           else {
             autoLogType = await fn.userSelectFromList(
               bot,
-              message,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               `\n\`1\` - **No** ⛔${
                 noMoreStreakHabitsAtTier
@@ -643,7 +655,8 @@ module.exports = {
 
         const confirmReminder = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           `Do you want to set a **recurring reminder** for when you want to **log/complete this habit?**\n\n${habitDescription}`,
           false,
@@ -760,7 +773,8 @@ module.exports = {
           const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} habits?**`;
           const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             habitArray,
             multipleDeleteMessage,
@@ -868,7 +882,8 @@ module.exports = {
           );
           const confirmDeleteMany = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             habitArray,
             deleteConfirmMessage,
@@ -963,7 +978,8 @@ module.exports = {
               const multipleDeleteMessage = `Are you sure you want to **delete ${habitCollection.length} habits past habit ${skipEntries}?**`;
               const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 habitArray,
                 multipleDeleteMessage,
@@ -1029,7 +1045,8 @@ module.exports = {
           const deleteConfirmMessage = `Are you sure you want to **delete your most recent habit?**`;
           const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             habitEmbed,
             deleteConfirmMessage,
@@ -1050,7 +1067,8 @@ module.exports = {
           }
           let confirmDeleteAll = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             confirmDeleteAllMessage,
             forceSkip,
@@ -1060,7 +1078,8 @@ module.exports = {
           const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR HABITS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             finalDeleteAllMessage,
             `Habit${
@@ -1129,7 +1148,8 @@ module.exports = {
         const deleteConfirmMessage = `Are you sure you want to **delete Habit ${pastNumberOfEntriesIndex}?**`;
         const deleteConfirmation = await fn.getPaginatedUserConfirmation(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           habitEmbed,
           deleteConfirmMessage,
@@ -1281,7 +1301,8 @@ module.exports = {
             } habits?** `;
             let confirmSeeHabits = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               confirmSeeMessage,
               forceSkip,
@@ -1298,7 +1319,8 @@ module.exports = {
               "Are you sure you want to **see all** of your habit history?";
             let confirmSeeAll = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               confirmSeeAllMessage,
               forceSkip,
@@ -1406,7 +1428,8 @@ module.exports = {
                 } entries past ${entriesToSkip}?** `;
                 const confirmSeePast = await fn.getUserConfirmation(
                   bot,
-                  message,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   confirmSeePastMessage,
                   forceSkip,
@@ -1693,8 +1716,9 @@ module.exports = {
           const fieldToEditTitle = `${type}: Edit Field`;
           var fieldToEdit, fieldToEditIndex;
           const selectedField = await fn.getUserSelectedObject(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             fieldToEditInstructions,
             fieldToEditTitle,
@@ -1730,7 +1754,8 @@ module.exports = {
                   });
                   targetLogIndex = await fn.userSelectFromList(
                     bot,
-                    message,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     `\n${logList}`,
                     logs.length,
@@ -1747,8 +1772,9 @@ module.exports = {
                   }
 
                   const selectedLogField = await fn.getUserSelectedObject(
-                    bot,
-                    message,
+                bot,
+                message.author.id,
+                message.channel.id,
                     PREFIX,
                     "**Please enter the number corresponding to the field you'd like to edit.**",
                     `${type}: Log Edit Field`,
@@ -1768,8 +1794,9 @@ module.exports = {
                     case 0:
                       habitEditMessagePrompt = `\n__**Please enter the date/time of when you created this log:**__ ⌚\n${timeExamples}`;
                       userEdit = await fn.getUserEditString(
-                        bot,
-                        message,
+                bot,
+                message.author.id,
+                message.channel.id,
                         PREFIX,
                         "Date Created",
                         habitEditMessagePrompt,
@@ -1786,7 +1813,8 @@ module.exports = {
                       habitEditMessagePrompt = checkMissedSkipList;
                       userEdit = await fn.userSelectFromList(
                         bot,
-                        message,
+                        message.author.id,
+                        message.channel.id,
                         PREFIX,
                         habitEditMessagePrompt,
                         3,
@@ -1800,8 +1828,9 @@ module.exports = {
                       habitEditMessagePrompt =
                         "\n__**Please enter the reflection message you'd like to enter for this log:**__ ✍\n(Within 1000 characters)";
                       userEdit = await fn.getUserMultilineEditString(
-                        bot,
-                        message,
+                bot,
+                message.author.id,
+                message.channel.id,
                         PREFIX,
                         "Reflection Message",
                         habitEditMessagePrompt,
@@ -1816,8 +1845,9 @@ module.exports = {
                       if (isCountType) {
                         // Let user select which count value they want to edit
                         const selectedCount = await fn.getUserSelectedObject(
-                          bot,
-                          message,
+                bot,
+                message.author.id,
+                message.channel.id,
                           PREFIX,
                           "**Please enter the number corresponding to the count value you'd like to edit.**",
                           `${type}: Edit Log Count Value`,
@@ -1841,8 +1871,9 @@ module.exports = {
                           selectedCount.object || "N/A"
                         }\n\nType \`delete\` to **delete this count entry**\nType \`add #\` where __**# = a number**__: To **add the number to the current count**\nType \`sub #\` where __**# = a number**__: To **subtract the number from the current count**`;
                         userEdit = await fn.getUserEditString(
-                          bot,
-                          message,
+                bot,
+                message.author.id,
+                message.channel.id,
                           PREFIX,
                           "Count",
                           habitEditMessagePrompt,
@@ -1863,7 +1894,8 @@ module.exports = {
               habitEditMessagePrompt = `\n__**Please enter the date/time of when you created this habit:**__ ⌚\n${timeExamples}`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 habitEditMessagePrompt,
@@ -1877,7 +1909,8 @@ module.exports = {
                 "\n👣 **What is the __habit__ you'd like to track?** 📈\n(Within 100 characters)";
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 habitEditMessagePrompt,
@@ -1911,7 +1944,8 @@ module.exports = {
                 "\n💭 **__Why__ do you want to incorporate this habit into your lifestyle?**\n(Within 1000 characters)";
               userEdit = await fn.getUserMultilineEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 habitEditMessagePrompt,
@@ -1926,7 +1960,8 @@ module.exports = {
               habitEditMessagePrompt = `\n**__Which area of life does this habit fall under? 🌱__**\n${areasOfLifeList}`;
               userEdit = await fn.getUserEditNumber(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 areasOfLife.length,
@@ -1949,7 +1984,8 @@ module.exports = {
               }\n\n📁 - Archive\n\n📜 - No Archive**`;
               userEdit = await fn.getUserEditBoolean(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 habitEditMessagePrompt,
@@ -1987,7 +2023,8 @@ module.exports = {
               }\n\n${goalList}`;
               userEdit = await fn.getUserEditNumber(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 outputArray.length,
@@ -2007,7 +2044,8 @@ module.exports = {
               }\n\n🌇 - **Daily Reset**\n📅 - **Weekly Reset**`;
               userEdit = await fn.getUserEditBoolean(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 habitEditMessagePrompt,
@@ -2023,7 +2061,8 @@ module.exports = {
               } do you want your habit streak to reset__**\n(Enter a number)`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 habitEditMessagePrompt,
@@ -2050,7 +2089,8 @@ module.exports = {
               }
               userEdit = await fn.userSelectFromList(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 `\n\`1\` - **No** ⛔${
                   noMoreStreakHabitsAtTier
@@ -2078,7 +2118,8 @@ module.exports = {
               }\n\n🔢 - Has a value to count\n\n⛔ - No value to count**`;
               userEdit = await fn.getUserEditBoolean(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 habitEditMessagePrompt,
@@ -2092,7 +2133,8 @@ module.exports = {
               habitEditMessagePrompt = `\n**__What metric are you tracking for this habit?__** 📏\n(Within 30 characters)\ne.g. Pushups, Hours Spend Studying`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 habitEditMessagePrompt,
@@ -2109,7 +2151,8 @@ module.exports = {
               }__?**`;
               userEdit = await fn.userSelectFromList(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 "\n`1` - **Daily Goal** 🌇\n`2` - **Weekly Goal** 📅\n`3` - **Total/Cumulative Goal** 🔢",
                 3,
@@ -2130,7 +2173,8 @@ module.exports = {
               } for __${countMetric || "this count-based habit"}?__**`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 habitEditMessagePrompt,
@@ -2186,7 +2230,8 @@ module.exports = {
                         }
                         const confirmOverwiteLog = await fn.getUserConfirmation(
                           bot,
-                          message,
+                          message.author.id,
+                          message.channel.id,
                           PREFIX,
                           `**Another habit log exists on your intended date** (based on habit reset time).\n__**${fn.timestampToDateString(
                             userEdit,
@@ -2361,7 +2406,8 @@ module.exports = {
                   ) {
                     const confirmRemoveCount = await fn.getUserConfirmation(
                       bot,
-                      message,
+                      message.author.id,
+                      message.channel.id,
                       PREFIX,
                       "**Removing the count-based functionality automatically disables auto completion based on count.**\n\n**__Current Auto Complete:__** Based on Count Value\n\nAccordingly, the **__auto complete will be removed__**.\n(You can change it again in the main edit menu)",
                       forceSkip,
@@ -2546,7 +2592,8 @@ module.exports = {
                 }Habit ${habitIndex}:**__ ${showHabit}${showEditedLog}`;
                 continueEdit = await fn.getUserConfirmation(
                   bot,
-                  message,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   continueEditMessage,
                   forceSkip,
@@ -2799,8 +2846,9 @@ module.exports = {
 
         if (targetHabitIndex === undefined) {
           targetHabit = await fn.getUserSelectedObject(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             "__**Which habit would you like to log?**__",
             `Habit${
@@ -2820,8 +2868,9 @@ module.exports = {
         }
 
         const logTimestamp = await fn.getDateAndTimeEntry(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           timezoneOffset,
           daylightSaving,
@@ -2862,7 +2911,8 @@ module.exports = {
         if (existingLog && autoLogType !== 1) {
           const confirmOverwiteLog = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             `__**You already have a habit log on this day, are you sure you would like to overwrite it?**__\n*If yes, you can start creating the new log which will replace the old one.\nOtherwise, it will exit the log creation.*\n(**You can edit it instead using: \`${PREFIX}habit edit${
               targetHabitIndex || targetHabitIndex === 0
@@ -2909,8 +2959,9 @@ module.exports = {
 
         if (isCountType) {
           countValue = await fn.getNumberEntry(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             `Enter your **${countMetric}** (${countGoalTypeString}: **${countGoal}**)\n${logTimestampString}\n${previousCountTypeString}`,
             `Habit${isArchived ? " Archive" : ""}: ${countGoalTypeString}`,
@@ -2932,7 +2983,8 @@ module.exports = {
 
         let habitLog = await fn.userSelectFromList(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           checkMissedSkipList,
           3,
@@ -2957,7 +3009,8 @@ module.exports = {
         var reflectionMessage;
         const confirmReflection = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           `Would you like to **__add a${
             currentReflection ? " new" : ""
@@ -2972,8 +3025,9 @@ module.exports = {
         );
         if (confirmReflection) {
           reflectionMessage = await fn.getMultilineEntry(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             `**Write a reflection message to go with your habit log.**\n(Within 1000 characters)`,
             `Habit${isArchived ? " Archive" : ""}: Reflection Message`,
@@ -2988,7 +3042,8 @@ module.exports = {
 
         const confirmEnd = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           `**__Are you sure you want to log this habit as:__** ${fn.getStateEmoji(
             habitLog
@@ -3626,8 +3681,9 @@ module.exports = {
 
       if (!targetHabit) {
         targetHabit = await fn.getUserSelectedObject(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           "__**Which habit would you like to set a recurring reminder for?**__",
           `Habit${isArchived ? " Archive" : ""}: Select Habit For Reminder`,
@@ -3765,8 +3821,9 @@ module.exports = {
 
         if (!targetHabit) {
           const selectedHabit = await fn.getUserSelectedObject(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             "__**Which habit would you like to archive?**__",
             `Habit${isArchived ? " Archive" : ""}: Archive Selection`,
@@ -3783,7 +3840,8 @@ module.exports = {
 
         const confirmArchive = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           `**__Are you sure you want to archive this habit?__**\n\n❄ - **Your current streak will be frozen and stopped.**\n🕵️‍♀️ - **This habit won't show up in your regular commands:**\n\`${PREFIX}${commandUsed} see\` \`${PREFIX}${commandUsed} edit\` \`${PREFIX}${commandUsed} post\` \`${PREFIX}${commandUsed} delete\`\n⏲ - **You won't get reminders for it anymore.** (if any)\n\n${fn.habitDocumentDescription(
             targetHabit

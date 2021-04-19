@@ -141,8 +141,9 @@ async function getGeneratedPromptAndAnswer(bot, message, PREFIX, prompts) {
     }
     const user = bot.users.cache.get(currentPrompt.userID);
     let entry = await fn.getMultilineEntry(
-      bot,
-      message,
+                bot,
+                message.author.id,
+                message.channel.id,
       PREFIX,
       `**__${currentPrompt || ""}__**${
         user ? `\n\nBy: __**${user.username}**__` : ""
@@ -159,7 +160,8 @@ async function getGeneratedPromptAndAnswer(bot, message, PREFIX, prompts) {
       if (entry.message) {
         const confirmNewPrompt = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "**__Are you sure you want to generate a new prompt?__**\n\n**Your current journal entry will be lost!**",
           false,
@@ -272,8 +274,9 @@ function journalDocumentToString(bot, journalDoc) {
       }${entry.message ? `\n💬 **Entry:**\n${entry.message}` : ""}`;
       break;
     case 3:
-      entryString +=
-        `Freehand${entry.message ? `\n💬 **Entry:**\n${entry.message}` : ""}`;
+      entryString += `Freehand${
+        entry.message ? `\n💬 **Entry:**\n${entry.message}` : ""
+      }`;
       break;
   }
   entryString = fn.getRoleMentionToTextString(bot, entryString);
@@ -398,7 +401,8 @@ module.exports = {
       if (!userSettings) {
         const timezone = await fn.getNewUserTimezoneSettings(
           bot,
-          message,
+          message.author.id,
+        message.channel.id,
           PREFIX,
           authorID
         );
@@ -428,7 +432,8 @@ module.exports = {
 
       const templateType = await fn.reactionDataCollect(
         bot,
-        message,
+        authorID,
+        message.channel.id,
         `📜 - **Daily (2-part) Journal Template** (*5-Minute Journal*)\n🗣 - **Prompt/Question & Answer** (Enter a prompt or get a generated prompt)\n✍ - \"**Freehand**\" (No template or prompt)\n❌ - **Exit**`,
         ["📜", "🗣", "✍", "❌"],
         "Journal: Template",
@@ -442,8 +447,9 @@ module.exports = {
             );
 
           let gratitudes = await fn.getMultilineEntry(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             "What are **3** things you are **truly __grateful__** for? 🙏\n(big or small)\n(Within 1000 characters)",
             "Journal: Gratitudes",
@@ -455,15 +461,16 @@ module.exports = {
           console.log({ gratitudes });
           if (!gratitudes && gratitudes !== "") return;
 
-          // let improvements = await fn.getMultilineEntry(bot, message, "What are **3** things/areas you feel you should **__improve__** on? 📈",
+          // let improvements = await fn.getMultilineEntry(bot, message.author.id, message.channel.id, "What are **3** things/areas you feel you should **__improve__** on? 📈",
           //     "Journal: Improvements", true, journalEmbedColour);
           // improvements = improvements.message;
           // console.log({ improvements });
           // if (!improvements && improvements !== '') return;
 
           let actions = await fn.getMultilineEntry(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             "What are **3 __actions or mindset shifts__** that would make **today great**? 🧠‍\n(Within 1000 characters)",
             "Journal: Actions",
@@ -476,8 +483,9 @@ module.exports = {
           if (!actions && actions !== "") return;
 
           const affirmations = await fn.getSingleEntry(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             "Complete the affirmation:\n\n**__I am...__**",
             "Journal: Affirmations",
@@ -511,7 +519,8 @@ module.exports = {
 
           const confirmEndReminder = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             "**Do you want to set a reminder for when you want to finish your journal entry?**\n(Ideally for the end of the day, before bed)",
             false,
@@ -521,8 +530,9 @@ module.exports = {
           if (!confirmEndReminder) return;
 
           let endTime = await fn.getDateAndTimeEntry(
-            bot,
-            message,
+                bot,
+                message.author.id,
+                message.channel.id,
             PREFIX,
             timezoneOffset,
             daylightSaving,
@@ -563,7 +573,8 @@ module.exports = {
           {
             const promptType = await fn.reactionDataCollect(
               bot,
-              message,
+              authorID,
+              message.channel.id,
               "**Would you like to answer a randomly generated question/prompt or create your own to answer?**\n\n⚙ - **Generate Prompts**\n🖋 - **Create Prompt**\n❌ - **Exit**",
               ["⚙", "🖋", "❌"],
               "Journal: Prompt",
@@ -573,7 +584,8 @@ module.exports = {
             if (promptType === "🖋") {
               const userPrompt = await fn.getSingleEntryWithCharacterLimit(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 `**Enter a __question or prompt__ you'd like to explore and answer:**\n(Within 1000 characters)`,
                 "Journal: Create Prompt",
@@ -585,7 +597,8 @@ module.exports = {
               if (!userPrompt) return;
               let journalEntry = await fn.getMultilineEntry(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 userPrompt,
                 "Journal: Prompt and Answer",
@@ -659,8 +672,9 @@ module.exports = {
         case "✍":
           {
             let journalEntry = await fn.getMultilineEntry(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               "\n**__Type in your journal entry:__**",
               "Journal: Freehand (No Template)",
@@ -699,8 +713,9 @@ module.exports = {
           `**No journals in progress...** Try \`${PREFIX}${commandUsed} start\` to **start** one!`
         );
       let amazing = await fn.getMultilineEntry(
-        bot,
-        message,
+                bot,
+                message.author.id,
+                message.channel.id,
         PREFIX,
         "List **3 __amazing__** things that happened today ☘ (big or small)\n(Within 1500 Characters)",
         "Journal: The Amazing 3",
@@ -710,12 +725,13 @@ module.exports = {
       );
       if (!amazing) return;
       else amazing = amazing.message;
-      // let accomplishments = await fn.getMultilineEntry(bot, message, "List **3 __accomplishments__** today 🏆🥇 (big or small)", "Journal: Accomplishments", true, journalEmbedColour);
+      // let accomplishments = await fn.getMultilineEntry(bot, message.author.id, message.channel.id "List **3 __accomplishments__** today 🏆🥇 (big or small)", "Journal: Accomplishments", true, journalEmbedColour);
       // if (!accomplishments);
       // else accomplishments = accomplishments.message;
       let betterDay = await fn.getMultilineEntry(
-        bot,
-        message,
+                bot,
+                message.author.id,
+                message.channel.id,
         PREFIX,
         "**__How could you have made today better?__** 📈\n\ne.g. **__Retrospective Journal:__**\n👀 - **Critical Moment** of suboptimal behaviour/action.\n🧠 - The **rationalization/thought pattern** behind it.\n🤔 - How you want to **think** next time! 💭\n\n[From *Metascript Method* - by Mark Queppet]\n(Within 1500 Characters)",
         "Journal: Retrospective Better Day",
@@ -839,7 +855,8 @@ module.exports = {
           const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} entries?** `;
           const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             journalStringArray,
             multipleDeleteMessage,
@@ -931,7 +948,8 @@ module.exports = {
           );
           const confirmDeleteMany = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             journalStringArray,
             deleteConfirmMessage,
@@ -1010,7 +1028,8 @@ module.exports = {
               const multipleDeleteMessage = `Are you sure you want to **delete ${journalCollection.length} entries past entry ${skipEntries}?**`;
               const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 journalStringArray,
                 multipleDeleteMessage,
@@ -1065,7 +1084,8 @@ module.exports = {
           const deleteConfirmMessage = `Are you sure you want to **delete your most recent entry?:**`;
           const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             journalEmbed,
             deleteConfirmMessage,
@@ -1081,15 +1101,15 @@ module.exports = {
             return;
           }
         } else if (deleteType === "all") {
-          const confirmDeleteAllMessage =
-            `Are you sure you want to **delete all** of your recorded journals?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
+          const confirmDeleteAllMessage = `Are you sure you want to **delete all** of your recorded journals?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           const pastNumberOfEntriesIndex = totalJournalNumber;
           if (pastNumberOfEntriesIndex === 0) {
             return fn.sendErrorMessage(message, noJournalsMessage);
           }
           let confirmDeleteAll = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             confirmDeleteAllMessage,
             forceSkip,
@@ -1099,7 +1119,8 @@ module.exports = {
           const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR JOURNALS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             finalDeleteAllMessage,
             "Journal: Delete ALL Entries FINAL Warning!"
@@ -1153,7 +1174,8 @@ module.exports = {
         );
         const deleteConfirmation = await fn.getPaginatedUserConfirmation(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           journalEmbed,
           deleteConfirmMessage,
@@ -1260,7 +1282,8 @@ module.exports = {
             const confirmSeeMessage = `Are you sure you want to **see ${args[2]} journals?**`;
             let confirmSeeAll = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               confirmSeeMessage,
               forceSkip,
@@ -1276,7 +1299,8 @@ module.exports = {
               "Are you sure you want to **see all** of your journal history?";
             let confirmSeeAll = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               confirmSeeAllMessage,
               forceSkip,
@@ -1364,7 +1388,8 @@ module.exports = {
                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} entries past ${entriesToSkip}?**`;
                 const confirmSeePast = await fn.getUserConfirmation(
                   bot,
-                  message,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   confirmSeePastMessage,
                   forceSkip,
@@ -1475,8 +1500,7 @@ module.exports = {
       journalCommand === "upd" ||
       journalCommand === "ch"
     ) {
-      let journalEditUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${journalCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3** (3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the journals by **actual time created instead of journal created time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
+      let journalEditUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${journalCommand} <#_MOST_RECENT_ENTRY> <recent?> <force?>\`\n\n\`<#_MOST_RECENT_ENTRY>\`: **recent; 3** (3rd most recent entry, \\**any number*)\n\n\`<recent?>\`(OPT.): type **recent** at the indicated spot to sort the journals by **actual time created instead of journal created time!**\n\n\`<force?>\`(OPT.): type **force** at the end of your command to **skip all of the confirmation windows!**`;
       journalEditUsageMessage = fn.getMessageEmbed(
         journalEditUsageMessage,
         `Journal: Edit Help`,
@@ -1568,8 +1592,9 @@ module.exports = {
             const fieldToEditTitle = `Journal: Edit Field`;
             var fieldToEdit, fieldToEditIndex;
             const selectedField = await fn.getUserSelectedObject(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEditInstructions,
               fieldToEditTitle,
@@ -1596,7 +1621,8 @@ module.exports = {
               journalEditMessagePrompt = `**__Please enter the date and time when this journal entry was created:__** ⌚\n${timeExamples}`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 journalEditMessagePrompt,
@@ -1613,8 +1639,9 @@ module.exports = {
                         {
                           journalEditMessagePrompt = `\nWhat are **3** things you are **truly __grateful__** for? 🙏\n(big or small)`;
                           userEdit = await fn.getUserMultilineEditString(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             fieldToEdit,
                             journalEditMessagePrompt,
@@ -1629,8 +1656,9 @@ module.exports = {
                         {
                           journalEditMessagePrompt = `\nWhat are **3 __actions or mindset shifts__** that would make **today great**? 🧠`;
                           userEdit = await fn.getUserMultilineEditString(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             fieldToEdit,
                             journalEditMessagePrompt,
@@ -1645,8 +1673,9 @@ module.exports = {
                         {
                           journalEditMessagePrompt = `\nComplete the affirmation:\n\n**__I am...__**`;
                           userEdit = await fn.getUserMultilineEditString(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             fieldToEdit,
                             journalEditMessagePrompt,
@@ -1661,8 +1690,9 @@ module.exports = {
                         {
                           journalEditMessagePrompt = `\nList **3 __amazing__** things that happened today ☘ (big or small)`;
                           userEdit = await fn.getUserMultilineEditString(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             fieldToEdit,
                             journalEditMessagePrompt,
@@ -1675,11 +1705,11 @@ module.exports = {
                         break;
                       case 5:
                         {
-                          journalEditMessagePrompt =
-                            `\n**__How could you have made today better?__** 📈\n\ne.g. **__Retrospective Journal:__**\n**__CM__** - **Critical Moment** of suboptimal behaviour/action. 👀\n**__X__** - The **rationalization/thought pattern** behind it. 🧠\n**__\\$__** - How you want to **think** next time! 🤔💭\n\n[From *Metascript Method* - by Mark Queppet]`;
+                          journalEditMessagePrompt = `\n**__How could you have made today better?__** 📈\n\ne.g. **__Retrospective Journal:__**\n**__CM__** - **Critical Moment** of suboptimal behaviour/action. 👀\n**__X__** - The **rationalization/thought pattern** behind it. 🧠\n**__\\$__** - How you want to **think** next time! 🤔💭\n\n[From *Metascript Method* - by Mark Queppet]`;
                           userEdit = await fn.getUserMultilineEditString(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             fieldToEdit,
                             journalEditMessagePrompt,
@@ -1701,8 +1731,9 @@ module.exports = {
                           journalEditMessagePrompt =
                             "\n**Enter the __question or prompt__ you'd like to explore and answer 💭**: ";
                           userEdit = await fn.getUserEditString(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             fieldToEdit,
                             journalEditMessagePrompt,
@@ -1720,8 +1751,9 @@ module.exports = {
                             "**Enter your new answer to the prompt ✍:**"
                           }`;
                           userEdit = await fn.getUserMultilineEditString(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             fieldToEdit,
                             journalEditMessagePrompt,
@@ -1741,8 +1773,9 @@ module.exports = {
                   journalEditMessagePrompt =
                     "\n**__Enter your new journal entry__**✍: ";
                   userEdit = await fn.getUserMultilineEditString(
-                    bot,
-                    message,
+                bot,
+                message.author.id,
+                message.channel.id,
                     PREFIX,
                     fieldToEdit,
                     journalEditMessagePrompt,
@@ -1826,7 +1859,8 @@ module.exports = {
                   const continueEditMessage = `Do you want to continue **editing Journal ${pastNumberOfEntriesIndex}?:**\n\n__**Journal ${pastNumberOfEntriesIndex}:**__\n${showJournal}`;
                   continueEdit = await fn.getUserConfirmation(
                     bot,
-                    message,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     continueEditMessage,
                     forceSkip,
@@ -1946,8 +1980,7 @@ module.exports = {
       journalCommand === "temp" ||
       journalCommand === "t"
     ) {
-      let templateUsageMessage =
-        `**USAGE:**\n\`${PREFIX}${commandUsed} ${journalCommand} <DAILY/WEEKLY> <TYPE?>\`\n\n\`<DAILY/WEEKLY>\`: **daily/d; weekly/w**\n\n\`<TYPE?>\`: (OPT.)\nIf \`daily\`: **morning/m; night/n**\nIf \`weekly\`: **reflection/r; goals/g**`;
+      let templateUsageMessage = `**USAGE:**\n\`${PREFIX}${commandUsed} ${journalCommand} <DAILY/WEEKLY> <TYPE?>\`\n\n\`<DAILY/WEEKLY>\`: **daily/d; weekly/w**\n\n\`<TYPE?>\`: (OPT.)\nIf \`daily\`: **morning/m; night/n**\nIf \`weekly\`: **reflection/r; goals/g**`;
       templateUsageMessage = fn.getMessageEmbed(
         templateUsageMessage,
         "Journal: Template Help",

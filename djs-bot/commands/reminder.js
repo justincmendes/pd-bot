@@ -151,7 +151,8 @@ module.exports = {
           const multipleDeleteMessage = `Are you sure you want to **delete the past ${numberArg} reminder(s)?**`;
           const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             reminderStringArray,
             multipleDeleteMessage,
@@ -256,7 +257,8 @@ module.exports = {
           );
           const confirmDeleteMany = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             reminderStringArray,
             deleteConfirmMessage,
@@ -340,7 +342,8 @@ module.exports = {
               const multipleDeleteMessage = `Are you sure you want to **delete ${reminderCollection.length} reminder(s) past reminder ${skipEntries}?**`;
               const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 reminderStringArray,
                 multipleDeleteMessage,
@@ -408,7 +411,8 @@ module.exports = {
           const deleteConfirmMessage = `Are you sure you want to **delete your most recent reminder?**`;
           const deleteIsConfirmed = await fn.getPaginatedUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             reminderEmbed,
             deleteConfirmMessage,
@@ -433,7 +437,8 @@ module.exports = {
           }
           let confirmDeleteAll = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             confirmDeleteAllMessage,
             forceSkip,
@@ -443,7 +448,8 @@ module.exports = {
           const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR REMINDERS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`${PREFIX}${commandUsed} see all\` *first)*`;
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             finalDeleteAllMessage,
             false,
@@ -506,7 +512,8 @@ module.exports = {
         const deleteConfirmMessage = `Are you sure you want to **delete Reminder ${pastNumberOfEntriesIndex}?**`;
         const deleteConfirmation = await fn.getPaginatedUserConfirmation(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           reminderEmbed,
           deleteConfirmMessage,
@@ -660,7 +667,8 @@ module.exports = {
             const confirmSeeMessage = `Are you sure you want to **see ${args[2]} reminders?**`;
             let confirmSeeAll = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               confirmSeeMessage,
               forceSkip,
@@ -686,7 +694,8 @@ module.exports = {
               "Are you sure you want to **see all** of your reminder history?";
             let confirmSeeAll = await fn.getUserConfirmation(
               bot,
-              message,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               confirmSeeAllMessage,
               forceSkip,
@@ -777,7 +786,8 @@ module.exports = {
                 const confirmSeePastMessage = `Are you sure you want to **see ${args[1]} reminders past ${entriesToSkip}?**`;
                 const confirmSeePast = await fn.getUserConfirmation(
                   bot,
-                  message,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   confirmSeePastMessage,
                   forceSkip,
@@ -1005,8 +1015,9 @@ module.exports = {
             const fieldToEditTitle = `Reminder: Edit Field`;
             var fieldToEdit, fieldToEditIndex;
             const selectedField = await fn.getUserSelectedObject(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEditInstructions,
               fieldToEditTitle,
@@ -1032,8 +1043,9 @@ module.exports = {
                   ", "
                 )}__**`;
                 userEdit = await fn.getUserEditString(
-                  bot,
-                  message,
+                bot,
+                message.author.id,
+                message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1045,8 +1057,9 @@ module.exports = {
               case 1:
                 reminderEditMessagePrompt = `Please enter the **channel you'd like to send the reminder to OR "DM"** if you want to get it through a Direct Message:`;
                 userEdit = await fn.getUserEditString(
-                  bot,
-                  message,
+                bot,
+                message.author.id,
+                message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1058,8 +1071,9 @@ module.exports = {
               case 2:
                 reminderEditMessagePrompt = `\n${fn.timeExamples}`;
                 userEdit = await fn.getUserEditString(
-                  bot,
-                  message,
+                bot,
+                message.author.id,
+                message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1071,8 +1085,9 @@ module.exports = {
               case 3:
                 reminderEditMessagePrompt = `\n${fn.futureTimeExamples}`;
                 userEdit = await fn.getUserEditString(
-                  bot,
-                  message,
+                bot,
+                message.author.id,
+                message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1084,8 +1099,9 @@ module.exports = {
               // Reminder does not need a prompt explanation
               case 4:
                 userEdit = await fn.getUserMultilineEditString(
-                  bot,
-                  message,
+                bot,
+                message.author.id,
+                message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   `${reminderEditMessagePrompt}${
@@ -1103,8 +1119,9 @@ module.exports = {
               case 5:
                 reminderEditMessagePrompt = `Would you like to make this a **__repeating (⌚)__ OR __one-time (1️⃣)__ reminder?**`;
                 userEdit = await fn.getUserEditBoolean(
-                  bot,
-                  message,
+                bot,
+                message.author.id,
+                message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1118,8 +1135,9 @@ module.exports = {
                 if (isRecurring === true) {
                   reminderEditMessagePrompt = `**Please enter the time you'd like in-between recurring reminders (interval):**\n\n${fn.intervalExamplesOver1Minute}`;
                   userEdit = await fn.getUserEditString(
-                    bot,
-                    message,
+                bot,
+                message.author.id,
+                message.channel.id,
                     PREFIX,
                     fieldToEdit,
                     reminderEditMessagePrompt,
@@ -1140,8 +1158,9 @@ module.exports = {
                       : "Indefinite (keeps repeating)"
                   }`;
                 userEdit = await fn.getUserEditBoolean(
-                  bot,
-                  message,
+                bot,
+                message.author.id,
+                message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1188,7 +1207,8 @@ module.exports = {
                   if (isStartTime) startTime -= HOUR_IN_MS * timezoneOffset;
                   else endTime -= HOUR_IN_MS * timezoneOffset;
                   const validReminderDuration = fn.endTimeAfterStartTime(
-                    message,
+                    bot,
+          message.channel.id,
                     startTime,
                     endTime,
                     reminderType
@@ -1205,7 +1225,8 @@ module.exports = {
                     if (validTypes.includes(userType)) {
                       let removeConnectedDocs = await fn.getUserConfirmation(
                         bot,
-                        message,
+                        message.author.id,
+                        message.channel.id,
                         PREFIX,
                         `Are you sure you want to change the reminder type to **"${userType}"**` +
                           `\n\n*(This reminder will **lose** it's **connected document**, if any)*`,
@@ -1408,8 +1429,9 @@ module.exports = {
                       if (typeof userEdit === "boolean") {
                         if (userEdit === true) {
                           const repetitions = await fn.getNumberEntry(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             "**How many times do you want this reminder to repeat?**\n(Enter a positive whole number or `0` to repeat indefinitely)",
                             "Reminder: Number of Occurrences",
@@ -1533,7 +1555,8 @@ module.exports = {
                     const continueEditMessage = `Do you want to continue **editing Reminder ${pastNumberOfEntriesIndex}?:**\n\n__**Reminder ${pastNumberOfEntriesIndex}:**__\n${showReminder}`;
                     continueEdit = await fn.getUserConfirmation(
                       bot,
-                      message,
+                      message.author.id,
+                      message.channel.id,
                       PREFIX,
                       continueEditMessage,
                       forceSkip,
@@ -1630,8 +1653,9 @@ module.exports = {
       const isDM = channel === "DM";
 
       let reminderMessage = await fn.getMultilineEntry(
-        bot,
-        message,
+                bot,
+                message.author.id,
+                message.channel.id,
         PREFIX,
         `__**Enter the message of this reminder**__:` +
           `${
@@ -1649,8 +1673,9 @@ module.exports = {
 
       var currentTimestamp, duration;
       let reminderEndTime = await fn.getDateAndTimeEntry(
-        bot,
-        message,
+                bot,
+                message.author.id,
+                message.channel.id,
         PREFIX,
         timezoneOffset,
         daylightSavingsSetting,
@@ -1673,7 +1698,8 @@ module.exports = {
       const confirmCreationMessage = `Are you sure you want to set the following **one-time reminder** to send -\n**in ${channel} after ${duration} from now**:\n\n${reminderMessage}`;
       const confirmCreation = await fn.getUserConfirmation(
         bot,
-        message,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         confirmCreationMessage,
         forceSkip,
@@ -1742,6 +1768,7 @@ module.exports = {
     args,
     timezoneOffset,
     daylightSaving,
+    PREFIX,
   }) => {
     // Variable Declarations and Initializations
     // if(!interaction) return;
@@ -1851,7 +1878,8 @@ module.exports = {
       // const confirmCreationMessage = `Are you sure you want to set the following **one-time reminder** to send -\n**in ${channel} after ${duration} from now**:\n\n${message}`;
       // const confirmCreation = await fn.getUserConfirmation(
       //   bot,
-      //   message,
+      //   message.author.id,
+      //  message.channel.id,
       //   DEFAULT_PREFIX,
       //   confirmCreationMessage,
       //   forceSkip,
@@ -1913,6 +1941,66 @@ module.exports = {
         `Your **one-time reminder** has been set to trigger in **${duration}** from now!`
       );
       return;
+    } else if (subCommandGroup === "edit") {
+      console.log({ args });
+      const { index } = args;
+      if (index <= 0) {
+        await ic.reply(
+          bot,
+          interaction,
+          `**Please enter a reminder index __greater than 0__.**`
+        );
+        return;
+      }
+      if (index > totalReminderNumber) {
+        await ic.reply(
+          bot,
+          interaction,
+          `**Reminder ${index} does not exist.** You only have **${totalReminderNumber} reminders**.`
+        );
+        return;
+      }
+
+      const targetReminder = Reminder.find({ userID: authorID }).skip(
+        index - 1
+      );
+      console.log({ targetReminder });
+      if (!targetReminder) {
+        await ic.reply(
+          bot,
+          interaction,
+          `**Reminder ${index} does not exist.**`
+        );
+        return;
+      }
+
+      switch (subCommand) {
+        case "type":
+          {
+            const { type } = args;
+            if (!validTypes.includes(type)) {
+              await ic.reply(
+                bot,
+                interaction,
+                "**Please enter a valid reminder type!**"
+              );
+              return;
+            }
+          }
+          break;
+        case "channel":
+          break;
+        case "dm":
+          break;
+        case "startTime":
+          break;
+        case "endTime":
+          break;
+        case "message":
+          break;
+        case "repeat":
+          break;
+      }
     }
   },
 };

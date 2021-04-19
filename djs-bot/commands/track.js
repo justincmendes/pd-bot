@@ -119,8 +119,9 @@ module.exports = {
         const fieldToEditTitle = `${showTrackedVoiceChannels.title}: Edit Field`;
         var fieldToEdit, fieldToEditIndex;
         const selectedField = await fn.getUserSelectedObject(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           `${fieldToEditAdditionalMessage}\n\n\n${fieldToEditInstructions}`,
           fieldToEditTitle,
@@ -157,8 +158,9 @@ module.exports = {
               false
             )}`;
             userEdit = await fn.getUserEditBoolean(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               trackPrompt,
@@ -182,7 +184,8 @@ module.exports = {
               targetVcObject = userSettings.voiceChannels[selectVoiceChannel];
               userEdit = await fn.getUserEditDuration(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 timezoneOffset,
                 daylightSaving,
@@ -220,7 +223,8 @@ module.exports = {
               )} long?\n\n**🔁 - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay** for after you leave the voice channel - in case you come back within that time)`;
               userEdit = await fn.getUserEditBoolean(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 trackPrompt,
@@ -252,7 +256,8 @@ module.exports = {
               }
               userEdit = await fn.getUserEditDuration(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 timezoneOffset,
                 daylightSaving,
@@ -297,7 +302,8 @@ module.exports = {
               )} long?\n\n**0️⃣ - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay** for after you leave the voice channel - in case you come back within that time)`;
               userEdit = await fn.getUserEditBoolean(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 trackPrompt,
@@ -370,8 +376,9 @@ module.exports = {
                     )} long?\n\n**🔁 - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay** for after you leave the voice channel - in case you come back within that time)`;
                     var reportDelay;
                     let autoSendReport = await fn.getUserEditBoolean(
-                      bot,
-                      message,
+                bot,
+                message.author.id,
+                message.channel.id,
                       PREFIX,
                       "Auto Send Report",
                       autoSendReportPrompt,
@@ -418,8 +425,9 @@ module.exports = {
                             MINIMUM_AUTO_REPORT_TRACK_PERIOD
                           )} long?\n\n**0️⃣ - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay** for after you leave the voice channel - in case you come back within that time)`;
                           autoReset = await fn.getUserEditBoolean(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             "Auto Reset",
                             trackPrompt,
@@ -449,8 +457,9 @@ module.exports = {
                           }
                           // Set the report delay
                           reportDelay = await fn.getUserEditDuration(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             timezoneOffset,
                             daylightSaving,
@@ -523,7 +532,8 @@ module.exports = {
                     });
                     const vcTargetIndex = await fn.userSelectFromList(
                       bot,
-                      message,
+                      message.author.id,
+                      message.channel.id,
                       PREFIX,
                       vcList,
                       userSettings.voiceChannels.length,
@@ -541,7 +551,8 @@ module.exports = {
                         if (vcTarget.id) {
                           const confirmDelete = await fn.getUserConfirmation(
                             bot,
-                            message,
+                            message.author.id,
+                            message.channel.id,
                             PREFIX,
                             `**Are you sure you want to stop tracking this voice channel?**\n${await fn.voiceChannelArrayToString(
                               bot,
@@ -650,8 +661,9 @@ module.exports = {
                         MINIMUM_AUTO_REPORT_TRACK_PERIOD
                       )} long?\n\n**0️⃣ - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay** for after you leave the voice channel - in case you come back within that time)`;
                       let autoReset = await fn.getUserEditBoolean(
-                        bot,
-                        message,
+                bot,
+                message.author.id,
+                message.channel.id,
                         PREFIX,
                         "Auto Reset",
                         trackPrompt,
@@ -683,8 +695,9 @@ module.exports = {
 
                       // Set the report delay
                       const reportDelay = await fn.getUserEditDuration(
-                        bot,
-                        message,
+                bot,
+                message.author.id,
+                message.channel.id,
                         PREFIX,
                         timezoneOffset,
                         daylightSaving,
@@ -793,7 +806,8 @@ module.exports = {
           )}`;
           continueEdit = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             continueEditMessage,
             forceSkip,

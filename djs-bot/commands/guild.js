@@ -145,8 +145,9 @@ module.exports = {
         const postToServerTitle = "Guild Settings: Select Server";
         const serverList = await fn.listOfServerNames(bot, mutualServers);
         const targetServerIndex = await fn.userSelectFromList(
-          bot,
-          message,
+            bot,
+            message.author.id,
+            message.channel.id,
           PREFIX,
           serverList,
           mutualServers.length,
@@ -232,8 +233,9 @@ module.exports = {
         );
         const fieldToEditTitle = `${showGuildSettings.title}: Edit Field`;
         const selectedField = await fn.getUserSelectedObject(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           fieldToEditInstructions,
           fieldToEditTitle,
@@ -260,8 +262,9 @@ module.exports = {
           case 0:
             guildSettingsPrompt = `Please enter the server's **new prefix** (currently **${guildConfig.prefix}**):`;
             userEdit = await fn.getUserEditString(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               guildSettingsPrompt,
@@ -273,8 +276,9 @@ module.exports = {
           case 1:
             guildSettingsPrompt = `Please enter the server's **__general timezone__** as an **abbreviation** or **+/- UTC Offset**:`;
             userEdit = await fn.getUserEditString(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               guildSettingsPrompt,
@@ -286,8 +290,9 @@ module.exports = {
           case 2:
             guildSettingsPrompt = `Does your timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No**`;
             userEdit = await fn.getUserEditBoolean(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               guildSettingsPrompt,
@@ -302,8 +307,9 @@ module.exports = {
               .map((roleID) => `<@&${roleID}>`)
               .join(", ")})`;
             userEdit = await fn.getUserEditString(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               guildSettingsPrompt,
@@ -315,8 +321,9 @@ module.exports = {
           case 4:
             guildSettingsPrompt = `Enter the number corresponding to the __**day of the week**__ when you would like the server's **weekly mastermind reset to happen:**`;
             userEdit = await fn.getUserEditNumber(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               daysOfWeek.length,
@@ -346,8 +353,9 @@ module.exports = {
               .map((roleID) => `<@&${roleID}>`)
               .join(", ")})`;
             userEdit = await fn.getUserEditString(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               guildSettingsPrompt,
@@ -359,8 +367,9 @@ module.exports = {
           case wantsQuote ? 7 : 6:
             guildSettingsPrompt = `Do you want to regularly receive an **inspirational quote?**\n🙌 - **Yes**\n⛔ - **No**`;
             userEdit = await fn.getUserEditBoolean(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               guildSettingsPrompt,
@@ -376,7 +385,8 @@ module.exports = {
                 `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}\n\nType \`skip\` to **start it now**`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 guildSettingsPrompt,
@@ -399,7 +409,8 @@ module.exports = {
               guildSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 guildSettingsPrompt,
@@ -616,8 +627,9 @@ module.exports = {
                         ", "
                       )})\n\nType \`same\` to **keep the same roles** as shown above`;
                     const updatedRoles = await fn.getUserEditString(
-                      bot,
-                      message,
+                bot,
+                message.author.id,
+                message.channel.id,
                       PREFIX,
                       "Quote Role(s)",
                       guildSettingsPrompt,
@@ -644,8 +656,9 @@ module.exports = {
                     }
                     guildSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
                     let intervalInput = await fn.getUserEditString(
-                      bot,
-                      message,
+                bot,
+                message.author.id,
+                message.channel.id,
                       PREFIX,
                       "Quote Interval",
                       guildSettingsPrompt,
@@ -704,8 +717,9 @@ module.exports = {
                       guildSettingsPrompt =
                         `\n__**When do you intend to start the first quote?**__ ⌚\n${futureTimeExamples}\n\nType \`skip\` to **start it now**`;
                       let quoteTrigger = await fn.getUserEditString(
-                        bot,
-                        message,
+                bot,
+                message.author.id,
+                message.channel.id,
                         PREFIX,
                         "First Quote Time",
                         guildSettingsPrompt,
@@ -890,8 +904,9 @@ module.exports = {
                         : ""
                     }\n${futureTimeExamples}\n\nType \`same\` to **keep it the same**\nType \`skip\` to **start it now**`;
                     let quoteTrigger = await fn.getUserEditString(
-                      bot,
-                      message,
+                bot,
+                message.author.id,
+                message.channel.id,
                       PREFIX,
                       "First Quote Time",
                       guildSettingsPrompt,
@@ -1008,7 +1023,8 @@ module.exports = {
           )}`;
           continueEdit = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+      message.channel.id,
             PREFIX,
             continueEditMessage,
             forceSkip,

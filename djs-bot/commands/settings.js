@@ -190,8 +190,9 @@ module.exports = {
         const fieldToEditTitle = `${showUserSettings.title}: Edit Field`;
         var fieldToEdit, fieldToEditIndex;
         const selectedField = await fn.getUserSelectedObject(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           `${fieldToEditAdditionalMessage}\n\n\n${fieldToEditInstructions}`,
           fieldToEditTitle,
@@ -223,8 +224,9 @@ module.exports = {
           case 0:
             userSettingsPrompt = `Please enter your **__timezone__** as an **abbreviation** or **+/- UTC Offset**:`;
             userEdit = await fn.getUserEditString(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               userSettingsPrompt,
@@ -236,8 +238,9 @@ module.exports = {
           case 1:
             userSettingsPrompt = `Does your timezone participate in **Daylight Savings Time (DST)?**\n**⌚ - Yes\n⛔ - No**`;
             userEdit = await fn.getUserEditBoolean(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               userSettingsPrompt,
@@ -252,8 +255,9 @@ module.exports = {
               userSettings.habitCron.daily
             )}`;
             userEdit = await fn.getUserEditString(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               userSettingsPrompt,
@@ -267,8 +271,9 @@ module.exports = {
               userSettings.habitCron.weekly
             )}`;
             userEdit = await fn.getUserEditNumber(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               daysOfWeek.length,
@@ -284,8 +289,9 @@ module.exports = {
           case 4:
             userSettingsPrompt = `Do you want to regularly receive an **inspirational quote?**\n🙌 - **Yes**\n⛔ - **No**`;
             userEdit = await fn.getUserEditBoolean(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               userSettingsPrompt,
@@ -298,8 +304,9 @@ module.exports = {
           case 7 - quoteAdjustment:
             userSettingsPrompt = `Do you want me to delete your replies to my commands?\n(To keep servers/channels clean and/or hide your entries while typing in a server)\n\n👍 - **Yes**\n\n👎 - **No**`;
             userEdit = await fn.getUserEditBoolean(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               userSettingsPrompt,
@@ -312,8 +319,9 @@ module.exports = {
           case 8 - quoteAdjustment:
             userSettingsPrompt = `Are you into **pestering accountability** (💪) or not so much (🙅‍♀️)?`;
             userEdit = await fn.getUserEditBoolean(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               userSettingsPrompt,
@@ -336,8 +344,9 @@ module.exports = {
               false
             )}`;
             userEdit = await fn.getUserEditBoolean(
-              bot,
-              message,
+                bot,
+                message.author.id,
+                message.channel.id,
               PREFIX,
               fieldToEdit,
               userSettingsPrompt,
@@ -361,7 +370,8 @@ module.exports = {
               targetVcObject = userSettings.voiceChannels[selectVoiceChannel];
               userEdit = await fn.getUserEditDuration(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 timezoneOffset,
                 daylightSaving,
@@ -399,7 +409,8 @@ module.exports = {
               )} long?\n\n**🔁 - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay** for after you leave the voice channel - in case you come back within that time)`;
               userEdit = await fn.getUserEditBoolean(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 trackPrompt,
@@ -431,7 +442,8 @@ module.exports = {
               }
               userEdit = await fn.getUserEditDuration(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 timezoneOffset,
                 daylightSaving,
@@ -476,7 +488,8 @@ module.exports = {
               )} long?\n\n**0️⃣ - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay** for after you leave the voice channel - in case you come back within that time)`;
               userEdit = await fn.getUserEditBoolean(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 trackPrompt,
@@ -493,7 +506,8 @@ module.exports = {
               userSettingsPrompt = `\n__**When do you intend to start the next quote?**__ ⌚\n${futureTimeExamples}\n\nType \`skip\` to **start it now**`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 userSettingsPrompt,
@@ -516,7 +530,8 @@ module.exports = {
               userSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
               userEdit = await fn.getUserEditString(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 fieldToEdit,
                 userSettingsPrompt,
@@ -672,7 +687,8 @@ module.exports = {
                 //* I set forceSkip to true, to force this shift to happen. Otherwise there will be more conflicts that the user will have trouble fixing in the future.
                 const confirmAdjust = await fn.getUserConfirmation(
                   bot,
-                  message,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   confirmationMessage,
                   true,
@@ -742,8 +758,9 @@ module.exports = {
                   if (userEdit) {
                     userSettingsPrompt = `How often do you want to receive an inspirational quote?\n\n${intervalExamples}`;
                     let intervalInput = await fn.getUserEditString(
-                      bot,
-                      message,
+                bot,
+                message.author.id,
+                message.channel.id,
                       PREFIX,
                       "Quote Interval",
                       userSettingsPrompt,
@@ -800,8 +817,9 @@ module.exports = {
                         interval = intervalInput;
                         userSettingsPrompt = `\n__**When do you intend to start the first quote?**__ ⌚\n${futureTimeExamples}\n\nType \`skip\` to **start it now**`;
                         let quoteTrigger = await fn.getUserEditString(
-                          bot,
-                          message,
+                bot,
+                message.author.id,
+                message.channel.id,
                           PREFIX,
                           "First Quote Time",
                           userSettingsPrompt,
@@ -999,8 +1017,9 @@ module.exports = {
                     )} long?\n\n**🔁 - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay** for after you leave the voice channel - in case you come back within that time)`;
                     var reportDelay;
                     let autoSendReport = await fn.getUserEditBoolean(
-                      bot,
-                      message,
+                bot,
+                message.author.id,
+                message.channel.id,
                       PREFIX,
                       "Auto Send Report",
                       autoSendReportPrompt,
@@ -1047,8 +1066,9 @@ module.exports = {
                             MINIMUM_AUTO_REPORT_TRACK_PERIOD
                           )} long?\n\n**0️⃣ - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay** for after you leave the voice channel - in case you come back within that time)`;
                           autoReset = await fn.getUserEditBoolean(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             "Auto Reset",
                             trackPrompt,
@@ -1078,8 +1098,9 @@ module.exports = {
                           }
                           // Set the report delay
                           reportDelay = await fn.getUserEditDuration(
-                            bot,
-                            message,
+                bot,
+                message.author.id,
+                message.channel.id,
                             PREFIX,
                             timezoneOffset,
                             daylightSaving,
@@ -1152,7 +1173,8 @@ module.exports = {
                     });
                     const vcTargetIndex = await fn.userSelectFromList(
                       bot,
-                      message,
+                      message.author.id,
+                      message.channel.id,
                       PREFIX,
                       vcList,
                       userSettings.voiceChannels.length,
@@ -1169,7 +1191,8 @@ module.exports = {
                         if (vcTarget.id) {
                           const confirmDelete = await fn.getUserConfirmation(
                             bot,
-                            message,
+                            message.author.id,
+                            message.channel.id,
                             PREFIX,
                             `**Are you sure you want to stop tracking this voice channel?**\n${await fn.voiceChannelArrayToString(
                               bot,
@@ -1283,8 +1306,9 @@ module.exports = {
                           MINIMUM_AUTO_REPORT_TRACK_PERIOD
                         )} long?\n\n**0️⃣ - Yes**\n**⛔ - No**\n\n(If yes, you can specify the **auto report delay** for after you leave the voice channel - in case you come back within that time)`;
                         let autoReset = await fn.getUserEditBoolean(
-                          bot,
-                          message,
+                bot,
+                message.author.id,
+                message.channel.id,
                           PREFIX,
                           "Auto Reset",
                           trackPrompt,
@@ -1316,8 +1340,9 @@ module.exports = {
 
                         // Set the report delay
                         const reportDelay = await fn.getUserEditDuration(
-                          bot,
-                          message,
+                bot,
+                message.author.id,
+                message.channel.id,
                           PREFIX,
                           timezoneOffset,
                           daylightSaving,
@@ -1513,8 +1538,9 @@ module.exports = {
                         : ""
                     }\n${futureTimeExamples}\n\nType \`same\` to **keep it the same**\nType \`skip\` to **start it now**`;
                     let quoteTrigger = await fn.getUserEditString(
-                      bot,
-                      message,
+                bot,
+                message.author.id,
+                message.channel.id,
                       PREFIX,
                       "First Quote Time",
                       userSettingsPrompt,
@@ -1598,7 +1624,8 @@ module.exports = {
             updateGuildReminders = true;
           const confirmUpdateReminders = await fn.userSelectFromList(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             "`1` - Adjust **ALL** of your reminders\n`2` - Adjust only your **DM** reminders\n`3` - Adjust only your **server** reminders\n`4` - NONE",
             4,
@@ -1702,7 +1729,8 @@ module.exports = {
           )}`;
           continueEdit = await fn.getUserConfirmation(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             continueEditMessage,
             forceSkip,

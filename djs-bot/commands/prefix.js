@@ -79,7 +79,8 @@ module.exports = {
         }
         const confirmation = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           `Are you sure you want to change your **guild prefix ${PREFIX}** to **${newPrefix}**?`,
           forceSkip,

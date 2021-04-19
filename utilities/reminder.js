@@ -310,7 +310,6 @@ module.exports = {
               // habitFooter = `\n🔁 to track your habit`;
               // additionalReactionEmojis.push("🔁");
               // additionalReactionInformation.push(connectedDocument);
-
               // const habits = await Habit.find({ userID }).sort({
               //   createdAt: +1,
               // });
@@ -546,7 +545,7 @@ module.exports = {
                         channelObject.id,
                         userID,
                         [embed],
-                        true,
+                        true
                       );
                     }
                   } else {
@@ -555,11 +554,11 @@ module.exports = {
                       channelObject.id,
                       userID,
                       [message],
-                      true,
+                      true
                     );
                   }
                 } else channelObject.send(message);
-                
+
                 await this.deleteOneReminderByObjectID(
                   reminderID
                 ).catch((err) => console.error(err));
@@ -1523,7 +1522,8 @@ module.exports = {
       }reminder?**__\n\n${timeExamples}\n\nType \`skip\` to **start it now**`;
       const userTimeInput = await fn.messageDataCollect(
         bot,
-        message,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         reminderPrompt,
         type
@@ -1557,7 +1557,7 @@ module.exports = {
       if (!error) {
         if (firstEndTime >= startTimestamp) {
           const duration = firstEndTime - startTimestamp;
-          // const confirmReminder = await fn..getUserConfirmation(bot, message, PREFIX,
+          // const confirmReminder = await fn..getUserConfirmation(bot,message.author.id, message.channel.id, PREFIX,
           //     `Are you sure you want to **start the first reminder** after **${fn.millisecondsToTimeString(duration)}**?`,
           //     forceSkip, "Repeat Reminder: First Reminder Confirmation");
           // if (confirmReminder) return duration;
@@ -1593,7 +1593,8 @@ module.exports = {
     do {
       channel = await fn.messageDataCollect(
         bot,
-        message,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         instructions,
         title,
@@ -1664,8 +1665,9 @@ module.exports = {
   ) {
     do {
       let interval = await fn.getUserEditString(
-        bot,
-        message,
+                bot,
+                message.author.id,
+                message.channel.id,
         PREFIX,
         field,
         `${instructionPrompt}\n\n${intervalExamples}`,
@@ -1732,7 +1734,8 @@ module.exports = {
     }:\n\n${reminderMessage}`;
     const confirmCreation = await fn.getUserConfirmation(
       bot,
-      message,
+      message.author.id,
+      message.channel.id,
       PREFIX,
       confirmCreationMessage,
       forceSkip,
@@ -1778,7 +1781,8 @@ module.exports = {
     try {
       let remainingOccurrences = await fn.userSelectFromList(
         bot,
-        message,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         "`1` - **Keep repeating** 🔁\n`2` - **Repeat a certain number of times** 🔢",
         2,
@@ -1794,8 +1798,9 @@ module.exports = {
         remainingOccurrences = undefined;
       } else if (remainingOccurrences === 1) {
         let numberOfRepeats = await fn.getNumberEntry(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           "**How many times do you want this reminder to repeat?**\n(Enter a positive whole number or `0` to repeat indefinitely)",
           `${type}: Number of Occurrences`,
@@ -1834,7 +1839,8 @@ module.exports = {
     do {
       let interval = await fn.messageDataCollect(
         bot,
-        message,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         `${instructions}\n\n${intervalExamples}`,
         title,

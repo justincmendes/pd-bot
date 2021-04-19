@@ -458,8 +458,9 @@ module.exports = {
       let { duration: intervalDuration, args: intervalArgs } = interval;
 
       let endTime = await fn.getDateAndTimeEntry(
-        bot,
-        message,
+                bot,
+                message.author.id,
+                message.channel.id,
         PREFIX,
         timezoneOffset,
         daylightSaving,
@@ -516,8 +517,9 @@ module.exports = {
         reset = false;
 
         const selectedHabit = await fn.getUserSelectedObject(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           `**__Select the habit you'd like to post:__**${
             someHabitsSelected
@@ -542,7 +544,8 @@ module.exports = {
             if (habits.length) {
               const anotherHabit = await fn.getUserConfirmation(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 "**__Would you like to add another habit to be posted?__**",
                 false,
@@ -586,8 +589,9 @@ module.exports = {
         reset = false;
 
         const selectedGoal = await fn.getUserSelectedObject(
-          bot,
-          message,
+                bot,
+                message.author.id,
+                message.channel.id,
           PREFIX,
           `**Select the goal you'd like to make into a habit:**${
             someGoalsSelected
@@ -612,7 +616,8 @@ module.exports = {
             if (mastermindGoals.length) {
               const anotherHabit = await fn.getUserConfirmation(
                 bot,
-                message,
+                message.author.id,
+                message.channel.id,
                 PREFIX,
                 `**Would you like to convert another goal into a habit?**\n\n**If you want to setup Weekly Goal habits later**, type \`${PREFIX}${commandUsed} habit\``,
                 false,
@@ -630,7 +635,8 @@ module.exports = {
 
       const confirmConversion = await fn.getUserConfirmation(
         bot,
-        message,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         `**Are you sure you want to convert the following goals into habits?**\n(Default settings will be applied: **daily habit, manual entry, no count value** - you can edit these using \`${PREFIX}habit edit\`)\n\n**If you want to setup Weekly Goal habits later**, type \`${PREFIX}${commandUsed} habit\`\n\n${
           fn.goalArrayToString(finalGoals, "Weekly", true, false) || ""
@@ -651,7 +657,8 @@ module.exports = {
 
         const confirmHabitReminders = await fn.getUserConfirmation(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           `**Would you like to set a reminder to track your habit for __any__ of the habits you've created?**`,
           true,
@@ -727,8 +734,9 @@ module.exports = {
     instructionKeywords = []
   ) {
     const specifics = await fn.getMultilineEntry(
-      bot,
-      message,
+                bot,
+                message.author.id,
+                message.channel.id,
       PREFIX,
       `**__Answer some or all the following questions regarding your habit:__**\n(Within 1000 characters)\n🔴 - **How** will do your habit?\n🔵 - **Who** do you need help from or who is involved?\n🟢 - **Where** will you do your habit?\n🟡 - **When** will you do your habit?\n\n**__Examples (from *Atomic Habits* by James Clear):__**\n${this.implementationIntentionsExamples}\n\n${this.habitStackingExamples}`,
       `${title} (Who, Where, When, How)`,

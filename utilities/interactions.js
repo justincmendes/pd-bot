@@ -26,7 +26,7 @@ module.exports = {
     interaction,
     message,
     isEphemeral = false,
-    deleteReply = { delete: false, deleteDelay: 5000 }
+    deleteReply = { delete: false, timeout: 5000 }
   ) => {
     let data = {
       content: message,
@@ -63,7 +63,7 @@ module.exports = {
 
     // TODO SetTimeout then delete!
     // if (deleteReply && deleteReply.delete) {
-    //   if (!deleteReply.deleteDelay) deleteReply.deleteDelay = 5000;
+    //   if (!deleteReply.timeout) deleteReply.timeout = 5000;
     //   tm.setLongTimeout(() => {
     //     const deleteInteractionReply = bot.api
     //       .interactions(interaction.id, interaction.token)
@@ -71,12 +71,12 @@ module.exports = {
     //           data: {
     //               type: 4,
     //               data: {
-    //                   content: "ez",
+    //                   content: "erased",
     //               }
     //           }
     //       });
     //     console.log({ deleteInteractionReply });
-    //   }, deleteReply.deleteDelay);
+    //   }, deleteReply.timeout);
     // }
   },
 };

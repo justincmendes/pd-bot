@@ -68,7 +68,8 @@ module.exports = {
           const serverList = await fn.listOfServerNames(bot, mutualServers);
           const targetServerIndex = await fn.userSelectFromList(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             serverList,
             mutualServers.length,
