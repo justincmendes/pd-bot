@@ -18,25 +18,6 @@ const MINIMUM_INTERVAL = rm.MINIMUM_INTERVAL;
 const futureTimeExamples = fn.futureTimeExamples;
 
 // Function Declarations and Definitions
-const getParsedTime = async (
-  bot,
-  userID,
-  channelID,
-  userInput,
-  timezoneOffset,
-  daylightSaving
-) => {
-  userInput = userInput.toLowerCase().split(/[\s\n]+/);
-  console.log({ userInput });
-  const now = Date.now();
-  let timeOut = fn.timeCommandHandlerToUTC(
-    userInput,
-    now,
-    timezoneOffset,
-    daylightSaving
-  );
-  return timeOut;
-};
 
 const sendInvalidTimeReply = async (
   bot,
@@ -2154,10 +2135,7 @@ module.exports = {
         case "timeCreated":
           {
             const { when } = args;
-            const timeOut = await getParsedTime(
-              bot,
-              authorID,
-              interaction.channel_id,
+            const timeOut = await rm.getParsedTime(
               when,
               timezoneOffset,
               daylightSaving
@@ -2173,7 +2151,7 @@ module.exports = {
             }
             targetReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
-              { $set: { startTime: timeOut } },
+              { $set: { startTime: timeOut - timezoneOffset * HOUR_IN_MS } },
               { new: true }
             );
           }
@@ -2181,10 +2159,7 @@ module.exports = {
         case "triggerTime":
           {
             const { when } = args;
-            const timeOut = await getParsedTime(
-              bot,
-              authorID,
-              interaction.channel_id,
+            const timeOut = await rm.getParsedTime(
               when,
               timezoneOffset,
               daylightSaving
@@ -2200,7 +2175,7 @@ module.exports = {
             }
             targetReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
-              { $set: { endTime: timeOut } },
+              { $set: { endTime: timeOut - timezoneOffset * HOUR_IN_MS } },
               { new: true }
             );
           }
@@ -2220,10 +2195,7 @@ module.exports = {
             let { interval, repetitions, next } = args;
             let endTime;
             if (next) {
-              endTime = await getParsedTime(
-                bot,
-                authorID,
-                interaction.channel_id,
+              endTime = await rm.getParsedTime(
                 next,
                 timezoneOffset,
                 daylightSaving
@@ -2269,7 +2241,9 @@ module.exports = {
                 $set: {
                   isRecurring: true,
                   interval: intervalArgs.join(" "),
-                  endTime: endTime || targetReminder.endTime,
+                  endTime: endTime
+                    ? endTime - timezoneOffset * HOUR_IN_MS
+                    : targetReminder.endTime,
                   remainingOccurrences: repetitions,
                 },
               }

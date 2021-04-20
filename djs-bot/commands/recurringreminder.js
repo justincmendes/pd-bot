@@ -2234,10 +2234,7 @@ module.exports = {
         case "timeCreated":
           {
             const { when } = args;
-            const timeOut = await getParsedTime(
-              bot,
-              authorID,
-              interaction.channel_id,
+            const timeOut = await rm.getParsedTime(
               when,
               timezoneOffset,
               daylightSaving
@@ -2253,7 +2250,7 @@ module.exports = {
             }
             targetReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
-              { $set: { startTime: timeOut } },
+              { $set: { startTime: timeOut - timezoneOffset * HOUR_IN_MS } },
               { new: true }
             );
           }
@@ -2261,10 +2258,7 @@ module.exports = {
         case "triggerTime":
           {
             const { when } = args;
-            const timeOut = await getParsedTime(
-              bot,
-              authorID,
-              interaction.channel_id,
+            const timeOut = await rm.getParsedTime(
               when,
               timezoneOffset,
               daylightSaving
@@ -2280,7 +2274,7 @@ module.exports = {
             }
             targetReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
-              { $set: { endTime: timeOut } },
+              { $set: { endTime: timeOut - timezoneOffset * HOUR_IN_MS } },
               { new: true }
             );
           }
@@ -2300,10 +2294,7 @@ module.exports = {
             let { next } = args;
             let endTime;
             if (next) {
-              endTime = await getParsedTime(
-                bot,
-                authorID,
-                interaction.channel_id,
+              endTime = await rm.getParsedTime(
                 next,
                 timezoneOffset,
                 daylightSaving
@@ -2324,7 +2315,9 @@ module.exports = {
               {
                 $set: {
                   isRecurring: false,
-                  endTime: endTime || targetReminder.endTime,
+                  endTime: endTime
+                    ? endTime - timezoneOffset * HOUR_IN_MS
+                    : targetReminder.endTime,
                 },
               }
             );

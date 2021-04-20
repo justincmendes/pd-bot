@@ -1927,5 +1927,18 @@ module.exports = {
     } else return { args: timeArgs.join(" "), duration: interval };
   },
 
+  getParsedTime: async function (userInput, timezoneOffset, daylightSaving) {
+    userInput = userInput.toLowerCase().split(/[\s\n]+/);
+    console.log({ userInput });
+    const now = Date.now();
+    let timeOut = fn.timeCommandHandlerToUTC(
+      userInput,
+      now,
+      timezoneOffset,
+      daylightSaving
+    );
+    return timeOut;
+  };
+
   MINIMUM_INTERVAL,
 };
