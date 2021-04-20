@@ -1218,7 +1218,7 @@ module.exports = {
                 if (continueEdit === false) {
                   if (isStartTime) startTime -= HOUR_IN_MS * timezoneOffset;
                   else endTime -= HOUR_IN_MS * timezoneOffset;
-                  const validReminderDuration = fn.endTimeAfterStartTime(
+                  const validReminderDuration = await fn.endTimeAfterStartTime(
                     bot,
           message.channel.id,
                     startTime,

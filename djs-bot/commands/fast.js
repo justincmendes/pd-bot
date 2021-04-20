@@ -1023,7 +1023,7 @@ module.exports = {
         if (!endTimestamp && endTimestamp !== 0) return;
         const { startTime } = currentFast;
         console.log({ currentFast, startTime, endTimestamp });
-        const validEndTime = fn.endTimeAfterStartTime(
+        const validEndTime = await fn.endTimeAfterStartTime(
           bot,
           message.channel.id,
           startTime,
@@ -2335,7 +2335,7 @@ module.exports = {
               // If the end time is correctly after the start time, update the fast duration as well!
               // Otherwise, go back to the main menu
               const validFastDuration = fastData[fieldToEditIndex]
-                ? fn.endTimeAfterStartTime(
+                ? await fn.endTimeAfterStartTime(
                   bot,
                   message.channel.id,
                     fastData[0],

@@ -42,10 +42,11 @@ const awaitingUsers = new Discord.Collection();
 // Private Function Declarations
 
 module.exports = {
-  setUserAwait: function (userID, messageSent, collector) {
+  setUserAwait: function (userID, messageSent, collector, channelID) {
     awaitingUsers.set(userID, {
       messageSent,
       collector,
+      channel: channelID,
     });
   },
 
@@ -54,8 +55,10 @@ module.exports = {
   },
 
   cancelUserAwait: function (userID) {
-    const { messageSent, collector } = awaitingUsers.get(userID);
-    messageSent.delete();
+    const { 
+      // messageSent, 
+      collector } = awaitingUsers.get(userID);
+    // messageSent.delete();
     collector.stop();
   },
 
@@ -166,14 +169,14 @@ module.exports = {
             delete: true,
             timeout: deleteDelay,
           });
-          await sd.reply(
-            bot,
-            channelID,
-            `Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${
-              isPrefixed ? PREFIX : tag
-            }\n**__Command Entered:__** ${confirmationMessage}`,
-            userID
-          );
+          // await sd.reply(
+          //   bot,
+          //   channelID,
+          //   `Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${
+          //     isPrefixed ? PREFIX : tag
+          //   }\n**__Command Entered:__** ${confirmationMessage}`,
+          //   userID
+          // );
           return null;
         }
         confirmationMessage = confirmationMessage
@@ -374,7 +377,7 @@ module.exports = {
         });
 
         try {
-          this.setUserAwait(userID, confirm, reactionCollector);
+          this.setUserAwait(userID, confirm, reactionCollector, channelID);
           result = new Promise(async (resolve) => {
             reactionCollector.on("collect", async (reaction, user) => {
               console.log(
@@ -392,19 +395,19 @@ module.exports = {
             reactionCollector.on("end", async (collected) => {
               console.log(`Reactions Collected: ${collected.size}`);
               if (!collected.size) {
-                resolve(null);
                 confirm.delete();
                 console.log(
                   `User didn't react within ${delayTime / MS_TO_SECONDS}s!`
-                );
-                console.log("Ending (reactionDataCollect) promise...");
-                console.log(`Message Sent (in function): null`);
-                if (channelObject.type !== "dm") {
-                  await sd.sendMessage(bot, channelID, "Ending...", {
-                    delete: true,
-                    timeout: deleteDelay,
-                  });
-                }
+                  );
+                  console.log("Ending (reactionDataCollect) promise...");
+                  console.log(`Message Sent (in function): null`);
+                  if (channelObject.type !== "dm") {
+                    await sd.sendMessage(bot, channelID, "Ending...", {
+                      delete: true,
+                      timeout: deleteDelay,
+                    });
+                  }
+                  resolve(null);
               }
             });
           });
@@ -512,12 +515,10 @@ module.exports = {
         });
 
         try {
-          this.setUserAwait(userID, confirm, messageCollector);
+          this.setUserAwait(userID, confirm, messageCollector, channelID);
           result = new Promise(async (resolve) => {
             messageCollector.on("collect", async (msg) => {
-              console.log(
-                `${msg.author.username}'s message was collected!`
-              );
+              console.log(`${msg.author.username}'s message was collected!`);
               confirm.delete();
               console.log(`Message Sent (in function): ${msg.content}`);
               if (deleteUserMessage && channelObject.type !== "dm") {
@@ -546,24 +547,26 @@ module.exports = {
                     delete: true,
                     timeout: deleteDelay,
                   });
-                  await sd.reply(
-                    bot,
-                    channelID,
-                    `Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${
-                      isPrefixed ? PREFIX : tag
-                    }\n**__Command Entered:__** ${finalMessage}`,
-                    userID
-                  );
+                  // await sd.reply(
+                  //   bot,
+                  //   channelID,
+                  //   `Any **command calls** while confirming your intentions will automatically **cancel**.\n**__Prefix:__** ${
+                  //     isPrefixed ? PREFIX : tag
+                  //   }\n**__Command Entered:__** ${finalMessage}`,
+                  //   userID
+                  // );
                   resolve(false);
                 }
               }
+
               if (getObject) resolve(msg);
               else resolve(finalMessage);
             });
             messageCollector.on("end", async (collected) => {
               console.log(`Messages Collected: ${collected.size}`);
+
+              
               if (!collected.size) {
-                resolve(null);
                 confirm.delete();
                 console.log(
                   `User didn't respond within ${delayTime / MS_TO_SECONDS}s!`
@@ -576,6 +579,7 @@ module.exports = {
                     timeout: deleteDelay,
                   });
                 }
+                resolve(null);
               }
             });
           });
@@ -884,9 +888,7 @@ module.exports = {
     const channelList = await bot.guilds.cache
       .get(serverID)
       .channels.cache.map((channel) => {
-        const userPermissions = channel.permissionsFor(
-          userID
-        );
+        const userPermissions = channel.permissionsFor(userID);
         if (!userPermissions) return null;
         else if (userPermissions.has("VIEW_CHANNEL")) {
           if (
@@ -4699,7 +4701,7 @@ module.exports = {
               bot,
               channelID,
               `**Your edit is too long.** (must be __less than ${characterLimit} characters__ long)\nTry undoing some line entries by typing \`2\` or reset your edit by typing \`0\``,
-              userID,
+              userID
             );
             collectedEdit = null;
           }
@@ -4903,11 +4905,19 @@ module.exports = {
           );
           if (backToMainEdit === true) return collectedEdit;
           else if (backToMainEdit === null) return false;
-        } else {await sd.reply(bot, channelID, numberErrorMessage, userID, {delete: true, timeout: 15000});}
+        } else {
+          await sd.reply(bot, channelID, numberErrorMessage, userID, {
+            delete: true,
+            timeout: 15000,
+          });
+        }
       } else if (collectedEdit !== undefined) {
         collectedEdit = parseInt(collectedEdit);
         if (collectedEdit < 1 || collectedEdit > maxNumber) {
-          await sd.reply(bot, channelID, numberErrorMessage, userID, {delete: true, timeout:15000});
+          await sd.reply(bot, channelID, numberErrorMessage, userID, {
+            delete: true,
+            timeout: 15000,
+          });
         } else {
           let showEdit = collectedEdit;
           if (Array.isArray(numberMappingArray)) {
@@ -4929,14 +4939,7 @@ module.exports = {
           else if (confirmEdit === null) return false;
         }
       }
-      if (
-        await this.userIsSpamming(
-          bot,
-          userID,
-          channelID,
-          currentTimestamp
-        )
-      )
+      if (await this.userIsSpamming(bot, userID, channelID, currentTimestamp))
         return false;
     }
   },
@@ -5005,9 +5008,15 @@ module.exports = {
             return endTime - now;
           }
         }
-        await sd.reply(bot, channelID, `**Please enter a proper time duration __> ${this.millisecondsToTimeString(
-          minimumDuration
-        )}__!**...\nTry \`${PREFIX}date\` for **valid time inputs!**`, userID, {delete: true, timeout: 30000});
+        await sd.reply(
+          bot,
+          channelID,
+          `**Please enter a proper time duration __> ${this.millisecondsToTimeString(
+            minimumDuration
+          )}__!**...\nTry \`${PREFIX}date\` for **valid time inputs!**`,
+          userID,
+          { delete: true, timeout: 30000 }
+        );
       } while (true);
     } catch (err) {
       console.log(err);
@@ -5015,7 +5024,7 @@ module.exports = {
     }
   },
 
-  endTimeAfterStartTime: function (
+  endTimeAfterStartTime: async function (
     bot,
     channelID,
     startTimestamp,
@@ -5027,11 +5036,16 @@ module.exports = {
         type = type ? `${this.toTitleCase(type)} ` : "";
         const startTimestampToDate = this.timestampToDateString(startTimestamp);
         const endTimestampToDate = this.timestampToDateString(endTimestamp);
-        await sd.sendMessage(bot, channelID, this.getMessageEmbed(
-          `**__${type}Start Time:__** ${startTimestampToDate}\n**__${type}End Time:__** ${endTimestampToDate}\n\n**The end time cannot be before the start time...**`,
-          `${type ? `${type}: ` : ""}Invalid Start and End Times`,
-          "#FF0000"
-        ), {delete: true, timeout: 1800000});
+        await sd.sendMessage(
+          bot,
+          channelID,
+          this.getMessageEmbed(
+            `**__${type}Start Time:__** ${startTimestampToDate}\n**__${type}End Time:__** ${endTimestampToDate}\n\n**The end time cannot be before the start time...**`,
+            `${type ? `${type}: ` : ""}Invalid Start and End Times`,
+            "#FF0000"
+          ),
+          { delete: true, timeout: 1800000 }
+        );
         return false;
       }
     }
@@ -5561,7 +5575,12 @@ module.exports = {
     if (userTimezone === "stop") return false;
     const userTimezoneOffset = this.getTimezoneOffset(userTimezone);
     if (!userTimezoneOffset && userTimezoneOffset !== 0) {
-      await sd.reply(bot, channelID, "**This __timezone does not exist__... Try again!**", userID);
+      await sd.reply(
+        bot,
+        channelID,
+        "**This __timezone does not exist__... Try again!**",
+        userID
+      );
       return false;
     }
     let userDaylightSavingSetting = await this.reactionDataCollect(
@@ -5755,11 +5774,17 @@ module.exports = {
       return !excludedChannels.includes(channel);
     });
     if (channelList.length === 0) {
-      await sd.reply(bot, channelID, `This server has **no ${
-        allowTextChannels && !allowVoiceChannels ? "text " : ""
-      }${allowTextChannels && allowVoiceChannels ? "and " : ""}${
-        !allowTextChannels && allowVoiceChannels ? "voice " : ""
-      }channels!** EXITING...`, userID, {delete: true, timeout: 15000});
+      await sd.reply(
+        bot,
+        channelID,
+        `This server has **no ${
+          allowTextChannels && !allowVoiceChannels ? "text " : ""
+        }${allowTextChannels && allowVoiceChannels ? "and " : ""}${
+          !allowTextChannels && allowVoiceChannels ? "voice " : ""
+        }channels!** EXITING...`,
+        userID,
+        { delete: true, timeout: 15000 }
+      );
       return false;
     }
     channelListDisplay = await this.listOfChannelNames(bot, channelList);
@@ -5850,24 +5875,44 @@ module.exports = {
         else if (!isNaN(entry)) {
           entry = allowDecimals ? parseFloat(entry) : parseInt(entry);
           if (!allowNegatives && entry < 0) {
-            await sd.reply(bot, channelID, `${errorMessage}\n**__You sent:__** ${entry}`, userID);
+            await sd.reply(
+              bot,
+              channelID,
+              `${errorMessage}\n**__You sent:__** ${entry}`,
+              userID
+            );
             continue;
           }
           if (minimumIsDefined) {
             if (entry < minimumValue) {
-              await sd.reply(bot, channelID, `${errorMessage}\n**__You sent:__** ${entry}`, userID);
+              await sd.reply(
+                bot,
+                channelID,
+                `${errorMessage}\n**__You sent:__** ${entry}`,
+                userID
+              );
               continue;
             }
           }
           if (maximumIsDefined) {
             if (entry > maximumValue) {
-              await sd.reply(bot, channelID, `${errorMessage}\n**__You sent:__** ${entry}`, userID);
+              await sd.reply(
+                bot,
+                channelID,
+                `${errorMessage}\n**__You sent:__** ${entry}`,
+                userID
+              );
               continue;
             }
           }
           break;
         } else {
-          await sd.reply(bot, channelID, `${errorMessage}\n**__You sent:__** ${entry}`, userID);
+          await sd.reply(
+            bot,
+            channelID,
+            `${errorMessage}\n**__You sent:__** ${entry}`,
+            userID
+          );
         }
       } while (true);
       return entry;
@@ -5961,9 +6006,9 @@ module.exports = {
       var entry;
       do {
         entry = await this.getSingleEntry(
-                bot,
-                userID,
-                channelID,
+          bot,
+          userID,
+          channelID,
           PREFIX,
           instructionPrompt,
           title,
@@ -5979,13 +6024,18 @@ module.exports = {
         )
           break;
         else {
-          await sd.reply(bot, channelID, `**Please enter ${
-            entryType ? entryType.toLowerCase() : "something"
-          } less than ${
-            characterLimit || 2000
-          } characters**\n**__You sent:__** __Word Count - ${
-            entry.length
-          }__\n${entry}`,userID);
+          await sd.reply(
+            bot,
+            channelID,
+            `**Please enter ${
+              entryType ? entryType.toLowerCase() : "something"
+            } less than ${
+              characterLimit || 2000
+            } characters**\n**__You sent:__** __Word Count - ${
+              entry.length
+            }__\n${entry}`,
+            userID
+          );
         }
       } while (true);
       return entry;
@@ -6051,13 +6101,22 @@ module.exports = {
       );
       if (!collectedEntry || collectedEntry === "stop") {
         if (collectedEntry !== "stop") {
-          await sd.sendMessage(bot, channelID, `This was your **entry**:\n${finalEntry.join("\n")}`);
+          await sd.sendMessage(
+            bot,
+            channelID,
+            `This was your **entry**:\n${finalEntry.join("\n")}`
+          );
           return collectedEntry;
         }
         return false;
       } else currentTimestamp = Date.now();
       if (collectedEntry.length + finalEntry.join("\n").length > 6000) {
-        await sd.reply(bot, channelID, "**Your entry was too long** (*over 6000 characters*), so I had to **stop** collecting it.", userID);
+        await sd.reply(
+          bot,
+          channelID,
+          "**Your entry was too long** (*over 6000 characters*), so I had to **stop** collecting it.",
+          userID
+        );
         return false;
       }
       if (hasInstructions) {
@@ -6072,7 +6131,12 @@ module.exports = {
       if (inputIndex === 1 || reset === true) {
         if (collectedEntry === "1") {
           if (finalEntry.join("\n").length > characterLimit) {
-            await sd.reply(bot, channelID, `**Your entry is too long** (must be __less than ${characterLimit} characters__ long)\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``, userID);
+            await sd.reply(
+              bot,
+              channelID,
+              `**Your entry is too long** (must be __less than ${characterLimit} characters__ long)\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``,
+              userID
+            );
             collectedEntry = null;
           } else {
             const endConfirmation = await this.getUserConfirmation(
@@ -6097,7 +6161,12 @@ module.exports = {
         } else inputIndex = 0;
       } else if (collectedEntry === "1") {
         if (finalEntry.join("\n").length > characterLimit) {
-          await sd.reply(bot, channelID, `**Your entry is too long** (must be __less than ${characterLimit} characters__ long)\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``, userID);
+          await sd.reply(
+            bot,
+            channelID,
+            `**Your entry is too long** (must be __less than ${characterLimit} characters__ long)\nTry undoing some line entries by typing \`2\` or reset your entry by typing \`0\``,
+            userID
+          );
           collectedEntry = null;
         } else {
           const endConfirmation = await this.getUserConfirmation(
@@ -6154,7 +6223,12 @@ module.exports = {
               );
             } else {
               console.log("Could not undo the last entry!");
-              await sd.sendMessage(bot, channelID, `**Sorry <@!${userID}>, I could not undo the last entry!**`, {delete:true, timeout: 30000});
+              await sd.sendMessage(
+                bot,
+                channelID,
+                `**Sorry <@!${userID}>, I could not undo the last entry!**`,
+                { delete: true, timeout: 30000 }
+              );
               error = true;
             }
           }
@@ -6175,12 +6249,7 @@ module.exports = {
         collectedEntry !== "stop"
       ) {
         if (
-          await this.userIsSpamming(
-            bot,
-            userID,
-            channelID,
-            currentTimestamp
-          )
+          await this.userIsSpamming(bot, userID, channelID, currentTimestamp)
         ) {
           return false;
         }
@@ -6262,12 +6331,23 @@ module.exports = {
         daylightSetting
       );
       if (time === false) {
-        await sd.reply(bot, channelID, `Try** \`${PREFIX}date\` **for **help with entering dates and times**`, userID, {delete: true, timeout: errorReplyDelay});
-      }
-      else if (forceFutureTime) {
+        await sd.reply(
+          bot,
+          channelID,
+          `Try** \`${PREFIX}date\` **for **help with entering dates and times**`,
+          userID,
+          { delete: true, timeout: errorReplyDelay }
+        );
+      } else if (forceFutureTime) {
         now = this.getCurrentUTCTimestampFlooredToSecond();
         if (now + timezoneOffset * HOUR_IN_MS > time) {
-          await sd.reply(bot, channelID, `Please enter a date/time in the **future**! Try** \`${PREFIX}date\` **for help`, userID, {delete:true, timeout: errorReplyDelay});
+          await sd.reply(
+            bot,
+            channelID,
+            `Please enter a date/time in the **future**! Try** \`${PREFIX}date\` **for help`,
+            userID,
+            { delete: true, timeout: errorReplyDelay }
+          );
         } else break;
       } else break;
     } while (true);

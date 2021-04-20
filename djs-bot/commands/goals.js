@@ -760,7 +760,7 @@ module.exports = {
           )}\nEnd: ${fn.timestampToDateString(time[1])}`
         );
         if (
-          fn.endTimeAfterStartTime(bot,
+          await fn.endTimeAfterStartTime(bot,
             message.channel.id, time[0], time[1], "Long-Term Goal")
         ) {
           goalDocument = new Goal({

@@ -17,6 +17,7 @@ const bot = new Discord.Client({
   ws: { intents: Discord.Intents.PRIVILEDGED },
 });
 const ic = require("../utilities/interactions");
+const sd = require("../utilities/send");
 const fn = require("../utilities/functions");
 const rm = require("../utilities/reminder");
 const hb = require("../utilities/habit");
@@ -967,6 +968,20 @@ bot.on("ready", async () => {
       );
     }
 
+    // Check if PD Bot is already awaiting a response from the user. If yes, cancel the await and send a response that there is an await.
+    const userAwait = fn.getUserAwait(userID);
+    if (userAwait) {
+      if (userAwait.channel && userAwait.channel !== userID) {
+        await sd.sendMessage(
+          bot,
+          userAwait.channel,
+          `Any **command calls** while I am listening to your response will automatically **stop** the listening.\n**__Command Used:__** ${commandName}`
+        );
+      }
+      fn.cancelUserAwait(userID);
+      fn.deleteUserAwait(userID);
+    }
+
     // Retrieve user settings:
     var timezoneOffset, daylightSaving;
     let userSettings = await User.findOne({ discordID: userID });
@@ -1336,6 +1351,22 @@ bot.on("message", async (message) => {
       );
     }
     return;
+  }
+
+  // Check if PD Bot is already awaiting a response from the user. If yes, cancel the await and send a response that there is an await.
+  const userAwait = fn.getUserAwait(message.author.id);
+  if (userAwait) {
+    if (userAwait.channel && userAwait.channel !== message.author.id) {
+      await sd.sendMessage(
+        bot,
+        userAwait.channel,
+        `Any **command calls** while I am listening to your response will automatically **stop** the listening.\n**__Prefix:__** ${PREFIX}\n**__Command Entered:__** ${PREFIX}${commandName} ${args.join(
+          " "
+        )}`
+      );
+    }
+    fn.cancelUserAwait(message.author.id);
+    fn.deleteUserAwait(message.author.id);
   }
 
   if (commandName !== "ping") {
