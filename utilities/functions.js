@@ -56,10 +56,10 @@ module.exports = {
 
   cancelUserAwait: function (userID) {
     const userAwait = awaitingUsers.get(userID);
-    if(!userAwait) return false;
-    const { 
-      // messageSent, 
-      collector 
+    if (!userAwait) return false;
+    const {
+      // messageSent,
+      collector,
     } = userAwait;
     // messageSent.delete();
     collector.stop();
@@ -387,7 +387,7 @@ module.exports = {
               console.log(
                 `${user.username}'s ${reaction.emoji.name} collected!`
               );
-              
+
               console.log(
                 `Reaction Value (in function): ${reaction.emoji.name}`
               );
@@ -402,19 +402,19 @@ module.exports = {
               this.cancelUserAwait(userID);
               this.deleteUserAwait(userID);
               if (!collected.size) {
-                if(!promptMessageDelete) confirm.delete();
+                if (!promptMessageDelete) confirm.delete();
                 console.log(
                   `User didn't react within ${delayTime / MS_TO_SECONDS}s!`
-                  );
-                  console.log("Ending (reactionDataCollect) promise...");
-                  console.log(`Message Sent (in function): null`);
-                  if (channelObject.type !== "dm") {
-                    await sd.sendMessage(bot, channelID, "Ending...", {
-                      delete: true,
-                      timeout: deleteDelay,
-                    });
-                  }
-                  resolve(null);
+                );
+                console.log("Ending (reactionDataCollect) promise...");
+                console.log(`Message Sent (in function): null`);
+                if (channelObject.type !== "dm") {
+                  await sd.sendMessage(bot, channelID, "Ending...", {
+                    delete: true,
+                    timeout: deleteDelay,
+                  });
+                }
+                resolve(null);
               }
             });
           });
@@ -503,7 +503,8 @@ module.exports = {
       }
     });
     await this.sendPaginationEmbed(bot, channelID, userID, embeds, false)
-      .then(async (confirm) => {2
+      .then(async (confirm) => {
+        2;
         const filter = (response) => {
           const filterOut = response.author.id === userID;
           console.log(
@@ -570,8 +571,8 @@ module.exports = {
             });
             messageCollector.on("end", async (collected) => {
               console.log(`Messages Collected: ${collected.size}`);
-                confirm.delete();
-                this.cancelUserAwait(userID);
+              confirm.delete();
+              this.cancelUserAwait(userID);
               this.deleteUserAwait(userID);
               if (!collected.size) {
                 console.log(
@@ -631,12 +632,12 @@ module.exports = {
     }
   },
 
-  camelCaseToSpacedString: function(string) {
+  camelCaseToSpacedString: function (string) {
     const capitalRegex = /([A-Z])/g;
     const spacedString = string.replace(capitalRegex, (letter) => {
       return ` ${letter.toLowerCase()}`;
     });
-    return spacedString
+    return spacedString;
   },
 
   // START CRUD Operations Help
@@ -5249,7 +5250,9 @@ module.exports = {
     if (Array.isArray(embedArray)) {
       let currentPage = 0;
       const channel =
-        bot.channels.cache.get(channelID) || bot.users.cache.get(channelID);
+        bot.channels.cache.get(channelID) ||
+        bot.users.cache.get(channelID) ||
+        bot.users.cache.get(authorID);
       embed = await channel.send(embedArray[currentPage]);
       if (embedArray.length) {
         const left = "⬅";
