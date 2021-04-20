@@ -88,9 +88,9 @@ const addArg = (originalArgs, option) => {
     originalArgs[fn.snakeCaseToCamelCase(name)] = value;
   } else if (name) {
     if (type === 1) {
-      originalArgs["subCommand"] = name;
+      originalArgs["subCommand"] = fn.snakeCaseToCamelCase(name);
     } else if (type === 2) {
-      originalArgs["subCommandGroup"] = name;
+      originalArgs["subCommandGroup"] = fn.snakeCaseToCamelCase(name);
     }
   }
   return true;
@@ -975,7 +975,7 @@ bot.on("ready", async () => {
         await sd.sendMessage(
           bot,
           userAwait.channel,
-          `Any **command calls** while I am listening to your response will automatically **stop** the listening.\n**__Command Used:__** ${commandName}`
+          `Any **command calls** while I am listening to your response will automatically **stop** my listening.\n**__Command Used:__** ${commandName}`
         );
       }
       fn.cancelUserAwait(userID);
@@ -1360,7 +1360,7 @@ bot.on("message", async (message) => {
       await sd.sendMessage(
         bot,
         userAwait.channel,
-        `Any **command calls** while I am listening to your response will automatically **stop** the listening.\n**__Prefix:__** ${PREFIX}\n**__Command Entered:__** ${PREFIX}${commandName} ${args.join(
+        `Any **command calls** while I am listening to your response will automatically **stop** my listening.\n**__Prefix:__** ${PREFIX}\n**__Command Entered:__** ${PREFIX}${commandName} ${args.join(
           " "
         )}`
       );

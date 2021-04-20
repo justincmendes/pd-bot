@@ -5,6 +5,7 @@ const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
 const ic = require("../../utilities/interactions");
 const fn = require("../../utilities/functions");
+const sd = require("../../utilities/send");
 const rm = require("../../utilities/reminder");
 require("dotenv").config();
 
@@ -13,9 +14,45 @@ const reminderMax = fn.reminderMaxTier1;
 const reminderEmbedColour = fn.reminderEmbedColour;
 const reminderType = "Reminder";
 const HOUR_IN_MS = fn.HOUR_IN_MS;
+const MINIMUM_INTERVAL = rm.MINIMUM_INTERVAL;
 const futureTimeExamples = fn.futureTimeExamples;
 
 // Function Declarations and Definitions
+const getParsedTime = async (
+  bot,
+  userID,
+  channelID,
+  userInput,
+  timezoneOffset,
+  daylightSaving
+) => {
+  userInput = userInput.toLowerCase().split(/[\s\n]+/);
+  console.log({ userInput });
+  const now = Date.now();
+  let timeOut = fn.timeCommandHandlerToUTC(
+    userInput,
+    now,
+    timezoneOffset,
+    daylightSaving
+  );
+  return timeOut;
+};
+
+const sendInvalidTimeReply = async (
+  bot,
+  channelID,
+  PREFIX,
+  userID = undefined,
+  deleteDelay = 60000
+) => {
+  await sd.reply(
+    bot,
+    channelID,
+    `**INVALID TIME**... Try** \`${PREFIX}date\` **for **help with dates and times**`,
+    userID,
+    { delete: true, timeout: deleteDelay }
+  );
+};
 
 module.exports = {
   name: "reminder",
@@ -1015,9 +1052,9 @@ module.exports = {
             const fieldToEditTitle = `Reminder: Edit Field`;
             var fieldToEdit, fieldToEditIndex;
             const selectedField = await fn.getUserSelectedObject(
-                bot,
-                message.author.id,
-                message.channel.id,
+              bot,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               fieldToEditInstructions,
               fieldToEditTitle,
@@ -1043,9 +1080,9 @@ module.exports = {
                   ", "
                 )}__**`;
                 userEdit = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                  bot,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1057,9 +1094,9 @@ module.exports = {
               case 1:
                 reminderEditMessagePrompt = `Please enter the **channel you'd like to send the reminder to OR "DM"** if you want to get it through a Direct Message:`;
                 userEdit = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                  bot,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1071,9 +1108,9 @@ module.exports = {
               case 2:
                 reminderEditMessagePrompt = `\n${fn.timeExamples}`;
                 userEdit = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                  bot,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1085,9 +1122,9 @@ module.exports = {
               case 3:
                 reminderEditMessagePrompt = `\n${fn.futureTimeExamples}`;
                 userEdit = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                  bot,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1099,9 +1136,9 @@ module.exports = {
               // Reminder does not need a prompt explanation
               case 4:
                 userEdit = await fn.getUserMultilineEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                  bot,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   `${reminderEditMessagePrompt}${
@@ -1119,9 +1156,9 @@ module.exports = {
               case 5:
                 reminderEditMessagePrompt = `Would you like to make this a **__repeating (⌚)__ OR __one-time (1️⃣)__ reminder?**`;
                 userEdit = await fn.getUserEditBoolean(
-                bot,
-                message.author.id,
-                message.channel.id,
+                  bot,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1135,9 +1172,9 @@ module.exports = {
                 if (isRecurring === true) {
                   reminderEditMessagePrompt = `**Please enter the time you'd like in-between recurring reminders (interval):**\n\n${fn.intervalExamplesOver1Minute}`;
                   userEdit = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     fieldToEdit,
                     reminderEditMessagePrompt,
@@ -1158,9 +1195,9 @@ module.exports = {
                       : "Indefinite (keeps repeating)"
                   }`;
                 userEdit = await fn.getUserEditBoolean(
-                bot,
-                message.author.id,
-                message.channel.id,
+                  bot,
+                  message.author.id,
+                  message.channel.id,
                   PREFIX,
                   fieldToEdit,
                   reminderEditMessagePrompt,
@@ -1208,7 +1245,7 @@ module.exports = {
                   else endTime -= HOUR_IN_MS * timezoneOffset;
                   const validReminderDuration = await fn.endTimeAfterStartTime(
                     bot,
-          message.channel.id,
+                    message.channel.id,
                     startTime,
                     endTime,
                     reminderType
@@ -1392,7 +1429,9 @@ module.exports = {
                       if (isRecurring === true) {
                         const timeArgs = userEdit.toLowerCase().split(" ");
                         interval = await rm.getProcessedInterval(
-                          message,
+                          bot,
+                          message.author.id,
+                          message.channel.id,
                           timeArgs,
                           PREFIX,
                           timezoneOffset,
@@ -1429,9 +1468,9 @@ module.exports = {
                       if (typeof userEdit === "boolean") {
                         if (userEdit === true) {
                           const repetitions = await fn.getNumberEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+                            bot,
+                            message.author.id,
+                            message.channel.id,
                             PREFIX,
                             "**How many times do you want this reminder to repeat?**\n(Enter a positive whole number or `0` to repeat indefinitely)",
                             "Reminder: Number of Occurrences",
@@ -1653,9 +1692,9 @@ module.exports = {
       const isDM = channel === "DM";
 
       let reminderMessage = await fn.getMultilineEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+        bot,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         `__**Enter the message of this reminder**__:` +
           `${
@@ -1673,9 +1712,9 @@ module.exports = {
 
       var currentTimestamp, duration;
       let reminderEndTime = await fn.getDateAndTimeEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+        bot,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         timezoneOffset,
         daylightSavingsSetting,
@@ -1772,7 +1811,7 @@ module.exports = {
   }) => {
     // Variable Declarations and Initializations
     // if(!interaction) return;
-    const { subCommand, subCommandGroup } = args;
+    let { subCommand, subCommandGroup } = args;
     // if(!subCommand || !subCommandGroup) return;
 
     const authorID = interaction.guild_id
@@ -1895,7 +1934,7 @@ module.exports = {
           reminderEndTime,
           message,
           reminderType,
-          sendAsEmbed === undefined ? true : sendAsEmbed,
+          sendAsEmbed,
           false,
           false,
           false,
@@ -1961,8 +2000,10 @@ module.exports = {
         return;
       }
 
-      const targetReminder = Reminder.find({ userID: authorID }).skip(
-        index - 1
+      let targetReminder = await rm.getOneReminderByEndTime(
+        authorID,
+        index - 1,
+        false
       );
       console.log({ targetReminder });
       if (!targetReminder) {
@@ -1973,6 +2014,95 @@ module.exports = {
         );
         return;
       }
+      const reminderID = targetReminder._id;
+
+      console.log({ args });
+
+      var editValue = "";
+      var typeString = "";
+      var editActionString = "";
+      switch (subCommand) {
+        case "type":
+          {
+            const { type } = args;
+            editValue = type;
+          }
+          break;
+        case "channel":
+          {
+            const { channel } = args;
+            editValue = `<#${channel}>`;
+          }
+          break;
+        case "dm":
+          {
+            typeString = "DM";
+            editActionString = "send this reminder via __DM__ (Direct Message)";
+          }
+          break;
+        case "timeCreated":
+          {
+            const { when } = args;
+            editValue = when;
+          }
+          break;
+        case "triggerTime":
+          {
+            const { when } = args;
+            editValue = when;
+          }
+          break;
+        case "message":
+          {
+            const { message } = args;
+            editValue = `\"${message}\"`;
+          }
+          break;
+        case "repeat":
+          {
+            typeString = "Recurrence";
+            editActionString = `set a __recurrence__`;
+          }
+          break;
+      }
+
+      if (!typeString) {
+        typeString =
+          subCommand === "dm"
+            ? "DM"
+            : fn.toTitleCase(fn.camelCaseToSpacedString(subCommand));
+      }
+
+      if (!editActionString) {
+        editActionString = `edit the __${typeString}__`;
+      }
+
+      // Acknowledge Interaction
+      await ic.reply(
+        bot,
+        interaction,
+        `**__Reminder ${index}:__** ${
+          editValue ? `Editing ${typeString} (${editValue})` : `${typeString}`
+        } `
+      );
+
+      const confirmEdit = await fn.getUserConfirmation(
+        bot,
+        authorID,
+        interaction.channel_id,
+        PREFIX,
+        `**Are you sure you want to ${editActionString} for __Reminder ${index}__?**${
+          editValue ? `\n\n**__New ${typeString}:__** ${editValue}` : ""
+        }\n\n**__Reminder ${index}:__**\n${await rm.reminderDocumentToString(
+          bot,
+          targetReminder,
+          timezoneOffset
+        )}`,
+        false,
+        `Reminder: Edit ${typeString}`,
+        600000
+      );
+      if (!confirmEdit) return;
 
       switch (subCommand) {
         case "type":
@@ -1986,21 +2116,155 @@ module.exports = {
               );
               return;
             }
+            targetReminder = await Reminder.findOneAndUpdate(
+              { _id: reminderID },
+              { $set: { title: type } }
+            );
           }
           break;
         case "channel":
+          {
+            const { channel } = args;
+            targetReminder = await Reminder.findOneAndUpdate(
+              { _id: reminderID },
+              { $set: { channel, isDM: false } }
+            );
+          }
           break;
         case "dm":
+          {
+            targetReminder = await Reminder.findOneAndUpdate(
+              { _id: reminderID },
+              { $set: { isDM: true } }
+            );
+          }
           break;
-        case "startTime":
+        case "timeCreated":
+          {
+            const { when } = args;
+            const timeOut = await getParsedTime(
+              bot,
+              authorID,
+              interaction.channel_id,
+              when,
+              timezoneOffset,
+              daylightSaving
+            );
+            if (!timeOut && timeOut !== 0) {
+              await sendInvalidTimeReply(
+                bot,
+                interaction.channel_id,
+                PREFIX,
+                authorID
+              );
+              return;
+            }
+            targetReminder = await Reminder.findOneAndUpdate(
+              { _id: reminderID },
+              { $set: { startTime: timeOut } }
+            );
+          }
           break;
-        case "endTime":
+        case "triggerTime":
+          {
+            const { when } = args;
+            const timeOut = await getParsedTime(
+              bot,
+              authorID,
+              interaction.channel_id,
+              when,
+              timezoneOffset,
+              daylightSaving
+            );
+            if (!timeOut && timeOut !== 0) {
+              await sendInvalidTimeReply(
+                bot,
+                interaction.channel_id,
+                PREFIX,
+                authorID
+              );
+              return;
+            }
+            targetReminder = await Reminder.findOneAndUpdate(
+              { _id: reminderID },
+              { $set: { endTime: timeOut } }
+            );
+          }
           break;
         case "message":
+          {
+            const { message } = args;
+            targetReminder = await Reminder.findOneAndUpdate(
+              { _id: reminderID },
+              { $set: { message: message || "" } }
+            );
+          }
           break;
         case "repeat":
+          {
+            let { interval, repetitions, next } = args;
+            let endTime;
+            if (next) {
+              endTime = await getParsedTime(
+                bot,
+                authorID,
+                interaction.channel_id,
+                next,
+                timezoneOffset,
+                daylightSaving
+              );
+              if (!endTime && endTime !== 0) {
+                await sendInvalidTimeReply(
+                  bot,
+                  interaction.channel_id,
+                  PREFIX,
+                  authorID
+                );
+                return;
+              }
+            }
+
+            if (!repetitions) repetitions = undefined;
+            else if (repetitions < 0) {
+              await sd.reply(
+                bot,
+                channelID,
+                `Please enter a **__positive whole number__** for recurring reminder repetitions!\n**__You Entered:__** ${repetitions}`,
+                userID
+              );
+              return;
+            }
+
+            const intervalArgs = interval.toLowerCase().split(/[\s\n]+/);
+            const processedInterval = await rm.getProcessedInterval(
+              bot,
+              authorID,
+              interaction.channel_id,
+              intervalArgs,
+              PREFIX,
+              timezoneOffset,
+              daylightSaving,
+              MINIMUM_INTERVAL
+            );
+            if (!processedInterval) return;
+
+            targetReminder = await Reminder.findOneAndUpdate(
+              { _id: reminderID },
+              {
+                $set: {
+                  isRecurring: true,
+                  interval: intervalArgs.join(" "),
+                  endTime: endTime || targetReminder.endTime,
+                  remainingOccurrences: repetitions,
+                },
+              }
+            );
+          }
           break;
       }
+      rm.cancelReminderById(reminderID);
+      await rm.sendReminderByObject(bot, targetReminder);
+      return;
     }
   },
 };

@@ -55,11 +55,15 @@ module.exports = {
   },
 
   cancelUserAwait: function (userID) {
+    const userAwait = awaitingUsers.get(userID);
+    if(!userAwait) return false;
     const { 
       // messageSent, 
-      collector } = awaitingUsers.get(userID);
+      collector 
+    } = userAwait;
     // messageSent.delete();
     collector.stop();
+    return true;
   },
 
   getUserAwait: function (userID) {
@@ -189,7 +193,7 @@ module.exports = {
         ) {
           if (channelObject.type !== "dm") {
             const userSettings = await User.findOne(
-              { discordID: message.author.id },
+              { discordID: userID },
               { _id: 0, deleteRepliesDuringCommand: 1 }
             );
             if (userSettings) {
@@ -383,9 +387,7 @@ module.exports = {
               console.log(
                 `${user.username}'s ${reaction.emoji.name} collected!`
               );
-              if (promptMessageDelete) {
-                confirm.delete();
-              }
+              
               console.log(
                 `Reaction Value (in function): ${reaction.emoji.name}`
               );
@@ -394,8 +396,13 @@ module.exports = {
             });
             reactionCollector.on("end", async (collected) => {
               console.log(`Reactions Collected: ${collected.size}`);
-              if (!collected.size) {
+              if (promptMessageDelete) {
                 confirm.delete();
+              }
+              this.cancelUserAwait(userID);
+              this.deleteUserAwait(userID);
+              if (!collected.size) {
+                if(!promptMessageDelete) confirm.delete();
                 console.log(
                   `User didn't react within ${delayTime / MS_TO_SECONDS}s!`
                   );
@@ -496,7 +503,7 @@ module.exports = {
       }
     });
     await this.sendPaginationEmbed(bot, channelID, userID, embeds, false)
-      .then(async (confirm) => {
+      .then(async (confirm) => {2
         const filter = (response) => {
           const filterOut = response.author.id === userID;
           console.log(
@@ -519,7 +526,6 @@ module.exports = {
           result = new Promise(async (resolve) => {
             messageCollector.on("collect", async (msg) => {
               console.log(`${msg.author.username}'s message was collected!`);
-              confirm.delete();
               console.log(`Message Sent (in function): ${msg.content}`);
               if (deleteUserMessage && channelObject.type !== "dm") {
                 const userSettings = await User.findOne(
@@ -564,10 +570,10 @@ module.exports = {
             });
             messageCollector.on("end", async (collected) => {
               console.log(`Messages Collected: ${collected.size}`);
-
-              
-              if (!collected.size) {
                 confirm.delete();
+                this.cancelUserAwait(userID);
+              this.deleteUserAwait(userID);
+              if (!collected.size) {
                 console.log(
                   `User didn't respond within ${delayTime / MS_TO_SECONDS}s!`
                 );
@@ -623,6 +629,14 @@ module.exports = {
       console.error(err);
       return false;
     }
+  },
+
+  camelCaseToSpacedString: function(string) {
+    const capitalRegex = /([A-Z])/g;
+    const spacedString = string.replace(capitalRegex, (letter) => {
+      return ` ${letter.toLowerCase()}`;
+    });
+    return spacedString
   },
 
   // START CRUD Operations Help

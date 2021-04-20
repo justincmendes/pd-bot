@@ -6,6 +6,7 @@ const User = require("../djs-bot/database/schemas/user");
 const mongoose = require("mongoose");
 const quotes = require("../utilities/quotes.json").quotes;
 const fn = require("./functions");
+const sd = require("./send");
 const tm = require("./timeout");
 const Habit = require("../djs-bot/database/schemas/habit");
 const Log = require("../djs-bot/database/schemas/habittracker");
@@ -26,6 +27,8 @@ const mastermindEmbedColour = fn.mastermindEmbedColour;
 const trackEmbedColour = fn.trackEmbedColour;
 
 const reminders = new Discord.Collection();
+
+const MINIMUM_INTERVAL = 60000;
 
 // When Storing Reminders: Use UTC time for proper restarts relative to system (UNIX) time
 // => When Reading Reminders: Convert UTC to User Timezone
@@ -1678,8 +1681,10 @@ module.exports = {
       if (!interval || interval === "stop") return false;
       else if (interval === "back") return interval;
       const timeArgs = interval.toLowerCase().split(/[\s\n]+/);
-      interval = this.getProcessedInterval(
-        message,
+      interval = await this.getProcessedInterval(
+        bot,
+        message.author.id,
+        message.channel.id,
         timeArgs,
         PREFIX,
         timezoneOffset,
@@ -1851,8 +1856,10 @@ module.exports = {
       );
       if (!interval || interval === "stop") return false;
       const timeArgs = interval.toLowerCase().split(" ");
-      interval = this.getProcessedInterval(
-        message,
+      interval = await this.getProcessedInterval(
+        bot,
+        message.author.id,
+        message.channel.id,
         timeArgs,
         PREFIX,
         timezoneOffset,
@@ -1865,8 +1872,10 @@ module.exports = {
     } while (true);
   },
 
-  getProcessedInterval: function (
-    message,
+  getProcessedInterval: async function (
+    bot,
+    userID,
+    channelID,
     timeArgs,
     PREFIX,
     timezoneOffset,
@@ -1887,30 +1896,18 @@ module.exports = {
       true
     );
     if (!interval) {
-      fn.sendReplyThenDelete(
-        message,
-        `**INVALID Interval**...** \`${PREFIX}date\` **for **valid time inputs!**`,
-        errorReplyDelay
-      );
+      await sd.reply(bot, channelID, `**INVALID Interval**...** \`${PREFIX}date\` **for **valid time inputs!**`, userID, {delete: true, timeout: errorReplyDelay});
       return false;
     } else now = fn.getCurrentUTCTimestampFlooredToSecond();
     interval -= now + HOUR_IN_MS * timezoneOffset;
     if (interval <= 0) {
-      fn.sendReplyThenDelete(
-        message,
-        `**INVALID Interval**... ${PREFIX}date for **valid time inputs!**`,
-        errorReplyDelay
-      );
+      await sd.reply(bot, channelID, `**INVALID Interval**... ${PREFIX}date for **valid time inputs!**`, userID, {delete: true, timeout: errorReplyDelay});
       return false;
     } else if (interval < minimumInterval) {
-      fn.sendReplyThenDelete(
-        message,
-        `Intervals must be **__> ${fn.millisecondsToTimeString(
-          minimumInterval
-        )}__**`,
-        errorReplyDelay
-      );
+      await sd.reply(bot, channelID, `**INVALID Interval**... ${PREFIX}date for **valid time inputs!**`, userID, {delete: true, timeout: errorReplyDelay});
       return false;
     } else return { args: timeArgs.join(" "), duration: interval };
   },
+
+  MINIMUM_INTERVAL,
 };

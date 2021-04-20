@@ -4,6 +4,7 @@ const User = require("../database/schemas/user");
 const Reminder = require("../database/schemas/reminder");
 const mongoose = require("mongoose");
 const fn = require("../../utilities/functions");
+const sd = require("../../utilities/send");
 const rm = require("../../utilities/reminder");
 const ic = require("../../utilities/interactions");
 require("dotenv").config();
@@ -1404,7 +1405,9 @@ module.exports = {
                       if (isRecurring === true) {
                         const timeArgs = userEdit.toLowerCase().split(" ");
                         interval = await rm.getProcessedInterval(
-                          message,
+                          bot,
+        message.author.id,
+        message.channel.id,
                           timeArgs,
                           PREFIX,
                           timezoneOffset,
