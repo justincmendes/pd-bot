@@ -1938,7 +1938,7 @@ module.exports = {
       daylightSaving
     );
     return timeOut;
-  };
+  },
 
   MINIMUM_INTERVAL,
 };
