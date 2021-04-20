@@ -1981,7 +1981,6 @@ module.exports = {
       );
       return;
     } else if (subCommandGroup === "edit") {
-      console.log({ args });
       const { index } = args;
       if (index <= 0) {
         await ic.reply(
@@ -2064,6 +2063,16 @@ module.exports = {
             editActionString = `set a __recurrence__`;
           }
           break;
+        case "embed":
+          {
+            const { sendAsEmbed } = args;
+            typeString = "Send As Embed";
+            editActionString = sendAsEmbed
+              ? `__send this reminder as an embed__`
+              : `__not send this reminder as an embed__`;
+            editValue = sendAsEmbed ? "Yes" : "No";
+          }
+          break;
       }
 
       if (!typeString) {
@@ -2118,7 +2127,8 @@ module.exports = {
             }
             targetReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
-              { $set: { title: type } }
+              { $set: { title: type } },
+              { new: true }
             );
           }
           break;
@@ -2127,7 +2137,8 @@ module.exports = {
             const { channel } = args;
             targetReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
-              { $set: { channel, isDM: false } }
+              { $set: { channel, isDM: false } },
+              { new: true }
             );
           }
           break;
@@ -2135,7 +2146,8 @@ module.exports = {
           {
             targetReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
-              { $set: { isDM: true } }
+              { $set: { isDM: true } },
+              { new: true }
             );
           }
           break;
@@ -2161,7 +2173,8 @@ module.exports = {
             }
             targetReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
-              { $set: { startTime: timeOut } }
+              { $set: { startTime: timeOut } },
+              { new: true }
             );
           }
           break;
@@ -2187,7 +2200,8 @@ module.exports = {
             }
             targetReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
-              { $set: { endTime: timeOut } }
+              { $set: { endTime: timeOut } },
+              { new: true }
             );
           }
           break;
@@ -2196,7 +2210,8 @@ module.exports = {
             const { message } = args;
             targetReminder = await Reminder.findOneAndUpdate(
               { _id: reminderID },
-              { $set: { message: message || "" } }
+              { $set: { message: message || "" } },
+              { new: true }
             );
           }
           break;
@@ -2258,6 +2273,16 @@ module.exports = {
                   remainingOccurrences: repetitions,
                 },
               }
+            );
+          }
+          break;
+        case "embed":
+          {
+            const { sendAsEmbed } = args;
+            targetReminder = await Reminder.findOneAndUpdate(
+              { _id: reminderID },
+              { $set: { sendAsEmbed: !!sendAsEmbed } },
+              { new: true }
             );
           }
           break;
