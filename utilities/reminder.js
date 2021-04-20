@@ -1668,9 +1668,9 @@ module.exports = {
   ) {
     do {
       let interval = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+        bot,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         field,
         `${instructionPrompt}\n\n${intervalExamples}`,
@@ -1803,9 +1803,9 @@ module.exports = {
         remainingOccurrences = undefined;
       } else if (remainingOccurrences === 1) {
         let numberOfRepeats = await fn.getNumberEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "**How many times do you want this reminder to repeat?**\n(Enter a positive whole number or `0` to repeat indefinitely)",
           `${type}: Number of Occurrences`,
@@ -1896,15 +1896,33 @@ module.exports = {
       true
     );
     if (!interval) {
-      await sd.reply(bot, channelID, `**INVALID Interval**...** \`${PREFIX}date\` **for **valid time inputs!**`, userID, {delete: true, timeout: errorReplyDelay});
+      await sd.reply(
+        bot,
+        channelID,
+        `**INVALID Interval**...** \`${PREFIX}date\` **for **valid time inputs!**`,
+        userID,
+        { delete: true, timeout: errorReplyDelay }
+      );
       return false;
     } else now = fn.getCurrentUTCTimestampFlooredToSecond();
     interval -= now + HOUR_IN_MS * timezoneOffset;
     if (interval <= 0) {
-      await sd.reply(bot, channelID, `**INVALID Interval**... ${PREFIX}date for **valid time inputs!**`, userID, {delete: true, timeout: errorReplyDelay});
+      await sd.reply(
+        bot,
+        channelID,
+        `**INVALID Interval**... ${PREFIX}date for **valid time inputs!**`,
+        userID,
+        { delete: true, timeout: errorReplyDelay }
+      );
       return false;
     } else if (interval < minimumInterval) {
-      await sd.reply(bot, channelID, `**INVALID Interval**... ${PREFIX}date for **valid time inputs!**`, userID, {delete: true, timeout: errorReplyDelay});
+      await sd.reply(
+        bot,
+        channelID,
+        `**INVALID Interval**... ${PREFIX}date for **valid time inputs!**`,
+        userID,
+        { delete: true, timeout: errorReplyDelay }
+      );
       return false;
     } else return { args: timeArgs.join(" "), duration: interval };
   },
