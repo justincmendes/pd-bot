@@ -1440,13 +1440,7 @@ module.exports = {
               fastDataToStringArray,
               `Fast: See ${pastNumberOfEntriesIndex} Fasts (${sortType})`,
               true,
-              `Fasts ${fn.timestampToDateString(
-                Date.now() + timezoneOffset * HOUR_IN_MS,
-                false,
-                false,
-                true,
-                true
-              )}`,
+              fn.getFileName("Fasts", timezoneOffset),
               fastEmbedColour
             )
           );
@@ -1529,13 +1523,7 @@ module.exports = {
                     fastDataToStringArray,
                     `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip} (${sortType})`,
                     true,
-                    `Fasts ${fn.timestampToDateString(
-                      Date.now() + timezoneOffset * HOUR_IN_MS,
-                      false,
-                      false,
-                      true,
-                      true
-                    )}`,
+                    fn.getFileName("Fasts", timezoneOffset),
                     fastEmbedColour
                   )
                 );
@@ -1594,13 +1582,7 @@ module.exports = {
           fastDataToString,
           `Fast: See Fast ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
-          `Fast ${fn.timestampToDateString(
-            Date.now() + timezoneOffset * HOUR_IN_MS,
-            false,
-            false,
-            true,
-            true
-          )}`,
+          fn.getFileName("Fast", timezoneOffset),
           fastEmbedColour
         );
         await fn.sendPaginationEmbed(

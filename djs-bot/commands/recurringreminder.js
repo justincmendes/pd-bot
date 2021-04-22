@@ -155,7 +155,8 @@ module.exports = {
           const reminderStringArray = fn.getEmbedArray(
             await rm.multipleRemindersToString(
               bot,
-              message,
+              message.author.id,
+              message.channel.id,
               reminderCollection,
               numberArg,
               timezoneOffset,
@@ -341,7 +342,8 @@ module.exports = {
               const reminderStringArray = fn.getEmbedArray(
                 await rm.multipleRemindersToString(
                   bot,
-                  message,
+                  message.author.id,
+                  message.channel.id,
                   reminderCollection,
                   pastNumberOfEntries,
                   timezoneOffset,
@@ -604,7 +606,7 @@ module.exports = {
         const isNumberArg = !isNaN(args[1]);
         if (seeType === "recent") {
           return message.channel.send(
-            await rm.getMostRecentReminder(
+            await rm.getMostRecentReminderEmbed(
               bot,
               authorID,
               true,
@@ -631,7 +633,7 @@ module.exports = {
         // If the first argument after "see" is not past, then it is not a valid call
         else {
           message.channel.send(
-            await rm.getMostRecentReminder(
+            await rm.getMostRecentReminderEmbed(
               bot,
               authorID,
               true,
@@ -655,7 +657,7 @@ module.exports = {
             // If the next argument is NotaNumber, invalid "past" command call
             if (isNaN(args[2])) {
               message.channel.send(
-                await rm.getMostRecentReminder(
+                await rm.getMostRecentReminderEmbed(
                   bot,
                   authorID,
                   true,
@@ -667,7 +669,7 @@ module.exports = {
             }
             if (parseInt(args[2]) <= 0) {
               message.channel.send(
-                await rm.getMostRecentReminder(
+                await rm.getMostRecentReminderEmbed(
                   bot,
                   authorID,
                   true,
@@ -693,7 +695,7 @@ module.exports = {
             // => empty "past" command call
             if (seeType !== "all") {
               message.channel.send(
-                await rm.getMostRecentReminder(
+                await rm.getMostRecentReminderEmbed(
                   bot,
                   authorID,
                   true,
@@ -738,7 +740,8 @@ module.exports = {
           console.log({ reminderView: reminderDocument });
           const reminderDataToStringArray = await rm.multipleRemindersToString(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             reminderDocument,
             pastNumberOfEntriesIndex,
             timezoneOffset,
@@ -753,13 +756,7 @@ module.exports = {
               reminderDataToStringArray,
               `Recurring Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`,
               true,
-              `Recurring Reminders ${fn.timestampToDateString(
-                Date.now() + timezoneOffset * HOUR_IN_MS,
-                false,
-                false,
-                true,
-                true
-              )}`,
+              fn.getFileName("Recurring Reminders", timezoneOffset),
               repeatEmbedColour
             )
           );
@@ -825,7 +822,8 @@ module.exports = {
                 console.log({ reminderView: reminderDocument });
                 const reminderDataToStringArray = await rm.multipleRemindersToString(
                   bot,
-                  message,
+                  message.author.id,
+                  message.channel.id,
                   reminderDocument,
                   pastNumberOfEntriesIndex,
                   timezoneOffset,
@@ -840,13 +838,7 @@ module.exports = {
                     reminderDataToStringArray,
                     `Recurring Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`,
                     true,
-                    `Recurring Reminders ${fn.timestampToDateString(
-                      Date.now() + timezoneOffset * HOUR_IN_MS,
-                      false,
-                      false,
-                      true,
-                      true
-                    )}`,
+                    fn.getFileName("Recurring Reminders", timezoneOffset),
                     repeatEmbedColour
                   )
                 );
@@ -894,13 +886,7 @@ module.exports = {
           reminderDataToString,
           `Recurring Reminder: See Reminder ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
-          `Recurring Reminder ${fn.timestampToDateString(
-            Date.now() + timezoneOffset * HOUR_IN_MS,
-            false,
-            false,
-            true,
-            true
-          )}`,
+          fn.getFileName("Recurring Reminder", timezoneOffset),
           repeatEmbedColour
         );
         await fn.sendPaginationEmbed(
@@ -1816,6 +1802,15 @@ module.exports = {
 
     const totalReminderNumber = await rm.getTotalReminders(authorID, true);
     if (totalReminderNumber === false) return;
+    if (subCommandGroup !== "set" && totalReminderNumber <= 0) {
+      await ic.reply(
+        bot,
+        interaction,
+        `**NO REMINDERS...** try \`/reminder set\` to set one up!`,
+        true
+      );
+      return;
+    }
 
     const userSettings = await User.findOne({ discordID: authorID });
     const { tier } = userSettings;
@@ -2379,6 +2374,273 @@ module.exports = {
       rm.cancelReminderById(reminderID);
       await rm.sendReminderByObject(bot, targetReminder);
       return;
+    } else if (subCommandGroup === "see") {
+      switch (subCommand) {
+        case "recent":
+          {
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing your recent recurring reminder...**`
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.getMostRecentReminderString(
+                  bot,
+                  authorID,
+                  true,
+                  timezoneOffset
+                ),
+                `Recurring Reminder: See Recent Reminder`,
+                true,
+                fn.getFileName("Reminder", timezoneOffset),
+                repeatEmbedColour
+              ),
+              true
+            );
+            // await sd.sendMessage(
+            //   bot,
+            //   interaction.channel_id,
+            //   await rm.getMostRecentReminderEmbed(
+            //     bot,
+            //     authorID,
+            //     false,
+            //     timezoneOffset,
+            //     repeatEmbedColour
+            //   )
+            // );
+          }
+          break;
+        case "entry":
+          {
+            const { entry } = args;
+            if (entry <= 0 || entry > totalReminderNumber) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Recurring Reminder ${entry} does not exist... You have __${totalReminderNumber} Recurring Reminders.__**`
+              );
+              return;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing __Reminder ${entry}__...**`
+            );
+            const reminderDocument = await rm.getOneReminderByEndTime(
+              authorID,
+              entry - 1,
+              true
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.reminderDocumentToString(
+                  bot,
+                  reminderDocument,
+                  timezoneOffset,
+                  !isInGuild
+                ),
+                `Recurring Reminder: See Reminder ${entry}`,
+                true,
+                fn.getFileName("Reminder", timezoneOffset),
+                repeatEmbedColour
+              ),
+              true
+            );
+          }
+          break;
+        case "all":
+          {
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing ALL recurring reminders...**`
+            );
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: true },
+              0,
+              totalReminderNumber
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  totalReminderNumber,
+                  timezoneOffset
+                ),
+                `Recurring Reminder: See All Reminders`,
+                true,
+                fn.getFileName("Reminders", timezoneOffset),
+                repeatEmbedColour
+              ),
+              true
+            );
+          }
+          break;
+        case "range":
+          {
+            let { from, to } = args;
+            if (from > to) {
+              const temp = to;
+              from = to;
+              to = temp;
+            }
+            if (from <= 0) {
+              from = 1;
+            }
+            if (to > totalReminderNumber) {
+              to = totalReminderNumber;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing reminders from __${from} to ${to}__...**`
+            );
+            const numberOfEntries = to - from + 1;
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: true },
+              from - 1,
+              numberOfEntries
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  numberOfEntries,
+                  timezoneOffset,
+                  from - 1
+                ),
+                `Recurring Reminder: See Reminders From ${from} to ${to}`,
+                true,
+                fn.getFileName("Reminders", timezoneOffset),
+                repeatEmbedColour
+              ),
+              true
+            );
+          }
+          break;
+        case "past":
+          {
+            let { numberOfEntries } = args;
+            if (numberOfEntries < 0) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Please enter a positive whole number greater than 0: __${numberOfEntries} entries__ do not exist...**`
+              );
+              return;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing the __past ${numberOfEntries} recurring reminders__...**`
+            );
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: true },
+              0,
+              numberOfEntries
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  numberOfEntries,
+                  timezoneOffset
+                ),
+                `Recurring Reminder: See the Past ${numberOfEntries} Reminders`,
+                true,
+                fn.getFileName("Reminders", timezoneOffset),
+                repeatEmbedColour
+              ),
+              true
+            );
+          }
+          break;
+        case "entriesAfter":
+          {
+            let { first, numberOfEntries } = args;
+            if (numberOfEntries < 0) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Please enter a positive whole number greater than 0: __${numberOfEntries} entries__ do not exist...**`
+              );
+              return;
+            }
+            if (first <= 0 || first > totalReminderNumber) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Recurring Reminder ${first} does not exist... You have __${totalReminderNumber} Recurring Reminders.__**`
+              );
+              return;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing the __${numberOfEntries} recurring reminders after Reminder ${first}__...**`
+            );
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: true },
+              first - 1,
+              numberOfEntries
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  numberOfEntries,
+                  timezoneOffset,
+                  first - 1
+                ),
+                `Recurring Reminder: See ${numberOfEntries} Reminders After Reminder ${first}`,
+                true,
+                fn.getFileName("Reminders", timezoneOffset),
+                repeatEmbedColour
+              ),
+              true
+            );
+          }
+          break;
+        case "many":
+          {
+          }
+          break;
+      }
     }
   },
 };

@@ -154,7 +154,8 @@ module.exports = {
           const reminderStringArray = fn.getEmbedArray(
             await rm.multipleRemindersToString(
               bot,
-              message,
+              message.author.id,
+              message.channel.id,
               reminderCollection,
               numberArg,
               timezoneOffset,
@@ -343,7 +344,8 @@ module.exports = {
               const reminderStringArray = fn.getEmbedArray(
                 await rm.multipleRemindersToString(
                   bot,
-                  message,
+                  message.author.id,
+                  message.channel.id,
                   reminderCollection,
                   pastNumberOfEntries,
                   timezoneOffset,
@@ -609,7 +611,7 @@ module.exports = {
         const isNumberArg = !isNaN(args[1]);
         if (seeType === "recent") {
           return message.channel.send(
-            await rm.getMostRecentReminder(
+            await rm.getMostRecentReminderEmbed(
               bot,
               authorID,
               false,
@@ -636,7 +638,7 @@ module.exports = {
         // If the first argument after "see" is not past, then it is not a valid call
         else {
           message.channel.send(
-            await rm.getMostRecentReminder(
+            await rm.getMostRecentReminderEmbed(
               bot,
               authorID,
               false,
@@ -660,7 +662,7 @@ module.exports = {
             // If the next argument is NotaNumber, invalid "past" command call
             if (isNaN(args[2])) {
               message.channel.send(
-                await rm.getMostRecentReminder(
+                await rm.getMostRecentReminderEmbed(
                   bot,
                   authorID,
                   false,
@@ -672,7 +674,7 @@ module.exports = {
             }
             if (parseInt(args[2]) <= 0) {
               message.channel.send(
-                await rm.getMostRecentReminder(
+                await rm.getMostRecentReminderEmbed(
                   bot,
                   authorID,
                   false,
@@ -698,7 +700,7 @@ module.exports = {
             // => empty "past" command call
             if (seeType !== "all") {
               message.channel.send(
-                await rm.getMostRecentReminder(
+                await rm.getMostRecentReminderEmbed(
                   bot,
                   authorID,
                   false,
@@ -743,7 +745,8 @@ module.exports = {
           console.log({ reminderView: reminderDocument });
           const reminderDataToStringArray = await rm.multipleRemindersToString(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             reminderDocument,
             pastNumberOfEntriesIndex,
             timezoneOffset,
@@ -758,13 +761,7 @@ module.exports = {
               reminderDataToStringArray,
               `Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`,
               true,
-              `Reminders ${fn.timestampToDateString(
-                Date.now() + timezoneOffset * HOUR_IN_MS,
-                false,
-                false,
-                true,
-                true
-              )}`,
+              fn.getFileName("Reminders", timezoneOffset),
               reminderEmbedColour
             )
           );
@@ -830,7 +827,8 @@ module.exports = {
                 console.log({ reminderView: reminderDocument });
                 const reminderDataToStringArray = await rm.multipleRemindersToString(
                   bot,
-                  message,
+                  message.author.id,
+                  message.channel.id,
                   reminderDocument,
                   pastNumberOfEntriesIndex,
                   timezoneOffset,
@@ -845,13 +843,7 @@ module.exports = {
                     reminderDataToStringArray,
                     `Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`,
                     true,
-                    `Reminders ${fn.timestampToDateString(
-                      Date.now() + timezoneOffset * HOUR_IN_MS,
-                      false,
-                      false,
-                      true,
-                      true
-                    )}`,
+                    fn.getFileName("Reminders", timezoneOffset),
                     reminderEmbedColour
                   )
                 );
@@ -898,13 +890,7 @@ module.exports = {
           reminderToString,
           `Reminder: See Reminder ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
-          `Reminder ${fn.timestampToDateString(
-            Date.now() + timezoneOffset * HOUR_IN_MS,
-            false,
-            false,
-            true,
-            true
-          )}`,
+          fn.getFileName("Reminder", timezoneOffset),
           reminderEmbedColour
         );
         await fn.sendPaginationEmbed(
@@ -1795,18 +1781,26 @@ module.exports = {
     let { subCommand, subCommandGroup } = args;
     // if(!subCommand || !subCommandGroup) return;
 
-    const authorID = interaction.guild_id
+    const isInGuild = !!interaction.guild_id;
+    const authorID = isInGuild
       ? interaction.member.user.id
       : interaction.user.id;
-    const authorUsername = interaction.guild_id
+    const authorUsername = isInGuild
       ? interaction.member.user.username
       : interaction.user.username;
-    const authorNickname = interaction.guild_id
-      ? interaction.member.nick
-      : authorUsername;
+    const authorNickname = isInGuild ? interaction.member.nick : authorUsername;
 
     const totalReminderNumber = await rm.getTotalReminders(authorID, false);
     if (totalReminderNumber === false) return;
+    if (subCommandGroup !== "set" && totalReminderNumber <= 0) {
+      await ic.reply(
+        bot,
+        interaction,
+        `**NO REMINDERS...** try \`/reminder set\` to set one up!`,
+        true
+      );
+      return;
+    }
 
     const userSettings = await User.findOne({ discordID: authorID });
     const { tier } = userSettings;
@@ -2086,7 +2080,8 @@ module.exports = {
         }\n\n**__Reminder ${index}:__**\n${await rm.reminderDocumentToString(
           bot,
           targetReminder,
-          timezoneOffset
+          timezoneOffset,
+          !isInGuild
         )}`,
         false,
         `Reminder: Edit ${typeString}`,
@@ -2264,6 +2259,269 @@ module.exports = {
       rm.cancelReminderById(reminderID);
       await rm.sendReminderByObject(bot, targetReminder);
       return;
+    } else if (subCommandGroup === "see") {
+      switch (subCommand) {
+        case "recent":
+          {
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing your recent reminder...**`
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.getMostRecentReminderString(
+                  bot,
+                  authorID,
+                  false,
+                  timezoneOffset
+                ),
+                `Reminder: See Recent Reminder`,
+                true,
+                fn.getFileName("Reminder", timezoneOffset),
+                reminderEmbedColour
+              ),
+              true
+            );
+            // await sd.sendMessage(
+            //   bot,
+            //   interaction.channel_id,
+            //   await rm.getMostRecentReminderEmbed(
+            //     bot,
+            //     authorID,
+            //     false,
+            //     timezoneOffset,
+            //     reminderEmbedColour
+            //   )
+            // );
+          }
+          break;
+        case "entry":
+          {
+            const { entry } = args;
+            if (entry <= 0 || entry > totalReminderNumber) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Reminder ${entry} does not exist... You have __${totalReminderNumber} Reminders.__**`
+              );
+              return;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing __Reminder ${entry}__...**`
+            );
+            const reminderDocument = await rm.getOneReminderByEndTime(
+              authorID,
+              entry - 1,
+              false
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.reminderDocumentToString(
+                  bot,
+                  reminderDocument,
+                  timezoneOffset,
+                  !isInGuild
+                ),
+                `Reminder: See Reminder ${entry}`,
+                true,
+                fn.getFileName("Reminder", timezoneOffset),
+                reminderEmbedColour
+              ),
+              true
+            );
+          }
+          break;
+        case "all":
+          {
+            await ic.reply(bot, interaction, `**Showing ALL reminders...**`);
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: false },
+              0,
+              totalReminderNumber
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  totalReminderNumber,
+                  timezoneOffset
+                ),
+                `Reminder: See All Reminders`,
+                true,
+                fn.getFileName("Reminders", timezoneOffset),
+                reminderEmbedColour
+              ),
+              true
+            );
+          }
+          break;
+        case "range":
+          {
+            let { from, to } = args;
+            if (from > to) {
+              const temp = to;
+              from = to;
+              to = temp;
+            }
+            if (from <= 0) {
+              from = 1;
+            }
+            if (to > totalReminderNumber) {
+              to = totalReminderNumber;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing reminders from __${from} to ${to}__...**`
+            );
+            const numberOfEntries = to - from + 1;
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: false },
+              from - 1,
+              numberOfEntries
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  numberOfEntries,
+                  timezoneOffset,
+                  from - 1
+                ),
+                `Reminder: See Reminders From ${from} to ${to}`,
+                true,
+                fn.getFileName("Reminders", timezoneOffset),
+                reminderEmbedColour
+              ),
+              true
+            );
+          }
+          break;
+        case "past":
+          {
+            let { numberOfEntries } = args;
+            if (numberOfEntries < 0) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Please enter a positive whole number greater than 0: __${numberOfEntries} entries__ do not exist...**`
+              );
+              return;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing the __past ${numberOfEntries} reminders__...**`
+            );
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: false },
+              0,
+              numberOfEntries
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  numberOfEntries,
+                  timezoneOffset
+                ),
+                `Reminder: See the Past ${numberOfEntries} Reminders`,
+                true,
+                fn.getFileName("Reminders", timezoneOffset),
+                reminderEmbedColour
+              ),
+              true
+            );
+          }
+          break;
+        case "entriesAfter":
+          {
+            let { first, numberOfEntries } = args;
+            if (numberOfEntries < 0) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Please enter a positive whole number greater than 0: __${numberOfEntries} entries__ do not exist...**`
+              );
+              return;
+            }
+            if (first <= 0 || first > totalReminderNumber) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Reminder ${first} does not exist... You have __${totalReminderNumber} Reminders.__**`
+              );
+              return;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Showing the __${numberOfEntries} reminders after Reminder ${first}__...**`
+            );
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: false },
+              first - 1,
+              numberOfEntries
+            );
+            await fn.sendPaginationEmbed(
+              bot,
+              interaction.channel_id,
+              authorID,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  numberOfEntries,
+                  timezoneOffset,
+                  first - 1
+                ),
+                `Reminder: See ${numberOfEntries} Reminders After Reminder ${first}`,
+                true,
+                fn.getFileName("Reminders", timezoneOffset),
+                reminderEmbedColour
+              ),
+              true
+            );
+          }
+          break;
+        case "many":
+          {
+          }
+          break;
+      }
     }
   },
 };

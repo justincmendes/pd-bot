@@ -593,7 +593,7 @@ module.exports = {
                 message.author.id,
                 message.channel.id,
           PREFIX,
-          `**Select the goal you'd like to make into a habit:**${
+          `**__Select the goal you'd like to make into a habit:__**${
             someGoalsSelected
               ? `\n(Type \`${mastermindGoals.length + 1}\` if you're done)`
               : ""

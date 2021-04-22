@@ -294,9 +294,9 @@ async function setUserMastermindReminder(
   mastermindDocument
 ) {
   let endTime = await fn.getDateAndTimeEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+    bot,
+    message.author.id,
+    message.channel.id,
     PREFIX,
     timezoneOffset,
     daylightSaving,
@@ -308,9 +308,9 @@ async function setUserMastermindReminder(
   if (!endTime && endTime !== 0) return false;
   else endTime -= HOUR_IN_MS * timezoneOffset;
   var repetitions = await fn.getNumberEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+    bot,
+    message.author.id,
+    message.channel.id,
     PREFIX,
     `**How many times** do you want to be **reminded?** (1 per day)\n\nEnter a whole number, or \`0\` if you want to continue being **reminded indefinitely.**\n(You can always use \`${PREFIX}repeat edit recent\` or \`${PREFIX}repeat delete recent\`)\n\n(Recommended: \`7\` or \`14\` - for a full week or two of goal reminders until next mastermind)`,
     "Mastermind: Weekly Goals Daily Reminder Repetitions",
@@ -332,7 +332,7 @@ async function setUserMastermindReminder(
       const confirmOverride = await fn.getUserConfirmation(
         bot,
         message.author.id,
-      message.channel.id,
+        message.channel.id,
         PREFIX,
         `Do you want to **cancel** any **older Mastermind reminders** that are **currently ongoing**?\n(There are currently **${mastermindReminders.length} reminder(s)** ongoing)`,
         false,
@@ -643,7 +643,7 @@ module.exports = {
         const timezone = await fn.getNewUserTimezoneSettings(
           bot,
           message.author.id,
-        message.channel.id,
+          message.channel.id,
           PREFIX,
           targetUser
         );
@@ -657,9 +657,9 @@ module.exports = {
 
       if (userWantsTemplate) {
         let observations = await fn.getMultilineEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "**__Look back at the previous week ↩:__**\n**- 📈 How much did you stick to your habits and/or progress on your goals this week?\n- 💭 Make 3 observations.**",
           "Mastermind Entry: Observations",
@@ -671,9 +671,9 @@ module.exports = {
         if (!observations && observations !== "") return;
 
         const areaOfLifeIndex = await fn.userSelectFromList(
-            bot,
-            message.author.id,
-            message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           areasOfLifeList,
           areasOfLife.length,
@@ -685,9 +685,9 @@ module.exports = {
         if (!areaOfLifeIndex && areaOfLifeIndex !== 0) return;
 
         const areaOfLifeReason = await fn.getSingleEntryWithCharacterLimit(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           `**Why does ${areasOfLifeEmojis[areaOfLifeIndex]} __${areasOfLife[areaOfLifeIndex]}__ need the most attention this week?**\n(Within 1000 characters)`,
           "Mastermind Entry: Area of Life Assessment",
@@ -700,9 +700,9 @@ module.exports = {
         if (!areaOfLifeReason && areaOfLifeReason !== "") return;
 
         const stopEntry = await fn.getSingleEntryWithCharacterLimit(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "**What do you want to __stop__ doing this week?**\n(Within 1000 characters)",
           "Mastermind Entry: Stop",
@@ -715,9 +715,9 @@ module.exports = {
         if (!stopEntry && stopEntry !== "") return;
 
         const startEntry = await fn.getSingleEntryWithCharacterLimit(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "**What do you want to __start__ doing this week?**\n(Within 1000 characters)",
           "Mastermind Entry: Start",
@@ -730,9 +730,9 @@ module.exports = {
         if (!startEntry && startEntry !== "") return;
 
         const continueEntry = await fn.getSingleEntryWithCharacterLimit(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "**What went well this past week that you want to __continue__ doing for this week?**\n(Within 1000 characters)",
           "Mastermind Entry: Continue",
@@ -761,9 +761,9 @@ module.exports = {
           }\nType \`reset\` to **reset** all of your current **weekly goals**`;
           const completionKeywords = ["done", "reset"];
           const weeklyGoalDescription = await fn.getSingleEntryWithCharacterLimit(
-                bot,
-                message.author.id,
-                message.channel.id,
+            bot,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             `**🎯 What is __Goal #${goalCount}__ of this week's goals?**\n(Within 100 characters)\n\n*Write a brief description of your weekly goal (in very simple terms), you will get into the specifics in the next few pages.*`,
             weeklyGoalEntryTitle,
@@ -819,9 +819,9 @@ module.exports = {
           } else weeklyGoalSpecifics = weeklyGoalSpecifics.message;
 
           let weeklyGoalReason = await fn.getMultilineEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+            bot,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             `${goalDescriptionString}\n${goalTypeString}\n\n**__💭 Why do you want to accomplish this goal?__**\n(Within 1000 characters)`,
             `${weeklyGoalEntryTitle} (Why)`,
@@ -894,7 +894,7 @@ module.exports = {
           const userIsFinished = await fn.getUserConfirmation(
             bot,
             message.author.id,
-      message.channel.id,
+            message.channel.id,
             PREFIX,
             `**Would you like to __set another weekly goal?__**\n*- Type \`no\` if you're finished setting goals*\n\n${goalsOut}`,
             false,
@@ -929,9 +929,9 @@ module.exports = {
         });
       } else if (userWantsTemplate === false) {
         let entry = await fn.getMultilineEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "**Enter your mastermind entry:**",
           "Mastermind Entry: No Template",
@@ -983,7 +983,7 @@ module.exports = {
               const goalsToReminderConfirmation = await fn.getUserConfirmation(
                 bot,
                 message.author.id,
-      message.channel.id,
+                message.channel.id,
                 PREFIX,
                 `Would you like to be **reminded** of your **Mastermind Weekly Goals** each day this upcoming week?\n(If yes, you can choose if you want to be reminded of them for 7 days or more)\n\n**If you want to setup Weekly Goal reminders later**, type \`${PREFIX}${commandUsed} reminder\``,
                 forceSkip,
@@ -1004,7 +1004,7 @@ module.exports = {
               const goalsToHabitConfirmation = await fn.getUserConfirmation(
                 bot,
                 message.author.id,
-      message.channel.id,
+                message.channel.id,
                 PREFIX,
                 `**__Would you like to set any of this week's goal(s) as a habit?:__**\n\n${
                   fn.goalArrayToString(
@@ -1037,7 +1037,7 @@ module.exports = {
             const postConfirmation = await fn.getUserConfirmation(
               bot,
               message.author.id,
-      message.channel.id,
+              message.channel.id,
               PREFIX,
               "**Would you like to __post__ your mastermind entry to a __server's channel?__**",
               false,
@@ -1344,7 +1344,7 @@ module.exports = {
               const multipleDeleteConfirmation = await fn.getPaginatedUserConfirmation(
                 bot,
                 message.author.id,
-            message.channel.id,
+                message.channel.id,
                 PREFIX,
                 mastermindStringArray,
                 multipleDeleteMessage,
@@ -1431,7 +1431,7 @@ module.exports = {
           let confirmDeleteAll = await fn.getUserConfirmation(
             bot,
             message.author.id,
-      message.channel.id,
+            message.channel.id,
             PREFIX,
             confirmDeleteAllMessage,
             forceSkip,
@@ -1442,7 +1442,7 @@ module.exports = {
           let finalConfirmDeleteAll = await fn.getUserConfirmation(
             bot,
             message.author.id,
-      message.channel.id,
+            message.channel.id,
             PREFIX,
             finalDeleteAllMessage,
             "Mastermind: Delete ALL Entries FINAL Warning!"
@@ -1497,7 +1497,7 @@ module.exports = {
         const deleteConfirmation = await fn.getPaginatedUserConfirmation(
           bot,
           message.author.id,
-            message.channel.id,
+          message.channel.id,
           PREFIX,
           mastermindEmbed,
           deleteConfirmMessage,
@@ -1606,7 +1606,7 @@ module.exports = {
             let confirmSeeAll = await fn.getUserConfirmation(
               bot,
               message.author.id,
-      message.channel.id,
+              message.channel.id,
               PREFIX,
               confirmSeeMessage,
               forceSkip,
@@ -1623,7 +1623,7 @@ module.exports = {
             let confirmSeeAll = await fn.getUserConfirmation(
               bot,
               message.author.id,
-      message.channel.id,
+              message.channel.id,
               PREFIX,
               confirmSeeAllMessage,
               forceSkip,
@@ -1666,13 +1666,7 @@ module.exports = {
               mastermindStringArray,
               `Mastermind: See ${pastNumberOfEntriesIndex} Entries (${sortType})`,
               true,
-              `Mastermind Reflections ${fn.timestampToDateString(
-                Date.now() + timezoneOffset * HOUR_IN_MS,
-                false,
-                false,
-                true,
-                true
-              )}`,
+              fn.getFileName("Mastermind Reflections", timezoneOffset),
               mastermindEmbedColour
             )
           );
@@ -1753,13 +1747,7 @@ module.exports = {
                     mastermindStringArray,
                     `Mastermind: See ${pastNumberOfEntriesIndex} Entries Past ${entriesToSkip} (${sortType})`,
                     true,
-                    `Mastermind Reflections ${fn.timestampToDateString(
-                      Date.now() + timezoneOffset * HOUR_IN_MS,
-                      false,
-                      false,
-                      true,
-                      true
-                    )}`,
+                    fn.getFileName("Mastermind Reflections", timezoneOffset),
                     mastermindEmbedColour
                   )
                 );
@@ -1801,13 +1789,7 @@ module.exports = {
           mastermindString,
           `Mastermind: See Entry ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
-          `Mastermind Reflection ${fn.timestampToDateString(
-            Date.now() + timezoneOffset * HOUR_IN_MS,
-            false,
-            false,
-            true,
-            true
-          )}`,
+          fn.getFileName("Mastermind Reflection", timezoneOffset),
           mastermindEmbedColour
         );
         await fn.sendPaginationEmbed(
@@ -1911,9 +1893,9 @@ module.exports = {
             const fieldToEditTitle = `Mastermind: Edit Field`;
             var fieldToEdit, fieldToEditIndex;
             const selectedField = await fn.getUserSelectedObject(
-                bot,
-                message.author.id,
-                message.channel.id,
+              bot,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               fieldToEditInstructions,
               fieldToEditTitle,
@@ -1954,9 +1936,9 @@ module.exports = {
               if (fieldToEditIndex === 1) {
                 mastermindEditMessagePrompt = `\n**__Please enter your new mastermind entry:__**`;
                 userEdit = await fn.getUserMultilineEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                  bot,
+                  message.author.id,
+                  message.channel.id,
                   fieldToEdit,
                   mastermindEditMessagePrompt,
                   type,
@@ -1971,9 +1953,9 @@ module.exports = {
                   mastermindEditMessagePrompt =
                     "\n**__Look back at the previous week ↩:__**\n**- 📈 How much did you stick to your habits and/or progress on your goals?\n- 💭 Make 3 observations.**";
                   userEdit = await fn.getUserMultilineEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     fieldToEdit,
                     mastermindEditMessagePrompt,
                     type,
@@ -1985,9 +1967,9 @@ module.exports = {
                 case 2: {
                   mastermindEditMessagePrompt = `\n**__Which area of life needs the most attention? 🌱__**\n${areasOfLifeList}`;
                   let areaOfLifeType = await fn.getUserEditNumber(
-                bot,
-                message.author.id,
-                message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     fieldToEdit,
                     areasOfLife.length,
@@ -2005,9 +1987,9 @@ module.exports = {
                   // let additionalInstructions = `Type \`same\` to keep the previous entry you've had`;
                   // let additionalKeywords = ["same"];
                   let areaOfLifeReason = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     fieldToEdit,
                     mastermindEditMessagePrompt,
@@ -2033,9 +2015,9 @@ module.exports = {
                   mastermindEditMessagePrompt =
                     "What do you want to __stop__ doing?";
                   userEdit = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     fieldToEdit,
                     mastermindEditMessagePrompt,
@@ -2049,9 +2031,9 @@ module.exports = {
                   mastermindEditMessagePrompt =
                     "What do you want to __start__ doing?";
                   userEdit = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     fieldToEdit,
                     mastermindEditMessagePrompt,
@@ -2065,9 +2047,9 @@ module.exports = {
                   mastermindEditMessagePrompt =
                     "What went well in the previous week that you want to __continue__ doing for?";
                   userEdit = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     fieldToEdit,
                     mastermindEditMessagePrompt,
@@ -2089,9 +2071,9 @@ module.exports = {
                     true
                   )}`;
                   let goalIndex = await fn.userSelectFromList(
-            bot,
-            message.author.id,
-            message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     fn.goalArrayToString(
                       goalsArray,
@@ -2111,9 +2093,9 @@ module.exports = {
                   // + `Type \`same\` to **keep this category the same** as it was before`;
                   // let extraKeywords = ["delete", "same"];
                   let weeklyGoalDescription = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     "Goal Description",
                     `\n**🎯 What is __Goal #${goalIndex + 1}__?:**`,
@@ -2140,9 +2122,9 @@ module.exports = {
                       : `\n${weeklyGoalDescription}`
                   }`;
                   let weeklyGoalType = await fn.getUserEditNumber(
-                bot,
-                message.author.id,
-                message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     "Goal Category",
                     areasOfLife.length,
@@ -2176,9 +2158,9 @@ module.exports = {
                   else weeklyGoalSpecifics = weeklyGoalSpecifics.message;
 
                   let weeklyGoalReason = await fn.getUserMultilineEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+                    bot,
+                    message.author.id,
+                    message.channel.id,
                     PREFIX,
                     "Goal Reason",
                     `${goalTypeString}\n${goalDescriptionString}\n\n**__💭 Why do you want to accomplish this goal?__**`,
@@ -2306,7 +2288,7 @@ module.exports = {
                   continueEdit = await fn.getUserConfirmation(
                     bot,
                     message.author.id,
-      message.channel.id,
+                    message.channel.id,
                     PREFIX,
                     continueEditMessage,
                     forceSkip,
@@ -2391,9 +2373,9 @@ module.exports = {
               }
             });
             const targetMastermindIndex = await fn.userSelectFromList(
-            bot,
-            message.author.id,
-            message.channel.id,
+              bot,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               mastermindList,
               userMasterminds.length,
@@ -2419,7 +2401,7 @@ module.exports = {
             const setMoreHabits = await fn.getUserConfirmation(
               bot,
               message.author.id,
-      message.channel.id,
+              message.channel.id,
               PREFIX,
               "Would you like to convert another mastermind weekly goal into a habit?",
               false,
@@ -2470,9 +2452,9 @@ module.exports = {
               }
             });
             const targetMastermindIndex = await fn.userSelectFromList(
-            bot,
-            message.author.id,
-            message.channel.id,
+              bot,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               mastermindList,
               userMasterminds.length,
@@ -2487,7 +2469,7 @@ module.exports = {
               const confirmSelection = await fn.getUserConfirmation(
                 bot,
                 message.author.id,
-      message.channel.id,
+                message.channel.id,
                 PREFIX,
                 `Are you sure you want reminders for the mastermind created on **__${fn.timestampToDateString(
                   targetMastermind.createdAt,
@@ -2522,7 +2504,7 @@ module.exports = {
             const setMoreReminders = await fn.getUserConfirmation(
               bot,
               message.author.id,
-      message.channel.id,
+              message.channel.id,
               PREFIX,
               "Would you like to set another mastermind weekly goal reminder?",
               false,

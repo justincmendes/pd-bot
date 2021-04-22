@@ -5236,6 +5236,16 @@ module.exports = {
     }
   },
 
+  getFileName: function(title, timezoneOffset) {
+    return `${title} ${this.timestampToDateString(
+      Date.now() + timezoneOffset * HOUR_IN_MS,
+      false,
+      false,
+      true,
+      true
+    )}`;
+  },
+
   // With file capability
   sendPaginationEmbed: async function (
     bot,

@@ -289,7 +289,7 @@ bot.on("ready", async () => {
   // await getApp(<GUILD_ID>).commands(<COMMAND_ID>).delete();
 
   //* Reminder Command:
-  // await getApp().commands.post({
+  // await getApp("736750419170164800").commands.post({
   //   data: {
   //     name: "reminder",
   //     description: "Set a channel or DM one-time reminder",
@@ -545,11 +545,116 @@ bot.on("ready", async () => {
   //                 type: 4,
   //               },
   //               {
-  //                 name: "embed",
+  //                 name: "send_as_embed",
   //                 description:
   //                   "Send this reminder as an embed message. NOTE: No pings will trigger if true for a channel reminder!",
-  //                 required: false,
+  //                 required: true,
   //                 type: 5,
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //       {
+  //         name: "see",
+  //         description: "See a reminder",
+  //         type: 2,
+  //         options: [
+  //           {
+  //             name: "recent",
+  //             description: "See the most recent Reminder you've created",
+  //             type: 1,
+  //           },
+  //           {
+  //             name: "entry",
+  //             description:
+  //               "See a specific Reminder (based on the Reminder's number)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "entry",
+  //                 description:
+  //                   "Enter the Reminder number of the Reminder you'd like to see!",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "all",
+  //             description: "See all Reminders",
+  //             type: 1,
+  //           },
+  //           {
+  //             name: "range",
+  //             description:
+  //               "See a range of Reminders (e.g. from 1 to 5, inclusive)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "from",
+  //                 description:
+  //                   "Enter the first Reminder you'd like to see in the range.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "to",
+  //                 description:
+  //                   "Enter the last Reminder you'd like to see in the range.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "past",
+  //             description:
+  //               "See reminders starting from the first Reminder onwards.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "number_of_entries",
+  //                 description:
+  //                   "Enter the number of reminders you'd like to see from the first Reminder onwards",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "entries_after",
+  //             description:
+  //               "See a certain number of entries after a particular Reminder",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "number_of_entries",
+  //                 description: "Enter number of reminders you'd like to see",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "first",
+  //                 description:
+  //                   "Enter the number of the Reminder you would like to be the first Reminder to be returned",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "many",
+  //             description:
+  //               "See many reminders (with differing reminder numbers)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "entries",
+  //                 description:
+  //                   "Enter each of the entries you'd like to see, comma separated (CSVs)",
+  //                 required: true,
+  //                 type: 3,
   //               },
   //             ],
   //           },
@@ -560,7 +665,7 @@ bot.on("ready", async () => {
   // });
 
   //* Recurring Reminder (Repeat) Command:
-  // await getApp().commands.post({
+  // await getApp("736750419170164800").commands.post({
   //   data: {
   //     name: "recurringreminder",
   //     description: "Set a channel or DM repeating/recurring reminder",
@@ -872,11 +977,118 @@ bot.on("ready", async () => {
   //                 type: 4,
   //               },
   //               {
-  //                 name: "embed",
+  //                 name: "send_as_embed",
   //                 description:
   //                   "Send this reminder as an embed message. NOTE: No pings will trigger if true for a channel reminder!",
-  //                 required: false,
+  //                 required: true,
   //                 type: 5,
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //       {
+  //         name: "see",
+  //         description: "See a recurring reminder",
+  //         type: 2,
+  //         options: [
+  //           {
+  //             name: "recent",
+  //             description:
+  //               "See the most recent Recurring Reminder you've created",
+  //             type: 1,
+  //           },
+  //           {
+  //             name: "entry",
+  //             description:
+  //               "See a specific Recurring Reminder (based on the Reminder's number)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "entry",
+  //                 description:
+  //                   "Enter the Reminder number of the Recurring Reminder you'd like to see!",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "all",
+  //             description: "See all Recurring Reminders",
+  //             type: 1,
+  //           },
+  //           {
+  //             name: "range",
+  //             description:
+  //               "See a range of Recurring Reminders (e.g. from 1 to 5, inclusive)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "from",
+  //                 description:
+  //                   "Enter the first Reminder you'd like to see in the range.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "to",
+  //                 description:
+  //                   "Enter the last Reminder you'd like to see in the range.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "past",
+  //             description:
+  //               "See Recurring Reminders starting from the first Reminder onwards.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "number_of_entries",
+  //                 description:
+  //                   "Enter the number of Reminders you'd like to see from the first Reminder onwards",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "entries_after",
+  //             description:
+  //               "See a certain number of entries after a particular Recurring Reminder",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "number_of_entries",
+  //                 description:
+  //                   "Enter number of Recurring Reminders you'd like to see",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the Reminder you would like to be the first Reminder to be returned",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "many",
+  //             description:
+  //               "See many reminders (with differing reminder numbers)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "entries",
+  //                 description:
+  //                   "Enter each of the entries you'd like to see, comma separated (CSVs)",
+  //                 required: true,
+  //                 type: 3,
   //               },
   //             ],
   //           },

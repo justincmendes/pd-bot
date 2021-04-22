@@ -1255,7 +1255,8 @@ module.exports = {
 
   multipleRemindersToString: async function (
     bot,
-    message,
+    userID,
+    channelID,
     reminderArray,
     numberOfReminders,
     userTimezoneOffset,
@@ -1267,8 +1268,9 @@ module.exports = {
     for (let i = 0; i < numberOfReminders; i++) {
       if (reminderArray[i] === undefined) {
         numberOfReminders = i;
-        fn.sendErrorMessage(
-          message,
+        await sd.sendMessage(
+          bot,
+          channelID,
           `**REMINDERS ${i + entriesToSkip + 1}**+ ONWARDS DO NOT EXIST...`
         );
         break;
@@ -1482,12 +1484,11 @@ module.exports = {
     return reminder;
   },
 
-  getMostRecentReminder: async function (
+  getMostRecentReminderString: async function (
     bot,
     userID,
     isRecurring,
-    userTimezoneOffset,
-    embedColour = reminderEmbedColour
+    userTimezoneOffset
   ) {
     const recentReminderToString = `__**Reminder ${await this.getRecentReminderIndex(
       userID,
@@ -1497,6 +1498,22 @@ module.exports = {
       await this.getOneReminderByRecency(userID, 0, isRecurring),
       userTimezoneOffset
     )}`;
+    return recentReminderToString;
+  },
+
+  getMostRecentReminderEmbed: async function (
+    bot,
+    userID,
+    isRecurring,
+    userTimezoneOffset,
+    embedColour = reminderEmbedColour
+  ) {
+    const recentReminderToString = this.getMostRecentReminderString(
+      bot,
+      userID,
+      isRecurring,
+      userTimezoneOffset
+    );
     const reminderEmbed = fn.getMessageEmbed(
       recentReminderToString,
       `Reminder: See Recent Reminder`,

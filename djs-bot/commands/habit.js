@@ -1370,13 +1370,7 @@ module.exports = {
                 isArchived ? ` Archive` : ""
               }: See ${habitIndex} Habits(${sortType})`,
               true,
-              `Habits ${fn.timestampToDateString(
-                Date.now() + timezoneOffset * HOUR_IN_MS,
-                false,
-                false,
-                true,
-                true
-              )}`,
+              fn.getFileName("Habits", timezoneOffset),
               habitEmbedColour
             )
           );
@@ -1476,13 +1470,7 @@ module.exports = {
                       isArchived ? ` Archive` : ""
                     }: See ${habitIndex} Habits Past ${entriesToSkip} (${sortType})`,
                     true,
-                    `Habits ${fn.timestampToDateString(
-                      Date.now() + timezoneOffset * HOUR_IN_MS,
-                      false,
-                      false,
-                      true,
-                      true
-                    )}`,
+                    fn.getFileName("Habits", timezoneOffset),
                     habitEmbedColour
                   )
                 );
@@ -1534,13 +1522,7 @@ module.exports = {
             isArchived ? ` Archive` : ""
           }: See Habit ${habitIndex} (${sortType})`,
           true,
-          `Habit ${fn.timestampToDateString(
-            Date.now() + timezoneOffset * HOUR_IN_MS,
-            false,
-            false,
-            true,
-            true
-          )}`,
+          fn.getFileName("Habit", timezoneOffset),
           habitEmbedColour
         );
         await fn.sendPaginationEmbed(
@@ -3327,13 +3309,7 @@ module.exports = {
               false
             )}`,
             true,
-            `Habits ${fn.timestampToDateString(
-              currentTimestamp,
-              false,
-              false,
-              true,
-              true
-            )}`,
+            fn.getFileName("Habits", timezoneOffset),
             habitEmbedColour
           ),
           true
@@ -3451,13 +3427,7 @@ module.exports = {
               ? `Habit ${i}: Stats (${sortType})`
               : `Habits: Stats (${sortType})`,
             true,
-            `Habits ${fn.timestampToDateString(
-              currentTimestamp,
-              false,
-              false,
-              true,
-              true
-            )}`,
+            fn.getFileName("Habits", timezoneOffset),
             habitEmbedColour
           ),
           true
@@ -3574,13 +3544,7 @@ module.exports = {
               habitOutputArray,
               `Habits: Past ${pastXDays} Days Stats`,
               true,
-              `Habits ${fn.timestampToDateString(
-                currentTimestamp,
-                false,
-                false,
-                true,
-                true
-              )}`,
+              fn.getFileName("Habits", timezoneOffset),
               habitEmbedColour
             ),
             true

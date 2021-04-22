@@ -219,9 +219,9 @@ module.exports = {
 
         if (targetHabitIndex === undefined) {
           targetHabit = await fn.getUserSelectedObject(
-                bot,
-                message.author.id,
-                message.channel.id,
+            bot,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             "__**Which habit would you like to log?**__",
             `Log${isArchived ? " Archive" : ""}: Select Habit To Log`,
@@ -239,9 +239,9 @@ module.exports = {
         }
 
         const logTimestamp = await fn.getDateAndTimeEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           timezoneOffset,
           daylightSaving,
@@ -283,7 +283,7 @@ module.exports = {
           const confirmOverwiteLog = await fn.getUserConfirmation(
             bot,
             message.author.id,
-      message.channel.id,
+            message.channel.id,
             PREFIX,
             `__**You already have a habit log on this day, are you sure you would like to overwrite it?**__\n*If yes, you can start creating the new log which will replace the old one.\nOtherwise, it will exit the log creation.*\n(**You can edit it instead using: \`${PREFIX}habit edit${
               targetHabitIndex || targetHabitIndex === 0
@@ -332,9 +332,9 @@ module.exports = {
 
         if (isCountType) {
           countValue = await fn.getNumberEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+            bot,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             `Enter your **${countMetric}** (${countGoalTypeString}: **${countGoal}**)\n${logTimestampString}\n${previousCountTypeString}`,
             `Log${isArchived ? " Archive" : ""}: ${countGoalTypeString}`,
@@ -355,9 +355,9 @@ module.exports = {
           : "";
 
         let habitLog = await fn.userSelectFromList(
-            bot,
-            message.author.id,
-            message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           checkMissedSkipList,
           3,
@@ -398,9 +398,9 @@ module.exports = {
         );
         if (confirmReflection) {
           reflectionMessage = await fn.getMultilineEntry(
-                bot,
-                message.author.id,
-                message.channel.id,
+            bot,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             `**Write a reflection message to go with your habit log.**\n(Within 1000 characters)`,
             `Log${isArchived ? " Archive" : ""}: Reflection Message`,
@@ -625,9 +625,9 @@ module.exports = {
 
       if (targetHabitIndex === undefined) {
         targetHabit = await fn.getUserSelectedObject(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "__**Which habit has the log**(**s**)** you want to delete?**__",
           `Log${isArchived ? " Archive" : ""}: Select Habit To Delete Logs`,
@@ -669,9 +669,9 @@ module.exports = {
           logList += `\`${habitLogs.length + 1}\`: **DONE**`;
         }
         const targetLogIndex = await fn.userSelectFromList(
-            bot,
-            message.author.id,
-            message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           `\n${logList}`,
           habitLogs.length + 1,
@@ -817,9 +817,9 @@ module.exports = {
 
       if (targetHabitIndex === undefined) {
         targetHabit = await fn.getUserSelectedObject(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "__**Which habit do you want to see logs for?**__",
           `Log${isArchived ? " Archive" : ""}: Select Habit To See Logs`,
@@ -874,13 +874,7 @@ module.exports = {
             targetHabitIndex + 1
           }: All ${totalLogs} Logs`,
           true,
-          `Logs ${fn.timestampToDateString(
-            Date.now() + timezoneOffset * HOUR_IN_MS,
-            false,
-            false,
-            true,
-            true
-          )}`,
+          fn.getFileName("Logs", timezoneOffset),
           habitEmbedColour
         )
       );
@@ -970,9 +964,9 @@ module.exports = {
 
       if (targetHabitIndex === undefined) {
         targetHabit = await fn.getUserSelectedObject(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "__**Which habit has the log you want to edit?**__",
           `Log${isArchived ? " Archive" : ""}: Select Habit To Edit Log`,
@@ -1010,9 +1004,9 @@ module.exports = {
       const type = `Log${isArchived ? " Archive" : ""}`;
       var targetLog;
       let targetLogIndex = await fn.userSelectFromList(
-            bot,
-            message.author.id,
-            message.channel.id,
+        bot,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         `\n${logList}`,
         logs.length,
@@ -1083,9 +1077,9 @@ module.exports = {
         var fieldToEdit, fieldToEditIndex;
 
         const selectedField = await fn.getUserSelectedObject(
-                bot,
-                message.author.id,
-                message.channel.id,
+          bot,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           fieldToEditInstructions,
           fieldToEditTitle,
@@ -1109,9 +1103,9 @@ module.exports = {
           case 0:
             habitEditMessagePrompt = `\n__**Please enter the date/time of when you created this log:**__ ⌚\n${timeExamples}`;
             userEdit = await fn.getUserEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+              bot,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               fieldToEdit,
               habitEditMessagePrompt,
@@ -1125,9 +1119,9 @@ module.exports = {
             let currentStateEmoji = fn.getStateEmoji(targetLog.state);
             habitEditMessagePrompt = checkMissedSkipList;
             userEdit = await fn.userSelectFromList(
-            bot,
-            message.author.id,
-            message.channel.id,
+              bot,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               habitEditMessagePrompt,
               3,
@@ -1141,9 +1135,9 @@ module.exports = {
             habitEditMessagePrompt =
               "\n__**Please enter the reflection message you'd like to enter for this log:**__ ✍\n(Within 1000 characters)";
             userEdit = await fn.getUserMultilineEditString(
-                bot,
-                message.author.id,
-                message.channel.id,
+              bot,
+              message.author.id,
+              message.channel.id,
               PREFIX,
               fieldToEdit,
               habitEditMessagePrompt,
@@ -1383,7 +1377,7 @@ module.exports = {
               continueEdit = await fn.getUserConfirmation(
                 bot,
                 message.author.id,
-      message.channel.id,
+                message.channel.id,
                 PREFIX,
                 continueEditMessage,
                 forceSkip,
