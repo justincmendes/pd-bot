@@ -277,6 +277,7 @@ module.exports = {
             originalMessage,
             titleString,
             true,
+            userID,
             `${
               !title.startsWith("Mastermind: Weekly Goals")
                 ? isRecurring && title === "Reminder"
@@ -1955,6 +1956,147 @@ module.exports = {
       daylightSaving
     );
     return timeOut;
+  },
+
+  getReminderObjectArray: async function (indexArray, userID, isRecurring) {
+    try {
+      if (!indexArray || !indexArray.length) return [];
+      const currentReminderIndices = new Array();
+      const reminderObjectArray = new Array();
+      for (const index of indexArray) {
+        var reminderDocument, reminderIndex;
+        if (index === "recent") {
+          reminderIndex = await this.getRecentReminderIndex(
+            userID,
+            isRecurring
+          );
+        } else reminderIndex = index;
+
+        if (!currentReminderIndices.includes(reminderIndex)) {
+          currentReminderIndices.push(reminderIndex);
+          if (index === "recent") {
+            reminderDocument = await this.getOneReminderByRecency(
+              userID,
+              1,
+              isRecurring
+            );
+          } else {
+            reminderDocument = await this.getOneReminderByEndTime(
+              userID,
+              index - 1,
+              isRecurring
+            );
+          }
+          reminderObjectArray.push({
+            index: reminderIndex,
+            document: reminderDocument,
+          });
+        }
+      }
+      return reminderObjectArray;
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
+  },
+
+  getReminderObjectStringArray: async function (
+    bot,
+    timezoneOffset,
+    reminderObjectArray
+  ) {
+    try {
+      if (!reminderObjectArray || !reminderObjectArray.length) return [];
+      const reminderObjectStringArray = new Array();
+      for (const reminder of reminderObjectArray) {
+        const documentString = await this.reminderDocumentToString(
+          bot,
+          reminder.document,
+          timezoneOffset
+        );
+        if (documentString) {
+          reminderObjectStringArray.push(
+            `__**Reminder${
+              reminder.index ? ` ${reminder.index}` : ""
+            }:**__\n${documentString}`
+          );
+        }
+      }
+      console.log({ reminderObjectStringArray });
+      return reminderObjectStringArray;
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
+  },
+
+  getParsedReminderManyQuery: async function (
+    bot,
+    userID,
+    timezoneOffset,
+    indicesString,
+    isRecurring,
+    objectPlural,
+    totalObjectNumber,
+    acceptedStrings = [],
+    ignoreCase = false
+  ) {
+    const indexArray = fn.parseUserInputIndices(
+      fn.parseStringArrayIntegerValues(
+        fn.extractCommaSeparatedValues(indicesString)
+      ),
+      totalObjectNumber,
+      { acceptedStrings, ignoreCase }
+    );
+    // console.log({ indexArray });
+    if (!indexArray.length) {
+      return {
+        error: true,
+        message: fn.getManyEntriesErrorMessage(
+          indicesString,
+          objectPlural,
+          totalObjectNumber
+        ),
+      };
+    }
+    const reminderObjectArray = await this.getReminderObjectArray(
+      indexArray,
+      userID,
+      isRecurring
+    );
+    console.log({ reminderObjectArray });
+    if (!reminderObjectArray.length) {
+      return {
+        error: true,
+        message: fn.getManyEntriesErrorMessage(
+          indexArray.join(", "),
+          objectPlural,
+          totalObjectNumber
+        ),
+      };
+    }
+    const reminderStringArray = await this.getReminderObjectStringArray(
+      bot,
+      timezoneOffset,
+      reminderObjectArray
+    );
+    // console.log({ reminderStringArray });
+    if (!reminderStringArray.length) {
+      return {
+        error: true,
+        message: fn.getManyEntriesErrorMessage(
+          reminderObjectArray.map((object) => object.index).join(", "),
+          objectPlural,
+          totalObjectNumber
+        ),
+      };
+    }
+    return {
+      error: false,
+      indexArray: indexArray,
+      stringArray: reminderStringArray,
+      objectArray: reminderObjectArray,
+    };
   },
 
   MINIMUM_INTERVAL,

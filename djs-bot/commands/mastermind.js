@@ -65,6 +65,7 @@ async function sendGeneratedTemplate(
       templateArray,
       "Mastermind: Weekly Reflection And Goals Template",
       true,
+      message.author.id,
       "Mastermind Weekly Reflection and Weekly Goals Template",
       templateEmbedColour
     )
@@ -1162,6 +1163,7 @@ module.exports = {
             ),
             "",
             true,
+            authorID,
             false,
             mastermindEmbedColour
           );
@@ -1258,6 +1260,7 @@ module.exports = {
             mastermindStringArray,
             "",
             true,
+            authorID,
             false,
             mastermindEmbedColour
           );
@@ -1333,6 +1336,7 @@ module.exports = {
                 ),
                 "",
                 true,
+                authorID,
                 false,
                 mastermindEmbedColour
               );
@@ -1400,6 +1404,7 @@ module.exports = {
             )}`,
             `Mastermind: Delete Recent Entry`,
             true,
+            authorID,
             false,
             mastermindEmbedColour
           );
@@ -1491,6 +1496,7 @@ module.exports = {
           )}`,
           `Mastermind: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
+          authorID,
           false,
           mastermindEmbedColour
         );
@@ -1666,6 +1672,7 @@ module.exports = {
               mastermindStringArray,
               `Mastermind: See ${pastNumberOfEntriesIndex} Entries (${sortType})`,
               true,
+              authorID,
               fn.getFileName("Mastermind Reflections", timezoneOffset),
               mastermindEmbedColour
             )
@@ -1747,6 +1754,7 @@ module.exports = {
                     mastermindStringArray,
                     `Mastermind: See ${pastNumberOfEntriesIndex} Entries Past ${entriesToSkip} (${sortType})`,
                     true,
+                    authorID,
                     fn.getFileName("Mastermind Reflections", timezoneOffset),
                     mastermindEmbedColour
                   )
@@ -1789,6 +1797,7 @@ module.exports = {
           mastermindString,
           `Mastermind: See Entry ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
+          authorID,
           fn.getFileName("Mastermind Reflection", timezoneOffset),
           mastermindEmbedColour
         );
@@ -2587,6 +2596,7 @@ module.exports = {
             true
           )}`,
           true,
+          authorID,
           false,
           mastermindEmbedColour
         );

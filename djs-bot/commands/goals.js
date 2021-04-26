@@ -1008,6 +1008,7 @@ module.exports = {
             ),
             "",
             true,
+            authorID,
             false,
             goalEmbedColour
           );
@@ -1114,7 +1115,7 @@ module.exports = {
           }
           const deleteConfirmMessage = `Are you sure you want to **delete goals ${toDelete.toString()}?**`;
           const sortType = indexByRecency ? "By Recency" : "By Start Time";
-          habits = fn.getEmbedArray(habits, "", true, false, goalEmbedColour);
+          habits = fn.getEmbedArray(habits, "", true, authorID, false, goalEmbedColour);
           const confirmDeleteMany = await fn.getPaginatedUserConfirmation(
             bot,
             message.author.id,
@@ -1199,6 +1200,7 @@ module.exports = {
                 ),
                 "",
                 true,
+                authorID,
                 false,
                 goalEmbedColour
               );
@@ -1264,6 +1266,7 @@ module.exports = {
             `__**Goal ${goalIndex}:**__ ${goalDocumentToString(bot, goalView)}`,
             `Long-Term Goal${isArchived ? ` Archive` : ""}: Delete Recent Goal`,
             true,
+            authorID,
             false,
             goalEmbedColour
           );
@@ -1369,6 +1372,7 @@ module.exports = {
             isArchived ? ` Archive` : ""
           }: Delete Goal ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
+          authorID,
           false,
           goalEmbedColour
         );
@@ -1588,6 +1592,7 @@ module.exports = {
                 isArchived ? ` Archive` : ""
               }: See ${goalIndex} Goals (${sortType})`,
               true,
+              authorID,
               fn.getFileName("Goals", timezoneOffset),
               goalEmbedColour
             )
@@ -1681,6 +1686,7 @@ module.exports = {
                       isArchived ? ` Archive` : ""
                     }: See ${goalIndex} Goals Past ${entriesToSkip} (${sortType})`,
                     true,
+                    authorID,
                     fn.getFileName("Goals", timezoneOffset),
                     goalEmbedColour
                   )
@@ -1729,6 +1735,7 @@ module.exports = {
             isArchived ? ` Archive` : ""
           }: See Goal ${goalIndex} (${sortType})`,
           true,
+          authorID,
           fn.getFileName("Goal", timezoneOffset),
           goalEmbedColour
         );
@@ -2271,6 +2278,7 @@ module.exports = {
           Date.now() + HOUR_IN_MS * timezoneOffset
         ).getUTCFullYear()})`,
         true,
+        authorID,
         false,
         goalEmbedColour
       );

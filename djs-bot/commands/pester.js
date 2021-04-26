@@ -154,6 +154,7 @@ module.exports = {
           userArray,
           `Pestering Accountability: ${guildName}`,
           false,
+          authorID,
           false,
           pesterEmbedColour
         )
@@ -210,6 +211,7 @@ module.exports = {
             userArray,
             title,
             false,
+            authorID,
             false,
             pesterEmbedColour
           );

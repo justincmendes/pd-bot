@@ -39,6 +39,9 @@ const autoSendReports = new Discord.Collection();
 const awaitingUsers = new Discord.Collection();
 // if channel is equal to userID, then just cancel the await and delete the message. (message to delete)
 
+const deleteFooterText = `🗑 to delete this window (not the entries)`;
+const textFileFooterText = `📎 to get all of this in a text file`;
+
 // Private Function Declarations
 
 module.exports = {
@@ -351,7 +354,14 @@ module.exports = {
       const deleteDelay = 3000;
       const MS_TO_SECONDS = 1000;
       const footerText = `*(expires in ${delayTime / MS_TO_SECONDS}s)*`;
-      let embeds = this.getEmbedArray(prompt, title, true, false, colour);
+      let embeds = this.getEmbedArray(
+        prompt,
+        title,
+        true,
+        userID,
+        false,
+        colour
+      );
       embeds.forEach((embed, i) => {
         embed[i] = embed.setFooter(footerText);
       });
@@ -495,7 +505,7 @@ module.exports = {
         : ""
     }`;
     prompt = prompt + textEntryInstructions;
-    let embeds = this.getEmbedArray(prompt, title, true, false, colour);
+    let embeds = this.getEmbedArray(prompt, title, true, userID, false, colour);
     embeds.forEach((embed, i) => {
       embeds[i] = embed.setFooter(footerText);
       if (imageURL) {
@@ -5121,6 +5131,7 @@ module.exports = {
     elements,
     title,
     doubleSpace = true,
+    userID = null,
     fileName = null,
     embedColour = this.defaultEmbedColour
   ) {
@@ -5220,11 +5231,17 @@ module.exports = {
           embedStrings.forEach((string) => {
             if (string.length) {
               const embed = this.getMessageEmbed(string, title, embedColour);
-              embedArray.push(
-                fileName
-                  ? embed.setFooter(`${this.fileFooterText} (${fileName})`)
-                  : embed
-              );
+              var footerText = "";
+              if (fileName) {
+                footerText = `${this.fileFooterText} (${fileName})`;
+              }
+              if (userID) {
+                footerText += (footerText ? "\n" : "") + `(User: ${userID})`;
+              }
+              if (footerText) {
+                embed.setFooter(footerText);
+              }
+              embedArray.push(embed);
             }
           });
           return embedArray;
@@ -5236,7 +5253,7 @@ module.exports = {
     }
   },
 
-  getFileName: function(title, timezoneOffset) {
+  getFileName: function (title, timezoneOffset) {
     return `${title} ${this.timestampToDateString(
       Date.now() + timezoneOffset * HOUR_IN_MS,
       false,
@@ -5324,7 +5341,8 @@ module.exports = {
               if (withDelete) {
                 collector.stop();
                 console.log("Stopped pagination");
-                embed.delete();
+                //* Message deletion handled in client (bot) event listener!
+                // embed.delete();
                 return;
               }
             // When sending the file, have a flag and ensure that the user only
@@ -8146,6 +8164,70 @@ module.exports = {
     return camelCaseString;
   },
 
+  extractCommaSeparatedValues: function (string) {
+    return string.split(/[,\s\n]+/);
+  },
+
+  parseStringArrayIntegerValues: function (array) {
+    return array.map((value) => {
+      if (!isNaN(value)) {
+        integer = parseInt(value);
+        return integer;
+      }
+      return value;
+    });
+  },
+
+  /**
+   * Useful for parsing the inputs to a "<command> many" query
+   */
+  parseUserInputIndices: function (
+    inputArray,
+    maxIndex,
+    parseStrings = { acceptedStrings: [], ignoreCase: true },
+    minIndex = 1
+  ) {
+    if (
+      !parseStrings ||
+      !parseStrings.acceptedStrings ||
+      !parseStrings.acceptedStrings.length
+    ) {
+      parseStrings = { acceptedStrings: [], ignoreCase: false };
+    }
+    if (parseStrings.ignoreCase) {
+      parseStrings.acceptedStrings = parseStrings.acceptedStrings.map(
+        (string) => string.toLowerCase()
+      );
+    }
+    const { acceptedStrings, ignoreCase } = parseStrings;
+    return inputArray.filter((index) => {
+      // console.log({ ignoreCase, acceptedStrings, index });
+      if (!isNaN(index)) {
+        numberIndex = parseInt(index);
+        if (numberIndex >= minIndex && numberIndex <= maxIndex) {
+          return numberIndex;
+        }
+      } else if (
+        (ignoreCase && acceptedStrings.includes(index.toLowerCase())) ||
+        acceptedStrings.includes(index)
+      ) {
+        return true;
+      }
+    });
+  },
+
+  getManyEntriesErrorMessage: function (
+    userInput,
+    objectPlural,
+    totalObjects = undefined
+  ) {
+    return `**There are no existing ${objectPlural} *${userInput}*...${
+      totalObjects || totalObjects === 0
+        ? ` You have __${totalObjects} ${objectPlural}.__**`
+        : ""
+    } `;
+  },
+
   getTierMaxMessage: function (
     PREFIX,
     commandUsed,
@@ -8228,7 +8310,9 @@ module.exports = {
     "Mastermind",
     "Task",
   ],
-  fileFooterText: `🗑 to delete this window (not the entries)\n📎 to get all of this in a text file`,
+  deleteFooterText,
+  textFileFooterText,
+  fileFooterText: `${deleteFooterText}\n${textFileFooterText}`,
   timeExamples: `e.g. **now **|** 5.5 hours ago **|** yesterday at 6pm\n**|** last monday at 8:30p **|** May 4, 2020 1230a\n**|** next friday at 3AM **|** March 22, 2027 **|** today 10PM**`,
   futureTimeExamples: `e.g. **in 15 mins **|** next tuesday at 930p **|** 1 month from now 8pm\ntoday at 1:55P **|** July 5 at 9A **|** April 30, 2021 at 8:45am**`,
   intervalExamplesOver1Minute: `⏳ Any period longer than **1 minute** ⏳\n\n**__In one of the forms:__\n- # Periods **(years; months; weeks; days; hours; minutes)**\n- #y **(years)** : #d **(days)** : #h **(hours)** : #m **(minutes)** : #s **(seconds)**\n- # Days of the Week **(mondays; tuesdays; wednesdays; thursdays; fridays; saturdays; sundays)** **\n\ne.g. **5 days **|** 12.25 hours **|** 30 mins **|** 1 week **|** 4 months **|** 2.5 years\n**|** 1y:2.75d:3h:30.5m:2s **|** 18.2h **|** 12m **|** 6m50s **|** 25.5m 5s **|** 7d:2h\n**|** 5y 15.1d 50.3h 20.7m 95s **|** friday **|** mon **|** 1 sat **|** 2 sun **|** tues at 6pm\n**|** wednesday at 4A **|** thurs at 12P PST**`,

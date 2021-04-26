@@ -516,6 +516,7 @@ async function getFastPostEmbedArray(
     fastPost,
     "Fast Post",
     true,
+    message.author.id,
     false,
     fastEmbedColour
   );
@@ -1440,6 +1441,7 @@ module.exports = {
               fastDataToStringArray,
               `Fast: See ${pastNumberOfEntriesIndex} Fasts (${sortType})`,
               true,
+              authorID,
               fn.getFileName("Fasts", timezoneOffset),
               fastEmbedColour
             )
@@ -1523,6 +1525,7 @@ module.exports = {
                     fastDataToStringArray,
                     `Fast: See ${pastNumberOfEntriesIndex} Fasts Past ${entriesToSkip} (${sortType})`,
                     true,
+                    authorID,
                     fn.getFileName("Fasts", timezoneOffset),
                     fastEmbedColour
                   )
@@ -1582,6 +1585,7 @@ module.exports = {
           fastDataToString,
           `Fast: See Fast ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
+          authorID,
           fn.getFileName("Fast", timezoneOffset),
           fastEmbedColour
         );
@@ -1699,6 +1703,7 @@ module.exports = {
             fastDataToStringArray,
             ``,
             true,
+            authorID,
             false,
             fastEmbedColour
           );
@@ -1803,6 +1808,7 @@ module.exports = {
               fastDataToString,
               ``,
               true,
+              authorID,
               false
             );
             const deleteConfirmMessage = `Are you sure you want to **delete fasts ${toDelete}?:**`;
@@ -1888,6 +1894,7 @@ module.exports = {
                 showFasts,
                 ``,
                 true,
+                authorID,
                 false,
                 fastEmbedColour
               );
@@ -1954,6 +1961,7 @@ module.exports = {
             )}`,
             `Fast: Delete Recent Fast`,
             true,
+            authorID,
             false,
             fastEmbedColour
           );
@@ -2047,6 +2055,7 @@ module.exports = {
           )}`,
           `Fast: Delete Fast ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
+          authorID,
           false,
           fastEmbedColour
         );

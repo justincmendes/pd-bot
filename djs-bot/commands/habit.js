@@ -767,6 +767,7 @@ module.exports = {
             ),
             "",
             true,
+            authorID,
             false,
             habitEmbedColour
           );
@@ -877,6 +878,7 @@ module.exports = {
             habitArray,
             "",
             true,
+            authorID,
             false,
             habitEmbedColour
           );
@@ -968,6 +970,7 @@ module.exports = {
                 ),
                 "",
                 true,
+                authorID,
                 false,
                 habitEmbedColour
               );
@@ -1039,6 +1042,7 @@ module.exports = {
             )}`,
             `Habit${isArchived ? " Archive" : ""}: Delete Recent Habit`,
             true,
+            authorID,
             false,
             habitEmbedColour
           );
@@ -1142,6 +1146,7 @@ module.exports = {
             isArchived ? ` Archive` : ""
           }: Delete Habit ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
+          authorID,
           false,
           habitEmbedColour
         );
@@ -1370,6 +1375,7 @@ module.exports = {
                 isArchived ? ` Archive` : ""
               }: See ${habitIndex} Habits(${sortType})`,
               true,
+              authorID,
               fn.getFileName("Habits", timezoneOffset),
               habitEmbedColour
             )
@@ -1470,6 +1476,7 @@ module.exports = {
                       isArchived ? ` Archive` : ""
                     }: See ${habitIndex} Habits Past ${entriesToSkip} (${sortType})`,
                     true,
+                    authorID,
                     fn.getFileName("Habits", timezoneOffset),
                     habitEmbedColour
                   )
@@ -1522,6 +1529,7 @@ module.exports = {
             isArchived ? ` Archive` : ""
           }: See Habit ${habitIndex} (${sortType})`,
           true,
+          authorID,
           fn.getFileName("Habit", timezoneOffset),
           habitEmbedColour
         );
@@ -2713,6 +2721,7 @@ module.exports = {
             habitStringArray,
             `${member ? `${member.displayName}'s` : ""} Habits`,
             true,
+            authorID,
             false,
             habitEmbedColour
           );
@@ -2738,7 +2747,7 @@ module.exports = {
       //     false, true, false, false, false);
       // if (habitStringArray.length) habitStringArray[0] = `<@!${authorID}>\n${habitStringArray[0]}`;
       // const posts = fn.getEmbedArray(habitStringArray, `${member ? `${member.displayName}'s` : ""} Habits`
-      //     + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, false, habitEmbedColour);
+      //     + ` (as of ${new Date(Date.now() + HOUR_IN_MS * timezoneOffset).getUTCFullYear()})`, true, authorID, false, habitEmbedColour);
       // posts.forEach(async post => {
       //     await fn.sendMessageToChannel(bot, post, targetChannel);
       // });
@@ -3309,6 +3318,7 @@ module.exports = {
               false
             )}`,
             true,
+            authorID,
             fn.getFileName("Habits", timezoneOffset),
             habitEmbedColour
           ),
@@ -3427,6 +3437,7 @@ module.exports = {
               ? `Habit ${i}: Stats (${sortType})`
               : `Habits: Stats (${sortType})`,
             true,
+            authorID,
             fn.getFileName("Habits", timezoneOffset),
             habitEmbedColour
           ),
@@ -3544,6 +3555,7 @@ module.exports = {
               habitOutputArray,
               `Habits: Past ${pastXDays} Days Stats`,
               true,
+              authorID,
               fn.getFileName("Habits", timezoneOffset),
               habitEmbedColour
             ),

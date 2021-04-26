@@ -652,7 +652,112 @@ bot.on("ready", async () => {
   //               {
   //                 name: "entries",
   //                 description:
-  //                   "Enter each of the entries you'd like to see, comma separated (CSVs)",
+  //                   "Enter each of the entries you'd like to see, comma or space separated",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //        {
+  //         name: "delete",
+  //         description: "Delete a reminder",
+  //         type: 2,
+  //         options: [
+  //           {
+  //             name: "recent",
+  //             description: "Delete the most recent Reminder you've created",
+  //             type: 1,
+  //           },
+  //           {
+  //             name: "entry",
+  //             description:
+  //               "Delete a specific Reminder (based on the Reminder's number)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "entry",
+  //                 description:
+  //                   "Enter the Reminder number of the Reminder you'd like to delete!",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "all",
+  //             description: "Delete all Reminders",
+  //             type: 1,
+  //           },
+  //           {
+  //             name: "range",
+  //             description:
+  //               "Delete a range of Reminders (e.g. from 1 to 5, inclusive)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "from",
+  //                 description:
+  //                   "Enter the first Reminder you'd like to delete in the range.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "to",
+  //                 description:
+  //                   "Enter the last Reminder you'd like to delete in the range.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "past",
+  //             description:
+  //               "Delete reminders starting from the first Reminder onwards.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "number_of_entries",
+  //                 description:
+  //                   "Enter the number of reminders you'd like to delete from the first Reminder onwards",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "entries_after",
+  //             description:
+  //               "Delete a certain number of entries after a particular Reminder",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "number_of_entries",
+  //                 description: "Enter number of reminders you'd like to delete",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "first",
+  //                 description:
+  //                   "Enter the number of the Reminder you would like to be the first Reminder to be returned",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "many",
+  //             description:
+  //               "Delete many reminders (with differing reminder numbers)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "entries",
+  //                 description:
+  //                   "Enter each of the entries you'd like to delete, comma or space separated",
   //                 required: true,
   //                 type: 3,
   //               },
@@ -1086,7 +1191,114 @@ bot.on("ready", async () => {
   //               {
   //                 name: "entries",
   //                 description:
-  //                   "Enter each of the entries you'd like to see, comma separated (CSVs)",
+  //                   "Enter each of the entries you'd like to see, comma or space separated",
+  //                 required: true,
+  //                 type: 3,
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //       {
+  //         name: "delete",
+  //         description: "Delete a recurring reminder",
+  //         type: 2,
+  //         options: [
+  //           {
+  //             name: "recent",
+  //             description:
+  //               "Delete the most recent Recurring Reminder you've created",
+  //             type: 1,
+  //           },
+  //           {
+  //             name: "entry",
+  //             description:
+  //               "Delete a specific Recurring Reminder (based on the Reminder's number)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "entry",
+  //                 description:
+  //                   "Enter the Reminder number of the Recurring Reminder you'd like to delete!",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "all",
+  //             description: "Delete all Recurring Reminders",
+  //             type: 1,
+  //           },
+  //           {
+  //             name: "range",
+  //             description:
+  //               "Delete a range of Recurring Reminders (e.g. from 1 to 5, inclusive)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "from",
+  //                 description:
+  //                   "Enter the first Reminder you'd like to delete in the range.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "to",
+  //                 description:
+  //                   "Enter the last Reminder you'd like to delete in the range.",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "past",
+  //             description:
+  //               "Delete Recurring Reminders starting from the first Reminder onwards.",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "number_of_entries",
+  //                 description:
+  //                   "Enter the number of Reminders you'd like to delete from the first Reminder onwards",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "entries_after",
+  //             description:
+  //               "Delete a certain number of entries after a particular Recurring Reminder",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "number_of_entries",
+  //                 description:
+  //                   "Enter number of Recurring Reminders you'd like to delete",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //               {
+  //                 name: "index",
+  //                 description:
+  //                   "Enter the number of the Reminder you would like to be the first Reminder to be returned",
+  //                 required: true,
+  //                 type: 4,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             name: "many",
+  //             description:
+  //               "Delete many reminders (with differing reminder numbers)",
+  //             type: 1,
+  //             options: [
+  //               {
+  //                 name: "entries",
+  //                 description:
+  //                   "Enter each of the entries you'd like to delete, comma or space separated",
   //                 required: true,
   //                 type: 3,
   //               },
@@ -1472,13 +1684,56 @@ bot.on("ready", async () => {
   // }
 });
 
+/**
+ * TODO: Continue to explore the partial data structure and its properties and how you can use them for the delete and potentially the file pagination emojis.
+ * ? For persistent file storage, create a simple MongoDB object that stores the messageId, messageContent (full text of embeds) and startTime (so that it can be scheduled to be deleted after 2-7 days, depending on the storage load)
+ * ? If the user is the same user that the bot reaction was created for, then get the document from MongoDB (query by messageId), if a document exists send the document text in the form of a .txt file, and delete the document in MongoDB.
+ */
 // To deal with reactions to bot messages
-// bot.on("messageReactionAdd", async (reaction, user) => {
-//     if (reaction.message.partial) {
-//         console.log(reaction);
-//         console.log("A user has reacted to an uncached message.");
-//     }
-// });
+bot.on("messageReactionAdd", async (reaction, user) => {
+  const isPdBotReaction = user.id === CLIENT_ID;
+  const isBotReaction = user.bot;
+  if (isBotReaction || isPdBotReaction) return;
+
+  var finalReaction = reaction;
+  if (reaction.partial) {
+    try {
+      finalReaction = await reaction.fetch();
+    } catch (err) {
+      console.error("Error while fetching reaction", err);
+      return;
+    }
+  }
+
+  // console.log({ finalReaction });
+  const { message } = finalReaction;
+  const messageEmbed = message.embeds && message.embeds[0];
+  const messageHasEmbed = !!messageEmbed;
+  console.log(message.embeds);
+
+  const sentByPdBot = message.author.id === CLIENT_ID;
+  const isTrashCanReaction = !!(reaction.emoji.name === "🗑️");
+  // console.log({sentByPdBot, isTrashCanReaction});
+  const deleteMessage = sentByPdBot && isTrashCanReaction;
+  console.log({ deleteMessage });
+  if (deleteMessage) {
+    if (!messageHasEmbed) return;
+    const userIdFooterRegex = /\(User: (\d+)\)/;
+    const footerText = messageEmbed.footer && messageEmbed.footer.text;
+    // console.log({ footerText });
+    if (!footerText) return;
+    const canDelete = footerText.includes(fn.deleteFooterText);
+    if (!canDelete) return;
+    const footerUserId = userIdFooterRegex.exec(footerText);
+    // console.log({ footerUserId });
+    if (!footerUserId) return;
+    const messageRecipient = footerUserId[1];
+    const isSameUser = messageRecipient === user.id;
+    if (!isSameUser) return;
+    message.delete();
+    return;
+  }
+});
 
 bot.on("message", async (message) => {
   // console.log({ message });

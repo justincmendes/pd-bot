@@ -874,6 +874,7 @@ module.exports = {
             targetHabitIndex + 1
           }: All ${totalLogs} Logs`,
           true,
+          authorID,
           fn.getFileName("Logs", timezoneOffset),
           habitEmbedColour
         )

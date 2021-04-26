@@ -848,6 +848,7 @@ module.exports = {
             ),
             "",
             true,
+            message.author.id,
             false,
             journalEmbedColour
           );
@@ -943,6 +944,7 @@ module.exports = {
             journalStringArray,
             "",
             true,
+            message.author.id,
             false,
             journalEmbedColour
           );
@@ -1018,6 +1020,7 @@ module.exports = {
                 ),
                 "",
                 true,
+                message.author.id,
                 false,
                 journalEmbedColour
               );
@@ -1078,6 +1081,7 @@ module.exports = {
             )}`,
             `Journal: Delete Recent Entry`,
             true,
+            authorID,
             false,
             journalEmbedColour
           );
@@ -1169,6 +1173,7 @@ module.exports = {
           )}`,
           `Journal: Delete Entry ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
+          authorID,
           false,
           journalEmbedColour
         );
@@ -1343,6 +1348,7 @@ module.exports = {
               journalStringArray,
               `Journal: See ${pastNumberOfEntriesIndex} Entries (${sortType})`,
               true,
+              authorID,
               fn.getFileName("Journals", timezoneOffset),
               journalEmbedColour
             )
@@ -1421,6 +1427,7 @@ module.exports = {
                     journalStringArray,
                     `Journal: See ${pastNumberOfEntriesIndex} Entries Past ${entriesToSkip} (${sortType})`,
                     true,
+                    authorID,
                     fn.getFileName("Journals", timezoneOffset),
                     journalEmbedColour
                   )
@@ -1463,6 +1470,7 @@ module.exports = {
           journalString,
           `Journal: See Entry ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
+          authorID,
           fn.getFileName("Journal", timezoneOffset),
           journalEmbedColour
         );
@@ -1946,6 +1954,7 @@ module.exports = {
             true
           )}`,
           true,
+          authorID,
           false,
           journalEmbedColour
         );

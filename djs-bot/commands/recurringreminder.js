@@ -165,6 +165,7 @@ module.exports = {
             ),
             "",
             true,
+            authorID,
             false,
             repeatEmbedColour
           );
@@ -272,6 +273,7 @@ module.exports = {
             reminderStringArray,
             "",
             true,
+            authorID,
             false,
             repeatEmbedColour
           );
@@ -352,6 +354,7 @@ module.exports = {
                 ),
                 "",
                 true,
+                authorID,
                 false,
                 repeatEmbedColour
               );
@@ -420,6 +423,7 @@ module.exports = {
             )}`,
             `Recurring Reminder: Delete Recent Reminder`,
             true,
+            authorID,
             false,
             repeatEmbedColour
           );
@@ -521,6 +525,7 @@ module.exports = {
           )}`,
           `Recurring Reminder: Delete Reminder ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
+          authorID,
           false,
           repeatEmbedColour
         );
@@ -756,6 +761,7 @@ module.exports = {
               reminderDataToStringArray,
               `Recurring Reminder: See ${pastNumberOfEntriesIndex} Reminders (${sortType})`,
               true,
+              authorID,
               fn.getFileName("Recurring Reminders", timezoneOffset),
               repeatEmbedColour
             )
@@ -838,6 +844,7 @@ module.exports = {
                     reminderDataToStringArray,
                     `Recurring Reminder: See ${pastNumberOfEntriesIndex} Reminder Past ${entriesToSkip} (${sortType})`,
                     true,
+                    authorID,
                     fn.getFileName("Recurring Reminders", timezoneOffset),
                     repeatEmbedColour
                   )
@@ -886,6 +893,7 @@ module.exports = {
           reminderDataToString,
           `Recurring Reminder: See Reminder ${pastNumberOfEntriesIndex} (${sortType})`,
           true,
+          authorID,
           fn.getFileName("Recurring Reminder", timezoneOffset),
           repeatEmbedColour
         );
@@ -2396,6 +2404,7 @@ module.exports = {
                 ),
                 `Recurring Reminder: See Recent Reminder`,
                 true,
+                authorID,
                 fn.getFileName("Reminder", timezoneOffset),
                 repeatEmbedColour
               ),
@@ -2428,7 +2437,7 @@ module.exports = {
             await ic.reply(
               bot,
               interaction,
-              `**Showing __Reminder ${entry}__...**`
+              `**Showing __Recurring Reminder ${entry}__...**`
             );
             const reminderDocument = await rm.getOneReminderByEndTime(
               authorID,
@@ -2448,6 +2457,7 @@ module.exports = {
                 ),
                 `Recurring Reminder: See Reminder ${entry}`,
                 true,
+                authorID,
                 fn.getFileName("Reminder", timezoneOffset),
                 repeatEmbedColour
               ),
@@ -2483,6 +2493,7 @@ module.exports = {
                 ),
                 `Recurring Reminder: See All Reminders`,
                 true,
+                authorID,
                 fn.getFileName("Reminders", timezoneOffset),
                 repeatEmbedColour
               ),
@@ -2507,7 +2518,7 @@ module.exports = {
             await ic.reply(
               bot,
               interaction,
-              `**Showing reminders from __${from} to ${to}__...**`
+              `**Showing recurring reminders from __${from} to ${to}__...**`
             );
             const numberOfEntries = to - from + 1;
             const reminderDocuments = await fn.getEntriesByEarliestEndTime(
@@ -2532,6 +2543,7 @@ module.exports = {
                 ),
                 `Recurring Reminder: See Reminders From ${from} to ${to}`,
                 true,
+                authorID,
                 fn.getFileName("Reminders", timezoneOffset),
                 repeatEmbedColour
               ),
@@ -2576,6 +2588,7 @@ module.exports = {
                 ),
                 `Recurring Reminder: See the Past ${numberOfEntries} Reminders`,
                 true,
+                authorID,
                 fn.getFileName("Reminders", timezoneOffset),
                 repeatEmbedColour
               ),
@@ -2629,6 +2642,7 @@ module.exports = {
                 ),
                 `Recurring Reminder: See ${numberOfEntries} Reminders After Reminder ${first}`,
                 true,
+                authorID,
                 fn.getFileName("Reminders", timezoneOffset),
                 repeatEmbedColour
               ),
@@ -2636,11 +2650,466 @@ module.exports = {
             );
           }
           break;
+        case "many": {
+          const { entries } = args;
+          const manyQuery = await rm.getParsedReminderManyQuery(
+            bot,
+            authorID,
+            timezoneOffset,
+            entries,
+            true,
+            "recurring reminders",
+            totalReminderNumber,
+            ["recent"],
+            true
+          );
+          if (!manyQuery) return;
+          if (manyQuery.error) {
+            await ic.reply(bot, interaction, manyQuery.message, true);
+            return;
+          }
+
+          const { objectArray, stringArray, indexArray } = manyQuery;
+          const queryIndexString = indexArray.join(", ");
+          const reminderIndicesString = objectArray
+            .map((object) => object.index)
+            .join(", ");
+          await ic.reply(
+            bot,
+            interaction,
+            `**Showing many recurring reminders: *${queryIndexString}***`
+          );
+
+          await fn.sendPaginationEmbed(
+            bot,
+            interaction.channel_id,
+            authorID,
+            fn.getEmbedArray(
+              stringArray,
+              `Recurring Reminder: See Many Reminders (${reminderIndicesString})`,
+              true,
+              authorID,
+              fn.getFileName("Reminders", timezoneOffset),
+              reminderEmbedColour
+            ),
+            true
+          );
+        }
+        break;
+      }
+    } else if (subCommandGroup === "delete") {
+      switch (subCommand) {
+        case "recent":
+          {
+            await ic.reply(
+              bot,
+              interaction,
+              `**Deleting your recent recurring reminder...**`
+            );
+            const confirmDeletion = await fn.getPaginatedUserConfirmation(
+              bot,
+              authorID,
+              interaction.channel_id,
+              PREFIX,
+              fn.getEmbedArray(
+                await rm.getMostRecentReminderString(
+                  bot,
+                  authorID,
+                  true,
+                  timezoneOffset
+                ),
+                `Recurring Reminder: Delete Recent Reminder`,
+                true,
+                authorID,
+                fn.getFileName("Reminder", timezoneOffset),
+                reminderEmbedColour
+              ),
+              `Are you sure you want to **delete your recent recurring reminder?**`,
+              false,
+              `Recurring Reminder: Delete Recent Reminder`,
+              600000
+            );
+            if (!confirmDeletion) return;
+            const recentReminder = await rm.getOneReminderByRecency(
+              authorID,
+              0,
+              true
+            );
+            if (!recentReminder) return;
+            console.log(
+              `Deleting (${authorID}) ${authorUsername}'s Recent Recurring Reminder`
+            );
+            await Reminder.deleteOne({ _id: recentReminder._id });
+          }
+          break;
+        case "entry":
+          {
+            const { entry } = args;
+            if (entry <= 0 || entry > totalReminderNumber) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Recurring Reminder ${entry} does not exist... You have __${totalReminderNumber} Recurring Reminders.__**`
+              );
+              return;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Deleting __Recurring Reminder ${entry}__...**`
+            );
+            const reminderDocument = await rm.getOneReminderByEndTime(
+              authorID,
+              entry - 1,
+              true
+            );
+
+            const confirmDeletion = await fn.getPaginatedUserConfirmation(
+              bot,
+              authorID,
+              interaction.channel_id,
+              PREFIX,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  numberOfEntries,
+                  timezoneOffset,
+                  first - 1
+                ),
+                `Recurring Reminder: Delete Reminder ${entry}`,
+                true,
+                authorID,
+                fn.getFileName("Reminder", timezoneOffset),
+                reminderEmbedColour
+              ),
+              `Are you sure you want to **delete Reminder ${entry}?**`,
+              false,
+              `Recurring Reminder: Delete Reminder ${entry}`,
+              600000
+            );
+            if (!confirmDeletion) return;
+            console.log(
+              `Deleting (${authorID}) ${authorUsername}'s Recurring Reminder ${entry}`
+            );
+            await Reminder.deleteOne({ _id: reminderDocument._id });
+          }
+          break;
+        case "all":
+          {
+            await ic.reply(
+              bot,
+              interaction,
+              `**Deleting ALL recurring reminders...**`
+            );
+            const allQuery = { userID: authorID, isRecurring: true };
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              allQuery,
+              0,
+              totalReminderNumber
+            );
+
+            const confirmDeleteAllMessage = `Are you sure you want to **delete ALL of your recorded recurring reminders?**\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`\/recurringreminder see all\` *first)*`;
+            const confirmDeletion = await fn.getPaginatedUserConfirmation(
+              bot,
+              authorID,
+              interaction.channel_id,
+              PREFIX,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  totalReminderNumber,
+                  timezoneOffset
+                ),
+                `Recurring Reminder: Delete All Reminders Reminders`,
+                true,
+                authorID,
+                fn.getFileName("Reminder", timezoneOffset),
+                reminderEmbedColour
+              ),
+              confirmDeleteAllMessage,
+              false,
+              `Recurring Reminder: Delete All Reminders`,
+              600000
+            );
+            if (!confirmDeletion) return;
+
+            const finalDeleteAllMessage = `Are you reaaaallly, really, truly, very certain you want to delete **ALL OF YOUR REMINDERS ON RECORD**?\n\nYou **cannot UNDO** this!\n\n*(I'd suggest you* \`\/recurringreminder see all\` *first)*`;
+            let finalConfirmDeleteAll = await fn.getUserConfirmation(
+              bot,
+              authorID,
+              channelID,
+              PREFIX,
+              finalDeleteAllMessage,
+              false,
+              "Recurring Reminders: Delete ALL Reminders FINAL Warning!",
+              600000
+            );
+            if (!finalConfirmDeleteAll) return;
+
+            console.log(
+              `Deleting ALL of (${authorID}) ${authorUsername}'s Recurring Reminders`
+            );
+            if (allQuery) {
+              await Reminder.deleteMany(allQuery);
+            }
+          }
+          break;
+        case "range":
+          {
+            let { from, to } = args;
+            if (from > to) {
+              const temp = to;
+              from = to;
+              to = temp;
+            }
+            if (from <= 0) {
+              from = 1;
+            }
+            if (to > totalReminderNumber) {
+              to = totalReminderNumber;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Deleting __Recurring Reminders ${from}-${to}__...**`
+            );
+            const numberOfEntries = to - from + 1;
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: true },
+              from - 1,
+              numberOfEntries
+            );
+            const confirmDeletion = await fn.getPaginatedUserConfirmation(
+              bot,
+              authorID,
+              interaction.channel_id,
+              PREFIX,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  numberOfEntries,
+                  timezoneOffset,
+                  first - 1
+                ),
+                `Recurring Reminder: Delete Reminders ${from}-${to}`,
+                true,
+                authorID,
+                fn.getFileName("Reminder", timezoneOffset),
+                reminderEmbedColour
+              ),
+              `Are you sure you want to **delete Recurring Reminders ${from}-${to}?**`,
+              false,
+              `Recurring Reminder: Delete Reminders ${from}-${to}`,
+              600000
+            );
+            if (!confirmDeletion) return;
+            const targetReminderIds = objectArray.map(
+              (reminderObject) => reminderObject._id
+            );
+            console.log(
+              `Deleting (${authorID}) ${authorUsername}'s Recurring Reminders ${from}-${to}`
+            );
+            await Reminder.deleteMany({ _id: { $in: targetReminderIds } });
+          }
+          break;
+        case "past":
+          {
+            let { numberOfEntries } = args;
+            if (numberOfEntries < 0) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Please enter a positive whole number greater than 0: __${numberOfEntries} entries__ do not exist...**`
+              );
+              return;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Deleting the __past ${numberOfEntries} recurring reminders__...**`
+            );
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: true },
+              0,
+              numberOfEntries
+            );
+            const confirmDeletion = await fn.getPaginatedUserConfirmation(
+              bot,
+              authorID,
+              interaction.channel_id,
+              PREFIX,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  numberOfEntries,
+                  timezoneOffset,
+                  first - 1
+                ),
+                `Recurring Reminder: Delete The Past ${numberOfEntries} Reminders`,
+                true,
+                authorID,
+                fn.getFileName("Reminder", timezoneOffset),
+                reminderEmbedColour
+              ),
+              `Are you sure you want to **delete your past ${numberOfEntries} recurring reminders?**`,
+              false,
+              `Recurring Reminder: Delete The Past ${numberOfEntries} Reminders`,
+              600000
+            );
+            if (!confirmDeletion) return;
+            const targetReminderIds = objectArray.map(
+              (reminderObject) => reminderObject._id
+            );
+            console.log(
+              `Deleting (${authorID}) ${authorUsername}'s Past ${numberOfEntries} Recurring Reminders`
+            );
+            await Reminder.deleteMany({ _id: { $in: targetReminderIds } });
+          }
+          break;
+        case "entriesAfter":
+          {
+            let { first, numberOfEntries } = args;
+            if (numberOfEntries < 0) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Please enter a positive whole number greater than 0: __${numberOfEntries} entries__ do not exist...**`
+              );
+              return;
+            }
+            if (first <= 0 || first > totalReminderNumber) {
+              await ic.reply(
+                bot,
+                interaction,
+                `**Recurring Reminder ${first} does not exist... You have __${totalReminderNumber} Reminders.__**`
+              );
+              return;
+            }
+            await ic.reply(
+              bot,
+              interaction,
+              `**Deleting __${numberOfEntries} Recurring reminders after Reminder ${first}__...**`
+            );
+            const reminderDocuments = await fn.getEntriesByEarliestEndTime(
+              Reminder,
+              { userID: authorID, isRecurring: true },
+              first - 1,
+              numberOfEntries
+            );
+            const confirmDeletion = await fn.getPaginatedUserConfirmation(
+              bot,
+              authorID,
+              interaction.channel_id,
+              PREFIX,
+              fn.getEmbedArray(
+                await rm.multipleRemindersToString(
+                  bot,
+                  authorID,
+                  interaction.channel_id,
+                  reminderDocuments,
+                  numberOfEntries,
+                  timezoneOffset,
+                  first - 1
+                ),
+                `Recurring Reminder: Delete ${numberOfEntries} Reminders After Reminder ${first}`,
+                true,
+                authorID,
+                fn.getFileName("Reminder", timezoneOffset),
+                reminderEmbedColour
+              ),
+              `Are you sure you want to **delete your ${numberOfEntries} recurring reminders after Reminder ${first}?**`,
+              false,
+              `Recurring Reminder: Delete ${numberOfEntries} Reminders After Reminder ${first}`,
+              600000
+            );
+            if (!confirmDeletion) return;
+            const targetReminderIds = objectArray.map(
+              (reminderObject) => reminderObject._id
+            );
+            console.log(
+              `Deleting (${authorID}) ${authorUsername}'s ${numberOfEntries} Recurring Reminders After Reminder ${first}`
+            );
+            await Reminder.deleteMany({ _id: { $in: targetReminderIds } });
+          }
+          break;
         case "many":
           {
+            const { entries } = args;
+            const manyQuery = await rm.getParsedReminderManyQuery(
+              bot,
+              authorID,
+              timezoneOffset,
+              entries,
+              true,
+              "recurring reminders",
+              totalReminderNumber,
+              ["recent"],
+              true
+            );
+            if (!manyQuery) return;
+            if (manyQuery.error) {
+              await ic.reply(bot, interaction, manyQuery.message, true);
+              return;
+            }
+
+            const { objectArray, stringArray, indexArray } = manyQuery;
+            const queryIndexString = indexArray.join(", ");
+            const reminderIndicesString = objectArray
+              .map((object) => object.index)
+              .join(", ");
+            await ic.reply(
+              bot,
+              interaction,
+              `**Deleting many recurring reminders: *${queryIndexString}***`
+            );
+
+            const confirmDeletion = await fn.getPaginatedUserConfirmation(
+              bot,
+              authorID,
+              interaction.channel_id,
+              PREFIX,
+              fn.getEmbedArray(
+                stringArray,
+                `Recurring Reminder: Delete Many Reminders (${reminderIndicesString})`,
+                true,
+                authorID,
+                fn.getFileName("Reminders", timezoneOffset),
+                reminderEmbedColour
+              ),
+              `**Are you sure you want to __delete__ Recurring Reminders *${reminderIndicesString}*?**`,
+              false,
+              `Recurring Reminder: Delete Multiple Recurring Reminders Confirmation`,
+              600000
+            );
+            if (!confirmDeletion) return;
+
+            // DELETE each of the reminders!
+            const targetReminderIds = objectArray.map(
+              (reminderObject) => reminderObject.document._id
+            );
+            console.log(
+              `Deleting (${authorID}) ${authorUsername}'s Recurring Reminders ${reminderIndicesString}`
+            );
+            await Reminder.deleteMany({ _id: { $in: targetReminderIds } });
           }
           break;
       }
     }
+    return;
   },
 };
