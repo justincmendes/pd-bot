@@ -1709,7 +1709,7 @@ bot.on("messageReactionAdd", async (reaction, user) => {
   const { message } = finalReaction;
   const messageEmbed = message.embeds && message.embeds[0];
   const messageHasEmbed = !!messageEmbed;
-  console.log(message.embeds);
+  // console.log(message.embeds);
 
   const sentByPdBot = message.author.id === CLIENT_ID;
   const isTrashCanReaction = !!(reaction.emoji.name === "🗑️");
@@ -1730,6 +1730,7 @@ bot.on("messageReactionAdd", async (reaction, user) => {
     const messageRecipient = footerUserId[1];
     const isSameUser = messageRecipient === user.id;
     if (!isSameUser) return;
+    console.log(`Deleting my message for (${user.id}) ${user.username}'s`)
     message.delete();
     return;
   }
