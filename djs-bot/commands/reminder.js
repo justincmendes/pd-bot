@@ -2659,7 +2659,7 @@ module.exports = {
                   reminderDocuments,
                   numberOfEntries,
                   timezoneOffset,
-                  first - 1
+                  entry - 1
                 ),
                 `Reminder: Delete Reminder ${entry}`,
                 true,
@@ -2778,7 +2778,7 @@ module.exports = {
                   reminderDocuments,
                   numberOfEntries,
                   timezoneOffset,
-                  first - 1
+                  from - 1
                 ),
                 `Reminder: Delete Reminders ${from}-${to}`,
                 true,
@@ -2836,7 +2836,6 @@ module.exports = {
                   reminderDocuments,
                   numberOfEntries,
                   timezoneOffset,
-                  first - 1
                 ),
                 `Reminder: Delete The Past ${numberOfEntries} Reminders`,
                 true,
