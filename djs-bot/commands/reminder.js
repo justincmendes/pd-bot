@@ -2792,7 +2792,7 @@ module.exports = {
               600000
             );
             if (!confirmDeletion) return;
-            const targetReminderIds = objectArray.map(
+            const targetReminderIds = reminderDocuments.map(
               (reminderObject) => reminderObject._id
             );
             console.log(
@@ -2849,7 +2849,7 @@ module.exports = {
               600000
             );
             if (!confirmDeletion) return;
-            const targetReminderIds = objectArray.map(
+            const targetReminderIds = reminderDocuments.map(
               (reminderObject) => reminderObject._id
             );
             console.log(
@@ -2915,7 +2915,7 @@ module.exports = {
               600000
             );
             if (!confirmDeletion) return;
-            const targetReminderIds = objectArray.map(
+            const targetReminderIds = reminderDocuments.map(
               (reminderObject) => reminderObject._id
             );
             console.log(
