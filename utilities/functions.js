@@ -5280,6 +5280,7 @@ module.exports = {
         bot.channels.cache.get(channelID) ||
         bot.users.cache.get(channelID) ||
         bot.users.cache.get(authorID);
+      // console.log({ channel });
       embed = await channel.send(embedArray[currentPage]);
       if (embedArray.length) {
         const left = "⬅";

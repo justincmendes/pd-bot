@@ -2725,7 +2725,8 @@ module.exports = {
         const mistakeMessage = `Exiting... try \`${PREFIX}${commandUsed} post\` to try to **post again!**`;
         let postChannel = await fn.getTargetChannel(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           "Fast",
           forceSkip,

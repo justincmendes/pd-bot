@@ -349,7 +349,8 @@ module.exports = {
                     // Or list all across all mutual servers
                     const targetVoiceChannel = await fn.getTargetChannel(
                       bot,
-                      message,
+                      message.author.id,
+          message.channel.id,
                       PREFIX,
                       `Add Voice Channel to Track Time Spent`,
                       forceSkip,

@@ -2679,7 +2679,8 @@ module.exports = {
           }
           const targetChannel = await fn.getTargetChannel(
             bot,
-            message,
+            message.author.id,
+            message.channel.id,
             PREFIX,
             `Habit`,
             forceSkip,

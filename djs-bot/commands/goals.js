@@ -1115,7 +1115,14 @@ module.exports = {
           }
           const deleteConfirmMessage = `Are you sure you want to **delete goals ${toDelete.toString()}?**`;
           const sortType = indexByRecency ? "By Recency" : "By Start Time";
-          habits = fn.getEmbedArray(habits, "", true, authorID, false, goalEmbedColour);
+          habits = fn.getEmbedArray(
+            habits,
+            "",
+            true,
+            authorID,
+            false,
+            goalEmbedColour
+          );
           const confirmDeleteMany = await fn.getPaginatedUserConfirmation(
             bot,
             message.author.id,
@@ -2248,7 +2255,8 @@ module.exports = {
         );
       const targetChannel = await fn.getTargetChannel(
         bot,
-        message,
+        message.author.id,
+        message.channel.id,
         PREFIX,
         `Long-Term Goal`,
         forceSkip,
@@ -2414,7 +2422,7 @@ module.exports = {
             const reminderTypeString = selectReminderType === 1 ? "ending" : "";
             var selectedGoal;
             if (selectReminderType === 1) {
-              const selectedGoal = await fn.getUserSelectedObject(
+              selectedGoal = await fn.getUserSelectedObject(
                 bot,
                 message.author.id,
                 message.channel.id,
@@ -2434,6 +2442,7 @@ module.exports = {
                 600000
               );
               if (!selectedGoal) return;
+              selectedGoal = selectedGoal.object;
             }
 
             if (selectReminderType === 0) {
@@ -2449,13 +2458,14 @@ module.exports = {
               );
               if (!setGoalsReminder) return;
             } else if (selectReminderType === 1) {
+              if (!selectedGoal) return;
               const confirmSelection = await fn.getUserConfirmation(
                 bot,
                 message.author.id,
                 message.channel.id,
                 PREFIX,
                 `**Are you sure you want reminders for this long-term goal?**` +
-                  `\n(1 year, 6 months, 1 month, 1 week, and 1 day before expected goal end time)\n\n${selectedGoal.object.description}`,
+                  `\n(1 year, 6 months, 1 month, 1 week, and 1 day before expected goal end time)\n\n${selectedGoal.description}`,
                 forceSkip,
                 "Long-Term Goal: Goal Reminder Confirmation",
                 180000
@@ -2463,17 +2473,15 @@ module.exports = {
               if (confirmSelection === false) break;
               else if (confirmSelection === null) return;
 
-              if (selectedGoal.object._id) {
+              if (selectedGoal._id) {
                 const currentReminders = await Reminder.find({
-                  connectedDocument: selectedGoal.object._id,
+                  connectedDocument: selectedGoal._id,
                 });
                 if (currentReminders)
                   if (currentReminders.length) {
-                    rm.cancelRemindersByConnectedDocument(
-                      selectedGoal.object._id
-                    );
+                    rm.cancelRemindersByConnectedDocument(selectedGoal._id);
                     await Reminder.deleteMany({
-                      connectedDocument: selectedGoal.object._id,
+                      connectedDocument: selectedGoal._id,
                     });
                   }
                 await setGoalEndingReminders(
@@ -2481,11 +2489,11 @@ module.exports = {
                   authorID,
                   timezoneOffset,
                   commandUsed,
-                  selectedGoal.object._id,
-                  selectedGoal.object.description,
-                  selectedGoal.object.start - HOUR_IN_MS * timezoneOffset,
+                  selectedGoal._id,
+                  selectedGoal.description,
+                  selectedGoal.start - HOUR_IN_MS * timezoneOffset,
                   message.createdTimestamp,
-                  selectedGoal.object.end - HOUR_IN_MS * timezoneOffset
+                  selectedGoal.end - HOUR_IN_MS * timezoneOffset
                 );
               }
             }

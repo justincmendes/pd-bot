@@ -2571,7 +2571,8 @@ module.exports = {
         const sortType = indexByRecency ? "By Recency" : "By Date Created";
         const targetChannel = await fn.getTargetChannel(
           bot,
-          message,
+          message.author.id,
+          message.channel.id,
           PREFIX,
           `Mastermind ${sortType}`,
           forceSkip,
