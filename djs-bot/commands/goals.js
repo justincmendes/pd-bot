@@ -2286,7 +2286,7 @@ module.exports = {
           Date.now() + HOUR_IN_MS * timezoneOffset
         ).getUTCFullYear()})`,
         true,
-        authorID,
+        null,
         false,
         goalEmbedColour
       );

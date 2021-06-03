@@ -2597,7 +2597,7 @@ module.exports = {
             true
           )}`,
           true,
-          authorID,
+          null,
           false,
           mastermindEmbedColour
         );

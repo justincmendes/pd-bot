@@ -2722,7 +2722,7 @@ module.exports = {
             habitStringArray,
             `${member ? `${member.displayName}'s` : ""} Habits`,
             true,
-            authorID,
+            null,
             false,
             habitEmbedColour
           );

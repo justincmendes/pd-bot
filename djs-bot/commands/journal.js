@@ -1955,7 +1955,7 @@ module.exports = {
             true
           )}`,
           true,
-          authorID,
+          null,
           false,
           journalEmbedColour
         );

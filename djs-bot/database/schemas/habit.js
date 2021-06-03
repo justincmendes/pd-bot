@@ -154,6 +154,10 @@ const habitSchema = mongoose.Schema({
     required: true,
     default: 0,
   },
+  connectedAccountability: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: false,
+  }
 });
 
 // habitSchema.pre('remove', (next) => {
