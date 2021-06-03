@@ -1722,7 +1722,8 @@ bot.on("messageReactionAdd", async (reaction, user) => {
     const footerText = messageEmbed.footer && messageEmbed.footer.text;
     // console.log({ footerText });
     if (!footerText) return;
-    const canDelete = footerText.includes(fn.deleteFooterText);
+    // Can delete if the footer has the delete instructions and PD Bot reacted to the message
+    const canDelete = footerText.includes(fn.deleteFooterText) && finalReaction.me;
     if (!canDelete) return;
     const footerUserId = userIdFooterRegex.exec(footerText);
     // console.log({ footerUserId });
